@@ -1,0 +1,3606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Duelist Adventure — Control Point Arena (Production WebGPU &amp; Reusable Map Module)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #080b10;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #e2e8f0;
+      touch-action: none;
+    }
+    #canvas-container {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .glass-panel {
+      background: rgba(13, 18, 28, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    }
+    .glass-btn {
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      transition: all 0.15s ease;
+    }
+    .glass-btn:hover {
+      background: rgba(51, 65, 85, 0.88);
+      border-color: rgba(245, 158, 11, 0.55);
+      color: #fff;
+    }
+    .glass-btn.active {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: rgba(245, 158, 11, 0.75);
+      color: #fbbf24;
+    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.45); border-radius: 9999px; }
+  </style>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.module.js",
+        "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.172.0/build/three.webgpu.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.172.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- Top-Left Performance, Backend & Playtest Telemetry Panel -->
+  <div class="fixed top-4 left-4 z-10 pointer-events-none flex flex-col gap-2 max-w-[94vw] sm:max-w-xl">
+    <div class="glass-panel rounded-2xl p-4 pointer-events-auto">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-[0_0_10px_#f59e0b]"></div>
+          <span class="text-[11px] font-semibold tracking-widest uppercase text-amber-400/90 mono">Duelist Adventure // Production Build</span>
+        </div>
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <span id="backend-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/40 text-sky-300 mono">DETECTING GPU...</span>
+          <button id="btn-mode-switch" class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-300 hover:bg-emerald-500/30 font-semibold mono cursor-pointer">
+            [F] PLAYTEST MODE
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 mt-1.5 flex-wrap">
+        <h1 class="text-base sm:text-lg font-bold text-white tracking-tight">Control Point Arena — Final Release</h1>
+        <!-- Performance Quality Presets (Defaults to LOW / Performance Mode) -->
+        <div class="flex items-center gap-1 text-[10px] mono">
+          <span class="text-slate-500 mr-0.5">PERF:</span>
+          <button data-quality="low" class="qual-btn glass-btn active rounded-lg px-2 py-0.5 text-emerald-300 font-semibold">LOW</button>
+          <button data-quality="medium" class="qual-btn glass-btn rounded-lg px-2 py-0.5 text-slate-300">MED</button>
+          <button data-quality="high" class="qual-btn glass-btn rounded-lg px-2 py-0.5 text-slate-300">HIGH</button>
+        </div>
+      </div>
+
+      <p id="mode-subtitle" class="text-xs text-slate-400 mt-0.5 leading-relaxed">
+        Inspection Mode: Orbit/Zoom/Pan CAD Inspector. Press <span class="text-emerald-300 mono">F</span> for third-person playtest (<span class="text-slate-200 mono">WASD</span> move, <span class="text-slate-200 mono">Shift</span> sprint, <span class="text-slate-200 mono">Space</span> jump, <span class="text-slate-200 mono">R</span> safe respawn).
+      </p>
+
+      <!-- Live Performance & Verification Metrics -->
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5 mt-3 pt-3 border-t border-slate-700/50 text-[10px] mono">
+        <div class="bg-slate-900/70 rounded-xl px-2 py-1.5 border border-slate-800">
+          <div class="text-slate-500 text-[9px]">FPS / MS</div>
+          <div id="perf-fps" class="text-emerald-300 font-semibold">-- / --</div>
+        </div>
+        <div class="bg-slate-900/70 rounded-xl px-2 py-1.5 border border-slate-800">
+          <div class="text-slate-500 text-[9px]">TRIANGLES</div>
+          <div id="perf-tris" class="text-sky-300 font-semibold">--</div>
+        </div>
+        <div class="bg-slate-900/70 rounded-xl px-2 py-1.5 border border-slate-800">
+          <div class="text-slate-500 text-[9px]">DRAW CALLS</div>
+          <div id="perf-calls" class="text-amber-300 font-semibold">--</div>
+        </div>
+        <div class="bg-slate-900/70 rounded-xl px-2 py-1.5 border border-slate-800">
+          <div class="text-slate-500 text-[9px]">MESHES</div>
+          <div id="perf-meshes" class="text-slate-200 font-semibold">--</div>
+        </div>
+        <div class="bg-slate-900/70 rounded-xl px-2 py-1.5 border border-slate-800">
+          <div class="text-slate-500 text-[9px]">PLAYER XYZ</div>
+          <div id="player-xyz" class="text-rose-300 font-semibold">IDLE</div>
+        </div>
+        <div class="bg-slate-900/70 rounded-xl px-2 py-1.5 border border-slate-800">
+          <div class="text-slate-500 text-[9px]">COLLISION</div>
+          <div id="player-col-status" class="text-emerald-300 font-semibold">READY</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top-Right Modular Group Inspector, Integration Exports & Verification Panel -->
+  <div class="fixed top-4 right-4 z-10 flex flex-col gap-2.5 w-80 max-w-[92vw] max-h-[calc(100vh-110px)]">
+    <button id="toggle-hud-btn" class="sm:hidden self-end glass-panel rounded-xl px-3 py-2 text-xs font-medium text-slate-200">
+      Inspector &amp; Exports
+    </button>
+
+    <div id="right-panel" class="glass-panel rounded-2xl p-4 flex flex-col gap-3.5 overflow-y-auto">
+      <!-- Game Integration Exports (Reusable JS Module, JSONs, GLB) -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-amber-400">Game Integration Exports</span>
+          <span id="export-toast" class="text-[10px] text-emerald-300 mono">READY</span>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5 text-[10px] mono">
+          <button id="btn-dl-js-module" class="glass-btn rounded-xl px-2.5 py-2 text-left text-emerald-300 border-emerald-500/30 font-semibold">
+            1. MapModule.js
+          </button>
+          <button id="btn-dl-collision-json" class="glass-btn rounded-xl px-2.5 py-2 text-left text-sky-300 border-sky-500/30 font-semibold">
+            2. CollisionNav.json
+          </button>
+          <button id="btn-dl-gameplay-json" class="glass-btn rounded-xl px-2.5 py-2 text-left text-amber-300 border-amber-500/30 font-semibold">
+            3. SpawnCap.json
+          </button>
+          <button id="btn-dl-glb" class="glass-btn rounded-xl px-2.5 py-2 text-left text-purple-300 border-purple-500/30 font-semibold">
+            4. ArenaLowPoly.glb
+          </button>
+        </div>
+      </div>
+
+      <!-- Playtest Character & Objective Simulation Controls -->
+      <div class="pt-3 border-t border-slate-700/50">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Playtest &amp; Objective Simulation</span>
+          <button id="btn-sim-reset" class="text-[10px] text-amber-400 hover:underline mono">RESET</button>
+        </div>
+
+        <div class="grid grid-cols-3 gap-1.5 mb-2 text-[10px] mono">
+          <button id="btn-team-red" class="glass-btn active rounded-xl py-1.5 text-rose-300 font-semibold">RED TEAM</button>
+          <button id="btn-team-blue" class="glass-btn rounded-xl py-1.5 text-sky-300 font-semibold">BLUE TEAM</button>
+          <button id="btn-respawn" class="glass-btn rounded-xl py-1.5 text-amber-300 font-semibold">[R] SPAWN</button>
+        </div>
+
+        <div id="capture-sim-panel" class="flex flex-col gap-1.5 text-xs"></div>
+      </div>
+
+      <!-- Visibility & CAD Verification Layers -->
+      <div class="pt-3 border-t border-slate-700/50">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">CAD &amp; Verification Layers</span>
+          <button id="btn-rerun-tests" class="text-[10px] text-emerald-400 hover:underline mono">RUN AUDIT</button>
+        </div>
+        <div class="grid grid-cols-1 gap-1.5 text-xs">
+          <button id="btn-spawns" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Team Spawns &amp; Directional Atlas</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-objectives" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Capture Indicators (A / B / C)</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-cover" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Combat Cover &amp; Industrial Props</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-alpha" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Alpha Platform &amp; Stairs (Y=8m)</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-level2" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Level 2 Hub &amp; Bridges (Y=8m)</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-buildings" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Corner Buildings &amp; Rooftops (Y=4m)</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-staircases" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Corner Staircases &amp; Landings (Y=8m)</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-trusses" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Under-Deck I-Beams &amp; Trusses</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-environment" class="glass-btn active rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Low-Poly Mountain Basin &amp; Sky</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">ON</span>
+          </button>
+          <button id="btn-grid" class="glass-btn rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>10×10 Reference Grid (30m)</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">OFF</span>
+          </button>
+          <button id="btn-collision" class="glass-btn rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Collision Surfaces Overlay</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">OFF</span>
+          </button>
+          <button id="btn-navroutes" class="glass-btn rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Navigation Routes &amp; Spatial Chunks</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">OFF</span>
+          </button>
+          <button id="btn-wireframe" class="glass-btn rounded-xl px-3 py-1.5 flex items-center justify-between text-left">
+            <span>Flat-Poly Facet Wireframe</span>
+            <span class="mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">OFF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modular Construction Groups -->
+      <div class="pt-3 border-t border-slate-700/50">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Modular Groups (Click to Inspect)</span>
+          <button id="btn-clear-selection" class="text-[10px] text-amber-400 hover:underline hidden">Reset</button>
+        </div>
+        <div id="module-list" class="flex flex-col gap-1 text-xs"></div>
+      </div>
+
+      <!-- Engineering Verification & Route Audit Report Card -->
+      <div id="module-spec-card" class="bg-slate-950/75 rounded-xl p-3 border border-slate-800/90 text-[11px] mono">
+        <div class="text-amber-400 font-semibold mb-1" id="spec-title">AUDIT_PENDING</div>
+        <div class="text-slate-300 leading-relaxed whitespace-pre-line" id="spec-details">
+          Running automated physics, route &amp; spawn clearance tests...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Touch Controls (Shown in Playtest Mode on Touch Devices) -->
+  <div id="mobile-touch-controls" class="hidden fixed inset-0 z-20 pointer-events-none">
+    <div id="touch-joystick-base" class="pointer-events-auto fixed bottom-20 left-6 w-28 h-28 rounded-full glass-panel flex items-center justify-center">
+      <div id="touch-joystick-knob" class="w-11 h-11 rounded-full bg-amber-400/70 border border-amber-200 shadow-lg"></div>
+    </div>
+    <div id="touch-look-zone" class="pointer-events-auto fixed top-24 right-0 w-1/2 h-[calc(100%-170px)]"></div>
+    <div class="pointer-events-auto fixed bottom-20 right-6 flex flex-col gap-2">
+      <button id="touch-jump-btn" class="glass-panel rounded-full w-14 h-14 text-xs font-bold text-emerald-300 mono">JUMP</button>
+      <button id="touch-sprint-btn" class="glass-panel rounded-full w-14 h-14 text-xs font-bold text-amber-300 mono">RUN</button>
+    </div>
+  </div>
+
+  <!-- Bottom Camera Preset Dock -->
+  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-10 w-max max-w-[95vw]">
+    <div class="glass-panel rounded-2xl p-1.5 flex items-center gap-1 overflow-x-auto">
+      <button data-cam="iso" class="cam-btn glass-btn active rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap">
+        Isometric Overview
+      </button>
+      <button data-cam="alpha" class="cam-btn glass-btn rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap text-emerald-300">
+        Alpha (0, 8, -105)
+      </button>
+      <button data-cam="redspawn" class="cam-btn glass-btn rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap text-rose-300">
+        Red Spawn (Bravo)
+      </button>
+      <button data-cam="bluespawn" class="cam-btn glass-btn rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap text-sky-300">
+        Blue Spawn (Charlie)
+      </button>
+      <button data-cam="level2" class="cam-btn glass-btn rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap">
+        Level 2 Hub (Y=8m)
+      </button>
+      <button data-cam="top" class="cam-btn glass-btn rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap">
+        Tactical Top-Down
+      </button>
+      <button data-cam="center" class="cam-btn glass-btn rounded-xl px-3 py-1.5 text-xs font-medium whitespace-nowrap">
+        Under L2 Hub (Y=2m)
+      </button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { WebGPURenderer } from 'three/webgpu';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+
+    /**
+     * ============================================================================
+     * DUELIST ADVENTURE — REUSABLE ARENA MAP CONSTRUCTION MODULE (SELF-CONTAINED)
+     * ============================================================================
+     * Decoupled from the HTML inspector, local test character and local capture
+     * simulation so Duelist Adventure's client/server can import and mount it directly.
+     */
+    const ARENA_SPEC = {
+      mapId: 'duelist_control_point_arena_v1',
+      boundarySize: 300,
+      fallRespawnY: -18.0,
+      gridDivisions: 10,
+      cellSize: 30,
+      slabThickness: 2.0,
+      railingHeight: 1.2,
+      pathwayWidth: 14.0,
+      horizontalLength: 210.0,
+      horizontalZ: 90.0,
+      landingSize: 36.0,
+      landingX: 105.0,
+      centerHubSize: 30.0,
+      alphaApexZ: -105.0,
+      crossbarHalfSpan: 52.5,
+      buildingWidth: 10.0,
+      buildingDepth: 12.0,
+      rooftopY: 4.0,
+      upperLandingY: 8.0,
+      wallThickness: 0.3,
+      doorWidth: 3.0,
+      doorHeight: 3.0,
+      stairWidth: 4.0,
+      stepHeight: 0.2,
+      stepDepth: 0.35,
+      risersPerFlight: 20,
+      l2HubWidth: 60.0,
+      l2HubDepth: 40.0,
+      l2HubChamfer: 5.0,
+      l2SlabThickness: 0.8,
+      l2BridgeWidth: 8.0,
+      alphaSize: 40.0,
+      alphaChamfer: 8.0,
+      alphaCaptureRadius: 6.0,
+      alphaBridgeStartZ: -20.0,
+      alphaBridgeEndZ: -85.0,
+      alphaBridgeWidth: 14.0,
+      elevations: {
+        level1DeckY: 0.0,
+        rooftopAndMidLandingY: 4.0,
+        level2DeckAndAlphaY: 8.0
+      },
+      captureRules: {
+        neutralCaptureSeconds: 8.0,
+        decapSeconds: 6.0,
+        contestedPausesProgress: true,
+        verticalToleranceMeters: 3.5
+      }
+    };
+
+    /**
+     * Unified 2D point-in-polygon test in XZ space.
+     * Supports BOTH THREE.Vector2 points ({ x, y }) AND exported world-space points ({ x, z }).
+     */
+    function isPointInPolygonXZ(px, pz, poly2D) {
+      if (!poly2D || poly2D.length < 3) return false;
+      let inside = false;
+      for (let i = 0, j = poly2D.length - 1; i < poly2D.length; j = i++) {
+        const pi = poly2D[i];
+        const pj = poly2D[j];
+        const xi = pi.x;
+        const zi = pi.z !== undefined ? pi.z : pi.y;
+        const xj = pj.x;
+        const zj = pj.z !== undefined ? pj.z : pj.y;
+        const intersect =
+          (zi > pz) !== (zj > pz) &&
+          px < ((xj - xi) * (pz - zi)) / (zj - zi || 1e-9) + xi;
+        if (intersect) inside = !inside;
+      }
+      return inside;
+    }
+
+    function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
+      const SPEC = {
+        ...ARENA_SPEC,
+        ...customOptions,
+        captureRules: { ...ARENA_SPEC.captureRules, ...(customOptions.captureRules || {}) }
+      };
+
+      const root = new THREE_LIB.Group();
+      root.name = 'Duelist_Control_Point_Arena';
+
+      // ==========================================================================
+      // STYLIZED LOW-POLY MOUNTAIN BASIN & SKY DOME BACKDROP (ZERO COLLISION)
+      // ==========================================================================
+      const environmentGroup = new THREE_LIB.Group();
+      environmentGroup.name = 'Stylized_Mountain_Environment';
+      root.add(environmentGroup);
+
+      function createGradientSkyTexture() {
+        const w = 256;
+        const h = 128;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+
+        // Soft blue zenith transitioning to a subtle warm horizon
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0.0, '#1e4e79');
+        grad.addColorStop(0.42, '#4a85b8');
+        grad.addColorStop(0.76, '#9fc4de');
+        grad.addColorStop(0.92, '#dfcdb8');
+        grad.addColorStop(1.0, '#cdbba8');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Faint painted low-contrast cloud wisps near the upper horizon
+        ctx.fillStyle = 'rgba(248, 250, 252, 0.14)';
+        const wisps = [
+          [24, 72, 46, 7],
+          [92, 66, 54, 8],
+          [168, 74, 48, 6],
+          [218, 68, 36, 7],
+          [56, 82, 40, 5],
+          [142, 80, 44, 6]
+        ];
+        wisps.forEach(([cx, cy, rx, ry]) => {
+          ctx.beginPath();
+          ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        const tex = new THREE_LIB.CanvasTexture(canvas);
+        tex.wrapS = THREE_LIB.RepeatWrapping;
+        tex.wrapT = THREE_LIB.ClampToEdgeWrapping;
+        tex.colorSpace = THREE_LIB.SRGBColorSpace;
+        return tex;
+      }
+
+      const skyTexture = createGradientSkyTexture();
+      const skyMat = new THREE_LIB.MeshBasicMaterial({
+        map: skyTexture,
+        side: THREE_LIB.BackSide,
+        depthWrite: false,
+        fog: false
+      });
+      // Low-poly 16x8 sky dome (224 triangles total)
+      const skyDome = new THREE_LIB.Mesh(
+        new THREE_LIB.SphereGeometry(860, 16, 8, 0, Math.PI * 2, 0, Math.PI * 0.62),
+        skyMat
+      );
+      skyDome.name = 'Sky_Dome';
+      skyDome.renderOrder = -10;
+      environmentGroup.add(skyDome);
+
+      /**
+       * Builds a static, angular, low-poly mountain ring using a single shared material.
+       */
+      function createLowPolyMountainRing({
+        name,
+        segments,
+        innerRadius,
+        outerRadius,
+        baseY,
+        minPeakY,
+        maxPeakY,
+        seed,
+        material
+      }) {
+        const positions = [];
+        const seededNoise = (i) => {
+          const s = Math.sin(i * 12.9898 + seed * 78.233) * 43758.5453;
+          return s - Math.floor(s);
+        };
+
+        const ridgePts = [];
+        const innerPts = [];
+        const outerPts = [];
+
+        for (let i = 0; i < segments; i++) {
+          const ang = (i / segments) * Math.PI * 2;
+          const cos = Math.cos(ang);
+          const sin = Math.sin(ang);
+
+          // Harmonic + deterministic angular variation for stylized mountain peaks
+          const wave =
+            0.55 +
+            0.25 * Math.sin(ang * 3.0 + seed) +
+            0.2 * Math.cos(ang * 5.0 - seed * 1.7);
+          const jitter = seededNoise(i);
+          const peakH = minPeakY + (maxPeakY - minPeakY) * Math.min(1, Math.max(0, wave * 0.65 + jitter * 0.35));
+          const ridgeR = innerRadius + (outerRadius - innerRadius) * (0.42 + 0.16 * seededNoise(i + 41));
+
+          innerPts.push([cos * innerRadius, baseY, sin * innerRadius]);
+          ridgePts.push([cos * ridgeR, peakH, sin * ridgeR]);
+          outerPts.push([cos * outerRadius, baseY - 25, sin * outerRadius]);
+        }
+
+        const pushTri = (a, b, c) => {
+          positions.push(a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2]);
+        };
+
+        for (let i = 0; i < segments; i++) {
+          const next = (i + 1) % segments;
+          // Inner slope facing the arena
+          pushTri(innerPts[i], ridgePts[i], innerPts[next]);
+          pushTri(innerPts[next], ridgePts[i], ridgePts[next]);
+          // Outer back-slope
+          pushTri(ridgePts[i], outerPts[i], ridgePts[next]);
+          pushTri(ridgePts[next], outerPts[i], outerPts[next]);
+        }
+
+        const geo = new THREE_LIB.BufferGeometry();
+        geo.setAttribute('position', new THREE_LIB.Float32BufferAttribute(positions, 3));
+        geo.computeVertexNormals();
+
+        const mesh = new THREE_LIB.Mesh(geo, material);
+        mesh.name = name;
+        mesh.frustumCulled = false;
+        return mesh;
+      }
+
+      // Closer near mountain layer: crisp slate blue-gray peaks outside the 300x300m playable zone
+      const nearMountainMat = new THREE_LIB.MeshStandardMaterial({
+        color: 0x33475e,
+        roughness: 0.9,
+        metalness: 0.05,
+        flatShading: true
+      });
+      const nearMountains = createLowPolyMountainRing({
+        name: 'Mountain_Ring_Near',
+        segments: 40,
+        innerRadius: 215,
+        outerRadius: 345,
+        baseY: -82,
+        minPeakY: 16,
+        maxPeakY: 78,
+        seed: 1.4,
+        material: nearMountainMat
+      });
+      environmentGroup.add(nearMountains);
+
+      // Farther background mountain layer: lighter desaturated blue-slate silhouettes for depth
+      const farMountainMat = new THREE_LIB.MeshStandardMaterial({
+        color: 0x6783a1,
+        roughness: 0.94,
+        metalness: 0.02,
+        flatShading: true
+      });
+      const farMountains = createLowPolyMountainRing({
+        name: 'Mountain_Ring_Far',
+        segments: 36,
+        innerRadius: 325,
+        outerRadius: 520,
+        baseY: -92,
+        minPeakY: 46,
+        maxPeakY: 138,
+        seed: 4.9,
+        material: farMountainMat
+      });
+      environmentGroup.add(farMountains);
+
+      // Visible golden daylight sun positioned ~36 degrees above the horizon
+      const sunElevationRad = THREE_LIB.MathUtils.degToRad(36);
+      const sunAzimuthRad = THREE_LIB.MathUtils.degToRad(34);
+      const sunRadius = 610;
+      const sunHoriz = Math.cos(sunElevationRad) * sunRadius;
+      const sunPosition = new THREE_LIB.Vector3(
+        Math.sin(sunAzimuthRad) * sunHoriz,
+        Math.sin(sunElevationRad) * sunRadius,
+        -Math.cos(sunAzimuthRad) * sunHoriz
+      );
+
+      const sunMat = new THREE_LIB.MeshBasicMaterial({
+        color: 0xffe49e,
+        fog: false
+      });
+      const sunDisc = new THREE_LIB.Mesh(new THREE_LIB.CircleGeometry(24, 16), sunMat);
+      sunDisc.position.copy(sunPosition);
+      sunDisc.lookAt(0, 0, 0);
+      sunDisc.name = 'Golden_Sun_Disc';
+      environmentGroup.add(sunDisc);
+
+      const sunHaloMat = new THREE_LIB.MeshBasicMaterial({
+        color: 0xffcf75,
+        transparent: true,
+        opacity: 0.2,
+        depthWrite: false,
+        fog: false
+      });
+      const sunHalo = new THREE_LIB.Mesh(new THREE_LIB.CircleGeometry(46, 16), sunHaloMat);
+      sunHalo.position.copy(sunPosition).multiplyScalar(0.996);
+      sunHalo.lookAt(0, 0, 0);
+      sunHalo.name = 'Golden_Sun_Halo';
+      environmentGroup.add(sunHalo);
+
+      // Stylized animated low-poly mountain lake at Y = -80m (vertex-wave ripples + teal/blue depth)
+      const lakeGeo = new THREE_LIB.RingGeometry(0.01, 520, 36, 10);
+      lakeGeo.rotateX(-Math.PI / 2);
+      const lakePos = lakeGeo.attributes.position;
+      const lakeBaseY = new Float32Array(lakePos.count);
+      const lakePhase = new Float32Array(lakePos.count);
+      const lakeColors = new Float32Array(lakePos.count * 3);
+      const cShallow = new THREE_LIB.Color(0x14859e);
+      const cMid = new THREE_LIB.Color(0x0d5c80);
+      const cDeep = new THREE_LIB.Color(0x083857);
+      const tmpLakeColor = new THREE_LIB.Color();
+
+      for (let i = 0; i < lakePos.count; i++) {
+        const vx = lakePos.getX(i);
+        const vz = lakePos.getZ(i);
+        const dist = Math.hypot(vx, vz);
+        const normDist = Math.min(1, dist / 330);
+        // Subtle low-poly bathymetry & angular wave phase per vertex
+        lakePhase[i] = vx * 0.045 + vz * 0.038 + Math.sin(dist * 0.04) * 1.4;
+        lakeBaseY[i] = -80 + Math.sin(lakePhase[i]) * 0.55;
+        lakePos.setY(i, lakeBaseY[i]);
+
+        if (normDist < 0.45) {
+          tmpLakeColor.copy(cMid).lerp(cShallow, normDist / 0.45);
+        } else {
+          tmpLakeColor.copy(cShallow).lerp(cDeep, (normDist - 0.45) / 0.55);
+        }
+        lakeColors[i * 3] = tmpLakeColor.r;
+        lakeColors[i * 3 + 1] = tmpLakeColor.g;
+        lakeColors[i * 3 + 2] = tmpLakeColor.b;
+      }
+      lakeGeo.setAttribute('color', new THREE_LIB.BufferAttribute(lakeColors, 3));
+      lakeGeo.computeVertexNormals();
+
+      const mountainLakeMat = new THREE_LIB.MeshStandardMaterial({
+        vertexColors: true,
+        emissive: 0x062c43,
+        emissiveIntensity: 0.35,
+        roughness: 0.24,
+        metalness: 0.42,
+        flatShading: true
+      });
+      const mountainLake = new THREE_LIB.Mesh(lakeGeo, mountainLakeMat);
+      mountainLake.name = 'Mountain_Lake_Surface';
+      environmentGroup.add(mountainLake);
+
+      // Gentle animated sunlight shimmer planes across the water surface
+      const sunGlintMat = new THREE_LIB.MeshBasicMaterial({
+        color: 0xfef08a,
+        transparent: true,
+        opacity: 0.24,
+        depthWrite: false
+      });
+      const sunGlintGroup = new THREE_LIB.Group();
+      sunGlintGroup.rotation.y = -sunAzimuthRad;
+      const glintStrips = [];
+      [
+        { z: -95, w: 34, d: 18, baseOp: 0.22, speed: 1.7, phase: 0.0 },
+        { z: -145, w: 46, d: 22, baseOp: 0.26, speed: 1.4, phase: 1.3 },
+        { z: -200, w: 56, d: 26, baseOp: 0.24, speed: 1.9, phase: 2.6 },
+        { z: -260, w: 64, d: 30, baseOp: 0.18, speed: 1.5, phase: 3.9 }
+      ].forEach((cfg) => {
+        const mat = sunGlintMat.clone();
+        mat.opacity = cfg.baseOp;
+        const m = new THREE_LIB.Mesh(new THREE_LIB.PlaneGeometry(cfg.w, cfg.d), mat);
+        m.rotation.x = -Math.PI / 2;
+        m.position.set(0, -79.2, cfg.z);
+        sunGlintGroup.add(m);
+        glintStrips.push({ mesh: m, mat, cfg });
+      });
+      environmentGroup.add(sunGlintGroup);
+
+      let lakeAnimTime = 0;
+      let lakeFrameSkip = 0;
+      function updateEnvironment(dt) {
+        if (!environmentGroup.visible) return;
+        lakeAnimTime += dt;
+        // Update low-poly vertex wave motion every 2nd frame for ultra-light mobile/WebGPU cost
+        lakeFrameSkip = (lakeFrameSkip + 1) & 1;
+        if (lakeFrameSkip === 0) {
+          for (let i = 0; i < lakePos.count; i++) {
+            lakePos.setY(i, -80 + Math.sin(lakeAnimTime * 1.45 + lakePhase[i]) * 0.62);
+          }
+          lakePos.needsUpdate = true;
+          lakeGeo.computeVertexNormals();
+        }
+        for (let i = 0; i < glintStrips.length; i++) {
+          const g = glintStrips[i];
+          const pulse = Math.sin(lakeAnimTime * g.cfg.speed + g.cfg.phase);
+          g.mat.opacity = g.cfg.baseOp * (0.72 + 0.28 * pulse);
+          g.mesh.scale.x = 0.92 + 0.1 * pulse;
+        }
+      }
+
+      // ==========================================================================
+      // SPATIAL PARTITIONING, PROCEDURAL TEXTURES & SHARED LOW-POLY MATERIALS
+      // ==========================================================================
+      const spatialChunks = {
+        Sector_SouthWest_Bravo: new THREE_LIB.Group(),
+        Sector_SouthEast_Charlie: new THREE_LIB.Group(),
+        Sector_Central_Hub: new THREE_LIB.Group(),
+        Sector_North_Alpha: new THREE_LIB.Group()
+      };
+      Object.entries(spatialChunks).forEach(([name, grp]) => {
+        grp.name = name;
+        root.add(grp);
+      });
+
+      function assignToSpatialChunk(group, cx, cz) {
+        if (cz < -42) spatialChunks.Sector_North_Alpha.add(group);
+        else if (cx < -35 && cz >= 35) spatialChunks.Sector_SouthWest_Bravo.add(group);
+        else if (cx > 35 && cz >= 35) spatialChunks.Sector_SouthEast_Charlie.add(group);
+        else spatialChunks.Sector_Central_Hub.add(group);
+      }
+
+      const createdTextures = [];
+      function makeCanvasTexture(size, drawFn, repeat = false) {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        drawFn(canvas.getContext('2d'), size);
+        const tex = new THREE_LIB.CanvasTexture(canvas);
+        if (repeat) {
+          tex.wrapS = THREE_LIB.RepeatWrapping;
+          tex.wrapT = THREE_LIB.RepeatWrapping;
+          tex.repeat.set(0.25, 0.25);
+        }
+        tex.colorSpace = THREE_LIB.SRGBColorSpace;
+        createdTextures.push(tex);
+        return tex;
+      }
+
+      const hexTex = makeCanvasTexture(256, (ctx, size) => {
+        ctx.fillStyle = '#182232';
+        ctx.fillRect(0, 0, size, size);
+        const r = 24, dx = r * 1.5, dy = r * Math.sqrt(3);
+        ctx.lineWidth = 2;
+        for (let gx = -dx; gx < size + dx * 2; gx += dx) {
+          const col = Math.round(gx / dx);
+          const offsetY = (col % 2) * (dy * 0.5);
+          for (let gy = -dy; gy < size + dy * 2; gy += dy) {
+            const cx = gx, cy = gy + offsetY;
+            ctx.beginPath();
+            for (let i = 0; i < 6; i++) {
+              const ang = (Math.PI / 3) * i;
+              const px = cx + r * 0.9 * Math.cos(ang);
+              const py = cy + r * 0.9 * Math.sin(ang);
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fillStyle = (col + Math.round(gy / dy)) % 2 === 0 ? '#1c2739' : '#151e2c';
+            ctx.fill();
+            ctx.strokeStyle = '#0d131d';
+            ctx.stroke();
+          }
+        }
+      }, true);
+
+      const trimTex = makeCanvasTexture(256, (ctx, size) => {
+        ctx.fillStyle = '#0f1520';
+        ctx.fillRect(0, 0, size, size);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.moveTo(0, 48); ctx.lineTo(76, 48); ctx.lineTo(104, 88);
+        ctx.lineTo(176, 88); ctx.lineTo(204, 48); ctx.lineTo(256, 48);
+        ctx.moveTo(0, 208); ctx.lineTo(64, 208); ctx.lineTo(92, 168);
+        ctx.lineTo(188, 168); ctx.lineTo(216, 208); ctx.lineTo(256, 208);
+        ctx.stroke();
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(122, 82, 12, 12);
+        ctx.fillRect(122, 162, 12, 12);
+      }, true);
+
+      const cargoTex = makeCanvasTexture(128, (ctx, size) => {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(0, 0, size, size);
+        ctx.strokeStyle = '#0f172a';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(6, 6, size - 12, size - 12);
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(16, 16); ctx.lineTo(size - 16, size - 16);
+        ctx.moveTo(size - 16, 16); ctx.lineTo(16, size - 16);
+        ctx.stroke();
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(14, 14, 18, 5);
+        ctx.fillRect(size - 32, size - 19, 18, 5);
+      });
+
+      const ventTex = makeCanvasTexture(128, (ctx, size) => {
+        ctx.fillStyle = '#1b2432';
+        ctx.fillRect(0, 0, size, size);
+        ctx.strokeStyle = '#0b1018';
+        ctx.lineWidth = 4;
+        ctx.strokeRect(4, 4, size - 8, size - 8);
+        for (let y = 18; y < size - 16; y += 12) {
+          ctx.fillStyle = '#090d14';
+          ctx.fillRect(14, y, size - 28, 6);
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(14, y + 6, size - 28, 2);
+        }
+      });
+
+      const signTex = makeCanvasTexture(256, (ctx, size) => {
+        ctx.clearRect(0, 0, size, size);
+        const labels = [
+          ['▲ ALPHA', '#10b981'], ['▲ BRAVO', '#a855f7'], ['▲ CHARLIE', '#f59e0b'], ['▲ LEVEL 2', '#38bdf8'],
+          ['▲ STAIRS', '#fbbf24'], ['▲ RED SPAWN', '#ef4444'], ['▲ BLUE SPAWN', '#3b82f6'], ['◆ HUB', '#94a3b8']
+        ];
+        ctx.font = 'bold 13px monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        labels.forEach(([txt, col], idx) => {
+          const c = idx % 4;
+          const r = Math.floor(idx / 4);
+          const x = c * 64 + 32;
+          const y = r * 128 + 64;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+          ctx.fillRect(c * 64 + 4, r * 128 + 38, 56, 52);
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(c * 64 + 4, r * 128 + 38, 56, 52);
+          ctx.fillStyle = col;
+          ctx.fillText(txt, x, y);
+        });
+      });
+
+      const materials = {
+        hexDeck: new THREE_LIB.MeshStandardMaterial({ map: hexTex, flatShading: true, color: 0xdbeafe, metalness: 0.62, roughness: 0.44 }),
+        perimeterTrim: new THREE_LIB.MeshStandardMaterial({ map: trimTex, flatShading: true, color: 0x94a3b8, metalness: 0.72, roughness: 0.36 }),
+        foundationHull: new THREE_LIB.MeshStandardMaterial({ color: 0x161d29, flatShading: true, metalness: 0.78, roughness: 0.38 }),
+        steelBeam: new THREE_LIB.MeshStandardMaterial({ color: 0x283447, flatShading: true, metalness: 0.82, roughness: 0.32 }),
+        railingMetal: new THREE_LIB.MeshStandardMaterial({ color: 0x475569, flatShading: true, metalness: 0.84, roughness: 0.28 }),
+        amberEmissive: new THREE_LIB.MeshStandardMaterial({ color: 0xf59e0b, emissive: 0xf59e0b, emissiveIntensity: 1.45, flatShading: true, roughness: 0.25 }),
+        inlayAccent: new THREE_LIB.MeshStandardMaterial({ color: 0x101724, flatShading: true, metalness: 0.68, roughness: 0.42 }),
+        alphaGreenEmissive: new THREE_LIB.MeshStandardMaterial({ color: 0x10b981, emissive: 0x10b981, emissiveIntensity: 1.55, flatShading: true, roughness: 0.25 }),
+        redTeamEmissive: new THREE_LIB.MeshStandardMaterial({ color: 0xef4444, emissive: 0xef4444, emissiveIntensity: 1.55, flatShading: true, roughness: 0.25 }),
+        blueTeamEmissive: new THREE_LIB.MeshStandardMaterial({ color: 0x3b82f6, emissive: 0x3b82f6, emissiveIntensity: 1.55, flatShading: true, roughness: 0.25 }),
+        neutralCaptureEmissive: new THREE_LIB.MeshStandardMaterial({ color: 0xdbeafe, emissive: 0x94a3b8, emissiveIntensity: 0.95, flatShading: true, roughness: 0.3 }),
+        contestedCaptureEmissive: new THREE_LIB.MeshStandardMaterial({ color: 0xfbbf24, emissive: 0xf59e0b, emissiveIntensity: 1.7, flatShading: true, roughness: 0.22 }),
+        cargoPanel: new THREE_LIB.MeshStandardMaterial({ map: cargoTex, flatShading: true, color: 0xcbd5e1, metalness: 0.65, roughness: 0.45 }),
+        ventUnit: new THREE_LIB.MeshStandardMaterial({ map: ventTex, flatShading: true, color: 0xcbd5e1, metalness: 0.74, roughness: 0.38 }),
+        tacticalSignage: new THREE_LIB.MeshBasicMaterial({ map: signTex, transparent: true, depthWrite: false })
+      };
+
+      const modularGroups = [];
+      const collisionDefinitions = [];
+      const connectionPoints = [];
+      const obstacleDefinitions = [];
+      const beamInstances = [];
+      const braceInstances = [];
+      const stepInstances = [];
+      const postInstances = [];
+
+      function getOctagonPoints(cx, cz, size) {
+        const half = size * 0.5;
+        const cut = size * 0.28;
+        return [
+          new THREE_LIB.Vector2(cx - half + cut, cz - half),
+          new THREE_LIB.Vector2(cx + half - cut, cz - half),
+          new THREE_LIB.Vector2(cx + half, cz - half + cut),
+          new THREE_LIB.Vector2(cx + half, cz + half - cut),
+          new THREE_LIB.Vector2(cx + half - cut, cz + half),
+          new THREE_LIB.Vector2(cx - half + cut, cz + half),
+          new THREE_LIB.Vector2(cx - half, cz + half - cut),
+          new THREE_LIB.Vector2(cx - half, cz - half + cut)
+        ];
+      }
+
+      function getChamferedRectPoints(cx, cz, width, depth, chamfer) {
+        const hw = width * 0.5;
+        const hd = depth * 0.5;
+        const c = Math.min(chamfer, hw * 0.45, hd * 0.45);
+        return [
+          new THREE_LIB.Vector2(cx - hw + c, cz - hd),
+          new THREE_LIB.Vector2(cx + hw - c, cz - hd),
+          new THREE_LIB.Vector2(cx + hw, cz - hd + c),
+          new THREE_LIB.Vector2(cx + hw, cz + hd - c),
+          new THREE_LIB.Vector2(cx + hw - c, cz + hd),
+          new THREE_LIB.Vector2(cx - hw + c, cz + hd),
+          new THREE_LIB.Vector2(cx - hw, cz + hd - c),
+          new THREE_LIB.Vector2(cx - hw, cz - hd + c)
+        ];
+      }
+
+      function createSlabFromPoints(points2D, topY, height, material) {
+        const shape = new THREE_LIB.Shape();
+        points2D.forEach((pt, idx) => {
+          if (idx === 0) shape.moveTo(pt.x, -pt.y);
+          else shape.lineTo(pt.x, -pt.y);
+        });
+        shape.closePath();
+        const rawGeo = new THREE_LIB.ExtrudeGeometry(shape, { depth: height, bevelEnabled: false, steps: 1 });
+        rawGeo.rotateX(-Math.PI / 2);
+        rawGeo.translate(0, topY - height, 0);
+        const posAttr = rawGeo.attributes.position;
+        const uvAttr = rawGeo.attributes.uv;
+        for (let i = 0; i < posAttr.count; i++) uvAttr.setXY(i, posAttr.getX(i), posAttr.getZ(i));
+        uvAttr.needsUpdate = true;
+        const flatGeo = rawGeo.index ? rawGeo.toNonIndexed() : rawGeo;
+        flatGeo.computeVertexNormals();
+        return new THREE_LIB.Mesh(flatGeo, material);
+      }
+
+      function addCollisionVolume(id, type, minVec, maxVec, rotationY = 0, slopeDeg = 0, polygonPts = null, endpoints = null) {
+        const entry = {
+          id,
+          type,
+          bounds: {
+            min: { x: Math.min(minVec.x, maxVec.x), y: Math.min(minVec.y, maxVec.y), z: Math.min(minVec.z, maxVec.z) },
+            max: { x: Math.max(minVec.x, maxVec.x), y: Math.max(minVec.y, maxVec.y), z: Math.max(minVec.z, maxVec.z) }
+          },
+          rotationY,
+          slopeDegrees: slopeDeg
+        };
+        if (polygonPts) {
+          entry.polygonXZ = polygonPts.map((p) => ({ x: p.x, z: p.z !== undefined ? p.z : p.y }));
+        }
+        if (endpoints) {
+          entry.endpoints = endpoints;
+        }
+        collisionDefinitions.push(entry);
+      }
+
+      function addEdgeDetails(group, points2D, openEdgeSet, yTop = 0, addRailings = true, edgeGaps = {}, layer = 'level1', emissiveMat = materials.amberEmissive) {
+        const railH = SPEC.railingHeight;
+        for (let i = 0; i < points2D.length; i++) {
+          const p1 = points2D[i];
+          const p2 = points2D[(i + 1) % points2D.length];
+          const dx = p2.x - p1.x;
+          const dz = p2.y - p1.y;
+          const len = Math.hypot(dx, dz);
+          if (len < 0.1) continue;
+          const ux = dx / len;
+          const uz = dz / len;
+          const nx = uz;
+          const nz = -ux;
+          const angle = -Math.atan2(dz, dx);
+
+          // Perimeter trim & glowing edge strip along outer edges
+          if (!openEdgeSet.has(i)) {
+            const trimMesh = new THREE_LIB.Mesh(new THREE_LIB.BoxGeometry(len, 0.24, 0.36), materials.perimeterTrim);
+            trimMesh.position.set((p1.x + p2.x) * 0.5 - nx * 0.16, yTop - 0.1, (p1.y + p2.y) * 0.5 - nz * 0.16);
+            trimMesh.rotation.y = angle;
+            group.add(trimMesh);
+
+            const glowMesh = new THREE_LIB.Mesh(new THREE_LIB.BoxGeometry(len, 0.08, 0.1), emissiveMat);
+            glowMesh.position.set((p1.x + p2.x) * 0.5 - nx * 0.04, yTop + 0.03, (p1.y + p2.y) * 0.5 - nz * 0.04);
+            glowMesh.rotation.y = angle;
+            group.add(glowMesh);
+          }
+
+          if (!addRailings || openEdgeSet.has(i)) continue;
+
+          const gap = edgeGaps[i];
+          const segments = gap ? [[0, Math.max(0, gap[0])], [Math.min(len, gap[1]), len]] : [[0, len]];
+
+          segments.forEach(([s0, s1], segIdx) => {
+            const segLen = s1 - s0;
+            if (segLen < 0.4) return;
+            const midD = (s0 + s1) * 0.5;
+            const cx = p1.x + ux * midD - nx * 0.14;
+            const cz = p1.y + uz * midD - nz * 0.14;
+
+            [railH, railH * 0.52].forEach((ry) => {
+              const bar = new THREE_LIB.Mesh(new THREE_LIB.BoxGeometry(segLen, 0.08, 0.08), materials.railingMetal);
+              bar.position.set(cx, yTop + ry, cz);
+              bar.rotation.y = angle;
+              group.add(bar);
+            });
+
+            const postCount = Math.max(2, Math.floor(segLen / 3.5) + 1);
+            for (let k = 0; k < postCount; k++) {
+              const d = s0 + (k / (postCount - 1)) * segLen;
+              postInstances.push({
+                x: p1.x + ux * d - nx * 0.14,
+                y: yTop + railH * 0.5,
+                z: p1.y + uz * d - nz * 0.14,
+                angle,
+                layer
+              });
+            }
+
+            // Railing collision volume
+            const ax = p1.x + ux * s0 - nx * 0.14;
+            const az = p1.y + uz * s0 - nz * 0.14;
+            const bx = p1.x + ux * s1 - nx * 0.14;
+            const bz = p1.y + uz * s1 - nz * 0.14;
+            const rPoly = [
+              { x: ax - nx * 0.18, z: az - nz * 0.18 },
+              { x: bx - nx * 0.18, z: bz - nz * 0.18 },
+              { x: bx + nx * 0.18, z: bz + nz * 0.18 },
+              { x: ax + nx * 0.18, z: az + nz * 0.18 }
+            ];
+            addCollisionVolume(
+              `${group.name || 'Deck'}_Railing_${i}_${segIdx}`,
+              'safety_railing',
+              new THREE_LIB.Vector3(Math.min(ax, bx) - 0.25, yTop, Math.min(az, bz) - 0.25),
+              new THREE_LIB.Vector3(Math.max(ax, bx) + 0.25, yTop + railH, Math.max(az, bz) + 0.25),
+              angle,
+              0,
+              rPoly
+            );
+          });
+        }
+      }
+
+      function registerSpanUnderStructure(p1, p2, spanWidth, yBottom = -2.0) {
+        const dx = p2.x - p1.x;
+        const dz = p2.y - p1.y;
+        const len = Math.hypot(dx, dz);
+        const angle = -Math.atan2(dz, dx);
+        const ux = dx / len;
+        const uz = dz / len;
+        const nx = -uz;
+        const nz = ux;
+        const midX = (p1.x + p2.x) * 0.5;
+        const midZ = (p1.y + p2.y) * 0.5;
+
+        [-spanWidth * 0.34, spanWidth * 0.34].forEach((offset) => {
+          beamInstances.push({ x: midX + nx * offset, y: yBottom - 0.55, z: midZ + nz * offset, len, angle });
+        });
+
+        const bayCount = Math.max(2, Math.floor(len / 12));
+        for (let i = 0; i <= bayCount; i++) {
+          const d = (i / bayCount) * len;
+          const bx = p1.x + ux * d;
+          const bz = p1.y + uz * d;
+          beamInstances.push({ x: bx, y: yBottom - 0.55, z: bz, len: spanWidth * 0.78, angle: angle + Math.PI / 2 });
+
+          if (i < bayCount) {
+            const dNext = ((i + 0.5) / bayCount) * len;
+            braceInstances.push({
+              x: p1.x + ux * dNext,
+              y: yBottom - 1.35,
+              z: p1.y + uz * dNext,
+              angle,
+              flip: i % 2 === 0
+            });
+          }
+        }
+      }
+
+      function registerModule(group, id, label, specs, cx = 0, cz = 0) {
+        group.name = id;
+        assignToSpatialChunk(group, cx, cz);
+        modularGroups.push({ id, label, specs, group });
+        return group;
+      }
+
+      /**
+       * Merges compatible static meshes by material inside a group so each modular
+       * group uses minimal draw calls, and computes tight bounding spheres for frustum culling.
+       */
+      function optimizeGroupStaticMeshes(group) {
+        const buckets = new Map();
+        const toRemove = [];
+        group.updateMatrixWorld(true);
+
+        group.traverse((child) => {
+          if (!child.isMesh || child.isInstancedMesh) return;
+          const mat = child.material;
+          if (!mat || Array.isArray(mat)) return;
+
+          let geo = child.geometry.clone();
+          if (geo.index) geo = geo.toNonIndexed();
+          geo.applyMatrix4(child.matrixWorld);
+          if (!geo.attributes.normal) geo.computeVertexNormals();
+
+          if (!buckets.has(mat)) buckets.set(mat, []);
+          buckets.get(mat).push(geo);
+          toRemove.push(child);
+        });
+
+        toRemove.forEach((m) => {
+          if (m.parent) m.parent.remove(m);
+          m.geometry.dispose();
+        });
+
+        buckets.forEach((geos, mat) => {
+          if (geos.length === 0) return;
+          let totalVerts = 0;
+          geos.forEach((g) => (totalVerts += g.attributes.position.count));
+
+          const posArr = new Float32Array(totalVerts * 3);
+          const normArr = new Float32Array(totalVerts * 3);
+          const uvArr = new Float32Array(totalVerts * 2);
+
+          let offset = 0;
+          geos.forEach((g) => {
+            const p = g.attributes.position.array;
+            const n = g.attributes.normal.array;
+            const u = g.attributes.uv ? g.attributes.uv.array : null;
+            const count = g.attributes.position.count;
+            posArr.set(p, offset * 3);
+            normArr.set(n, offset * 3);
+            if (u) uvArr.set(u, offset * 2);
+            offset += count;
+            g.dispose();
+          });
+
+          const mergedGeo = new THREE_LIB.BufferGeometry();
+          mergedGeo.setAttribute('position', new THREE_LIB.BufferAttribute(posArr, 3));
+          mergedGeo.setAttribute('normal', new THREE_LIB.BufferAttribute(normArr, 3));
+          mergedGeo.setAttribute('uv', new THREE_LIB.BufferAttribute(uvArr, 2));
+          mergedGeo.computeBoundingSphere();
+
+          const mergedMesh = new THREE_LIB.Mesh(mergedGeo, mat);
+          mergedMesh.frustumCulled = true;
+          group.add(mergedMesh);
+        });
+      }
+
+      // --------------------------------------------------------------------------
+      // LEVEL 1 FOUNDATION (Y = 0.0m)
+      // --------------------------------------------------------------------------
+      const bravoOctPts = getOctagonPoints(-SPEC.landingX, SPEC.horizontalZ, SPEC.landingSize);
+      const charlieOctPts = getOctagonPoints(SPEC.landingX, SPEC.horizontalZ, SPEC.landingSize);
+      const centerOctPts = getOctagonPoints(0, 0, SPEC.centerHubSize);
+
+      const gBL = new THREE_LIB.Group();
+      gBL.add(createSlabFromPoints(bravoOctPts, 0, 0.28, materials.hexDeck));
+      gBL.add(createSlabFromPoints(bravoOctPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+      addEdgeDetails(gBL, bravoOctPts, new Set([1, 2]), 0, true, {}, 'level1');
+      addCollisionVolume('Landing_Platform_BL_Floor', 'walkable_floor', new THREE_LIB.Vector3(-123, -2, 72), new THREE_LIB.Vector3(-87, 0, 108), 0, 0, bravoOctPts);
+      registerModule(gBL, 'Landing_Platform_BL', 'Bravo Octagon (Y=0m)', '36m x 36m octagonal deck @ (-105, 0, +90)', -105, 90);
+
+      const gBR = new THREE_LIB.Group();
+      gBR.add(createSlabFromPoints(charlieOctPts, 0, 0.28, materials.hexDeck));
+      gBR.add(createSlabFromPoints(charlieOctPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+      addEdgeDetails(gBR, charlieOctPts, new Set([6, 7]), 0, true, {}, 'level1');
+      addCollisionVolume('Landing_Platform_BR_Floor', 'walkable_floor', new THREE_LIB.Vector3(87, -2, 72), new THREE_LIB.Vector3(123, 0, 108), 0, 0, charlieOctPts);
+      registerModule(gBR, 'Landing_Platform_BR', 'Charlie Octagon (Y=0m)', '36m x 36m octagonal deck @ (+105, 0, +90)', 105, 90);
+
+      // Main Horizontal Pathway (Z = +90m, 14m wide)
+      const gHoriz = new THREE_LIB.Group();
+      const horizPts = [
+        new THREE_LIB.Vector2(-88, 83),
+        new THREE_LIB.Vector2(88, 83),
+        new THREE_LIB.Vector2(88, 97),
+        new THREE_LIB.Vector2(-88, 97)
+      ];
+      gHoriz.add(createSlabFromPoints(horizPts, 0, 0.28, materials.hexDeck));
+      gHoriz.add(createSlabFromPoints(horizPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+      addEdgeDetails(gHoriz, horizPts, new Set([1, 3]), 0, true, { 0: [81, 95] }, 'level1');
+      registerSpanUnderStructure(new THREE_LIB.Vector2(-88, 90), new THREE_LIB.Vector2(88, 90), 14, -2.0);
+      addCollisionVolume('Horizontal_Pathway_Floor', 'walkable_floor', new THREE_LIB.Vector3(-88, -2, 83), new THREE_LIB.Vector3(88, 0, 97), 0, 0, horizPts);
+      registerModule(gHoriz, 'Horizontal_Pathway', 'South Bridge (210m x 14m)', 'Connects Bravo & Charlie along Z = +90m', 0, 90);
+
+      // Central Ground Intersection (30m x 30m @ 0,0,0)
+      const gCenterL1 = new THREE_LIB.Group();
+      gCenterL1.add(createSlabFromPoints(centerOctPts, 0, 0.28, materials.hexDeck));
+      gCenterL1.add(createSlabFromPoints(centerOctPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+      addEdgeDetails(gCenterL1, centerOctPts, new Set([0, 2, 4, 6]), 0, true, {}, 'level1');
+      addCollisionVolume('Central_Intersection_Floor', 'walkable_floor', new THREE_LIB.Vector3(-15, -2, -15), new THREE_LIB.Vector3(15, 0, 15), 0, 0, centerOctPts);
+      registerModule(gCenterL1, 'Central_Intersection', 'L1 Center Hub (30m x 30m)', 'Chamfered ground intersection @ (0, 0, 0)', 0, 0);
+
+      // Central Spine Pathway & Lateral Crossbar
+      const gSpine = new THREE_LIB.Group();
+      const spineSouthPts = [
+        new THREE_LIB.Vector2(-7, 14),
+        new THREE_LIB.Vector2(7, 14),
+        new THREE_LIB.Vector2(7, 83),
+        new THREE_LIB.Vector2(-7, 83)
+      ];
+      gSpine.add(createSlabFromPoints(spineSouthPts, 0, 0.28, materials.hexDeck));
+      gSpine.add(createSlabFromPoints(spineSouthPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+      addEdgeDetails(gSpine, spineSouthPts, new Set([0, 2]), 0, true, {}, 'level1');
+      registerSpanUnderStructure(new THREE_LIB.Vector2(0, 14), new THREE_LIB.Vector2(0, 83), 14, -2.0);
+      addCollisionVolume('Central_Spine_South_Floor', 'walkable_floor', new THREE_LIB.Vector3(-7, -2, 14), new THREE_LIB.Vector3(7, 0, 83), 0, 0, spineSouthPts);
+
+      const spineNorthPts = [
+        new THREE_LIB.Vector2(-7, -112),
+        new THREE_LIB.Vector2(7, -112),
+        new THREE_LIB.Vector2(7, -14),
+        new THREE_LIB.Vector2(-7, -14)
+      ];
+      gSpine.add(createSlabFromPoints(spineNorthPts, 0, 0.28, materials.hexDeck));
+      gSpine.add(createSlabFromPoints(spineNorthPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+      addEdgeDetails(gSpine, spineNorthPts, new Set([2]), 0, true, { 1: [3, 11], 3: [87, 95] }, 'level1');
+      registerSpanUnderStructure(new THREE_LIB.Vector2(0, -112), new THREE_LIB.Vector2(0, -14), 14, -2.0);
+      addCollisionVolume('Central_Spine_North_Floor', 'walkable_floor', new THREE_LIB.Vector3(-7, -2, -112), new THREE_LIB.Vector3(7, 0, -14), 0, 0, spineNorthPts);
+
+      const crossbarPts = [
+        new THREE_LIB.Vector2(-52.5, -7),
+        new THREE_LIB.Vector2(52.5, -7),
+        new THREE_LIB.Vector2(52.5, 7),
+        new THREE_LIB.Vector2(-52.5, 7)
+      ];
+      gSpine.add(createSlabFromPoints(crossbarPts, 0, 0.28, materials.hexDeck));
+      gSpine.add(createSlabFromPoints(crossbarPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+      addEdgeDetails(gSpine, crossbarPts, new Set([1, 3]), 0, true, { 0: [45.5, 59.5], 2: [45.5, 59.5] }, 'level1');
+      addCollisionVolume('Central_Crossbar_Floor', 'walkable_floor', new THREE_LIB.Vector3(-52.5, -2, -7), new THREE_LIB.Vector3(52.5, 0, 7), 0, 0, crossbarPts);
+      registerModule(gSpine, 'Central_Spine_Pathway', 'L1 Spine & Crossbar (14m)', 'North-south spine & A-frame crossbar', 0, -20);
+
+      // Symmetrical Lower Diagonal Pathways
+      [
+        { id: 'Diagonal_Pathway_Left', label: 'West Diagonal Span (14m)', sign: -1, pStart: new THREE_LIB.Vector2(-95, 78), pEnd: new THREE_LIB.Vector2(-5, -96) },
+        { id: 'Diagonal_Pathway_Right', label: 'East Diagonal Span (14m)', sign: 1, pStart: new THREE_LIB.Vector2(95, 78), pEnd: new THREE_LIB.Vector2(5, -96) }
+      ].forEach((leg) => {
+        const gDiag = new THREE_LIB.Group();
+        const dx = leg.pEnd.x - leg.pStart.x;
+        const dz = leg.pEnd.y - leg.pStart.y;
+        const len = Math.hypot(dx, dz);
+        const ux = dx / len;
+        const uz = dz / len;
+        const nx = -uz * 7;
+        const nz = ux * 7;
+        const diagPts = [
+          new THREE_LIB.Vector2(leg.pStart.x + nx, leg.pStart.y + nz),
+          new THREE_LIB.Vector2(leg.pEnd.x + nx, leg.pEnd.y + nz),
+          new THREE_LIB.Vector2(leg.pEnd.x - nx, leg.pEnd.y - nz),
+          new THREE_LIB.Vector2(leg.pStart.x - nx, leg.pStart.y - nz)
+        ];
+        const cross = (diagPts[1].x - diagPts[0].x) * (diagPts[2].y - diagPts[0].y) - (diagPts[1].y - diagPts[0].y) * (diagPts[2].x - diagPts[0].x);
+        if (cross < 0) diagPts.reverse();
+
+        gDiag.add(createSlabFromPoints(diagPts, 0, 0.28, materials.hexDeck));
+        gDiag.add(createSlabFromPoints(diagPts, -0.28, SPEC.slabThickness - 0.28, materials.foundationHull));
+        addEdgeDetails(gDiag, diagPts, new Set([1, 3]), 0, true, { 0: [82, 102], 2: [82, 102] }, 'level1');
+        registerSpanUnderStructure(leg.pStart, leg.pEnd, 14, -2.0);
+        addCollisionVolume(
+          `${leg.id}_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(Math.min(...diagPts.map((p) => p.x)), -2, Math.min(...diagPts.map((p) => p.y))),
+          new THREE_LIB.Vector3(Math.max(...diagPts.map((p) => p.x)), 0, Math.max(...diagPts.map((p) => p.y))),
+          0,
+          0,
+          diagPts
+        );
+        registerModule(gDiag, leg.id, leg.label, '14m angled A-frame pathway @ Y = 0m', leg.sign * 52, 0);
+      });
+
+      // --------------------------------------------------------------------------
+      // PHASE 2: MIRRORED CORNER BUILDINGS (Y=0..4m) & DUAL-FLIGHT STAIRCASES (Y=0..8m)
+      // --------------------------------------------------------------------------
+      function buildCornerComplex(side) {
+        const isBravo = side === 'Bravo';
+        const sign = isBravo ? -1 : 1;
+        const bCenterX = sign * 116.5;
+        const bCenterZ = 93.0;
+        const bHalfW = SPEC.buildingWidth * 0.5;
+        const bHalfD = SPEC.buildingDepth * 0.5;
+        const roofY = SPEC.rooftopY;
+        const wallT = SPEC.wallThickness;
+
+        const gBldg = new THREE_LIB.Group();
+        const gRoof = new THREE_LIB.Group();
+        const gStair = new THREE_LIB.Group();
+        const gUpper = new THREE_LIB.Group();
+
+        // Building perimeter walls with 3m x 3m inward doorway on Z = bCenterZ
+        const wallParts = [
+          // North wall (Z = 87)
+          { x: bCenterX, y: roofY * 0.5, z: bCenterZ - bHalfD + wallT * 0.5, w: SPEC.buildingWidth, h: roofY, d: wallT },
+          // South wall (Z = 99)
+          { x: bCenterX, y: roofY * 0.5, z: bCenterZ + bHalfD - wallT * 0.5, w: SPEC.buildingWidth, h: roofY, d: wallT },
+          // Outer wall (X = sign * 121.5)
+          { x: bCenterX + sign * (bHalfW - wallT * 0.5), y: roofY * 0.5, z: bCenterZ, w: wallT, h: roofY, d: SPEC.buildingDepth },
+          // Inward wall north & south jambs (leaving 3m doorway Z = 91.5..94.5)
+          { x: bCenterX - sign * (bHalfW - wallT * 0.5), y: roofY * 0.5, z: bCenterZ - 3.75, w: wallT, h: roofY, d: 4.5 },
+          { x: bCenterX - sign * (bHalfW - wallT * 0.5), y: roofY * 0.5, z: bCenterZ + 3.75, w: wallT, h: roofY, d: 4.5 },
+          // Door header (Y = 3.0..4.0)
+          { x: bCenterX - sign * (bHalfW - wallT * 0.5), y: 3.5, z: bCenterZ, w: wallT, h: 1.0, d: 3.0 }
+        ];
+
+        wallParts.forEach((wp, idx) => {
+          const m = new THREE_LIB.Mesh(new THREE_LIB.BoxGeometry(wp.w, wp.h, wp.d), materials.foundationHull);
+          m.position.set(wp.x, wp.y, wp.z);
+          gBldg.add(m);
+          addCollisionVolume(
+            `Building_${side}_Wall_${idx}`,
+            'solid_wall',
+            new THREE_LIB.Vector3(wp.x - wp.w * 0.5, wp.y - wp.h * 0.5, wp.z - wp.d * 0.5),
+            new THREE_LIB.Vector3(wp.x + wp.w * 0.5, wp.y + wp.h * 0.5, wp.z + wp.d * 0.5)
+          );
+        });
+
+        // Illuminated doorway frame
+        const doorX = bCenterX - sign * bHalfW;
+        [bCenterZ - 1.55, bCenterZ + 1.55].forEach((jz) => {
+          const jamb = new THREE_LIB.Mesh(new THREE_LIB.BoxGeometry(0.16, 3.0, 0.14), materials.amberEmissive);
+          jamb.position.set(doorX, 1.5, jz);
+          gBldg.add(jamb);
+        });
+        const lintel = new THREE_LIB.Mesh(new THREE_LIB.BoxGeometry(0.16, 0.14, 3.24), materials.amberEmissive);
+        lintel.position.set(doorX, 3.05, bCenterZ);
+        gBldg.add(lintel);
+
+        // Walkable Rooftop (Y = 4.0m) + 4m x 4m edge-shared connector apron to stair landing
+        const roofPts = [
+          new THREE_LIB.Vector2(bCenterX - bHalfW, bCenterZ - bHalfD),
+          new THREE_LIB.Vector2(bCenterX + bHalfW, bCenterZ - bHalfD),
+          new THREE_LIB.Vector2(bCenterX + bHalfW, bCenterZ + bHalfD),
+          new THREE_LIB.Vector2(bCenterX - bHalfW, bCenterZ + bHalfD)
+        ];
+        gRoof.add(createSlabFromPoints(roofPts, roofY, 0.35, materials.hexDeck));
+        addEdgeDetails(gRoof, roofPts, new Set(), roofY, true, { 0: isBravo ? [5.5, 9.5] : [0.5, 4.5] }, 'buildings');
+        addCollisionVolume(
+          `Rooftop_${side}_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(bCenterX - bHalfW, roofY - 0.35, bCenterZ - bHalfD),
+          new THREE_LIB.Vector3(bCenterX + bHalfW, roofY, bCenterZ + bHalfD),
+          0,
+          0,
+          roofPts
+        );
+
+        // 4m x 4m Rooftop Connector Deck (X = sign * 111.5..115.5, Z = 83..87, Y = 4.0m)
+        const connMinX = Math.min(sign * 111.5, sign * 115.5);
+        const connMaxX = Math.max(sign * 111.5, sign * 115.5);
+        const connPts = [
+          new THREE_LIB.Vector2(connMinX, 83),
+          new THREE_LIB.Vector2(connMaxX, 83),
+          new THREE_LIB.Vector2(connMaxX, 87),
+          new THREE_LIB.Vector2(connMinX, 87)
+        ];
+        gRoof.add(createSlabFromPoints(connPts, roofY, 0.35, materials.hexDeck));
+        addEdgeDetails(gRoof, connPts, new Set([0, 2]), roofY, true, {}, 'buildings');
+        addCollisionVolume(
+          `Rooftop_Connector_${side}_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(connMinX, roofY - 0.35, 83),
+          new THREE_LIB.Vector3(connMaxX, roofY, 87),
+          0,
+          0,
+          connPts
+        );
+
+        // Flight 1: Y = 0 -> Y = 4m along Z = 85 (X = sign * 104.5 -> sign * 111.5)
+        const runLen = SPEC.risersPerFlight * SPEC.stepDepth; // 7.0m
+        for (let i = 0; i < SPEC.risersPerFlight; i++) {
+          const sx = sign * (104.5 + (i + 0.5) * SPEC.stepDepth);
+          const sy = (i + 0.5) * SPEC.stepHeight;
+          stepInstances.push({ x: sx, y: sy, z: 85.0, rotY: 0, layer: 'staircases' });
+        }
+        const f1MinX = Math.min(sign * 104.5, sign * 111.5);
+        const f1MaxX = Math.max(sign * 104.5, sign * 111.5);
+        addCollisionVolume(
+          `Staircase_${side}_Flight1_Ramp`,
+          'stair_ramp',
+          new THREE_LIB.Vector3(f1MinX, 0.0, 83.0),
+          new THREE_LIB.Vector3(f1MaxX, 4.0, 87.0),
+          0,
+          29.74,
+          null,
+          {
+            ascendingStart: { x: sign * 104.5, y: 0.0, z: 85.0 },
+            ascendingEnd: { x: sign * 111.5, y: 4.0, z: 85.0 },
+            descendingStart: { x: sign * 111.5, y: 4.0, z: 85.0 },
+            descendingEnd: { x: sign * 104.5, y: 0.0, z: 85.0 }
+          }
+        );
+
+        // Intermediate Transfer Landing at Y = 4.0m (X = sign * 109.5..115.5, Z = 79..83)
+        const midMinX = Math.min(sign * 109.5, sign * 115.5);
+        const midMaxX = Math.max(sign * 109.5, sign * 115.5);
+        const midPts = [
+          new THREE_LIB.Vector2(midMinX, 79),
+          new THREE_LIB.Vector2(midMaxX, 79),
+          new THREE_LIB.Vector2(midMaxX, 83),
+          new THREE_LIB.Vector2(midMinX, 83)
+        ];
+        gStair.add(createSlabFromPoints(midPts, 4.0, 0.35, materials.hexDeck));
+        addEdgeDetails(gStair, midPts, new Set([1]), 4.0, true, { 2: isBravo ? [0, 4.0] : [2.0, 6.0] }, 'staircases');
+        addCollisionVolume(
+          `Staircase_${side}_MidLanding_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(midMinX, 3.65, 79),
+          new THREE_LIB.Vector3(midMaxX, 4.0, 83),
+          0,
+          0,
+          midPts
+        );
+
+        // Flight 2: Y = 4m -> Y = 8m along Z = 81 (X = sign * 111.5 -> sign * 104.5)
+        for (let i = 0; i < SPEC.risersPerFlight; i++) {
+          const sx = sign * (111.5 - (i + 0.5) * SPEC.stepDepth);
+          const sy = 4.0 + (i + 0.5) * SPEC.stepHeight;
+          stepInstances.push({ x: sx, y: sy, z: 81.0, rotY: 0, layer: 'staircases' });
+        }
+        addCollisionVolume(
+          `Staircase_${side}_Flight2_Ramp`,
+          'stair_ramp',
+          new THREE_LIB.Vector3(f1MinX, 4.0, 79.0),
+          new THREE_LIB.Vector3(f1MaxX, 8.0, 83.0),
+          0,
+          29.74,
+          null,
+          {
+            ascendingStart: { x: sign * 111.5, y: 4.0, z: 81.0 },
+            ascendingEnd: { x: sign * 104.5, y: 8.0, z: 81.0 },
+            descendingStart: { x: sign * 104.5, y: 8.0, z: 81.0 },
+            descendingEnd: { x: sign * 111.5, y: 4.0, z: 81.0 }
+          }
+        );
+
+        // Upper Connection Landing at Y = 8.0m (X = sign * 96.5..104.5, Z = 75..87)
+        const upMinX = Math.min(sign * 96.5, sign * 104.5);
+        const upMaxX = Math.max(sign * 96.5, sign * 104.5);
+        const upPts = [
+          new THREE_LIB.Vector2(upMinX, 75),
+          new THREE_LIB.Vector2(upMaxX, 75),
+          new THREE_LIB.Vector2(upMaxX, 87),
+          new THREE_LIB.Vector2(upMinX, 87)
+        ];
+        gUpper.add(createSlabFromPoints(upPts, 8.0, 0.8, materials.hexDeck));
+        addEdgeDetails(
+          gUpper,
+          upPts,
+          new Set(),
+          8.0,
+          true,
+          isBravo ? { 1: [1.5, 10.5], 3: [4.0, 8.0] } : { 1: [4.0, 8.0], 3: [1.5, 10.5] },
+          'staircases'
+        );
+        addCollisionVolume(
+          `Upper_Landing_${side}_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(upMinX, 7.2, 75),
+          new THREE_LIB.Vector3(upMaxX, 8.0, 87),
+          0,
+          0,
+          upPts
+        );
+
+        connectionPoints.push({
+          id: `L2_Bridge_${side}_Start`,
+          position: { x: sign * 96.5, y: 8.0, z: 81.0 },
+          width: SPEC.l2BridgeWidth
+        });
+
+        registerModule(gBldg, `Building_${side}`, `${side} Industrial Building`, `10m x 12m x 4m interior @ (${bCenterX}, 0, ${bCenterZ})`, bCenterX, bCenterZ);
+        registerModule(gRoof, `Rooftop_${side}`, `${side} Rooftop (Y=4m)`, `Walkable Y=4.0m deck + 4m stair connector`, bCenterX, bCenterZ);
+        registerModule(gStair, `Staircase_${side}`, `${side} Dual-Flight Stairs`, `20 risers/flight: Y=0 -> Y=4 -> Y=8m`, sign * 108, 83);
+        registerModule(gUpper, `Upper_Landing_${side}`, `${side} Upper Landing (Y=8m)`, `8m x 12m inward bridge deck @ X=${sign * 96.5}`, sign * 100.5, 81);
+      }
+
+      buildCornerComplex('Bravo');
+      buildCornerComplex('Charlie');
+
+      // --------------------------------------------------------------------------
+      // PHASE 3: SECOND-LEVEL CENTRAL PLATFORM (60m x 40m @ Y=8m) & BRIDGES
+      // --------------------------------------------------------------------------
+      const gL2Hub = new THREE_LIB.Group();
+      const l2Pts = getChamferedRectPoints(0, 0, SPEC.l2HubWidth, SPEC.l2HubDepth, SPEC.l2HubChamfer);
+      gL2Hub.add(createSlabFromPoints(l2Pts, 8.0, 0.25, materials.hexDeck));
+      gL2Hub.add(createSlabFromPoints(l2Pts, 7.75, SPEC.l2SlabThickness - 0.25, materials.foundationHull));
+      // Open gaps on North edge (for 14m Alpha bridge) and West/East edges (for 8m Bravo/Charlie bridges)
+      addEdgeDetails(
+        gL2Hub,
+        l2Pts,
+        new Set(),
+        8.0,
+        true,
+        {
+          0: [18.0, 32.0],
+          2: [11.0, 19.0],
+          6: [11.0, 19.0]
+        },
+        'level2'
+      );
+      addCollisionVolume('Level2_Central_Platform_Floor', 'walkable_floor', new THREE_LIB.Vector3(-30, 7.2, -20), new THREE_LIB.Vector3(30, 8.0, 20), 0, 0, l2Pts);
+      connectionPoints.push({ id: 'L2_Alpha_North_Socket', position: { x: 0, y: 8.0, z: -20.0 }, width: SPEC.alphaBridgeWidth });
+      registerModule(gL2Hub, 'Level2_Central_Platform', 'L2 Central Platform (60x40m)', 'Elevated octagonal hub @ (0, 8, 0)', 0, 0);
+
+      // Two Symmetrical 8m-wide Diagonal Connecting Bridges (Bravo <-> L2 <-> Charlie)
+      [
+        { id: 'Level2_Bridge_Bravo', label: 'L2 Bravo Bridge (8m)', sign: -1, pA: new THREE_LIB.Vector2(-96.5, 81.0), pB: new THREE_LIB.Vector2(-30.0, 10.0) },
+        { id: 'Level2_Bridge_Charlie', label: 'L2 Charlie Bridge (8m)', sign: 1, pA: new THREE_LIB.Vector2(96.5, 81.0), pB: new THREE_LIB.Vector2(30.0, 10.0) }
+      ].forEach((br) => {
+        const gBr = new THREE_LIB.Group();
+        const dx = br.pB.x - br.pA.x;
+        const dz = br.pB.y - br.pA.y;
+        const len = Math.hypot(dx, dz);
+        const ux = dx / len;
+        const uz = dz / len;
+        const nx = -uz * (SPEC.l2BridgeWidth * 0.5);
+        const nz = ux * (SPEC.l2BridgeWidth * 0.5);
+
+        const brPts = [
+          new THREE_LIB.Vector2(br.pA.x + nx, br.pA.y + nz),
+          new THREE_LIB.Vector2(br.pB.x + nx, br.pB.y + nz),
+          new THREE_LIB.Vector2(br.pB.x - nx, br.pB.y - nz),
+          new THREE_LIB.Vector2(br.pA.x - nx, br.pA.y - nz)
+        ];
+        const cross = (brPts[1].x - brPts[0].x) * (brPts[2].y - brPts[0].y) - (brPts[1].y - brPts[0].y) * (brPts[2].x - brPts[0].x);
+        if (cross < 0) brPts.reverse();
+
+        gBr.add(createSlabFromPoints(brPts, 8.0, 0.25, materials.hexDeck));
+        gBr.add(createSlabFromPoints(brPts, 7.75, SPEC.l2SlabThickness - 0.25, materials.foundationHull));
+        addEdgeDetails(gBr, brPts, new Set([1, 3]), 8.0, true, {}, 'level2');
+        registerSpanUnderStructure(br.pA, br.pB, SPEC.l2BridgeWidth, 7.2);
+        addCollisionVolume(
+          `${br.id}_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(Math.min(...brPts.map((p) => p.x)), 7.2, Math.min(...brPts.map((p) => p.y))),
+          new THREE_LIB.Vector3(Math.max(...brPts.map((p) => p.x)), 8.0, Math.max(...brPts.map((p) => p.y))),
+          0,
+          0,
+          brPts
+        );
+        registerModule(gBr, br.id, br.label, '8m wide elevated bridge @ Y = 8.0m', br.sign * 63, 45);
+      });
+
+      // Instanced Level 2 Support Columns (placed outside Level 1 walking lanes)
+      const gL2Cols = new THREE_LIB.Group();
+      const colCoords = [
+        [-24, -14], [24, -14], [-24, 14], [24, 14],
+        [-12, -16], [12, -16], [-12, 16], [12, 16],
+        [-64, 46], [64, 46]
+      ];
+      const colGeo = new THREE_LIB.CylinderGeometry(0.65, 0.75, 7.2, 6);
+      const l2ColInst = new THREE_LIB.InstancedMesh(colGeo, materials.steelBeam, colCoords.length);
+      const dummy = new THREE_LIB.Object3D();
+      colCoords.forEach(([cx, cz], idx) => {
+        dummy.position.set(cx, 3.6, cz);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        l2ColInst.setMatrixAt(idx, dummy.matrix);
+        addCollisionVolume(
+          `Level2_Column_${idx}`,
+          'support_column',
+          new THREE_LIB.Vector3(cx - 0.7, 0, cz - 0.7),
+          new THREE_LIB.Vector3(cx + 0.7, 7.2, cz + 0.7)
+        );
+      });
+      l2ColInst.instanceMatrix.needsUpdate = true;
+      gL2Cols.add(l2ColInst);
+      registerModule(gL2Cols, 'Level2_Support_Columns', 'L2 Support Columns (10x)', 'Hexagonal steel columns clear of L1 lanes', 0, 0);
+
+      // --------------------------------------------------------------------------
+      // PHASE 4: NORTHERN ALPHA PLATFORM (Y=8m), NORTH BRIDGE & FLANK STAIRCASES
+      // --------------------------------------------------------------------------
+      const gAlpha = new THREE_LIB.Group();
+      const alphaPts = getChamferedRectPoints(0, SPEC.alphaApexZ, SPEC.alphaSize, SPEC.alphaSize, SPEC.alphaChamfer);
+      gAlpha.add(createSlabFromPoints(alphaPts, 8.0, 0.25, materials.hexDeck));
+      gAlpha.add(createSlabFromPoints(alphaPts, 7.75, SPEC.l2SlabThickness - 0.25, materials.foundationHull));
+      // Open gaps on East (edge 2), South (edge 4, 14m bridge), and West (edge 6)
+      addEdgeDetails(
+        gAlpha,
+        alphaPts,
+        new Set(),
+        8.0,
+        true,
+        {
+          2: [10.0, 14.0],
+          4: [5.0, 19.0],
+          6: [10.0, 14.0]
+        },
+        'alpha',
+        materials.alphaGreenEmissive
+      );
+      addCollisionVolume('Alpha_Capture_Platform_Floor', 'walkable_floor', new THREE_LIB.Vector3(-20, 7.2, -125), new THREE_LIB.Vector3(20, 8.0, -85), 0, 0, alphaPts);
+      registerModule(gAlpha, 'Alpha_Capture_Platform', 'Alpha Platform (40x40m, Y=8m)', 'Northern octagonal capture deck @ (0, 8, -105)', 0, -105);
+
+      // Straight Northern Bridge connecting L2 Central Hub (Z=-20) to Alpha (Z=-85)
+      const gAlphaBridge = new THREE_LIB.Group();
+      const abPts = [
+        new THREE_LIB.Vector2(-7, -85),
+        new THREE_LIB.Vector2(7, -85),
+        new THREE_LIB.Vector2(7, -20),
+        new THREE_LIB.Vector2(-7, -20)
+      ];
+      gAlphaBridge.add(createSlabFromPoints(abPts, 8.0, 0.25, materials.hexDeck));
+      gAlphaBridge.add(createSlabFromPoints(abPts, 7.75, SPEC.l2SlabThickness - 0.25, materials.foundationHull));
+      addEdgeDetails(gAlphaBridge, abPts, new Set([0, 2]), 8.0, true, {}, 'alpha');
+      registerSpanUnderStructure(new THREE_LIB.Vector2(0, -85), new THREE_LIB.Vector2(0, -20), 14, 7.2);
+      addCollisionVolume('Level2_Bridge_Alpha_Floor', 'walkable_floor', new THREE_LIB.Vector3(-7, 7.2, -85), new THREE_LIB.Vector3(7, 8.0, -20), 0, 0, abPts);
+      registerModule(gAlphaBridge, 'Level2_Bridge_Alpha', 'L2 Alpha Bridge (65m x 14m)', 'Connects L2 Hub (Z=-20) to Alpha (Z=-85)', 0, -52);
+
+      // Mirrored Dual-Flight Alpha Staircases (Ground Y=0 -> Y=4 -> Y=8m)
+      ['Left', 'Right'].forEach((side) => {
+        const isLeft = side === 'Left';
+        const sign = isLeft ? -1 : 1;
+        const gAStair = new THREE_LIB.Group();
+
+        // Flight 1: X = sign * 7 -> sign * 14 along Z = -105 (Y = 0 -> 4m)
+        for (let i = 0; i < SPEC.risersPerFlight; i++) {
+          const sx = sign * (7.0 + (i + 0.5) * SPEC.stepDepth);
+          const sy = (i + 0.5) * SPEC.stepHeight;
+          stepInstances.push({ x: sx, y: sy, z: -105.0, rotY: 0, layer: 'alpha' });
+        }
+        const af1MinX = Math.min(sign * 7.0, sign * 14.0);
+        const af1MaxX = Math.max(sign * 7.0, sign * 14.0);
+        addCollisionVolume(
+          `Alpha_Staircase_${side}_Flight1_Ramp`,
+          'stair_ramp',
+          new THREE_LIB.Vector3(af1MinX, 0.0, -107.0),
+          new THREE_LIB.Vector3(af1MaxX, 4.0, -103.0),
+          0,
+          29.74,
+          null,
+          {
+            ascendingStart: { x: sign * 7.0, y: 0.0, z: -105.0 },
+            ascendingEnd: { x: sign * 14.0, y: 4.0, z: -105.0 },
+            descendingStart: { x: sign * 14.0, y: 4.0, z: -105.0 },
+            descendingEnd: { x: sign * 7.0, y: 0.0, z: -105.0 }
+          }
+        );
+
+        // L-Shaped Intermediate Landing at Y = 4.0m (X = sign * 14..26, Z = -107..-103)
+        const aMidMinX = Math.min(sign * 14.0, sign * 26.0);
+        const aMidMaxX = Math.max(sign * 14.0, sign * 26.0);
+        const aMidPts = [
+          new THREE_LIB.Vector2(aMidMinX, -107),
+          new THREE_LIB.Vector2(aMidMaxX, -107),
+          new THREE_LIB.Vector2(aMidMaxX, -103),
+          new THREE_LIB.Vector2(aMidMinX, -103)
+        ];
+        gAStair.add(createSlabFromPoints(aMidPts, 4.0, 0.35, materials.hexDeck));
+        addEdgeDetails(gAStair, aMidPts, new Set([isLeft ? 1 : 3]), 4.0, true, { 2: isLeft ? [0, 4.0] : [8.0, 12.0] }, 'alpha', materials.alphaGreenEmissive);
+        addCollisionVolume(
+          `Alpha_Staircase_${side}_MidLanding_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(aMidMinX, 3.65, -107),
+          new THREE_LIB.Vector3(aMidMaxX, 4.0, -103),
+          0,
+          0,
+          aMidPts
+        );
+
+        // Flight 2: Z = -103 -> -96 along X = sign * 24 (Y = 4 -> 8m)
+        for (let i = 0; i < SPEC.risersPerFlight; i++) {
+          const sz = -103.0 + (i + 0.5) * SPEC.stepDepth;
+          const sy = 4.0 + (i + 0.5) * SPEC.stepHeight;
+          stepInstances.push({ x: sign * 24.0, y: sy, z: sz, rotY: Math.PI / 2, layer: 'alpha' });
+        }
+        const af2MinX = Math.min(sign * 22.0, sign * 26.0);
+        const af2MaxX = Math.max(sign * 22.0, sign * 26.0);
+        addCollisionVolume(
+          `Alpha_Staircase_${side}_Flight2_Ramp`,
+          'stair_ramp',
+          new THREE_LIB.Vector3(af2MinX, 4.0, -103.0),
+          new THREE_LIB.Vector3(af2MaxX, 8.0, -96.0),
+          0,
+          29.74,
+          null,
+          {
+            ascendingStart: { x: sign * 24.0, y: 4.0, z: -103.0 },
+            ascendingEnd: { x: sign * 24.0, y: 8.0, z: -96.0 },
+            descendingStart: { x: sign * 24.0, y: 8.0, z: -96.0 },
+            descendingEnd: { x: sign * 24.0, y: 4.0, z: -103.0 }
+          }
+        );
+
+        // Upper Entry Deck at Y = 8.0m connecting X = sign * 20..26, Z = -107..-92
+        const aTopMinX = Math.min(sign * 20.0, sign * 26.0);
+        const aTopMaxX = Math.max(sign * 20.0, sign * 26.0);
+        const aTopPts = [
+          new THREE_LIB.Vector2(aTopMinX, -107),
+          new THREE_LIB.Vector2(aTopMaxX, -107),
+          new THREE_LIB.Vector2(aTopMaxX, -92),
+          new THREE_LIB.Vector2(aTopMinX, -92)
+        ];
+        gAStair.add(createSlabFromPoints(aTopPts, 8.0, 0.8, materials.hexDeck));
+        addEdgeDetails(gAStair, aTopPts, new Set([0]), 8.0, true, isLeft ? { 1: [0, 4.0] } : { 3: [11.0, 15.0] }, 'alpha', materials.alphaGreenEmissive);
+        addCollisionVolume(
+          `Alpha_Staircase_${side}_TopDeck_Floor`,
+          'walkable_floor',
+          new THREE_LIB.Vector3(aTopMinX, 7.2, -107),
+          new THREE_LIB.Vector3(aTopMaxX, 8.0, -92),
+          0,
+          0,
+          aTopPts
+        );
+
+        registerModule(gAStair, `Alpha_Staircase_${side}`, `Alpha ${side} Staircase (Y=0..8m)`, `Dual 20-riser flank staircase into Alpha`, sign * 18, -102);
+      });
+
+      // Alpha Support Columns
+      const gAlphaCols = new THREE_LIB.Group();
+      const alphaColCoords = [[-16, -90], [16, -90], [-16, -120], [16, -120], [-8, -52], [8, -52]];
+      const alphaColInst = new THREE_LIB.InstancedMesh(colGeo, materials.steelBeam, alphaColCoords.length);
+      alphaColCoords.forEach(([cx, cz], idx) => {
+        dummy.position.set(cx, 3.6, cz);
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        alphaColInst.setMatrixAt(idx, dummy.matrix);
+        addCollisionVolume(`Alpha_Column_${idx}`, 'support_column', new THREE_LIB.Vector3(cx - 0.7, 0, cz - 0.7), new THREE_LIB.Vector3(cx + 0.7, 7.2, cz + 0.7));
+      });
+      alphaColInst.instanceMatrix.needsUpdate = true;
+      gAlphaCols.add(alphaColInst);
+      registerModule(gAlphaCols, 'Alpha_Support_Columns', 'Alpha Support Columns (6x)', 'Structural steel supports beneath Alpha & North Bridge', 0, -90);
+
+      // --------------------------------------------------------------------------
+      // PHASE 5: TACTICAL COMBAT COVER & INDUSTRIAL PROPS (INSTANCED LOW-POLY)
+      // --------------------------------------------------------------------------
+      const obstacleSpecs = {
+        small_barrier: { width: 3.0, depth: 0.8, height: 1.1 },
+        large_barrier: { width: 4.0, depth: 1.0, height: 2.2 },
+        small_crate: { width: 1.2, depth: 1.2, height: 1.2 },
+        large_container: { width: 4.0, depth: 2.0, height: 2.5 },
+        struct_pillar: { width: 1.2, depth: 1.2, height: 3.0 },
+        vent_unit: { width: 2.0, depth: 1.5, height: 1.2 }
+      };
+
+      const gCover = new THREE_LIB.Group();
+      const placements = [
+        // Horizontal L1 pathway cover (maintaining >= 6m open width)
+        { type: 'small_barrier', x: -55, y: 0, z: 85.2, rotY: 0 },
+        { type: 'small_barrier', x: 55, y: 0, z: 85.2, rotY: 0 },
+        { type: 'small_barrier', x: -28, y: 0, z: 94.8, rotY: 0 },
+        { type: 'small_barrier', x: 28, y: 0, z: 94.8, rotY: 0 },
+        // Diagonal L1 pathway cover
+        { type: 'small_barrier', x: -62, y: 0, z: 18, rotY: 0.48 },
+        { type: 'small_barrier', x: 62, y: 0, z: 18, rotY: -0.48 },
+        { type: 'small_barrier', x: -34, y: 0, z: -38, rotY: 0.48 },
+        { type: 'small_barrier', x: 34, y: 0, z: -38, rotY: -0.48 },
+        // Ground hub valid corner pillars & industrial props (inside chamfered 30m octagon)
+        { type: 'struct_pillar', x: -9.4, y: 0, z: -9.4, rotY: 0 },
+        { type: 'struct_pillar', x: 9.4, y: 0, z: -9.4, rotY: 0 },
+        { type: 'struct_pillar', x: -9.4, y: 0, z: 9.4, rotY: 0 },
+        { type: 'struct_pillar', x: 9.4, y: 0, z: 9.4, rotY: 0 },
+        { type: 'vent_unit', x: -11.5, y: 0, z: 0, rotY: Math.PI / 2 },
+        { type: 'vent_unit', x: 11.5, y: 0, z: 0, rotY: Math.PI / 2 },
+        { type: 'small_crate', x: -11.2, y: 0, z: -3.2, rotY: 0 },
+        { type: 'small_crate', x: 11.2, y: 0, z: -3.2, rotY: 0 },
+        // Bravo & Charlie outer perimeter cover (outside 10m capture radius)
+        { type: 'large_barrier', x: -92.0, y: 0, z: 99.5, rotY: -0.78 },
+        { type: 'large_barrier', x: 92.0, y: 0, z: 99.5, rotY: 0.78 },
+        { type: 'small_crate', x: -95.0, y: 0, z: 102.0, rotY: 0 },
+        { type: 'small_crate', x: 95.0, y: 0, z: 102.0, rotY: 0 },
+        // Level 2 Central Platform 4 symmetrical cover quadrants (open center arena)
+        { type: 'large_barrier', x: -15.0, y: 8.0, z: -9.0, rotY: 0.35 },
+        { type: 'large_barrier', x: 15.0, y: 8.0, z: -9.0, rotY: -0.35 },
+        { type: 'large_barrier', x: -15.0, y: 8.0, z: 9.0, rotY: -0.35 },
+        { type: 'large_barrier', x: 15.0, y: 8.0, z: 9.0, rotY: 0.35 },
+        { type: 'large_container', x: -21.0, y: 8.0, z: -2.5, rotY: Math.PI / 2 },
+        { type: 'large_container', x: 21.0, y: 8.0, z: -2.5, rotY: Math.PI / 2 },
+        { type: 'small_crate', x: -18.5, y: 8.0, z: -7.5, rotY: 0 },
+        { type: 'small_crate', x: 18.5, y: 8.0, z: -7.5, rotY: 0 },
+        // Alpha perimeter cover (preserving 6m central capture radius & 3 entrances)
+        { type: 'large_barrier', x: -10.5, y: 8.0, z: -114.5, rotY: 0.78 },
+        { type: 'large_barrier', x: 10.5, y: 8.0, z: -114.5, rotY: -0.78 },
+        { type: 'small_barrier', x: -10.5, y: 8.0, z: -94.5, rotY: -0.78 },
+        { type: 'small_barrier', x: 10.5, y: 8.0, z: -94.5, rotY: 0.78 }
+      ];
+
+      const bucketsByType = {};
+      Object.keys(obstacleSpecs).forEach((k) => (bucketsByType[k] = []));
+      placements.forEach((p, idx) => {
+        bucketsByType[p.type].push(p);
+        const s = obstacleSpecs[p.type];
+        const cos = Math.abs(Math.cos(p.rotY));
+        const sin = Math.abs(Math.sin(p.rotY));
+        const halfW = (s.width * cos + s.depth * sin) * 0.5;
+        const halfD = (s.width * sin + s.depth * cos) * 0.5;
+        obstacleDefinitions.push({ id: `Obstacle_${idx}_${p.type}`, type: p.type, position: { x: p.x, y: p.y, z: p.z }, rotationY: p.rotY, dimensions: s });
+        addCollisionVolume(
+          `Obstacle_${idx}_${p.type}`,
+          'tactical_obstacle',
+          new THREE_LIB.Vector3(p.x - halfW, p.y, p.z - halfD),
+          new THREE_LIB.Vector3(p.x + halfW, p.y + s.height, p.z + halfD),
+          p.rotY
+        );
+      });
+
+      Object.entries(bucketsByType).forEach(([type, list]) => {
+        if (list.length === 0) return;
+        const s = obstacleSpecs[type];
+        const geo = type === 'struct_pillar'
+          ? new THREE_LIB.CylinderGeometry(s.width * 0.5, s.width * 0.5, s.height, 6)
+          : new THREE_LIB.BoxGeometry(s.width, s.height, s.depth);
+        const mat = type === 'small_crate' || type === 'large_container'
+          ? materials.cargoPanel
+          : type === 'vent_unit'
+          ? materials.ventUnit
+          : materials.steelBeam;
+        const inst = new THREE_LIB.InstancedMesh(geo, mat, list.length);
+        list.forEach((p, idx) => {
+          dummy.position.set(p.x, p.y + s.height * 0.5, p.z);
+          dummy.rotation.set(0, p.rotY, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          inst.setMatrixAt(idx, dummy.matrix);
+        });
+        inst.instanceMatrix.needsUpdate = true;
+        gCover.add(inst);
+      });
+      registerModule(gCover, 'Tactical_Cover_All', 'Tactical Combat Cover & Props', 'Instanced low-poly barriers, crates, containers & pillars', 0, 0);
+
+      // --------------------------------------------------------------------------
+      // PHASE 6: TEAM SPAWNS, 3 CAPTURE INDICATORS & TACTICAL SIGNAGE ATLAS
+      // --------------------------------------------------------------------------
+      const spawnDefinitions = {
+        redTeam: {
+          team: 'Red',
+          basePlatform: 'Bravo',
+          elevationY: 0.0,
+          facingYawRad: -Math.PI * 0.25,
+          primarySpawns: [
+            { id: 'Red_Spawn_1', x: -116.5, y: 0.0, z: 81.5 },
+            { id: 'Red_Spawn_2', x: -113.5, y: 0.0, z: 79.0 },
+            { id: 'Red_Spawn_3', x: -110.5, y: 0.0, z: 76.5 },
+            { id: 'Red_Spawn_4', x: -114.5, y: 0.0, z: 83.2 }
+          ],
+          fallbackSpawns: [
+            { id: 'Red_Fallback_1', x: -108.5, y: 0.0, z: 103.5 },
+            { id: 'Red_Fallback_2', x: -97.5, y: 0.0, z: 103.5 }
+          ]
+        },
+        blueTeam: {
+          team: 'Blue',
+          basePlatform: 'Charlie',
+          elevationY: 0.0,
+          facingYawRad: Math.PI * 0.25,
+          primarySpawns: [
+            { id: 'Blue_Spawn_1', x: 116.5, y: 0.0, z: 81.5 },
+            { id: 'Blue_Spawn_2', x: 113.5, y: 0.0, z: 79.0 },
+            { id: 'Blue_Spawn_3', x: 110.5, y: 0.0, z: 76.5 },
+            { id: 'Blue_Spawn_4', x: 114.5, y: 0.0, z: 83.2 }
+          ],
+          fallbackSpawns: [
+            { id: 'Blue_Fallback_1', x: 108.5, y: 0.0, z: 103.5 },
+            { id: 'Blue_Fallback_2', x: 97.5, y: 0.0, z: 103.5 }
+          ]
+        }
+      };
+
+      const gSpawns = new THREE_LIB.Group();
+      [
+        { cfg: spawnDefinitions.redTeam, mat: materials.redTeamEmissive, cx: -113, cz: 80 },
+        { cfg: spawnDefinitions.blueTeam, mat: materials.blueTeamEmissive, cx: 113, cz: 80 }
+      ].forEach(({ cfg, mat }) => {
+        cfg.primarySpawns.forEach((sp) => {
+          const pad = new THREE_LIB.Mesh(new THREE_LIB.RingGeometry(0.55, 0.78, 6), mat);
+          pad.rotation.x = -Math.PI / 2;
+          pad.position.set(sp.x, sp.y + 0.025, sp.z);
+          gSpawns.add(pad);
+        });
+      });
+
+      // Batched 256x256 4x2 tactical directional signage atlas
+      const signGeo = new THREE_LIB.PlaneGeometry(2.6, 2.6);
+      signGeo.rotateX(-Math.PI / 2);
+      const signPlacements = [
+        { x: 0, y: 0.03, z: 78, rotY: 0, col: 0, row: 0 },
+        { x: 0, y: 8.03, z: -24, rotY: 0, col: 0, row: 0 },
+        { x: -82, y: 0.03, z: 90, rotY: Math.PI / 2, col: 1, row: 0 },
+        { x: 82, y: 0.03, z: 90, rotY: -Math.PI / 2, col: 2, row: 0 },
+        { x: -101, y: 0.03, z: 85, rotY: Math.PI / 2, col: 0, row: 1 },
+        { x: 101, y: 0.03, z: 85, rotY: -Math.PI / 2, col: 0, row: 1 },
+        { x: -5, y: 0.03, z: -105, rotY: Math.PI / 2, col: 3, row: 0 },
+        { x: 5, y: 0.03, z: -105, rotY: -Math.PI / 2, col: 3, row: 0 }
+      ];
+      signPlacements.forEach((sp) => {
+        const g = signGeo.clone();
+        const u0 = sp.col * 0.25;
+        const u1 = u0 + 0.25;
+        const v1 = 1.0 - sp.row * 0.5;
+        const v0 = v1 - 0.5;
+        const uv = g.attributes.uv;
+        uv.setXY(0, u0, v1);
+        uv.setXY(1, u1, v1);
+        uv.setXY(2, u0, v0);
+        uv.setXY(3, u1, v0);
+        const m = new THREE_LIB.Mesh(g, materials.tacticalSignage);
+        m.position.set(sp.x, sp.y, sp.z);
+        m.rotation.y = sp.rotY;
+        gSpawns.add(m);
+      });
+      registerModule(gSpawns, 'Team_Spawns_And_Signage', 'Red & Blue Spawns + Signage', '12 spawn pads + batched 256x256 tactical atlas', 0, 80);
+
+      // Three Multi-State Capture-Point Indicators (Alpha, Bravo, Charlie)
+      const gObjectives = new THREE_LIB.Group();
+      const capturePoints = [
+        { id: 'Alpha', letter: 'A', x: 0.0, y: 8.0, z: -105.0, radius: 6.0, minElevationY: 7.5, maxElevationY: 11.5 },
+        { id: 'Bravo', letter: 'B', x: -105.0, y: 0.0, z: 90.0, radius: 10.0, minElevationY: -0.5, maxElevationY: 3.5 },
+        { id: 'Charlie', letter: 'C', x: 105.0, y: 0.0, z: 90.0, radius: 10.0, minElevationY: -0.5, maxElevationY: 3.5 }
+      ].map((cp) => {
+        const outerRing = new THREE_LIB.Mesh(
+          new THREE_LIB.RingGeometry(cp.radius - 0.28, cp.radius, 24),
+          materials.neutralCaptureEmissive
+        );
+        outerRing.rotation.x = -Math.PI / 2;
+        outerRing.position.set(cp.x, cp.y + 0.03, cp.z);
+        gObjectives.add(outerRing);
+
+        const segGeo = new THREE_LIB.BoxGeometry(0.45, 0.04, 0.75);
+        const segInst = new THREE_LIB.InstancedMesh(segGeo, new THREE_LIB.MeshBasicMaterial({ color: 0xffffff }), 24);
+        for (let i = 0; i < 24; i++) {
+          const ang = (i / 24) * Math.PI * 2;
+          const rMid = cp.radius - 0.85;
+          dummy.position.set(cp.x + Math.sin(ang) * rMid, cp.y + 0.03, cp.z - Math.cos(ang) * rMid);
+          dummy.rotation.set(0, -ang, 0);
+          dummy.scale.set(1, 1, 1);
+          dummy.updateMatrix();
+          segInst.setMatrixAt(i, dummy.matrix);
+          segInst.setColorAt(i, new THREE_LIB.Color(0x101724));
+        }
+        segInst.instanceMatrix.needsUpdate = true;
+        if (segInst.instanceColor) segInst.instanceColor.needsUpdate = true;
+        gObjectives.add(segInst);
+
+        const coreDisc = new THREE_LIB.Mesh(new THREE_LIB.RingGeometry(0.01, 1.35, 6), materials.neutralCaptureEmissive);
+        coreDisc.rotation.x = -Math.PI / 2;
+        coreDisc.position.set(cp.x, cp.y + 0.03, cp.z);
+        gObjectives.add(coreDisc);
+
+        return { ...cp, outerRingMesh: outerRing, segmentInstancedMesh: segInst, letterMeshes: [coreDisc] };
+      });
+      registerModule(gObjectives, 'Capture_Point_Indicators', 'Capture Indicators (A / B / C)', '24-segment radial rings & elevation-gated zones', 0, 0);
+
+      // --------------------------------------------------------------------------
+      // INSTANCED TRUSSES, BEAMS, STAIRCASE RISERS & RAILING POSTS
+      // --------------------------------------------------------------------------
+      const trussGroup = new THREE_LIB.Group();
+      trussGroup.name = 'Under_Deck_Trusses';
+      const beamInst = new THREE_LIB.InstancedMesh(new THREE_LIB.BoxGeometry(1, 0.65, 0.42), materials.steelBeam, Math.max(1, beamInstances.length));
+      beamInstances.forEach((b, i) => {
+        dummy.position.set(b.x, b.y, b.z);
+        dummy.rotation.set(0, b.angle, 0);
+        dummy.scale.set(b.len, 1, 1);
+        dummy.updateMatrix();
+        beamInst.setMatrixAt(i, dummy.matrix);
+      });
+      beamInst.instanceMatrix.needsUpdate = true;
+      trussGroup.add(beamInst);
+
+      const braceInst = new THREE_LIB.InstancedMesh(new THREE_LIB.BoxGeometry(4.2, 0.28, 0.28), materials.steelBeam, Math.max(1, braceInstances.length));
+      braceInstances.forEach((br, i) => {
+        dummy.position.set(br.x, br.y, br.z);
+        dummy.rotation.set(0, br.angle, br.flip ? 0.55 : -0.55);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        braceInst.setMatrixAt(i, dummy.matrix);
+      });
+      braceInst.instanceMatrix.needsUpdate = true;
+      trussGroup.add(braceInst);
+      root.add(trussGroup);
+
+      const stepGeo = new THREE_LIB.BoxGeometry(SPEC.stepDepth, SPEC.stepHeight, SPEC.stairWidth);
+      const stepInst = new THREE_LIB.InstancedMesh(stepGeo, materials.perimeterTrim, Math.max(1, stepInstances.length));
+      stepInstances.forEach((st, i) => {
+        dummy.position.set(st.x, st.y, st.z);
+        dummy.rotation.set(0, st.rotY, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        stepInst.setMatrixAt(i, dummy.matrix);
+      });
+      stepInst.instanceMatrix.needsUpdate = true;
+      root.add(stepInst);
+
+      const postGeo = new THREE_LIB.BoxGeometry(0.12, SPEC.railingHeight, 0.12);
+      const postInst = new THREE_LIB.InstancedMesh(postGeo, materials.railingMetal, Math.max(1, postInstances.length));
+      postInstances.forEach((pt, i) => {
+        dummy.position.set(pt.x, pt.y, pt.z);
+        dummy.rotation.set(0, pt.angle, 0);
+        dummy.scale.set(1, 1, 1);
+        dummy.updateMatrix();
+        postInst.setMatrixAt(i, dummy.matrix);
+      });
+      postInst.instanceMatrix.needsUpdate = true;
+      root.add(postInst);
+
+      // Merge static geometry per modular group to minimize draw calls
+      modularGroups.forEach((m) => {
+        if (m.id !== 'Capture_Point_Indicators') optimizeGroupStaticMeshes(m.group);
+      });
+
+      const layerVisibility = {
+        buildings: true,
+        staircases: true,
+        level2: true,
+        alpha: true,
+        cover: true,
+        spawns: true,
+        objectives: true,
+        trusses: true,
+        environment: true
+      };
+
+      function refreshInstancedVisibility() {
+        stepInstances.forEach((st, i) => {
+          const vis = st.layer === 'alpha' ? layerVisibility.alpha : layerVisibility.staircases;
+          dummy.position.set(st.x, st.y, st.z);
+          dummy.rotation.set(0, st.rotY, 0);
+          dummy.scale.setScalar(vis ? 1 : 0);
+          dummy.updateMatrix();
+          stepInst.setMatrixAt(i, dummy.matrix);
+        });
+        stepInst.instanceMatrix.needsUpdate = true;
+
+        postInstances.forEach((pt, i) => {
+          let vis = true;
+          if (pt.layer === 'buildings') vis = layerVisibility.buildings;
+          else if (pt.layer === 'staircases') vis = layerVisibility.staircases;
+          else if (pt.layer === 'level2') vis = layerVisibility.level2;
+          else if (pt.layer === 'alpha') vis = layerVisibility.alpha;
+          dummy.position.set(pt.x, pt.y, pt.z);
+          dummy.rotation.set(0, pt.angle, 0);
+          dummy.scale.setScalar(vis ? 1 : 0);
+          dummy.updateMatrix();
+          postInst.setMatrixAt(i, dummy.matrix);
+        });
+        postInst.instanceMatrix.needsUpdate = true;
+      }
+
+      function setLayerVisibility(layerKey, visible) {
+        layerVisibility[layerKey] = visible;
+        const setByIds = (ids) => {
+          ids.forEach((id) => {
+            const found = modularGroups.find((m) => m.id === id);
+            if (found) found.group.visible = visible;
+          });
+        };
+        if (layerKey === 'buildings') setByIds(['Building_Bravo', 'Building_Charlie', 'Rooftop_Bravo', 'Rooftop_Charlie']);
+        else if (layerKey === 'staircases') setByIds(['Staircase_Bravo', 'Staircase_Charlie', 'Upper_Landing_Bravo', 'Upper_Landing_Charlie']);
+        else if (layerKey === 'level2') setByIds(['Level2_Central_Platform', 'Level2_Bridge_Bravo', 'Level2_Bridge_Charlie', 'Level2_Support_Columns']);
+        else if (layerKey === 'alpha') setByIds(['Alpha_Capture_Platform', 'Level2_Bridge_Alpha', 'Alpha_Staircase_Left', 'Alpha_Staircase_Right', 'Alpha_Support_Columns']);
+        else if (layerKey === 'cover') setByIds(['Tactical_Cover_All']);
+        else if (layerKey === 'spawns') setByIds(['Team_Spawns_And_Signage']);
+        else if (layerKey === 'objectives') setByIds(['Capture_Point_Indicators']);
+        else if (layerKey === 'trusses') trussGroup.visible = visible;
+        else if (layerKey === 'environment') environmentGroup.visible = visible;
+        refreshInstancedVisibility();
+      }
+
+      function dispose() {
+        root.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+        });
+        Object.values(materials).forEach((m) => m.dispose());
+        skyMat.dispose();
+        skyTexture.dispose();
+        nearMountainMat.dispose();
+        farMountainMat.dispose();
+        sunMat.dispose();
+        sunHaloMat.dispose();
+        mountainLakeMat.dispose();
+        sunGlintMat.dispose();
+        glintStrips.forEach((g) => g.mat.dispose());
+        createdTextures.forEach((t) => t.dispose());
+        if (root.parent) root.parent.remove(root);
+      }
+
+      return {
+        spec: SPEC,
+        obstacleSpecs,
+        spawnDefinitions,
+        capturePoints,
+        connectionPoints,
+        obstacleDefinitions,
+        collisionDefinitions,
+        modularGroups,
+        trussGroup,
+        environmentGroup,
+        sunPosition,
+        updateEnvironment,
+        layerVisibility,
+        setLayerVisibility,
+        root,
+        spatialChunks,
+        materials,
+        isPointInPolygonXZ,
+        dispose
+      };
+    }
+
+    // ============================================================================
+    // 2. THREE.JS SCENE, WEBGPU / WEBGL RENDERER & QUALITY PRESETS
+    // ============================================================================
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x88b4d8);
+    // Light far-distance atmospheric haze only so mountains & arena stay crisp
+    scene.fog = new THREE.Fog(0x9ec4e2, 420, 960);
+
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.5, 1100);
+    camera.position.set(0, 205, 245);
+
+    const QUALITY_PRESETS = {
+      low: { pixelRatioScale: 0.75, showTrusses: false },
+      medium: { pixelRatioScale: 1.0, showTrusses: true },
+      high: { pixelRatioScale: 1.4, showTrusses: true }
+    };
+    let currentQuality = 'low';
+    let adaptiveResolutionScale = 1.0;
+    let renderer = null;
+    let activeBackendLabel = 'WEBGL 2';
+
+    const backendBadgeEl = document.getElementById('backend-badge');
+    if (navigator.gpu) {
+      try {
+        const adapter = await navigator.gpu.requestAdapter();
+        if (adapter) {
+          const gpuRenderer = new WebGPURenderer({ antialias: false, powerPreference: 'high-performance' });
+          await gpuRenderer.init();
+          if (gpuRenderer.backend && gpuRenderer.backend.device) {
+            renderer = gpuRenderer;
+            activeBackendLabel = 'WEBGPU NATIVE';
+          }
+        }
+      } catch (e) {
+        console.warn('WebGPU init unavailable, falling back to WebGLRenderer:', e);
+      }
+    }
+
+    if (!renderer) {
+      renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+      activeBackendLabel = renderer.capabilities?.isWebGL2 ? 'WEBGL 2 FALLBACK' : 'WEBGL 1 FALLBACK';
+    }
+
+    if (backendBadgeEl) {
+      backendBadgeEl.textContent = activeBackendLabel;
+      if (activeBackendLabel.startsWith('WEBGPU')) {
+        backendBadgeEl.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/50 text-emerald-300 mono';
+      }
+    }
+
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2) * QUALITY_PRESETS.low.pixelRatioScale);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    container.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.07;
+    controls.target.set(0, 4, -5);
+    controls.maxPolarAngle = Math.PI * 0.495;
+    // Balanced lighting: cool sky ambient fill + warm sunlight matched to sun position + soft under-deck bounce
+    const hemiLight = new THREE.HemisphereLight(0xc8e1f7, 0x2a5c78, 1.3);
+    scene.add(hemiLight);
+    const dirLight = new THREE.DirectionalLight(0xffe7c2, 1.75);
+    dirLight.position.set(185, 248, -236);
+    scene.add(dirLight);
+    const underFillLight = new THREE.DirectionalLight(0x8bd3f7, 0.65);
+    underFillLight.position.set(-85, -60, -90);
+    scene.add(underFillLight);
+
+    const arenaMap = createDuelistControlPointArena(THREE);
+    dirLight.position.copy(arenaMap.sunPosition).multiplyScalar(0.5);
+    scene.add(arenaMap.root);
+
+    function applyQualityPreset(qKey) {
+      currentQuality = qKey;
+      adaptiveResolutionScale = 1.0;
+      const cfg = QUALITY_PRESETS[qKey] || QUALITY_PRESETS.low;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      renderer.setPixelRatio(Math.max(0.5, dpr * cfg.pixelRatioScale));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      arenaMap.setLayerVisibility('trusses', cfg.showTrusses);
+      const trussBtn = document.getElementById('btn-trusses');
+      if (trussBtn) {
+        trussBtn.classList.toggle('active', cfg.showTrusses);
+        const badge = trussBtn.querySelector('span:last-child');
+        if (badge) {
+          badge.textContent = cfg.showTrusses ? 'ON' : 'OFF';
+          badge.className = cfg.showTrusses
+            ? 'mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300'
+            : 'mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400';
+        }
+      }
+      document.querySelectorAll('.qual-btn').forEach((b) => {
+        b.classList.toggle('active', b.dataset.quality === qKey);
+      });
+    }
+
+    document.querySelectorAll('.qual-btn').forEach((btn) => {
+      btn.addEventListener('click', () => applyQualityPreset(btn.dataset.quality));
+    });
+    applyQualityPreset('low');
+
+    // ============================================================================
+    // 3. SUBSTEPPED COLLISION ENGINE, CAMERA ANTI-CLIPPING & SAFE SPAWN SELECTOR
+    // ============================================================================
+    const PLAYER_CFG = {
+      radius: 0.48,
+      height: 1.8,
+      walkSpeed: 9.0,
+      sprintSpeed: 13.5,
+      jumpVelocity: 8.2,
+      gravity: 22.0,
+      stepUpHeight: 0.45
+    };
+
+    const walkableFloors = arenaMap.collisionDefinitions.filter((c) => c.type === 'walkable_floor');
+    const stairRamps = arenaMap.collisionDefinitions.filter((c) => c.type === 'stair_ramp');
+    const solidObstacles = arenaMap.collisionDefinitions.filter(
+      (c) => c.type === 'solid_wall' || c.type === 'tactical_obstacle' || c.type === 'support_column' || c.type === 'safety_railing'
+    );
+
+    // Optional debug collision overlay
+    const collisionOverlayGroup = new THREE.Group();
+    collisionOverlayGroup.visible = false;
+    scene.add(collisionOverlayGroup);
+    const colWireMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, wireframe: true });
+    arenaMap.collisionDefinitions.forEach((c) => {
+      const b = c.bounds;
+      const w = Math.max(0.1, b.max.x - b.min.x);
+      const h = Math.max(0.1, b.max.y - b.min.y);
+      const d = Math.max(0.1, b.max.z - b.min.z);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), colWireMat);
+      box.position.set((b.min.x + b.max.x) * 0.5, (b.min.y + b.max.y) * 0.5, (b.min.z + b.max.z) * 0.5);
+      collisionOverlayGroup.add(box);
+    });
+
+    function getSupportingSurfaceY(px, py, pz) {
+      let bestY = -Infinity;
+
+      for (let i = 0; i < walkableFloors.length; i++) {
+        const f = walkableFloors[i];
+        const topY = f.bounds.max.y;
+        if (py + PLAYER_CFG.stepUpHeight < topY) continue;
+        if (px < f.bounds.min.x - 0.35 || px > f.bounds.max.x + 0.35 || pz < f.bounds.min.z - 0.35 || pz > f.bounds.max.z + 0.35) continue;
+        if (f.polygonXZ && !isPointInPolygonXZ(px, pz, f.polygonXZ)) {
+          // Allow small capsule radius margin near octagon edges
+          const r = 0.32;
+          const nearEdge =
+            isPointInPolygonXZ(px + r, pz, f.polygonXZ) ||
+            isPointInPolygonXZ(px - r, pz, f.polygonXZ) ||
+            isPointInPolygonXZ(px, pz + r, f.polygonXZ) ||
+            isPointInPolygonXZ(px, pz - r, f.polygonXZ);
+          if (!nearEdge) continue;
+        }
+        if (topY > bestY) bestY = topY;
+      }
+
+      for (let i = 0; i < stairRamps.length; i++) {
+        const sr = stairRamps[i];
+        const b = sr.bounds;
+        if (px < b.min.x - 0.3 || px > b.max.x + 0.3 || pz < b.min.z - 0.3 || pz > b.max.z + 0.3) continue;
+        const ep = sr.endpoints;
+        if (!ep) continue;
+        const dx = ep.ascendingEnd.x - ep.ascendingStart.x;
+        const dz = ep.ascendingEnd.z - ep.ascendingStart.z;
+        const lenSq = dx * dx + dz * dz || 1;
+        const t = THREE.MathUtils.clamp(((px - ep.ascendingStart.x) * dx + (pz - ep.ascendingStart.z) * dz) / lenSq, 0, 1);
+        const rampY = ep.ascendingStart.y + t * (ep.ascendingEnd.y - ep.ascendingStart.y);
+        if (py + PLAYER_CFG.stepUpHeight >= rampY - 0.15 && rampY > bestY) {
+          bestY = rampY;
+        }
+      }
+
+      return bestY;
+    }
+
+    function resolveHorizontalCollisions(pos) {
+      let hitWall = false;
+      const r = PLAYER_CFG.radius;
+      for (let i = 0; i < solidObstacles.length; i++) {
+        const obs = solidObstacles[i];
+        const b = obs.bounds;
+        if (b.max.y <= pos.y + 0.12 || b.min.y >= pos.y + PLAYER_CFG.height - 0.1) continue;
+
+        if (obs.polygonXZ && obs.polygonXZ.length === 4) {
+          // Polygon-accurate railing / rotated barrier push-out via closest point on segments
+          for (let e = 0; e < 4; e++) {
+            const p1 = obs.polygonXZ[e];
+            const p2 = obs.polygonXZ[(e + 1) % 4];
+            const ex = p2.x - p1.x;
+            const ez = p2.z - p1.z;
+            const lSq = ex * ex + ez * ez || 1;
+            const t = THREE.MathUtils.clamp(((pos.x - p1.x) * ex + (pos.z - p1.z) * ez) / lSq, 0, 1);
+            const cx = p1.x + ex * t;
+            const cz = p1.z + ez * t;
+            const dx = pos.x - cx;
+            const dz = pos.z - cz;
+            const d = Math.hypot(dx, dz);
+            if (d < r && d > 1e-5) {
+              const push = r - d;
+              pos.x += (dx / d) * push;
+              pos.z += (dz / d) * push;
+              hitWall = true;
+            }
+          }
+        } else {
+          const cx = THREE.MathUtils.clamp(pos.x, b.min.x, b.max.x);
+          const cz = THREE.MathUtils.clamp(pos.z, b.min.z, b.max.z);
+          const dx = pos.x - cx;
+          const dz = pos.z - cz;
+          const distSq = dx * dx + dz * dz;
+          if (distSq < r * r) {
+            hitWall = true;
+            if (distSq > 1e-6) {
+              const d = Math.sqrt(distSq);
+              const push = r - d;
+              pos.x += (dx / d) * push;
+              pos.z += (dz / d) * push;
+            } else {
+              const penLeft = Math.abs(pos.x - b.min.x);
+              const penRight = Math.abs(b.max.x - pos.x);
+              const penTop = Math.abs(pos.z - b.min.z);
+              const penBot = Math.abs(b.max.z - pos.z);
+              const minPen = Math.min(penLeft, penRight, penTop, penBot);
+              if (minPen === penLeft) pos.x = b.min.x - r;
+              else if (minPen === penRight) pos.x = b.max.x + r;
+              else if (minPen === penTop) pos.z = b.min.z - r;
+              else pos.z = b.max.z + r;
+            }
+          }
+        }
+      }
+      return hitWall;
+    }
+
+    function integrateCharacterStep(pos, vel, moveX, moveZ, dt) {
+      const horizStep = Math.hypot(moveX * dt, moveZ * dt);
+      const substeps = Math.max(1, Math.ceil(horizStep / 0.22));
+      const subDt = dt / substeps;
+      let hitWall = false;
+      let grounded = false;
+
+      for (let s = 0; s < substeps; s++) {
+        pos.x += moveX * subDt;
+        pos.z += moveZ * subDt;
+        if (resolveHorizontalCollisions(pos)) hitWall = true;
+
+        vel.y -= PLAYER_CFG.gravity * subDt;
+        pos.y += vel.y * subDt;
+
+        // Ceiling / overhead slab headroom check
+        for (let i = 0; i < walkableFloors.length; i++) {
+          const f = walkableFloors[i];
+          const botY = f.bounds.min.y;
+          if (pos.y < botY && pos.y + PLAYER_CFG.height > botY && vel.y > 0) {
+            if (pos.x >= f.bounds.min.x && pos.x <= f.bounds.max.x && pos.z >= f.bounds.min.z && pos.z <= f.bounds.max.z) {
+              if (!f.polygonXZ || isPointInPolygonXZ(pos.x, pos.z, f.polygonXZ)) {
+                pos.y = botY - PLAYER_CFG.height;
+                vel.y = 0;
+              }
+            }
+          }
+        }
+
+        const supportY = getSupportingSurfaceY(pos.x, pos.y, pos.z);
+        if (supportY > -Infinity && pos.y <= supportY + 0.08 && vel.y <= 0.1) {
+          pos.y = supportY;
+          vel.y = 0;
+          grounded = true;
+        }
+      }
+
+      return { grounded, hitWall };
+    }
+
+    function computeSafeCameraPosition(origin, desired) {
+      const dir = new THREE.Vector3().subVectors(desired, origin);
+      const totalDist = dir.length();
+      if (totalDist < 0.2) return desired;
+      dir.normalize();
+      const steps = Math.ceil(totalDist / 0.4);
+      const probe = new THREE.Vector3();
+      for (let i = 1; i <= steps; i++) {
+        const d = Math.min(totalDist, (i / steps) * totalDist);
+        probe.copy(origin).addScaledVector(dir, d);
+        for (let j = 0; j < solidObstacles.length; j++) {
+          const b = solidObstacles[j].bounds;
+          if (probe.x >= b.min.x - 0.2 && probe.x <= b.max.x + 0.2 && probe.y >= b.min.y - 0.2 && probe.y <= b.max.y + 0.2 && probe.z >= b.min.z - 0.2 && probe.z <= b.max.z + 0.2) {
+            return origin.clone().addScaledVector(dir, Math.max(0.8, d - 0.45));
+          }
+        }
+      }
+      return desired;
+    }
+
+    function selectSafeTeamSpawn(team, occupiedPositions = []) {
+      const cfg = team === 'red' ? arenaMap.spawnDefinitions.redTeam : arenaMap.spawnDefinitions.blueTeam;
+      const isSlotClear = (slot) => {
+        if (Math.hypot(slot.x - -105, slot.z - 90) < 10.0) return false;
+        if (Math.hypot(slot.x - 105, slot.z - 90) < 10.0) return false;
+
+        const supY = getSupportingSurfaceY(slot.x, slot.y + 0.2, slot.z);
+        if (Math.abs(supY - slot.y) > 0.1) return false;
+
+        for (let i = 0; i < solidObstacles.length; i++) {
+          const b = solidObstacles[i].bounds;
+          if (b.max.y <= slot.y + 0.1 || b.min.y >= slot.y + PLAYER_CFG.height) continue;
+          if (slot.x >= b.min.x - 0.55 && slot.x <= b.max.x + 0.55 && slot.z >= b.min.z - 0.55 && slot.z <= b.max.z + 0.55) {
+            return false;
+          }
+        }
+        for (let i = 0; i < occupiedPositions.length; i++) {
+          const occ = occupiedPositions[i];
+          if (occ && Math.abs(slot.y - occ.y) < 1.8 && Math.hypot(slot.x - occ.x, slot.z - occ.z) < 1.25) {
+            return false;
+          }
+        }
+        return true;
+      };
+
+      for (let i = 0; i < cfg.primarySpawns.length; i++) {
+        if (isSlotClear(cfg.primarySpawns[i])) return { status: 'OK', slot: cfg.primarySpawns[i], yaw: cfg.facingYawRad, tier: 'primary' };
+      }
+      for (let i = 0; i < cfg.fallbackSpawns.length; i++) {
+        if (isSlotClear(cfg.fallbackSpawns[i])) return { status: 'OK', slot: cfg.fallbackSpawns[i], yaw: cfg.facingYawRad, tier: 'fallback' };
+      }
+      const sign = team === 'red' ? -1 : 1;
+      const dynamicOffsets = [
+        [sign * 101.0, 99.5],
+        [sign * 112.0, 101.0],
+        [sign * 96.5, 96.5],
+        [sign * 109.0, 75.5]
+      ];
+      for (let i = 0; i < dynamicOffsets.length; i++) {
+        const candidate = { id: `${team}_DynamicSafe_${i + 1}`, x: dynamicOffsets[i][0], y: 0.0, z: dynamicOffsets[i][1] };
+        if (isSlotClear(candidate)) return { status: 'OK', slot: candidate, yaw: cfg.facingYawRad, tier: 'dynamic' };
+      }
+      return { status: 'WAIT_FOR_SAFE_SPAWN', slot: null, yaw: cfg.facingYawRad, tier: 'none' };
+    }
+
+    // ============================================================================
+    // 4. AUTOMATED PHYSICS, NAVIGATION ROUTE & SPAWN CLEARANCE AUDIT
+    // ============================================================================
+    function runFullEngineeringAudit() {
+      const allSpawns = [
+        ...arenaMap.spawnDefinitions.redTeam.primarySpawns,
+        ...arenaMap.spawnDefinitions.redTeam.fallbackSpawns,
+        ...arenaMap.spawnDefinitions.blueTeam.primarySpawns,
+        ...arenaMap.spawnDefinitions.blueTeam.fallbackSpawns
+      ];
+
+      let validSpawns = 0;
+      const spawnAuditLog = [];
+      allSpawns.forEach((sp) => {
+        const supY = getSupportingSurfaceY(sp.x, sp.y + 0.2, sp.z);
+        const floorOk = Math.abs(supY - sp.y) <= 0.1;
+
+        let obstacleClear = true;
+        for (let i = 0; i < solidObstacles.length; i++) {
+          const b = solidObstacles[i].bounds;
+          if (b.max.y <= sp.y + 0.1 || b.min.y >= sp.y + PLAYER_CFG.height) continue;
+          if (sp.x >= b.min.x - 0.55 && sp.x <= b.max.x + 0.55 && sp.z >= b.min.z - 0.55 && sp.z <= b.max.z + 0.55) {
+            obstacleClear = false;
+            break;
+          }
+        }
+
+        let headroomClear = true;
+        for (let i = 0; i < walkableFloors.length; i++) {
+          const f = walkableFloors[i];
+          const botY = f.bounds.min.y;
+          if (botY > sp.y + 0.1 && botY < sp.y + PLAYER_CFG.height + 0.4) {
+            if (sp.x >= f.bounds.min.x && sp.x <= f.bounds.max.x && sp.z >= f.bounds.min.z && sp.z <= f.bounds.max.z) {
+              if (!f.polygonXZ || isPointInPolygonXZ(sp.x, sp.z, f.polygonXZ)) {
+                headroomClear = false;
+                break;
+              }
+            }
+          }
+        }
+
+        if (floorOk && obstacleClear && headroomClear) {
+          validSpawns++;
+        } else {
+          spawnAuditLog.push(`${sp.id}(floor:${floorOk},obs:${obstacleClear},head:${headroomClear})`);
+        }
+      });
+
+      // Verify fallback + WAIT_FOR_SAFE_SPAWN when primary & dynamic slots are occupied
+      const redTeamCfg = arenaMap.spawnDefinitions.redTeam;
+      const fallbackCheck = selectSafeTeamSpawn('red', redTeamCfg.primarySpawns);
+      const waitCheck = selectSafeTeamSpawn('red', [
+        ...redTeamCfg.primarySpawns,
+        ...redTeamCfg.fallbackSpawns,
+        { x: -101.0, y: 0, z: 99.5 },
+        { x: -112.0, y: 0, z: 101.0 },
+        { x: -96.5, y: 0, z: 96.5 },
+        { x: -109.0, y: 0, z: 75.5 }
+      ]);
+      const fallbackVerified = fallbackCheck.tier === 'fallback' && waitCheck.status === 'WAIT_FOR_SAFE_SPAWN';
+
+      const l2Floor = walkableFloors.find((f) => f.id === 'Level2_Central_Platform_Floor');
+      const l2BottomY = l2Floor ? l2Floor.bounds.min.y : 7.2;
+      const headroomOk = l2BottomY >= 6.5;
+
+      const routesToTest = [
+        {
+          name: 'Level 1 Horizontal (Bravo <-> Charlie)',
+          waypoints: [
+            { x: -105, y: 0, z: 90 },
+            { x: 0, y: 0, z: 90 },
+            { x: 105, y: 0, z: 90 },
+            { x: 0, y: 0, z: 90 },
+            { x: -105, y: 0, z: 90 }
+          ]
+        },
+        {
+          name: 'Level 1 Spine & Under L2 Hub',
+          waypoints: [
+            { x: 0, y: 0, z: 90 },
+            { x: 0, y: 0, z: 0 },
+            { x: 0, y: 0, z: -105 }
+          ]
+        },
+        {
+          name: 'Level 1 Diagonal Pathways (L & R)',
+          waypoints: [
+            { x: -105, y: 0, z: 90 },
+            { x: -52.5, y: 0, z: 0 },
+            { x: 0, y: 0, z: -105 },
+            { x: 52.5, y: 0, z: 0 },
+            { x: 105, y: 0, z: 90 }
+          ]
+        },
+        {
+          name: 'Bravo Staircase Ascent (Y=0 -> 4 -> 8)',
+          waypoints: [
+            { x: -104.5, y: 0, z: 85 },
+            { x: -111.5, y: 4, z: 85 },
+            { x: -111.5, y: 4, z: 81 },
+            { x: -104.5, y: 8, z: 81 }
+          ]
+        },
+        {
+          name: 'Charlie Staircase Ascent (Y=0 -> 4 -> 8)',
+          waypoints: [
+            { x: 104.5, y: 0, z: 85 },
+            { x: 111.5, y: 4, z: 85 },
+            { x: 111.5, y: 4, z: 81 },
+            { x: 104.5, y: 8, z: 81 }
+          ]
+        },
+        {
+          name: 'Bravo Staircase Descent (Y=8 -> 0)',
+          waypoints: [
+            { x: -104.5, y: 8, z: 81 },
+            { x: -111.5, y: 4, z: 81 },
+            { x: -111.5, y: 4, z: 85 },
+            { x: -104.5, y: 0, z: 85 }
+          ]
+        },
+        {
+          name: 'Charlie Staircase Descent (Y=8 -> 0)',
+          waypoints: [
+            { x: 104.5, y: 8, z: 81 },
+            { x: 111.5, y: 4, z: 81 },
+            { x: 111.5, y: 4, z: 85 },
+            { x: 104.5, y: 0, z: 85 }
+          ]
+        },
+        {
+          name: 'Elevated Bridges (Bravo <-> L2 <-> Charlie)',
+          waypoints: [
+            { x: -96.5, y: 8, z: 81 },
+            { x: -30.0, y: 8, z: 10 },
+            { x: 0, y: 8, z: 0 },
+            { x: 30.0, y: 8, z: 10 },
+            { x: 96.5, y: 8, z: 81 }
+          ]
+        },
+        {
+          name: 'Level 2 Hub -> North Bridge -> Alpha',
+          waypoints: [
+            { x: 0, y: 8, z: 0 },
+            { x: 0, y: 8, z: -20 },
+            { x: 0, y: 8, z: -85 },
+            { x: 0, y: 8, z: -105 }
+          ]
+        },
+        {
+          name: 'Alpha Left Staircase (Up & Down)',
+          waypoints: [
+            { x: -7, y: 0, z: -105 },
+            { x: -14, y: 4, z: -105 },
+            { x: -24, y: 4, z: -103 },
+            { x: -24, y: 8, z: -96 },
+            { x: -20, y: 8, z: -105 },
+            { x: 0, y: 8, z: -105 },
+            { x: -20, y: 8, z: -105 },
+            { x: -24, y: 8, z: -96 },
+            { x: -24, y: 4, z: -103 },
+            { x: -14, y: 4, z: -105 },
+            { x: -7, y: 0, z: -105 }
+          ]
+        },
+        {
+          name: 'Alpha Right Staircase (Up & Down)',
+          waypoints: [
+            { x: 7, y: 0, z: -105 },
+            { x: 14, y: 4, z: -105 },
+            { x: 24, y: 4, z: -103 },
+            { x: 24, y: 8, z: -96 },
+            { x: 20, y: 8, z: -105 },
+            { x: 0, y: 8, z: -105 },
+            { x: 20, y: 8, z: -105 },
+            { x: 24, y: 8, z: -96 },
+            { x: 24, y: 4, z: -103 },
+            { x: 14, y: 4, z: -105 },
+            { x: 7, y: 0, z: -105 }
+          ]
+        },
+        {
+          name: 'Bravo Building Interior & Rooftop',
+          waypoints: [
+            { x: -110.0, y: 0, z: 93.0 },
+            { x: -116.5, y: 0, z: 93.0 },
+            { x: -110.0, y: 0, z: 93.0 },
+            { x: -104.5, y: 0, z: 85.0 },
+            { x: -111.5, y: 4, z: 85.0 },
+            { x: -114.0, y: 4, z: 90.0 }
+          ]
+        },
+        {
+          name: 'Charlie Building Interior & Rooftop',
+          waypoints: [
+            { x: 110.0, y: 0, z: 93.0 },
+            { x: 116.5, y: 0, z: 93.0 },
+            { x: 110.0, y: 0, z: 93.0 },
+            { x: 104.5, y: 0, z: 85.0 },
+            { x: 111.5, y: 4, z: 85.0 },
+            { x: 114.0, y: 4, z: 90.0 }
+          ]
+        }
+      ];
+
+      let passedRoutes = 0;
+      const failedRouteNames = [];
+      const simDt = 0.033;
+
+      routesToTest.forEach((rt) => {
+        const simPos = new THREE.Vector3(rt.waypoints[0].x, rt.waypoints[0].y, rt.waypoints[0].z);
+        const simVel = new THREE.Vector3(0, 0, 0);
+        let routeOk = true;
+
+        for (let w = 1; w < rt.waypoints.length; w++) {
+          const target = rt.waypoints[w];
+          const segDist = Math.hypot(target.x - simPos.x, target.z - simPos.z);
+          const maxSteps = Math.max(180, Math.ceil(((segDist / PLAYER_CFG.walkSpeed) / simDt) * 2.2) + 120);
+
+          for (let step = 0; step < maxSteps; step++) {
+            const dx = target.x - simPos.x;
+            const dz = target.z - simPos.z;
+            const dist = Math.hypot(dx, dz);
+            if (dist < 0.35) break;
+
+            const vx = (dx / dist) * PLAYER_CFG.walkSpeed;
+            const vz = (dz / dist) * PLAYER_CFG.walkSpeed;
+            integrateCharacterStep(simPos, simVel, vx, vz, simDt);
+
+            if (simPos.y < -1.0) {
+              routeOk = false;
+              break;
+            }
+          }
+          const finalErr = Math.hypot(target.x - simPos.x, target.z - simPos.z) + Math.abs(target.y - simPos.y);
+          if (finalErr > 0.85) {
+            routeOk = false;
+            break;
+          }
+        }
+
+        if (routeOk) passedRoutes++;
+        else failedRouteNames.push(rt.name);
+      });
+
+      return {
+        validSpawns,
+        totalSpawns: allSpawns.length,
+        spawnAuditLog,
+        fallbackVerified,
+        headroomMeters: l2BottomY,
+        headroomOk,
+        passedRoutes,
+        totalRoutes: routesToTest.length,
+        failedRouteNames,
+        exportsValidated: Boolean(
+          arenaMap.obstacleSpecs &&
+          arenaMap.collisionDefinitions.length > 0 &&
+          arenaMap.capturePoints.length === 3 &&
+          typeof GLTFExporter === 'function'
+        )
+      };
+    }
+
+    const auditSummary = runFullEngineeringAudit();
+
+    // ============================================================================
+    // 5. PLAYABLE THIRD-PERSON TESTER & LOCAL OBJECTIVE SIMULATION
+    // ============================================================================
+    const playerState = {
+      active: false,
+      team: 'red',
+      pos: new THREE.Vector3(-116.5, 0.0, 81.5),
+      vel: new THREE.Vector3(0, 0, 0),
+      grounded: true,
+      yaw: -Math.PI * 0.25,
+      pitch: 0.34,
+      camDist: 7.5
+    };
+
+    const playerGroup = new THREE.Group();
+    playerGroup.visible = false;
+    scene.add(playerGroup);
+
+    const playerBodyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, flatShading: true, metalness: 0.45, roughness: 0.45 });
+    const playerVisorMat = new THREE.MeshStandardMaterial({ color: 0xf8fafc, emissive: 0x38bdf8, emissiveIntensity: 0.85, flatShading: true });
+    const playerBodyMesh = new THREE.Mesh(
+      new THREE.CapsuleGeometry(PLAYER_CFG.radius, PLAYER_CFG.height - PLAYER_CFG.radius * 2, 4, 8),
+      playerBodyMat
+    );
+    playerBodyMesh.position.y = PLAYER_CFG.height * 0.5;
+    const visorMesh = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.16, 0.25), playerVisorMat);
+    visorMesh.position.set(0, 1.45, -0.34);
+    playerGroup.add(playerBodyMesh, visorMesh);
+
+    function respawnPlayer() {
+      const chosen = selectSafeTeamSpawn(playerState.team, playerState.active ? [playerState.pos] : []);
+      if (chosen.status !== 'OK' || !chosen.slot) return;
+      playerState.pos.set(chosen.slot.x, chosen.slot.y, chosen.slot.z);
+      playerState.vel.set(0, 0, 0);
+      playerState.grounded = true;
+      playerState.yaw = chosen.yaw;
+      playerBodyMat.color.setHex(playerState.team === 'red' ? 0xef4444 : 0x3b82f6);
+    }
+
+    // Local objective runtime states (isolated from reusable arenaMap module)
+    const objectiveStates = arenaMap.capturePoints.map((cp) => ({
+      cp,
+      owner: 'neutral',
+      contested: false,
+      progress: 0.0,
+      simMode: 'idle',
+      lastVisualHash: ''
+    }));
+
+    const COLOR_NEUTRAL = new THREE.Color(0x101724);
+    const COLOR_RED = new THREE.Color(0xef4444);
+    const COLOR_BLUE = new THREE.Color(0x3b82f6);
+    const COLOR_OWNER_RED = new THREE.Color(0xb91c1c);
+    const COLOR_OWNER_BLUE = new THREE.Color(0x1d4ed8);
+
+    function updateObjectiveVisuals(st) {
+      const cp = st.cp;
+      const segCount = 24;
+      const filledCount = Math.round(Math.abs(st.progress) * segCount);
+      const hash = `${st.owner}|${st.contested}|${filledCount}|${Math.sign(st.progress)}`;
+      if (st.lastVisualHash === hash) return;
+      st.lastVisualHash = hash;
+
+      let baseMat = arenaMap.materials.neutralCaptureEmissive;
+      if (st.contested) baseMat = arenaMap.materials.contestedCaptureEmissive;
+      else if (st.owner === 'red') baseMat = arenaMap.materials.redTeamEmissive;
+      else if (st.owner === 'blue') baseMat = arenaMap.materials.blueTeamEmissive;
+
+      if (cp.outerRingMesh) cp.outerRingMesh.material = baseMat;
+      cp.letterMeshes.forEach((m) => (m.material = baseMat));
+
+      const segInst = cp.segmentInstancedMesh;
+      if (!segInst) return;
+      for (let i = 0; i < segCount; i++) {
+        let c = COLOR_NEUTRAL;
+        if (st.contested) c = i % 2 === 0 ? COLOR_RED : COLOR_BLUE;
+        else if (i < filledCount) c = st.progress > 0 ? COLOR_RED : COLOR_BLUE;
+        else if (st.owner === 'red') c = COLOR_OWNER_RED;
+        else if (st.owner === 'blue') c = COLOR_OWNER_BLUE;
+        segInst.setColorAt(i, c);
+      }
+      if (segInst.instanceColor) segInst.instanceColor.needsUpdate = true;
+    }
+
+    function buildCaptureSimUI() {
+      const panel = document.getElementById('capture-sim-panel');
+      if (!panel) return;
+      panel.innerHTML = '';
+
+      objectiveStates.forEach((st) => {
+        const cp = st.cp;
+        const card = document.createElement('div');
+        card.className = 'bg-slate-900/70 rounded-xl p-2 border border-slate-800 flex flex-col gap-1';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-slate-200">[${cp.letter}] ${cp.id} <span class="text-slate-500 mono text-[10px]">(Y=${cp.y}m, R=${cp.radius}m)</span></span>
+            <span id="sim-status-${cp.id}" class="mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">NEUTRAL 0%</span>
+          </div>
+          <div class="grid grid-cols-4 gap-1 text-[10px] mono">
+            <button data-cp="${cp.id}" data-act="red_cap" class="sim-btn glass-btn rounded-lg py-1 text-rose-300">RED</button>
+            <button data-cp="${cp.id}" data-act="blue_cap" class="sim-btn glass-btn rounded-lg py-1 text-sky-300">BLUE</button>
+            <button data-cp="${cp.id}" data-act="contested" class="sim-btn glass-btn rounded-lg py-1 text-amber-300">CONTEST</button>
+            <button data-cp="${cp.id}" data-act="neutral" class="sim-btn glass-btn rounded-lg py-1 text-slate-300">CLEAR</button>
+          </div>
+        `;
+        panel.appendChild(card);
+      });
+
+      panel.querySelectorAll('.sim-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const st = objectiveStates.find((s) => s.cp.id === btn.dataset.cp);
+          if (!st) return;
+          const act = btn.dataset.act;
+          if (act === 'neutral') {
+            st.owner = 'neutral';
+            st.contested = false;
+            st.progress = 0.0;
+            st.simMode = 'idle';
+          } else if (act === 'contested') {
+            st.contested = true;
+            st.simMode = 'contested';
+          } else if (act === 'red_cap') {
+            st.contested = false;
+            st.simMode = 'red_cap';
+          } else if (act === 'blue_cap') {
+            st.contested = false;
+            st.simMode = 'blue_cap';
+          }
+          updateObjectiveVisuals(st);
+        });
+      });
+
+      const resetBtn = document.getElementById('btn-sim-reset');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          objectiveStates.forEach((st) => {
+            st.owner = 'neutral';
+            st.contested = false;
+            st.progress = 0.0;
+            st.simMode = 'idle';
+            updateObjectiveVisuals(st);
+          });
+        });
+      }
+
+      const redTeamBtn = document.getElementById('btn-team-red');
+      const blueTeamBtn = document.getElementById('btn-team-blue');
+      const respawnBtn = document.getElementById('btn-respawn');
+      if (redTeamBtn && blueTeamBtn) {
+        redTeamBtn.addEventListener('click', () => {
+          playerState.team = 'red';
+          redTeamBtn.classList.add('active');
+          blueTeamBtn.classList.remove('active');
+          if (playerState.active) respawnPlayer();
+        });
+        blueTeamBtn.addEventListener('click', () => {
+          playerState.team = 'blue';
+          blueTeamBtn.classList.add('active');
+          redTeamBtn.classList.remove('active');
+          if (playerState.active) respawnPlayer();
+        });
+      }
+      if (respawnBtn) {
+        respawnBtn.addEventListener('click', () => {
+          if (!playerState.active) togglePlaytestMode();
+          else respawnPlayer();
+        });
+      }
+    }
+
+    buildCaptureSimUI();
+    objectiveStates.forEach(updateObjectiveVisuals);
+
+    function stepCaptureSimulation(dt) {
+      const capRate = 1.0 / arenaMap.spec.captureRules.neutralCaptureSeconds;
+      const decapRate = 1.0 / arenaMap.spec.captureRules.decapSeconds;
+
+      objectiveStates.forEach((st) => {
+        const cp = st.cp;
+        const statusEl = document.getElementById(`sim-status-${cp.id}`);
+
+        let playerInsideValid = false;
+        let playerWrongElev = false;
+        if (playerState.active) {
+          const distXZ = Math.hypot(playerState.pos.x - cp.x, playerState.pos.z - cp.z);
+          if (distXZ <= cp.radius) {
+            if (playerState.pos.y >= cp.minElevationY && playerState.pos.y <= cp.maxElevationY) {
+              playerInsideValid = true;
+            } else {
+              playerWrongElev = true;
+            }
+          }
+        }
+
+        // If player stands on objective while inspector forced 'contested', pause all progression
+        const isContested = st.contested;
+        if (isContested) {
+          updateObjectiveVisuals(st);
+          if (statusEl) {
+            statusEl.textContent = `CONTESTED ${Math.round(Math.abs(st.progress) * 100)}%`;
+            statusEl.className = 'mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300';
+          }
+          return;
+        }
+
+        const effectiveMode = playerInsideValid
+          ? playerState.team === 'red'
+            ? 'red_cap'
+            : 'blue_cap'
+          : st.simMode;
+
+        if (effectiveMode === 'red_cap') {
+          if (st.owner === 'blue') {
+            st.progress = Math.min(0.0, st.progress + decapRate * dt);
+            if (st.progress >= 0.0) st.owner = 'neutral';
+          } else if (st.owner === 'neutral') {
+            st.progress = Math.min(1.0, st.progress + capRate * dt);
+            if (st.progress >= 1.0) {
+              st.owner = 'red';
+              if (!playerInsideValid) st.simMode = 'idle';
+            }
+          }
+        } else if (effectiveMode === 'blue_cap') {
+          if (st.owner === 'red') {
+            st.progress = Math.max(0.0, st.progress - decapRate * dt);
+            if (st.progress <= 0.0) st.owner = 'neutral';
+          } else if (st.owner === 'neutral') {
+            st.progress = Math.max(-1.0, st.progress - capRate * dt);
+            if (st.progress <= -1.0) {
+              st.owner = 'blue';
+              if (!playerInsideValid) st.simMode = 'idle';
+            }
+          }
+        }
+
+        updateObjectiveVisuals(st);
+
+        if (statusEl) {
+          const pct = Math.round(Math.abs(st.progress) * 100);
+          if (playerWrongElev) {
+            statusEl.textContent = 'ELEV BLOCKED';
+            statusEl.className = 'mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300';
+          } else if (st.owner === 'red' && effectiveMode !== 'blue_cap') {
+            statusEl.textContent = 'RED CONTROLLED';
+            statusEl.className = 'mono text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300';
+          } else if (st.owner === 'blue' && effectiveMode !== 'red_cap') {
+            statusEl.textContent = 'BLUE CONTROLLED';
+            statusEl.className = 'mono text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300';
+          } else if (effectiveMode === 'red_cap') {
+            statusEl.textContent = st.owner === 'blue' ? `NEUTRALIZING ${pct}%` : `RED CAP ${pct}%`;
+            statusEl.className = 'mono text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300';
+          } else if (effectiveMode === 'blue_cap') {
+            statusEl.textContent = st.owner === 'red' ? `NEUTRALIZING ${pct}%` : `BLUE CAP ${pct}%`;
+            statusEl.className = 'mono text-[10px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300';
+          } else {
+            statusEl.textContent = 'NEUTRAL 0%';
+            statusEl.className = 'mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300';
+          }
+        }
+      });
+    }
+
+    // Input & Touch Controls
+    const keys = {};
+    const touchInput = { moveX: 0, moveZ: 0, sprint: false };
+
+    window.addEventListener('keydown', (e) => {
+      keys[e.code] = true;
+      if (e.code === 'KeyF') togglePlaytestMode();
+      else if (e.code === 'KeyR' && playerState.active) respawnPlayer();
+      else if (e.code === 'Escape' && document.pointerLockElement) document.exitPointerLock();
+    });
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    renderer.domElement.addEventListener('click', () => {
+      if (playerState.active && document.pointerLockElement !== renderer.domElement) {
+        renderer.domElement.requestPointerLock?.();
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!playerState.active) return;
+      if (document.pointerLockElement === renderer.domElement) {
+        playerState.yaw -= e.movementX * 0.0024;
+        playerState.pitch = THREE.MathUtils.clamp(playerState.pitch + e.movementY * 0.0022, 0.08, 1.18);
+      }
+    });
+
+    const mobileTouchLayer = document.getElementById('mobile-touch-controls');
+    const joyBase = document.getElementById('touch-joystick-base');
+    const joyKnob = document.getElementById('touch-joystick-knob');
+    const lookZone = document.getElementById('touch-look-zone');
+    const touchJumpBtn = document.getElementById('touch-jump-btn');
+    const touchSprintBtn = document.getElementById('touch-sprint-btn');
+    let joyTouchId = null;
+    let lookTouchId = null;
+    let lastLookX = 0;
+    let lastLookY = 0;
+
+    if (joyBase && joyKnob) {
+      joyBase.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        joyTouchId = e.changedTouches[0].identifier;
+      }, { passive: false });
+
+      joyBase.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier !== joyTouchId) continue;
+          const rect = joyBase.getBoundingClientRect();
+          const maxR = rect.width * 0.36;
+          let dx = t.clientX - (rect.left + rect.width * 0.5);
+          let dy = t.clientY - (rect.top + rect.height * 0.5);
+          const dist = Math.hypot(dx, dy);
+          if (dist > maxR) {
+            dx = (dx / dist) * maxR;
+            dy = (dy / dist) * maxR;
+          }
+          joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+          touchInput.moveX = dx / maxR;
+          touchInput.moveZ = dy / maxR;
+        }
+      }, { passive: false });
+
+      const endJoy = (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === joyTouchId) {
+            joyTouchId = null;
+            touchInput.moveX = 0;
+            touchInput.moveZ = 0;
+            joyKnob.style.transform = 'translate(0px, 0px)';
+          }
+        }
+      };
+      joyBase.addEventListener('touchend', endJoy);
+      joyBase.addEventListener('touchcancel', endJoy);
+    }
+
+    if (lookZone) {
+      lookZone.addEventListener('touchstart', (e) => {
+        lookTouchId = e.changedTouches[0].identifier;
+        lastLookX = e.changedTouches[0].clientX;
+        lastLookY = e.changedTouches[0].clientY;
+      }, { passive: true });
+      lookZone.addEventListener('touchmove', (e) => {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          const t = e.changedTouches[i];
+          if (t.identifier !== lookTouchId) continue;
+          playerState.yaw -= (t.clientX - lastLookX) * 0.0055;
+          playerState.pitch = THREE.MathUtils.clamp(playerState.pitch + (t.clientY - lastLookY) * 0.0045, 0.08, 1.18);
+          lastLookX = t.clientX;
+          lastLookY = t.clientY;
+        }
+      }, { passive: true });
+    }
+
+    if (touchJumpBtn) {
+      touchJumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); keys['Space'] = true; }, { passive: false });
+      touchJumpBtn.addEventListener('touchend', () => { keys['Space'] = false; });
+    }
+    if (touchSprintBtn) {
+      touchSprintBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        touchInput.sprint = !touchInput.sprint;
+        touchSprintBtn.classList.toggle('active', touchInput.sprint);
+      }, { passive: false });
+    }
+
+    const modeSwitchBtn = document.getElementById('btn-mode-switch');
+    const modeSubtitle = document.getElementById('mode-subtitle');
+    const playerXyzEl = document.getElementById('player-xyz');
+    const playerColStatusEl = document.getElementById('player-col-status');
+
+    function togglePlaytestMode() {
+      playerState.active = !playerState.active;
+      controls.enabled = !playerState.active;
+      playerGroup.visible = playerState.active;
+
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (mobileTouchLayer) {
+        mobileTouchLayer.classList.toggle('hidden', !(playerState.active && isTouchDevice));
+      }
+
+      if (playerState.active) {
+        respawnPlayer();
+        if (modeSwitchBtn) {
+          modeSwitchBtn.textContent = '[F] INSPECT MODE';
+          modeSwitchBtn.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-amber-500/25 border border-amber-400/70 text-amber-300 font-semibold mono cursor-pointer';
+        }
+        if (modeSubtitle) {
+          modeSubtitle.innerHTML = 'Playtest Mode Active: Click canvas to lock mouse (<span class="text-amber-300 mono">ESC</span> unlocks). <span class="text-slate-200 mono">WASD</span> move, <span class="text-slate-200 mono">Shift</span> sprint, <span class="text-slate-200 mono">Space</span> jump, <span class="text-slate-200 mono">R</span> safe respawn.';
+        }
+      } else {
+        if (document.pointerLockElement) document.exitPointerLock();
+        if (modeSwitchBtn) {
+          modeSwitchBtn.textContent = '[F] PLAYTEST MODE';
+          modeSwitchBtn.className = 'text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/60 text-emerald-300 font-semibold mono cursor-pointer';
+        }
+        if (modeSubtitle) {
+          modeSubtitle.innerHTML = 'Inspection Mode: Orbit/Zoom/Pan CAD Inspector. Press <span class="text-emerald-300 mono">F</span> for third-person playtest (<span class="text-slate-200 mono">WASD</span> move, <span class="text-slate-200 mono">Shift</span> sprint, <span class="text-slate-200 mono">Space</span> jump, <span class="text-slate-200 mono">R</span> safe respawn).';
+        }
+        if (playerXyzEl) playerXyzEl.textContent = 'IDLE';
+        if (playerColStatusEl) playerColStatusEl.textContent = 'READY';
+      }
+    }
+
+    if (modeSwitchBtn) modeSwitchBtn.addEventListener('click', togglePlaytestMode);
+
+    function stepPlayerPhysics(dt) {
+      if (!playerState.active) return;
+
+      let forwardInput = (keys['KeyW'] || keys['ArrowUp'] ? 1 : 0) - (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0);
+      let strafeInput = (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0);
+
+      if (Math.abs(touchInput.moveX) > 0.08 || Math.abs(touchInput.moveZ) > 0.08) {
+        strafeInput = touchInput.moveX;
+        forwardInput = -touchInput.moveZ;
+      }
+
+      const len = Math.hypot(forwardInput, strafeInput);
+      if (len > 1) {
+        forwardInput /= len;
+        strafeInput /= len;
+      }
+
+      const isSprinting = Boolean(keys['ShiftLeft'] || keys['ShiftRight'] || touchInput.sprint);
+      const speed = isSprinting ? PLAYER_CFG.sprintSpeed : PLAYER_CFG.walkSpeed;
+
+      const sinY = Math.sin(playerState.yaw);
+      const cosY = Math.cos(playerState.yaw);
+      const moveX = (-sinY * forwardInput + cosY * strafeInput) * speed;
+      const moveZ = (-cosY * forwardInput - sinY * strafeInput) * speed;
+
+      if (keys['Space'] && playerState.grounded) {
+        playerState.vel.y = PLAYER_CFG.jumpVelocity;
+        playerState.grounded = false;
+      }
+
+      const res = integrateCharacterStep(playerState.pos, playerState.vel, moveX, moveZ, dt);
+      playerState.grounded = res.grounded;
+
+      if (playerState.pos.y < arenaMap.spec.fallRespawnY) {
+        respawnPlayer();
+      }
+
+      playerGroup.position.copy(playerState.pos);
+      playerGroup.rotation.y = playerState.yaw;
+
+      const lookTarget = new THREE.Vector3(playerState.pos.x, playerState.pos.y + 1.55, playerState.pos.z);
+      const horizDist = Math.cos(playerState.pitch) * playerState.camDist;
+      const vertDist = Math.sin(playerState.pitch) * playerState.camDist;
+      const desiredCam = new THREE.Vector3(
+        lookTarget.x + Math.sin(playerState.yaw) * horizDist,
+        lookTarget.y + vertDist,
+        lookTarget.z + Math.cos(playerState.yaw) * horizDist
+      );
+      const safeCam = computeSafeCameraPosition(lookTarget, desiredCam);
+      camera.position.copy(safeCam);
+      camera.lookAt(lookTarget);
+
+      if (playerXyzEl) {
+        playerXyzEl.textContent = `${playerState.pos.x.toFixed(1)}, ${playerState.pos.y.toFixed(1)}, ${playerState.pos.z.toFixed(1)}`;
+      }
+      if (playerColStatusEl) {
+        playerColStatusEl.textContent = res.hitWall ? 'COLLIDING' : res.grounded ? `Y=${playerState.pos.y.toFixed(1)}m` : 'AIR';
+      }
+    }
+
+    // ============================================================================
+    // 6. GAME INTEGRATION EXPORTS (REUSABLE JS MODULE, JSONS & BINARY GLB)
+    // ============================================================================
+    function triggerFileDownload(filename, content, mimeType = 'application/json') {
+      const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      const toast = document.getElementById('export-toast');
+      if (toast) {
+        toast.textContent = `SAVED ${filename}`;
+        setTimeout(() => { toast.textContent = 'READY'; }, 2400);
+      }
+    }
+
+    /**
+     * Generates a self-contained ES module (`DuelistControlPointArena.js`) ready to drop into
+     * Duelist Adventure's client or authoritative server without any HTML inspector dependencies.
+     */
+    function generateReusableJsModuleSource() {
+      return `// Duelist Adventure — Reusable Control Point Arena Map Module
+// Compatible with Three.js r172+ (WebGPURenderer & WebGLRenderer)
+// Exports: ARENA_SPEC, isPointInPolygonXZ, createDuelistControlPointArena
+
+export const ARENA_SPEC = ${JSON.stringify(arenaMap.spec, null, 2)};
+
+export ${isPointInPolygonXZ.toString()}
+
+export ${createDuelistControlPointArena.toString()}
+`;
+    }
+
+    /**
+     * Uses the official Three.js GLTFExporter to produce a binary .glb containing the
+     * complete low-poly arena (including all textures, UVs, metallic PBR and emissives),
+     * merging compatible geometry by material to minimize draw calls and guaranteeing
+     * restoration of visibility and disposal of temporary geometry even on failure.
+     */
+    function exportCompleteArenaGLB() {
+      const prevVis = {
+        buildings: arenaMap.layerVisibility.buildings,
+        staircases: arenaMap.layerVisibility.staircases,
+        level2: arenaMap.layerVisibility.level2,
+        alpha: arenaMap.layerVisibility.alpha,
+        cover: arenaMap.layerVisibility.cover,
+        spawns: arenaMap.layerVisibility.spawns,
+        objectives: arenaMap.layerVisibility.objectives,
+        trusses: arenaMap.trussGroup.visible,
+        environment: arenaMap.layerVisibility.environment
+      };
+
+      const exportRoot = new THREE.Group();
+      exportRoot.name = 'Duelist_Control_Point_Arena';
+      const instMat = new THREE.Matrix4();
+      const tempDisposables = [];
+      let asyncExportPending = false;
+
+      const restoreAndCleanup = () => {
+        tempDisposables.forEach((g) => g.dispose());
+        tempDisposables.length = 0;
+        arenaMap.setLayerVisibility('buildings', prevVis.buildings);
+        arenaMap.setLayerVisibility('staircases', prevVis.staircases);
+        arenaMap.setLayerVisibility('level2', prevVis.level2);
+        arenaMap.setLayerVisibility('alpha', prevVis.alpha);
+        arenaMap.setLayerVisibility('cover', prevVis.cover);
+        arenaMap.setLayerVisibility('spawns', prevVis.spawns);
+        arenaMap.setLayerVisibility('objectives', prevVis.objectives);
+        arenaMap.setLayerVisibility('trusses', prevVis.trusses);
+        arenaMap.setLayerVisibility('environment', prevVis.environment);
+      };
+
+      try {
+        // Force full arena geometry visible (excluding distant sky/mountain backdrop from GLB)
+        arenaMap.setLayerVisibility('buildings', true);
+        arenaMap.setLayerVisibility('staircases', true);
+        arenaMap.setLayerVisibility('level2', true);
+        arenaMap.setLayerVisibility('alpha', true);
+        arenaMap.setLayerVisibility('cover', true);
+        arenaMap.setLayerVisibility('spawns', true);
+        arenaMap.setLayerVisibility('objectives', true);
+        arenaMap.setLayerVisibility('trusses', true);
+        arenaMap.setLayerVisibility('environment', false);
+        arenaMap.root.updateMatrixWorld(true);
+
+        // Merge all static and instanced geometry by shared material to minimize GLB draw calls
+        const materialBuckets = new Map();
+        const pushGeoToBucket = (mat, rawGeo, worldMatrix) => {
+          let g = rawGeo.index ? rawGeo.toNonIndexed() : rawGeo.clone();
+          g.applyMatrix4(worldMatrix);
+          if (!g.attributes.normal) g.computeVertexNormals();
+          if (!materialBuckets.has(mat)) materialBuckets.set(mat, []);
+          materialBuckets.get(mat).push(g);
+        };
+
+        arenaMap.root.traverse((obj) => {
+          if (!obj.isMesh) return;
+          if (obj.isInstancedMesh) {
+            const combined = new THREE.Matrix4();
+            for (let i = 0; i < obj.count; i++) {
+              obj.getMatrixAt(i, instMat);
+              // Skip zero-scaled hidden instances
+              if (instMat.elements[0] === 0 && instMat.elements[5] === 0 && instMat.elements[10] === 0) continue;
+              combined.multiplyMatrices(obj.matrixWorld, instMat);
+              pushGeoToBucket(obj.material, obj.geometry, combined);
+            }
+          } else {
+            pushGeoToBucket(obj.material, obj.geometry, obj.matrixWorld);
+          }
+        });
+
+        let matIdx = 0;
+        materialBuckets.forEach((geos, mat) => {
+          if (geos.length === 0) return;
+          let totalVerts = 0;
+          geos.forEach((g) => (totalVerts += g.attributes.position.count));
+
+          const posArr = new Float32Array(totalVerts * 3);
+          const normArr = new Float32Array(totalVerts * 3);
+          const uvArr = new Float32Array(totalVerts * 2);
+
+          let offset = 0;
+          geos.forEach((g) => {
+            const count = g.attributes.position.count;
+            posArr.set(g.attributes.position.array, offset * 3);
+            normArr.set(g.attributes.normal.array, offset * 3);
+            if (g.attributes.uv) uvArr.set(g.attributes.uv.array, offset * 2);
+            offset += count;
+            g.dispose();
+          });
+
+          const mergedGeo = new THREE.BufferGeometry();
+          mergedGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+          mergedGeo.setAttribute('normal', new THREE.BufferAttribute(normArr, 3));
+          mergedGeo.setAttribute('uv', new THREE.BufferAttribute(uvArr, 2));
+          tempDisposables.push(mergedGeo);
+
+          const m = new THREE.Mesh(mergedGeo, mat);
+          m.name = `ArenaBatch_Mat_${++matIdx}`;
+          exportRoot.add(m);
+        });
+
+        const exporter = new GLTFExporter();
+        asyncExportPending = true;
+        exporter.parse(
+          exportRoot,
+          (glbArrayBuffer) => {
+            try {
+              triggerFileDownload(
+                'DuelistArena_LowPoly.glb',
+                new Blob([glbArrayBuffer], { type: 'model/gltf-binary' }),
+                'model/gltf-binary'
+              );
+            } finally {
+              restoreAndCleanup();
+            }
+          },
+          (err) => {
+            console.error('GLTFExporter error:', err);
+            restoreAndCleanup();
+          },
+          { binary: true, onlyVisible: true }
+        );
+      } catch (err) {
+        console.error('GLB assembly error:', err);
+        if (!asyncExportPending) restoreAndCleanup();
+      }
+    }
+
+    document.getElementById('btn-dl-js-module')?.addEventListener('click', () => {
+      triggerFileDownload('DuelistControlPointArena.js', generateReusableJsModuleSource(), 'application/javascript');
+    });
+
+    document.getElementById('btn-dl-collision-json')?.addEventListener('click', () => {
+      const payload = JSON.stringify(
+        {
+          mapId: arenaMap.spec.mapId,
+          renderingBackend: activeBackendLabel,
+          units: 'meters',
+          boundarySize: arenaMap.spec.boundarySize,
+          fallRespawnY: arenaMap.spec.fallRespawnY,
+          elevations: arenaMap.spec.elevations,
+          connectionPoints: arenaMap.connectionPoints,
+          obstacleTemplates: arenaMap.obstacleSpecs,
+          obstacleCount: arenaMap.obstacleDefinitions.length,
+          obstacles: arenaMap.obstacleDefinitions,
+          colliderCount: arenaMap.collisionDefinitions.length,
+          colliders: arenaMap.collisionDefinitions
+        },
+        null,
+        2
+      );
+      triggerFileDownload('DuelistArena_CollisionAndNav.json', payload);
+    });
+
+    document.getElementById('btn-dl-gameplay-json')?.addEventListener('click', () => {
+      const payload = JSON.stringify(
+        {
+          mapId: arenaMap.spec.mapId,
+          gameMode: 'ControlPoint_3CP',
+          boundarySize: arenaMap.spec.boundarySize,
+          fallRespawnY: arenaMap.spec.fallRespawnY,
+          spawnAreas: arenaMap.spawnDefinitions,
+          captureRules: arenaMap.spec.captureRules,
+          capturePoints: arenaMap.capturePoints.map((cp) => ({
+            id: cp.id,
+            letter: cp.letter,
+            position: { x: cp.x, y: cp.y, z: cp.z },
+            radius: cp.radius,
+            elevationRequirement: { minY: cp.minElevationY, maxY: cp.maxElevationY },
+            initialOwner: 'neutral'
+          }))
+        },
+        null,
+        2
+      );
+      triggerFileDownload('DuelistArena_SpawnAndCaptureConfig.json', payload);
+    });
+
+    document.getElementById('btn-dl-glb')?.addEventListener('click', () => {
+      exportCompleteArenaGLB();
+    });
+
+    // ============================================================================
+    // 7. DEBUG OVERLAYS, INSPECTOR UI & AUDIT REPORT DISPLAY
+    // ============================================================================
+    const referenceGridGroup = new THREE.Group();
+    referenceGridGroup.visible = false;
+    scene.add(referenceGridGroup);
+    const gridHelper = new THREE.GridHelper(300, 10, 0xf59e0b, 0x334155);
+    gridHelper.position.y = 0.03;
+    referenceGridGroup.add(gridHelper);
+
+    const navRoutesGroup = new THREE.Group();
+    navRoutesGroup.visible = false;
+    scene.add(navRoutesGroup);
+    const navLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+    [
+      [new THREE.Vector3(-105, 0.25, 90), new THREE.Vector3(0, 0.25, 90), new THREE.Vector3(105, 0.25, 90)],
+      [new THREE.Vector3(0, 0.25, 90), new THREE.Vector3(0, 0.25, 0), new THREE.Vector3(0, 0.25, -105)],
+      [new THREE.Vector3(-105, 0.25, 90), new THREE.Vector3(-52.5, 0.25, 0), new THREE.Vector3(0, 0.25, -105)],
+      [new THREE.Vector3(105, 0.25, 90), new THREE.Vector3(52.5, 0.25, 0), new THREE.Vector3(0, 0.25, -105)],
+      [new THREE.Vector3(-104.5, 0.25, 85), new THREE.Vector3(-111.5, 4.25, 85), new THREE.Vector3(-111.5, 4.25, 81), new THREE.Vector3(-104.5, 8.25, 81), new THREE.Vector3(-96.5, 8.25, 81), new THREE.Vector3(-30.0, 8.25, 10), new THREE.Vector3(0, 8.25, 0), new THREE.Vector3(0, 8.25, -20), new THREE.Vector3(0, 8.25, -105)],
+      [new THREE.Vector3(104.5, 0.25, 85), new THREE.Vector3(111.5, 4.25, 85), new THREE.Vector3(111.5, 4.25, 81), new THREE.Vector3(104.5, 8.25, 81), new THREE.Vector3(96.5, 8.25, 81), new THREE.Vector3(30.0, 8.25, 10), new THREE.Vector3(0, 8.25, 0)],
+      [new THREE.Vector3(-7, 0.25, -105), new THREE.Vector3(-14, 4.25, -105), new THREE.Vector3(-24, 4.25, -103), new THREE.Vector3(-24, 8.25, -96), new THREE.Vector3(-20, 8.25, -105), new THREE.Vector3(0, 8.25, -105)],
+      [new THREE.Vector3(7, 0.25, -105), new THREE.Vector3(14, 4.25, -105), new THREE.Vector3(24, 4.25, -103), new THREE.Vector3(24, 8.25, -96), new THREE.Vector3(20, 8.25, -105), new THREE.Vector3(0, 8.25, -105)]
+    ].forEach((pts) => {
+      navRoutesGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), navLineMat));
+    });
+
+    const specTitleEl = document.getElementById('spec-title');
+    const specDetailsEl = document.getElementById('spec-details');
+
+    function renderAuditReport() {
+      if (!specTitleEl || !specDetailsEl) return;
+      const renderInfo = renderer.info?.render;
+      const tris = renderInfo?.triangles ?? 0;
+      const calls = renderInfo?.calls ?? 0;
+      specTitleEl.textContent = `VERIFIED: ${auditSummary.passedRoutes}/${auditSummary.totalRoutes} ROUTES | ${auditSummary.validSpawns}/${auditSummary.totalSpawns} SPAWNS`;
+      specDetailsEl.textContent =
+        `• Nav & Stairs: ${auditSummary.passedRoutes}/${auditSummary.totalRoutes} passed (0 jumps/teleports)\n` +
+        `• Spawns (Floor/Clear/Head): ${auditSummary.validSpawns}/${auditSummary.totalSpawns} OK | Fallback=${auditSummary.fallbackVerified ? 'OK' : 'FAIL'}\n` +
+        `• Backend: ${activeBackendLabel} | Tris: ${tris.toLocaleString()} | Calls: ${calls}\n` +
+        `• Exports (JS/2xJSON/GLB): ${auditSummary.exportsValidated ? 'VERIFIED' : 'CHECK'} | L2 Headroom: ${auditSummary.headroomMeters.toFixed(1)}m`;
+    }
+    renderAuditReport();
+
+    document.getElementById('btn-rerun-tests')?.addEventListener('click', () => {
+      const fresh = runFullEngineeringAudit();
+      Object.assign(auditSummary, fresh);
+      renderAuditReport();
+    });
+
+    const moduleListEl = document.getElementById('module-list');
+    const clearSelectionBtn = document.getElementById('btn-clear-selection');
+    let selectedModuleId = null;
+
+    function selectModule(id) {
+      selectedModuleId = id;
+      document.querySelectorAll('.module-item-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.id === id);
+      });
+      if (id) {
+        clearSelectionBtn.classList.remove('hidden');
+        const mod = arenaMap.modularGroups.find((m) => m.id === id);
+        if (mod) {
+          specTitleEl.textContent = mod.id;
+          specDetailsEl.textContent = mod.specs;
+        }
+      } else {
+        clearSelectionBtn.classList.add('hidden');
+        renderAuditReport();
+      }
+    }
+
+    arenaMap.modularGroups.forEach((mod) => {
+      const btn = document.createElement('button');
+      btn.className = 'module-item-btn glass-btn rounded-lg px-2.5 py-1.5 text-left flex items-center justify-between';
+      btn.dataset.id = mod.id;
+      btn.innerHTML = `<span class="truncate">${mod.label}</span><span class="mono text-[10px] text-slate-500 ml-2">INSPECT</span>`;
+      btn.addEventListener('click', () => selectModule(selectedModuleId === mod.id ? null : mod.id));
+      moduleListEl.appendChild(btn);
+    });
+    clearSelectionBtn.addEventListener('click', () => selectModule(null));
+
+    function bindLayerToggle(btnId, onToggle) {
+      const btn = document.getElementById(btnId);
+      if (!btn) return;
+      btn.addEventListener('click', () => {
+        const next = !btn.classList.contains('active');
+        btn.classList.toggle('active', next);
+        const badge = btn.querySelector('span:last-child');
+        if (badge) {
+          badge.textContent = next ? 'ON' : 'OFF';
+          badge.className = next
+            ? 'mono text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300'
+            : 'mono text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400';
+        }
+        onToggle(next);
+      });
+    }
+
+    bindLayerToggle('btn-spawns', (v) => arenaMap.setLayerVisibility('spawns', v));
+    bindLayerToggle('btn-objectives', (v) => arenaMap.setLayerVisibility('objectives', v));
+    bindLayerToggle('btn-cover', (v) => arenaMap.setLayerVisibility('cover', v));
+    bindLayerToggle('btn-alpha', (v) => arenaMap.setLayerVisibility('alpha', v));
+    bindLayerToggle('btn-level2', (v) => arenaMap.setLayerVisibility('level2', v));
+    bindLayerToggle('btn-buildings', (v) => arenaMap.setLayerVisibility('buildings', v));
+    bindLayerToggle('btn-staircases', (v) => arenaMap.setLayerVisibility('staircases', v));
+    bindLayerToggle('btn-trusses', (v) => arenaMap.setLayerVisibility('trusses', v));
+    bindLayerToggle('btn-environment', (v) => arenaMap.setLayerVisibility('environment', v));
+    bindLayerToggle('btn-grid', (v) => (referenceGridGroup.visible = v));
+    bindLayerToggle('btn-collision', (v) => (collisionOverlayGroup.visible = v));
+    bindLayerToggle('btn-navroutes', (v) => (navRoutesGroup.visible = v));
+    bindLayerToggle('btn-wireframe', (v) => {
+      Object.values(arenaMap.materials).forEach((mat) => {
+        if ('wireframe' in mat) mat.wireframe = v;
+      });
+    });
+
+    // Camera Presets
+    let targetCamPos = null;
+    let targetLookAt = null;
+    const cameraPresets = {
+      iso: { pos: new THREE.Vector3(0, 205, 245), target: new THREE.Vector3(0, 4, -5) },
+      alpha: { pos: new THREE.Vector3(0, 46, -42), target: new THREE.Vector3(0, 8, -104) },
+      redspawn: { pos: new THREE.Vector3(-82, 24, 52), target: new THREE.Vector3(-111, 1, 83) },
+      bluespawn: { pos: new THREE.Vector3(82, 24, 52), target: new THREE.Vector3(111, 1, 83) },
+      level2: { pos: new THREE.Vector3(0, 48, 86), target: new THREE.Vector3(0, 8, -10) },
+      top: { pos: new THREE.Vector3(0, 320, 0.01), target: new THREE.Vector3(0, 0, -5) },
+      center: { pos: new THREE.Vector3(24, 3.2, 26), target: new THREE.Vector3(0, 2.5, 0) }
+    };
+
+    document.querySelectorAll('.cam-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (playerState.active) togglePlaytestMode();
+        document.querySelectorAll('.cam-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const p = cameraPresets[btn.dataset.cam];
+        if (p) {
+          targetCamPos = p.pos.clone();
+          targetLookAt = p.target.clone();
+        }
+      });
+    });
+
+    const toggleHudBtn = document.getElementById('toggle-hud-btn');
+    const rightPanel = document.getElementById('right-panel');
+    if (toggleHudBtn && rightPanel) {
+      toggleHudBtn.addEventListener('click', () => rightPanel.classList.toggle('hidden'));
+    }
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // ============================================================================
+    // 8. RENDER LOOP & REAL-TIME PERFORMANCE TELEMETRY
+    // ============================================================================
+    const perfFpsEl = document.getElementById('perf-fps');
+    const perfTrisEl = document.getElementById('perf-tris');
+    const perfCallsEl = document.getElementById('perf-calls');
+    const perfMeshesEl = document.getElementById('perf-meshes');
+
+    let lastFrameTime = performance.now();
+    let frameCounter = 0;
+    let fpsAccumTime = 0;
+
+    function animate(now = performance.now()) {
+      requestAnimationFrame(animate);
+      const rawDt = now - lastFrameTime;
+      const dt = Math.min(0.05, rawDt * 0.001);
+      lastFrameTime = now;
+
+      arenaMap.updateEnvironment(dt);
+      stepPlayerPhysics(dt);
+      stepCaptureSimulation(dt);
+
+      if (!playerState.active) {
+        if (targetCamPos && targetLookAt) {
+          camera.position.lerp(targetCamPos, 0.08);
+          controls.target.lerp(targetLookAt, 0.08);
+          if (camera.position.distanceTo(targetCamPos) < 0.25) {
+            targetCamPos = null;
+            targetLookAt = null;
+          }
+        }
+        controls.update();
+      }
+
+      renderer.render(scene, camera);
+
+      frameCounter++;
+      fpsAccumTime += rawDt;
+      if (fpsAccumTime >= 350) {
+        const fps = Math.round((frameCounter * 1000) / fpsAccumTime);
+        const ms = (fpsAccumTime / frameCounter).toFixed(1);
+        frameCounter = 0;
+        fpsAccumTime = 0;
+
+        // Adaptive pixel resolution scaling if frame rate drops below 35 FPS
+        if (fps < 35 && adaptiveResolutionScale > 0.65) {
+          adaptiveResolutionScale = Math.max(0.65, adaptiveResolutionScale - 0.1);
+          const cfg = QUALITY_PRESETS[currentQuality] || QUALITY_PRESETS.low;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          renderer.setPixelRatio(Math.max(0.5, dpr * cfg.pixelRatioScale * adaptiveResolutionScale));
+          renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        let visibleMeshes = 0;
+        arenaMap.root.traverseVisible((obj) => {
+          if (obj.isMesh) visibleMeshes++;
+        });
+
+        const renderInfo = renderer.info?.render;
+        const tris = renderInfo?.triangles ?? 0;
+        const calls = renderInfo?.calls ?? 0;
+
+        if (perfFpsEl) perfFpsEl.textContent = `${fps} / ${ms}ms`;
+        if (perfTrisEl) perfTrisEl.textContent = tris.toLocaleString();
+        if (perfCallsEl) perfCallsEl.textContent = calls.toLocaleString();
+        if (perfMeshesEl) perfMeshesEl.textContent = visibleMeshes.toLocaleString();
+      }
+    }
+
+    // Expose reusable API on window for external inspection or automated test runners
+    window.DuelistArena = {
+      ARENA_SPEC,
+      createDuelistControlPointArena,
+      isPointInPolygonXZ,
+      arenaMap,
+      auditSummary
+    };
+
+    animate();
+  </script>
+</body>
+</html>
