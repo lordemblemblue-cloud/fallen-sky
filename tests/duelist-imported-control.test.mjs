@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createLocalSource} from '../src/components/duelist/client/localSource.mjs';
 import {IMPORTED_CONTROL as map,importedSupport,importedBlockers} from '../src/components/duelist/sim/importedControlLayout.mjs';
+import {animationGrounded} from '../src/components/duelist/client/animator.mjs';
 import {routesToTest} from '../scripts/imported-control-routes.mjs';
 import {createDuelistControlPointArena} from '../src/components/duelist/client/maps/controlPointArena.mjs';
 import metadata from '../src/components/duelist/sim/importedControlData.mjs';
@@ -23,6 +24,7 @@ for(const route of routesToTest)test(`real match route: ${route.name}`,()=>{
    for(let n=0;n<steps;n++){
      const dx=target.x-body.x,dz=target.z-body.z,d=Math.hypot(dx,dz);if(d<.25)break;
      s.step(1/60,()=>({move:{x:dx/d,z:dz/d},run:true,presses:[]}));assert.ok(body.y>=-1,`fell on ${route.name}`);
+     assert.ok(animationGrounded(body,s.world.arenaLayout),`false airborne animation on ${route.name} at ${body.y}`);
    }
    assert.ok(Math.hypot(body.x-target.x,body.z-target.z)+Math.abs(body.y-target.y)<=.85,JSON.stringify({target,body}));
  }
