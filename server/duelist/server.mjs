@@ -601,13 +601,14 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         const res = queueMatchClass(client.room.match, client.id, msg.id);
         if (res.accepted) client.classId = msg.id;
         send(client, { t: 'class', ok: res.accepted, pending: res.pendingClass ?? null, reason: res.reason ?? null });
-      } else if (msg.t === 'shop') {
+      } else if (msg.t === 'shop' || msg.t === 'shopBuild') {
         // The client can only request an item ID. Match rules validate every coin,
         // tier, loadout slot and eligibility; story missions have no item shop.
         if (!client.room?.match || typeof msg.id !== 'string' || msg.id.length > 48) {
           send(client, { t: 'shop', ok: false, reason: 'no-match' }); return;
         }
-        const result = purchaseMatchItem(client.room.match, client.id, msg.id);
+        if (msg.t === 'shopBuild' && (!Number.isInteger(msg.tier) || typeof msg.combine !== 'boolean')) { send(client, { t: 'shop', ok: false, reason: 'invalid-tier' }); return; }
+        const result = purchaseMatchItem(client.room.match, client.id, msg.id, msg.t === 'shopBuild' ? msg.tier : undefined, msg.t === 'shopBuild' ? msg.combine : false);
         send(client, { t: 'shop', ...result });
       } else if (msg.t === 'storySupply') {
         // Free supplies are story-only, once per authoritative human seat per operation.
