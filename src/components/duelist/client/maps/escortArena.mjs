@@ -974,7 +974,7 @@ export function createRoadwayShell(positions, thickness=.38){
         const garageRoof = new THREE.Mesh(new THREE.BoxGeometry(garageW + sideW * 2 + 0.6, 0.6, garageD + 0.6), this.mats.darkWall);
         garageRoof.position.set(cx, cy + garageH + 0.3, garageZ);
         g.add(garageRoof);
-        this._registerBoxObstacle(cx - garageW * 0.5 - sideW, cx + garageW * 0.5 + sideW, cy + garageH, cy + garageH + 0.6, garageZ - garageD * 0.5, garageZ + garageD * 0.5, 'PointA_GarageRoofOverhead', 'Phase2');
+        this._registerBoxObstacle(cx - garageW * 0.5 - sideW - .3, cx + garageW * 0.5 + sideW + .3, cy + garageH, cy + garageH + 0.6, garageZ - garageD * 0.5-.3, garageZ + garageD * 0.5+.3, 'PointA_GarageRoofOverhead', 'Phase2');
 
         const garageTrim = new THREE.Mesh(new THREE.BoxGeometry(garageW, 0.22, 0.3), this.mats.cyanGlow);
         garageTrim.position.set(cx, cy + garageH - 0.15, garageZ + garageD * 0.5);
@@ -1134,7 +1134,6 @@ export function createRoadwayShell(positions, thickness=.38){
 
         const gwPt = this.routeSpline.getPoint(0.45);
         const gwTan = this.routeSpline.getTangent(0.45).normalize();
-        const gwRight = new THREE.Vector3().crossVectors(gwTan, new THREE.Vector3(0, 1, 0)).normalize();
         const gwYaw = Math.atan2(gwTan.x, gwTan.z);
         const gwGroup = new THREE.Group();
         gwGroup.position.copy(gwPt);
@@ -1156,7 +1155,8 @@ export function createRoadwayShell(positions, thickness=.38){
         const gwHeader = new THREE.Mesh(new THREE.BoxGeometry(gwHalfSpan * 2 + 2.4, 1.2, 2.6), this.mats.darkWall);
         gwHeader.position.set(0, gwH + 0.4, 0);
         gwGroup.add(gwHeader);
-        this._registerBoxObstacle(gwPt.x - 10.5, gwPt.x + 10.5, gwPt.y + gwH - 0.2, gwPt.y + gwH + 1.0, gwPt.z - 2.5, gwPt.z + 2.5, 'CP1_BridgeGateHeaderOverhead', 'Phase3');
+        gwGroup.updateMatrixWorld(true);
+        {const b=new THREE.Box3().setFromObject(gwHeader);this._registerBoxObstacle(b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z,"CP1_BridgeGateHeaderOverhead",'Phase3');}
 
         const gwCyan = new THREE.Mesh(new THREE.BoxGeometry(gwHalfSpan * 2 - 2.0, 0.24, 2.75), this.mats.cyanGlow);
         gwCyan.position.set(0, gwH - 0.15, 0);
@@ -1282,7 +1282,6 @@ export function createRoadwayShell(positions, thickness=.38){
 
         const bayPt = this.routeSpline.getPoint(0.92);
         const bayTan = this.routeSpline.getTangent(0.92).normalize();
-        const bayRight = new THREE.Vector3().crossVectors(bayTan, new THREE.Vector3(0, 1, 0)).normalize();
         const bayYaw = Math.atan2(bayTan.x, bayTan.z);
         const bayGroup = new THREE.Group();
         bayGroup.position.copy(bayPt);
@@ -1300,7 +1299,8 @@ export function createRoadwayShell(positions, thickness=.38){
         const bayHeader = new THREE.Mesh(new THREE.BoxGeometry(bayHalfW * 2 + 2.4, 1.2, 2.6), this.mats.darkWall);
         bayHeader.position.set(0, bayH + 0.3, 0);
         bayGroup.add(bayHeader);
-        this._registerBoxObstacle(bayPt.x - 10.0, bayPt.x + 10.0, bayPt.y + bayH - 0.3, bayPt.y + bayH + 0.9, bayPt.z - 2.5, bayPt.z + 2.5, 'PointB_BayHeaderOverhead', 'Phase5');
+        bayGroup.updateMatrixWorld(true);
+        {const b=new THREE.Box3().setFromObject(bayHeader);this._registerBoxObstacle(b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z,"PointB_BayHeaderOverhead",'Phase5');}
 
         const bayAmberTrim = new THREE.Mesh(new THREE.BoxGeometry(bayHalfW * 2 - 2.0, 0.28, 2.75), this.mats.amberGlow);
         bayAmberTrim.position.set(0, bayH - 0.2, 0);
