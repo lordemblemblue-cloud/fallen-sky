@@ -1,7 +1,7 @@
 // Server-authoritative room engine for Base44 realtime Actors. No browser or database access.
 import { createMatch, joinMatch, leaveMatch, stepMatch, matchView, queueMatchClass, purchaseMatchItem, MODES } from '../sim/match.mjs';
 import { createInputRateLimiter, classById } from '../core/index.mjs';
-import { PROTOCOL, DEFAULT_PUBLIC_ROOMS, BODY_IDS, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND, ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, sanitizeInput, encodeFighter, encodeOwn } from './protocol.mjs';
+import { PROTOCOL, DEFAULT_PUBLIC_ROOMS, BODY_IDS, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND, ABUSE_MESSAGES_PER_SECOND, compactWaitingInputs, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, sanitizeInput, encodeFighter, encodeOwn } from './protocol.mjs';
 
 export const ACTOR_TRANSPORT = 'base44:duelist';
 const STEP = 1 / TICK_HZ;
@@ -89,10 +89,7 @@ export class DuelistRoomEngine {
     c.lastSeq=input.seq;c.lastInput=now;
     input.presses=input.presses.filter(p=>p==='blockUp'||p==='release'||c.limiter.allow(now));
     c.waiting.push(input);
-    if(c.waiting.length>MAX_WAITING_INPUTS){
-      const skipped=c.waiting.splice(0,c.waiting.length-KEPT_WAITING_INPUTS);
-      c.waiting[0].presses=[...skipped.flatMap(v=>v.presses),...c.waiting[0].presses].slice(-16);
-    }
+    compactWaitingInputs(c.waiting);
   }
   shouldTick(){return this.clients.size>0;}
   tick(){

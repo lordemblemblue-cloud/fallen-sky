@@ -57,6 +57,16 @@ export const MAX_WAITING_INPUTS = 5;
 // A dropped connection keeps its seat this long (server seconds); the browser keeps trying for as long.
 export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
+// Server-only queue compaction. Do not apply a retained roll to a later stick
+// direction: the client already predicted it in the original direction.
+export function compactWaitingInputs(waiting){
+ if(waiting.length<=MAX_WAITING_INPUTS)return;
+ const skipped=waiting.splice(0,waiting.length-KEPT_WAITING_INPUTS),first=waiting[0];
+ const original=[...skipped,first].find(v=>v.presses.some(p=>p==='roll'||p==='dash'||p==='jump'));
+ first.presses=[...skipped.flatMap(v=>v.presses),...first.presses].slice(-16);
+ if(original){first.move={...original.move};first.face=original.face;first.strafe=original.strafe;}
+}
+
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
 // Append new modes to preserve the permanent room IDs (m1 through m7).

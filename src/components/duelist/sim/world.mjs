@@ -199,18 +199,21 @@ export function step(world, dt, inputs = {}) {
         effects.push({ type: 'abilityRefused', by: id, ability: abilityId, reason: 'no-target' });
         continue;
       }
-      const before = fighter.action?.id;
+      const before = fighter.action;
       const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
-      if (res.accepted && res.id && res.id !== before) startMotion(body, fighter, res.id, world);
+      if (res.accepted && res.id && fighter.action !== before) startMotion(body, fighter, res.id, world);
     }
   }
   // 2. the rules advance; moves that start from the buffer get their root motion too
   const pending = [];
   for (const [id, fighter] of world.fighters) {
     const body = world.bodies.get(id);
+    const beforeUpdate=fighter.action;
     update(fighter, dt, now, actionRate(fighter, now));
+    // A buffered roll may start on the exact tick its predecessor ends. The ID is
+    // identical, but its root-motion accumulator must start fresh.
+    if(fighter.action && fighter.action!==beforeUpdate)startMotion(body,fighter,fighter.action.id,world);
     for (const event of takeEvents(fighter)) {
-      if (event.type === 'start' && body.motion?.id !== event.id) startMotion(body, fighter, event.id, world);
       if (event.type === 'start') {
         const started = moveById(event.id);
         if (started && (started.kind === 'attack' || (started.kind === 'power' && !started.effect)) && effectOn(fighter, 'cloak', now)) {
@@ -230,7 +233,7 @@ export function step(world, dt, inputs = {}) {
     const delta={x:body.x-before.x,y:body.y-before.y,z:body.z-before.z};
     Object.assign(body,before);
     const result=moveArenaBody(world.arenaLayout,body,delta.x,delta.z,delta.y,BODY_RADIUS,!fighter.heldBy && !fighter.seizedBy && !body.jumped);
-    if(world.arenaLayout?.escortImported && fighter.team && escortEnemyZone(fighter.team,world.escortStage??0,body) && !escortEnemyZone(fighter.team,world.escortStage??0,before)){Object.assign(body,before);body.vy=0;}
+    if(world.arenaLayout?.escortImported && (fighter.team==='red'||fighter.team==='blue') && escortEnemyZone(fighter.team,world.escortStage??0,body) && !escortEnemyZone(fighter.team,world.escortStage??0,before)){Object.assign(body,before);body.vy=0;}
     if(result.ceiling || result.landed && body.vy<0)body.vy=0;
     if(arenaGrounded(world.arenaLayout,body,BODY_RADIUS) && body.vy<=0 && fighter.action?.id!=='jump'){
       body.jumped=false;body.airJumpAt=null;body.airDashReady=false;
@@ -606,8 +609,9 @@ function moveBody(world, fighter, body, dt, now) {
     const span = Math.max(1e-6, to - from);
     const progress = Math.max(0, Math.min(1, (a.t - from) / span));
     const target = progress * d;
-    const stepDist = target - body.motion.done;
-    body.motion.done = target;
+    // Never apply negative root travel from an older or rounded action clock.
+    const stepDist = Math.max(0,target - body.motion.done);
+    body.motion.done = Math.max(body.motion.done,target);
     vx += (dir.x * stepDist) / dt;
     vz += (dir.z * stepDist) / dt;
     if (a.move.leap && !a.move.air) { body.y = (world.arenaLayout ? (body.motion.baseY ?? 0) : 0) + 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }

@@ -210,7 +210,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       matchMode = msg.mode;
       world.arenaLayout = getModeArenaLayout(msg.mode);
       world.arenaRadius = world.arenaLayout?.radius ?? (MODES[msg.mode]?.arena || world.arenaRadius);
-      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.reset(); }
+      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.world.escortStage=0; predictor.fighter.team=msg.team??msg.seats?.find(s=>s.id===meId)?.team??null; predictor.reset(); }
       // the crew plays another mission (a friend's crew; the story's next one): its rooms
       if (story && msg.mission && MISSIONS[msg.mission] && msg.mission !== def?.id) {
         def = MISSIONS[msg.mission];
@@ -261,6 +261,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       // the player's own fighter: back to the server's word, the inputs it has not used yet replayed on top
       others = msg.fighters.filter((f) => f.id !== meId && !(f.v[4] & DEAD) && !f.hb).map((f) => ({ x: f.p[0], y: f.p[1], z: f.p[2] }));
       if (predictor) {
+        const ownSeat=msg.fighters.find(f=>f.id===meId);if(ownSeat)predictor.fighter.team=ownSeat.tm??null;
         const was = predictor.active;
         if (msg.own) predictor.reconcile(msg.own, msg.ack, others, was ? null : world.bodies.get(meId) || null);
         else predictor.drop();

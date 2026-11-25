@@ -1,5 +1,23 @@
 // Imported from docs/duelist/escort-phase9-source.html; standalone viewer UI intentionally excluded.
 import * as THREE from "three";
+// Build the opaque bottom and perimeter of the same walkable triangle mesh.
+export function createRoadwayShell(positions, thickness=.38){
+ const out=[], edges=new Map();
+ const key=v=>v.map(n=>Math.round(n*10000)).join(',');
+ const bottom=v=>[v[0],v[1]-thickness,v[2]];
+ for(let i=0;i<positions.length;i+=9){
+   const a=positions.slice(i,i+3),b=positions.slice(i+3,i+6),c=positions.slice(i+6,i+9);
+   out.push(...bottom(a),...bottom(c),...bottom(b));
+   for(const [u,v] of [[a,b],[b,c],[c,a]]){
+     const k=[key(u),key(v)].sort().join('|');
+     if(edges.has(k))edges.delete(k);else edges.set(k,[u,v]);
+   }
+ }
+ for(const [u,v] of edges.values())out.push(...u,...bottom(u),...v,...v,...bottom(u),...bottom(v));
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(out,3));geometry.computeVertexNormals();
+ return geometry;
+}
     function createProceduralTexture(type) {
       const canvas = globalThis.document.createElement('canvas');
       canvas.width = 256;
@@ -8,12 +26,12 @@ import * as THREE from "three";
 
       let seed=7482;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
       if (type === 'road') {
-        ctx.fillStyle = '#1e2633';
+        ctx.fillStyle = '#394655';
         ctx.fillRect(0, 0, 256, 256);
         for (let i = 0; i < 1400; i++) {
           const x = rand() * 256;
           const y = rand() * 256;
-          const v = 26 + Math.floor(rand() * 18);
+          const v = 47 + Math.floor(rand() * 18);
           ctx.fillStyle = `rgb(${v},${v + 5},${v + 12})`;
           ctx.fillRect(x, y, 2, 2);
         }
@@ -26,7 +44,7 @@ import * as THREE from "three";
           ctx.fillRect(169, y, 3, 18);
         }
       } else if (type === 'deck') {
-        ctx.fillStyle = '#242f40';
+        ctx.fillStyle = '#3b485b';
         ctx.fillRect(0, 0, 256, 256);
         ctx.strokeStyle = 'rgba(148, 163, 184, 0.16)';
         ctx.lineWidth = 2;
@@ -164,42 +182,49 @@ import * as THREE from "three";
 
         this.mats = {
           roadway: new THREE.MeshStandardMaterial({
+            transparent:false, opacity:1, depthWrite:true, emissive:0x344257, emissiveIntensity:.13,
             map: roadTex,
             color: 0xb8c7da,
             roughness: 0.78,
             metalness: 0.22
           }),
           bridgeDeck: new THREE.MeshStandardMaterial({
+            transparent:false, opacity:1, depthWrite:true, emissive:0x344257, emissiveIntensity:.13,
             map: roadTex,
             color: 0x94b8db,
             roughness: 0.62,
             metalness: 0.38
           }),
           slateDeck: new THREE.MeshStandardMaterial({
+            transparent:false, opacity:1, depthWrite:true, emissive:0x344257, emissiveIntensity:.13,
             map: deckTex,
             color: 0x9db0c7,
             roughness: 0.72,
             metalness: 0.32
           }),
           elevatedDeck: new THREE.MeshStandardMaterial({
+            transparent:false, opacity:1, depthWrite:true, emissive:0x344257, emissiveIntensity:.13,
             map: deckTex,
             color: 0x7da2c8,
             roughness: 0.58,
             metalness: 0.45
           }),
           tacticalDeck: new THREE.MeshStandardMaterial({
+            transparent:false, opacity:1, depthWrite:true, emissive:0x344257, emissiveIntensity:.13,
             map: deckTex,
             color: 0x6ea39f,
             roughness: 0.62,
             metalness: 0.44
           }),
           spawnDeckAtk: new THREE.MeshStandardMaterial({
+            transparent:false, opacity:1, depthWrite:true, emissive:0x344257, emissiveIntensity:.13,
             map: deckTex,
             color: 0x5c85b8,
             roughness: 0.58,
             metalness: 0.45
           }),
           spawnDeckDef: new THREE.MeshStandardMaterial({
+            transparent:false, opacity:1, depthWrite:true, emissive:0x344257, emissiveIntensity:.13,
             map: deckTex,
             color: 0xb88c5c,
             roughness: 0.58,
@@ -211,6 +236,7 @@ import * as THREE from "three";
             roughness: 0.64,
             metalness: 0.52
           }),
+          roadUnderside: new THREE.MeshStandardMaterial({color:0x354151,roughness:.88,metalness:.12,transparent:false,opacity:1,depthWrite:true}),
           steelTrim: new THREE.MeshStandardMaterial({
             color: 0x475569,
             roughness: 0.45,
@@ -876,12 +902,16 @@ import * as THREE from "three";
           const mesh = new THREE.Mesh(geom, mat);
           mesh.name = name;
           mesh.receiveShadow = true;
+          mesh.castShadow = true;
           g.add(mesh);
           return mesh;
         };
 
         this.roadwayMesh = buildMeshFromArrays(roadPositions, roadUVs, this.mats.roadway, 'RoadwayStandardMesh');
         this.bridgeMesh = buildMeshFromArrays(bridgePositions, bridgeUVs, this.mats.bridgeDeck, 'RoadwayBridgeMesh');
+        const shell=new THREE.Mesh(createRoadwayShell([...roadPositions,...bridgePositions]),this.mats.roadUnderside);
+        shell.name='OpaqueRoadwayAndBridgeUnderside';shell.receiveShadow=true;shell.castShadow=true;g.add(shell);
+
 
         const chevShape = new THREE.Shape();
         chevShape.moveTo(0, 1.3);

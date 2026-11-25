@@ -39,6 +39,8 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
   let ey = 0;
   let ez = 0;
   let lastCorrection = 0;
+  let evasionUntil=-Infinity;
+  let smoothCorrection=false;
 
   // the server moves two overlapping bodies half the overlap each; the others stand where they were last seen
   function keepApart(others) {
@@ -75,7 +77,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
     advance(seq, input, others = []) {
       pending.push({ seq, input });
       if (pending.length > PREDICTION.maxPending) pending.shift();
-      if (active) stepOnce(input, others);
+      if (active) {stepOnce(input, others);if(fighter.action?.id==='roll')evasionUntil=world.time+.25;}
     },
     /**
      * The server's word: the fighter in full (encodeOwn) after it used inputs up to number `ack`. Back to
@@ -86,8 +88,10 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       while (pending.length && pending[0].seq <= ack) pending.shift();
       // held in someone's grip: the holder moves this body, so it is drawn from the server's picture
       if (own.hb) { active = false; return; }
+      const evasive=active&&(fighter.action?.id==='roll'||own.a?.[0]==='roll'||world.time<evasionUntil);
       const was = active ? [body.x, body.y, body.z] : shownAt ? [shownAt.x, shownAt.y, shownAt.z] : null;
       if (!active) { ex = 0; ey = 0; ez = 0; }
+      const priorProtection=fighter.protectedUntil;
       applyOwn(fighter, body, own);
       world.time = own.at;
       for (const p of pending) stepOnce(p.input, others);
@@ -98,21 +102,24 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
         ex += dx;
         ey += was[1] - body.y;
         ez += dz;
-        if (Math.hypot(ex, ez) > PREDICTION.cutMetres) { ex = 0; ey = 0; ez = 0; }
+        const respawn=fighter.protectedUntil>priorProtection+.01||fighter.vitals.dead;
+        smoothCorrection=!respawn&&(smoothCorrection&&Math.hypot(ex,ez)>.1||evasive||fighter.action?.id==='roll')&&Math.hypot(ex,ez)<9&&Math.abs(ey)<2;
+        if (Math.hypot(ex, ez) > PREDICTION.cutMetres && !smoothCorrection || respawn) { ex = 0; ey = 0; ez = 0; smoothCorrection=false; }
+
       } else { ex = 0; ey = 0; ez = 0; lastCorrection = 0; }
       active = true;
     },
     /** The server is not acting on this player's inputs (fallen, a countdown): nothing to predict. */
     drop() { active = false; },
     /** A new connection or a new match: nothing to replay, nothing predicted until the server's next word. */
-    reset() { pending.length = 0; active = false; ex = 0; ey = 0; ez = 0; lastCorrection = 0; },
+    reset() { pending.length = 0; active = false; ex = 0; ey = 0; ez = 0; lastCorrection = 0; evasionUntil=-Infinity;smoothCorrection=false; },
     /**
      * Write the predicted fighter into the fighter and body the game view draws (the mirror world's), whose
      * clock reads `time`: moments (cooldowns, a stagger's end) are moved onto that clock, and an action keeps
      * its object while it is the same action (the animator and the effects tell a new action by it).
      */
     present(shown, shownBody, time, dt) {
-      const k = Math.exp(-Math.max(0, dt) / PREDICTION.easeSeconds);
+      const k = Math.exp(-Math.max(0, dt) / (smoothCorrection?.22:PREDICTION.easeSeconds));
       ex *= k; ey *= k; ez *= k;
       const shift = time - world.time;
       Object.assign(shown.vitals, fighter.vitals);

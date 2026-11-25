@@ -34,7 +34,7 @@ import { createMission, stepMission, joinMission, leaveMission, missionView, nex
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, DEFAULT_PUBLIC_ROOMS, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
-  ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
+  ABUSE_MESSAGES_PER_SECOND, compactWaitingInputs, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
 const REMATCH_AFTER = 12; // seconds after a match ends
@@ -629,10 +629,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         client.accepted += presses.length;
         client.waiting.push({ seq: input.seq, move: input.move, run: input.run, sprint: input.sprint, face: input.face, strafe: input.strafe, interact: input.interact, presses });
         // a burst after a stall: skip to the newest few (every press kept), so the fighter does not run long behind its player
-        if (client.waiting.length > MAX_WAITING_INPUTS) {
-          const skipped = client.waiting.splice(0, client.waiting.length - KEPT_WAITING_INPUTS);
-          client.waiting[0].presses = [...skipped.flatMap((s) => s.presses), ...client.waiting[0].presses].slice(-16);
-        }
+        compactWaitingInputs(client.waiting);
       }
     });
     ws.on('close', () => {
