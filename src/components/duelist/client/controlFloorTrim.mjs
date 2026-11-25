@@ -70,9 +70,14 @@ export function clippedPatternGeometry(floorGeometry, polygons) {
   const xyz=[];
   for(const polygon of polygons)for(const triangle of triangles){
     const p=clipToTriangle(polygon,triangle);
-    for(let i=1;i+1<p.length;i++){
-      const tri=[p[0],p[i],p[i+1]];
-      if(Math.abs(signedArea(tri))<1e-8)continue;
+    // Float32 boundary vertices can round a fraction outside a hole. Nudge
+    // toward the source triangle's interior, then reject collapsed slivers.
+    const center=[(triangle[0][0]+triangle[1][0]+triangle[2][0])/3,
+      (triangle[0][1]+triangle[1][1]+triangle[2][1])/3];
+    const inset=p.map(v=>v.map((c,k)=>Math.fround(c+(center[k]-c)*0.00001)));
+    for(let i=1;i+1<inset.length;i++){
+      const tri=[inset[0],inset[i],inset[i+1]];
+      if(Math.abs(signedArea(tri))<1e-5)continue;
       if(signedArea(tri)>0)tri.reverse(); // upward normal in world XZ
       for(const v of tri)xyz.push(v[0],0,v[1]);
     }
