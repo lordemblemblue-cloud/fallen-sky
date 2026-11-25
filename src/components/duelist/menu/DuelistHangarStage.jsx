@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
+import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady, sceneRendererApi } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
 import { prepareIdlePreview } from './idlePreview.mjs';
 
@@ -9,7 +9,7 @@ import { prepareIdlePreview } from './idlePreview.mjs';
  * Gameplay renderer and WebGPU migration paths are deliberately untouched.
  * The CSS hangar remains visible if WebGL or a character asset fails to load.
  */
-export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId = 'duelist' }) {
+export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId = 'duelist', headquarters = false, onHqStatus }) {
   const mountRef = useRef(null);
 
   useEffect(() => {
@@ -18,7 +18,8 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     let renderer;
     try {
       renderer = createSceneRenderer('duelist-adventure', { alpha: true, antialias: true, powerPreference: 'low-power' }).renderer;
-    } catch {
+    } catch (error) {
+      if (headquarters) onHqStatus?.({ state: 'fallback', message: String(error?.message || error).slice(0, 200) });
       return undefined;
     }
 
@@ -27,6 +28,9 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     let idlePose = null;
     let model = null;
     let observer = null;
+    let hq = null;
+    let reportElapsed = 0;
+    let hqFailed = false;
     const clock = new THREE.Clock();
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x071426, 0.026);
@@ -134,9 +138,44 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     }
 
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const originalCamera = camera.position.clone();
+    function showOriginal() {
+      world.visible = true;
+      camera.position.copy(originalCamera);
+      camera.fov = 42;
+      camera.lookAt(-0.6, 1.18, 0);
+      camera.updateProjectionMatrix();
+    }
+    function failHQ(error) {
+      hqFailed = true;
+      hq?.disposeGuildHeadquarters();
+      hq = null;
+      showOriginal();
+      onHqStatus?.({ state: 'fallback', message: String(error?.message || error).slice(0, 200) });
+    }
+    // Load the opt-in environment only in the browser, only on HOME. The existing
+    // character, scene, renderer, and single RAF remain the owners of rendering.
+    if (headquarters) {
+      onHqStatus?.({ state: 'loading' });
+      import('./experimentalGuildHQ.js').then(({ createGuildHeadquarters }) => {
+        if (!active) return;
+        hq = createGuildHeadquarters(THREE, scene, {
+          quality: window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'performance',
+          onFallback: (still) => { if (still && active) { showOriginal(); onHqStatus?.({ state: 'fallback', message: 'Sustained slow frames: original hangar restored.' }); } },
+        });
+        // Fit the 36m scene into the existing avatar camera's coordinate space.
+        hq.root.scale.setScalar(0.36);
+        world.visible = false;
+        camera.fov = 52;
+        camera.lookAt(-0.6, 1.25, -0.5);
+        camera.updateProjectionMatrix();
+        if (reducedMotion) hq.setAmbientSystemsEnabled(false);
+      }).catch(error => { if (active) failHQ(error); });
+    }
     const tick = () => {
       if (!active) return;
-      const dt = Math.min(0.05, clock.getDelta());
+      const elapsed = clock.getDelta();
+      const dt = Math.min(0.05, elapsed);
       if (!document.hidden) {
         idlePose?.update(dt);
         if (!reducedMotion) {
@@ -144,7 +183,27 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
           ticks.rotation.z -= dt * 0.18;
           platformRing.rotation.z += dt * 0.1;
         }
-        renderer.render(scene, camera);
+        if (isSceneRendererReady(renderer)) {
+          try {
+            if (hq && !hqFailed) {
+              hq.updateGuildHeadquarters(dt);
+              if (elapsed < 0.5) hq.reportHostFrameTime(elapsed * 1000, elapsed);
+            }
+            renderer.render(scene, camera);
+            if (hq && !hqFailed) {
+              reportElapsed += elapsed;
+              if (reportElapsed >= 1) {
+                reportElapsed = 0;
+                const stats = hq.getHeadquartersPerformanceStats();
+                onHqStatus?.({ ...stats, state: stats.stationary ? 'fallback' : 'active', backend: sceneRendererApi(renderer), frameMs: elapsed * 1000 });
+              }
+            }
+          } catch (error) {
+            if (hq) failHQ(error);
+            else if (headquarters && !hqFailed) failHQ(error);
+            else { active = false; return; }
+          }
+        }
       }
       frameId = window.requestAnimationFrame(tick);
     };
@@ -155,16 +214,17 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       if (frameId != null) window.cancelAnimationFrame(frameId);
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
+      hq?.disposeGuildHeadquarters();
       idlePose?.dispose();
       if (model) scene.remove(model);
       // GLB geometry/materials are shared by the character loader's cache:
       // do not dispose them here. Only dispose geometry owned by this stage.
       world.traverse((object) => { if (object.isMesh) object.geometry.dispose(); });
       materials.forEach((material) => material.dispose());
-      renderer.dispose();
+      destroySceneRenderer(renderer);
       renderer.domElement.remove();
     };
-  }, [fighter, classId]);
+  }, [fighter, classId, headquarters, onHqStatus]);
 
   return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" />;
 }
