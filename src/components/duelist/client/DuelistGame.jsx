@@ -480,6 +480,8 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       }
       point.y = Math.min(point.y, DEPOT.height - 0.3);
     };
+    // Conduit has three real elevations, including a basement below world zero.
+    const interiorRay = (from, to, pad) => arenaRayFraction(world.arenaLayout, from, to, pad);
     const lockedBody = () => {
       const f = lockId ? world.fighters.get(lockId) : null;
       if (!f || f.vitals.dead || outOfFight(f)) { lockId = null; return null; }
@@ -767,18 +769,21 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         const target = lockedBody();
         // watched while the game plays your fighter: the camera turns with the body
         if (pilot && at) { const y = controls.yaw(); controls.setYaw(y + Math.atan2(Math.sin(at.yaw - y), Math.cos(at.yaw - y)) * Math.min(1, dt * 2.5)); }
-        const followYaw = target && at ? Math.atan2(target.x - at.x, target.z - at.z) : controls.yaw();
+        // In Conduit, target lock remains a combat aid, not a camera override.
+        const freeInterior = !!world.arenaLayout?.conduitImported && !level;
+        const followYaw = target && at && !freeInterior ? Math.atan2(target.x - at.x, target.z - at.z) : controls.yaw();
         if (at) {
           if (follow.distanceTo(at) > 8) follow.snap();
-          follow.update(dt, { target: at, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target, clamp: clampCamera });
+          follow.update(dt, { target: at, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target, clamp: clampCamera, interiorRay: freeInterior ? interiorRay : null });
           if (level) {
             // the key light follows the crew through the rooms; a camera pressed against you looks through you
             lights.sun.position.set(at.x + 5, 20, at.z + 3);
             lights.sun.target.position.set(at.x, 0, at.z);
-            if (actors[mineId]) actors[mineId].group.visible = camera.position.distanceTo(head.set(at.x, at.y + HEAD, at.z)) > 0.85;
           }
+          // Close orbit becomes a clear near-first-person view rather than looking through our own mesh.
+          if ((level || freeInterior) && actors[mineId]) actors[mineId].group.visible = camera.position.distanceTo(head.set(at.x, at.y + HEAD, at.z)) > 0.85;
         }
-        if (target && at) controls.setYaw(followYaw);
+        if (target && at && !freeInterior) controls.setYaw(followYaw);
         if (markers) markers.update(lastView?.phase === 'live' ? lastView.markers.filter((m) => !m.follow) : [], camera, at);
         if (lastView && !!lastView.alarm !== alarmOn) { alarmOn = !!lastView.alarm; if (alarmOn) audio.play('alarm'); }
         if (fixedShot) { camera.position.fromArray(fixedShot.position); camera.lookAt(...fixedShot.target); }
@@ -845,7 +850,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       } else if (source.status !== 'reconnecting') {
         // nothing to follow yet (while reconnecting the picture simply holds still)
         const start = source.def?.start || { x: 0, z: 0 };
-        follow.update(dt, { target: { x: start.x, y: 0, z: start.z }, yaw: controls.yaw(), pitch: controls.pitch(), clamp: clampCamera });
+        follow.update(dt, { target: { x: start.x, y: 0, z: start.z }, yaw: controls.yaw(), pitch: controls.pitch(), clamp: clampCamera, interiorRay: world.arenaLayout?.conduitImported && !level ? interiorRay : null });
       }
       arena.update(dt, { view: lastView });
       warp.update(dt);

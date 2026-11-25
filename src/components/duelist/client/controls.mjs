@@ -7,6 +7,7 @@
 /* global window, document */
 import * as THREE from 'three';
 import { DEFAULT_KEYS, KIND, keysFrom, actionFor } from './bindings.mjs';
+import { createInteriorOrbit } from './interiorOrbit.mjs';
 
 const AIMED = new Set(['light', 'heavy', 'ability1', 'ability2', 'ability3', 'ability4', 'special', 'breach']);
 
@@ -187,9 +188,19 @@ export function createFollowCamera(camera) {
   const focus = new THREE.Vector3();
   const wanted = new THREE.Vector3();
   let first = true;
+  const interior = createInteriorOrbit(camera);
+  let wasInterior = false;
   return {
     // clamp(target, point): indoors, pulls a camera position back inside the room (walls, the ceiling)
-    update(dt, { target, yaw, pitch, lockOn = null, clamp = null }) {
+    update(dt, { target, yaw, pitch, lockOn = null, clamp = null, interiorRay = null }) {
+      if (interiorRay) {
+        focus.set(target.x, target.y + 1.45, target.z);
+        if (first || !wasInterior) interior.snap();
+        interior.update(dt, { target, yaw, pitch, ray: interiorRay });
+        first = false; wasInterior = true;
+        return;
+      }
+      if (wasInterior) { first = true; wasInterior = false; }
       const distance = 4.3;
       focus.set(target.x, target.y + 1.45, target.z);
       if (lockOn) focus.lerp(new THREE.Vector3(lockOn.x, lockOn.y + 1.2, lockOn.z), 0.25);
