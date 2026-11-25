@@ -198,7 +198,7 @@ function OnlineClassEntry(props) {
   </div>;
 }
 
-function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1, testMode = false, testBots = false,
+function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1, testMode = false, practiceMode = false, testBots = false,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
   onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, progress = null, onProgress = null }) {
   const bound = keysFrom(keys || {});
@@ -269,7 +269,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
     const source = story && !online ? createMissionSource({ id: mission, seed, youBody })
       : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, classId, onChange: (s, detail) => setNet({ status: s, detail }) })
-        : createLocalSource({ mode, botLevel, bots, testMode, testBots, seed, youBody, foeBody, classId, progress: progressRef.current });
+        : createLocalSource({ mode, botLevel, bots, testMode, practiceMode, testBots, seed, youBody, foeBody, classId, progress: progressRef.current });
     const { world } = source;
     sourceRef.current = source;
     // a mission's rooms (matches are fought in the open arena); online they follow the crew to its next mission
@@ -904,7 +904,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       }
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, testMode, testBots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn, entryClassConfirmed]);
+  }, [mode, botLevel, youBody, foeBody, bots, testMode, practiceMode, testBots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn, entryClassConfirmed]);
 
   const view = hud?.view;
   const quest = view?.mission ? view : null; // a story mission's view; otherwise a match's
@@ -1010,10 +1010,13 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
           {bound.itemActive ? keyLabel(bound.itemActive, {short:true}) + ' · ' : ''}Use relic
         </button>
       )}
+      {match?.me?.training && <div className="duelist-practice-tools" style={{position:'absolute',top:50,left:12,zIndex:59,display:'flex',flexWrap:'wrap',gap:6,maxWidth:'min(360px, 80vw)',color:'#e4efff',background:'rgba(8,17,30,.68)',padding:8,borderRadius:12}}>
+        {Object.entries({noCooldowns:'No ability cooldowns',unlimitedUltimate:'Unlimited ultimate'}).map(([id,label])=><button key={id} type="button" aria-pressed={match.me.training[id]} onClick={()=>{if(document.pointerLockElement)document.exitPointerLock?.();sourceRef.current?.setPracticeOption?.(id,!match.me.training[id]);}}>{label}: {match.me.training[id]?'On':'Off'}</button>)}
+      </div>}
       {match && <button type="button" className="duelist-shop-toggle" onClick={() => {
         if (document.pointerLockElement) document.exitPointerLock?.();
         setShopOpen(true);
-      }}>{keyLabel(bound.shop, { short: true })} · Shop · {Math.floor(match.me?.gold ?? 0)} gold</button>}
+      }}>{keyLabel(bound.shop, { short: true })} · Shop · {match.me?.unlimitedGold ? '∞' : Math.floor(match.me?.gold ?? 0)} gold</button>}
       {shopOpen && match && match.phase !== 'over' && <ShopPanel
         me={match.me} answer={sourceRef.current?.shopAnswer || null}
         onBuy={(id, tier, combine) => sourceRef.current?.buyItem?.(id, tier, combine)}
