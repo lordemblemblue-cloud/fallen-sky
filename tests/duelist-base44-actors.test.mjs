@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {DuelistRoomEngine} from '../src/components/duelist/net/actorRoomEngine.mjs';
 import {getModeArenaLayout,arenaFloorContains,arenaBodyBlockers} from '../src/components/duelist/sim/modeArenaLayout.mjs';
-import {DEFAULT_PUBLIC_ROOMS,PROTOCOL} from '../src/components/duelist/net/protocol.mjs';
+import {DEFAULT_PUBLIC_ROOMS,PROTOCOL,actorInstanceId,actorPublicRoomId} from '../src/components/duelist/net/protocol.mjs';
 const fixture=(mode='control')=>{
   let now=0,n=0;
   const room=new DuelistRoomEngine(DEFAULT_PUBLIC_ROOMS.find(r=>r.mode===mode).id,{clock:()=>now,idFactory:()=>String(++n).padStart(32,'0')});
@@ -49,3 +49,10 @@ test('duel enforces two human seats; mode mismatch cannot create a match',()=>{
   assert.ok(other.messages.some(m=>m.code==='room'));
 });
 
+
+test('the A arena has a fresh native instance but preserves its public room ID',()=>{
+  assert.notEqual(actorInstanceId('m5'),'m5');
+  assert.equal(actorPublicRoomId(actorInstanceId('m5')),'m5');
+  assert.equal(actorPublicRoomId('m5'),null);
+  for(const room of DEFAULT_PUBLIC_ROOMS)assert.equal(actorPublicRoomId(actorInstanceId(room.id)),room.id);
+});
