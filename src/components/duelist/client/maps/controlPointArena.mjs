@@ -109,7 +109,7 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#182232';
+        ctx.fillStyle = '#344459';
         ctx.fillRect(0, 0, size, size);
         const r = 24;
         const dx = r * 1.5;
@@ -130,9 +130,9 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
               else ctx.lineTo(px, py);
             }
             ctx.closePath();
-            ctx.fillStyle = (col + Math.round(gy / dy)) % 2 === 0 ? '#1c2739' : '#151e2c';
+            ctx.fillStyle = (col + Math.round(gy / dy)) % 2 === 0 ? '#40536a' : '#35465b';
             ctx.fill();
-            ctx.strokeStyle = '#0d131d';
+            ctx.strokeStyle = '#26364a';
             ctx.stroke();
           }
         }
@@ -151,9 +151,9 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#0f1520';
+        ctx.fillStyle = '#253447';
         ctx.fillRect(0, 0, size, size);
-        ctx.strokeStyle = '#334155';
+        ctx.strokeStyle = '#52657b';
         ctx.lineWidth = 4;
         ctx.beginPath();
         ctx.moveTo(0, 48); ctx.lineTo(76, 48); ctx.lineTo(104, 88);

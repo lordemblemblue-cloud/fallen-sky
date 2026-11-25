@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { createSceneRenderer, destroySceneRenderer, sceneRendererApi } from '../../../lib/webgpuSceneRenderer.js';
+import { applyControlPointDaylight } from '../client/maps/controlPointDaylight.mjs';
+import { createSceneLighting } from '../client/arena.mjs';
 import { createDuelistControlPointArena } from '../client/maps/controlPointArena.mjs';
 
 // Staging-only inspector: the exact imported map, not the live public room.
@@ -11,14 +13,12 @@ export default function ImportedControlPointPreview() {
   useEffect(() => {
     const mount=host.current;
     if (!mount) return;
-    let active=true, renderer, controls, observer, frame=0, map;
+    let active=true, renderer, controls, observer, frame=0, map, daylight;
     const scene=new THREE.Scene();
     scene.background=new THREE.Color(0x080b10);
     const camera=new THREE.PerspectiveCamera(48,1,0.5,900);
     camera.position.set(0,205,245);
-    const hemi=new THREE.HemisphereLight(0xdbeafe,0x1e293b,1.35);
-    const sun=new THREE.DirectionalLight(0xfffbeb,1.45);
-    sun.position.set(95,185,110);scene.add(hemi,sun);
+    const lights=createSceneLighting(scene);scene.add(lights.sun.target);
     const resize=()=>{if(!active||!renderer)return;const w=Math.max(1,mount.clientWidth),h=Math.max(1,mount.clientHeight);camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);};
     const fail=()=>{if(active)setStatus('Imported preview unavailable on this device.');};
     try {
@@ -28,6 +28,8 @@ export default function ImportedControlPointPreview() {
       scene.add(map.root);
       const created=createSceneRenderer('duelist-adventure',{antialias:false,powerPreference:'high-performance'});
       renderer=created.renderer;
+      renderer.toneMapping=THREE.ACESFilmicToneMapping;
+      daylight=applyControlPointDaylight({scene,camera,renderer,lights,materials:map.materials});
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2)*0.75);
       renderer.domElement.style.cssText='display:block;width:100%;height:100%;touch-action:none';
       mount.appendChild(renderer.domElement);
@@ -39,7 +41,7 @@ export default function ImportedControlPointPreview() {
         const draw=()=>{if(!active)return;try{controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(draw);}catch{fail();}};draw();
       }).catch(fail);
     }catch{fail();}
-    return()=>{active=false;cancelAnimationFrame(frame);observer?.disconnect();controls?.dispose();map?.dispose();if(renderer){renderer.domElement.remove();destroySceneRenderer(renderer);}};
+    return()=>{active=false;cancelAnimationFrame(frame);observer?.disconnect();controls?.dispose();daylight?.dispose();map?.dispose();if(renderer){renderer.domElement.remove();destroySceneRenderer(renderer);}};
   },[]);
   return <div className="space-y-2"><p className="text-xs text-amber-200" role="status">{status}</p><div ref={host} className="overflow-hidden rounded border border-white/20 bg-slate-950" style={{height:'clamp(220px,55vh,600px)'}}/><p className="text-xs text-white/60">Drag to orbit, scroll or pinch to zoom. This is not a multiplayer match.</p></div>;
 }
