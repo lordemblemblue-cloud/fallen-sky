@@ -11,6 +11,7 @@ import * as THREE from 'three';
 import { KNOCKDOWN, clipAt, settleOf, isStunned } from '../core/index.mjs';
 import { createDirectionalFeet } from './directionalFeet.mjs';
 import { secondHandAt } from './secondHand.mjs';
+import { arenaGrounded } from '../sim/modeArenaLayout.mjs';
 
 export const FADE = Object.freeze({ in: 0.07, out: 0.12, base: 0.2, settleOut: 0.18 });
 // metres per second each base clip covers at normal speed (the pack's are measured by its builder)
@@ -44,6 +45,13 @@ const RECOIL_FROM = 0.07;
 const CLASH = 0.15;
 const part = (clip, legs) => new THREE.AnimationClip(`${clip.name}:${legs ? 'legs' : 'body'}`, clip.duration, clip.tracks.filter((t) => LEGS.test(t.name) === legs));
 const WALKING = 1.2; // metres a second at which the legs are wholly the walk's
+
+// Ground support is the same geometry used by the match simulation, not world Y=0.
+export function animationGrounded(body, arenaLayout = null) {
+  // At takeoff a jump may still be within the support tolerance.
+  if (body.jumped && body.vy > 0.08) return false;
+  return arenaLayout ? arenaGrounded(arenaLayout, body) : body.y <= 0.08;
+}
 
 export function createFighterAnimator({ model, clips, stance = 'sword', secondHand = null }) {
   const mixer = new THREE.AnimationMixer(model);
@@ -132,7 +140,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
   };
 
   // What shows over the base now: { clip, time, fade, out } or null.
-  function choose(fighter, body, now, dt, working, clash) {
+  function choose(fighter, body, now, dt, working, clash, grounded) {
     const a = fighter.action;
     if (fighter.vitals.dead) {
       if (deathStart === null) deathStart = elapsed;
@@ -142,7 +150,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     deathStart = null;
     // Class leaps keep their own authored clips. A regular jump followed by airDash
     // uses its airborne loop until the feet actually land, not just until dash recovery.
-    const airborne = body.y > 0.08 && !fighter.effects?.levitate;
+    const airborne = !grounded && !fighter.effects?.levitate;
     if (airborne) wasAirborne = true;
     else if (wasAirborne) { wasAirborne = false; landedAt = elapsed; }
     // knocked down: thrown back and lying, then getting up
@@ -237,9 +245,10 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
 
   // working: { clip, progress (0..1), loop } while the fighter is using something, else null
   // clash: when (the rules' time) this fighter's cut was last parried, or null
-  function update(dt, { fighter, body, now, working = null, clash = null, impact = null }) {
+  function update(dt, { fighter, body, now, arenaLayout = null, working = null, clash = null, impact = null }) {
     elapsed += dt;
-    const want = choose(fighter, body, now, dt, working, clash);
+    const grounded = animationGrounded(body, arenaLayout);
+    const want = choose(fighter, body, now, dt, working, clash, grounded);
     lastAction = fighter.action;
     let outRate = 1 / FADE.out;
     if (want) {
@@ -358,7 +367,7 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     const blend = -Math.expm1(-dt / 0.08);
     sideStride += (travelX * cosine - travelZ * sine - sideStride) * blend;
     forwardStride += (travelX * sine + travelZ * cosine - forwardStride) * blend;
-    if (body.y < 0.04 && !fighter.vitals.dead && !fighter.heldBy) {
+    if (grounded && !fighter.vitals.dead && !fighter.heldBy) {
       feet?.pose(sideStride, forwardStride, legsShare * walking);
     }
     if (chest && impact && !fighter.vitals.dead && !fighter.heldBy && now >= fighter.riseUntil) {

@@ -704,7 +704,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
           actor.at.set(body.x, body.y, body.z);
           actor.group.position.copy(actor.at);
           actor.group.rotation.set(0, actor.yaw, 0);
-          if (drawing) actor.animator.update(dt, { fighter, body, now: world.time, working: working.get(id) || null, impact: actor.impactPose, clash: actor.clashAt ?? null });
+          if (drawing) actor.animator.update(dt, { fighter, body, now: world.time, arenaLayout: world.arenaLayout, working: working.get(id) || null, impact: actor.impactPose, clash: actor.clashAt ?? null });
           const will = fighter.vitals.max.will > 0 ? fighter.vitals.will / fighter.vitals.max.will : 0;
           actor.sword.setWill(will, fighterVeil(fighter));
           const a = fighter.action;
