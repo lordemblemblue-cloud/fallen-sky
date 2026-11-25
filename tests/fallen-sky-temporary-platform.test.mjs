@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {FALLEN_SKY_PLATFORM_MODE,PLATFORM_REGION,PLATFORM_SIZE,PLATFORM_EDGE,clampPlatformPosition,insidePlatform,isPlatformRegion,createTemporaryPlatform} from '../src/components/game3d/worlds/temporaryPlatform.mjs';
+import * as THREE from 'three';
+test('one 24m walkable flat plane',()=>{const scene=new THREE.Scene();const floor=createTemporaryPlatform(THREE,scene);assert.equal(scene.children.length,1);assert.equal(floor.geometry.parameters.width,PLATFORM_SIZE);assert.equal(floor.geometry.parameters.height,PLATFORM_SIZE);const ray=new THREE.Raycaster(new THREE.Vector3(0,5,0),new THREE.Vector3(0,-1,0));assert.ok(Math.abs(ray.intersectObject(floor)[0].point.y)<1e-6);floor.geometry.dispose();floor.material.dispose();});
+test('platform boundaries and region are separate from Wolfveil',()=>{assert.equal(FALLEN_SKY_PLATFORM_MODE,true);assert.equal(isPlatformRegion(PLATFORM_REGION),true);assert.equal(isPlatformRegion('wolfveil'),false);assert.deepEqual(clampPlatformPosition(100,-100),{x:PLATFORM_EDGE,z:-PLATFORM_EDGE});assert.ok(insidePlatform(0,0));assert.ok(!insidePlatform(13,0));});
+test('entry and checkpoint preserve unloaded overworld',()=>{const page=readFileSync(new URL('../src/pages/GameView.jsx',import.meta.url),'utf8');const world=readFileSync(new URL('../src/components/game3d/GameWorld3D.jsx',import.meta.url),'utf8');assert.match(page,/FALLEN_SKY_PLATFORM_MODE\?PLATFORM_REGION/);assert.match(world,/flatPlatform\?createTemporaryPlatform/);assert.match(world,/flatPlatform\?\[\]:region/);assert.match(world,/flatPlatform \|\| questTestRuntimeActive/);});
