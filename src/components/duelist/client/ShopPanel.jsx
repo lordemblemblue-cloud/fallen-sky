@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { SHOP_ITEMS, SHOP_RULES, shopItem, tierPrice } from '../core/shop.mjs';
+import { SHOP_ITEMS, SHOP_RULES, shopItem, tierPrice, tierItemPassive } from '../core/shop.mjs';
 import { SHOP_CATEGORIES, STAT_FILTERS, STATUS_FILTERS, itemArt, itemTier, recipeFor, buildsInto, shopQuote, filterShopItems, nextPrice, tierStats } from '../core/shopView.mjs';
 import './duelistBattleShop.css';
 
@@ -53,6 +53,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
   const current=itemTier(owned,item.id);
   const tier=selectedTier??Math.min(3,current+1);
   const quote=shopQuote(me,item.id,tier);
+  const activePassive=tierItemPassive(item,tier);
   const recipe=recipeFor(item.id);
   const combined=shopQuote(me,item.id,3,true);
   const destinations=buildsInto(item.id);
@@ -61,7 +62,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
   const buy=(combine=false)=>{const wanted=combine?3:tier;const q=shopQuote(me,item.id,wanted,combine);if(q.ok)onBuy(item.id,wanted,combine);};
   return <section className="duelist-shop bs-shop" role="dialog" aria-modal="true" aria-label="In-match item shop" data-mobile-pane={mobilePane}>
     <header className="duelist-shop-head bs-head">
-      <div className="bs-title"><span aria-hidden="true">◇</span><strong>Battle Shop</strong><small>Match equipment · Tier III unlocks passive</small></div>
+      <div className="bs-title"><span aria-hidden="true">◇</span><strong>Battle Shop</strong><small>Match equipment · Tier III unlocks full passive</small></div>
       <div className="duelist-shop-balance"><Coin value={Math.floor(gold)}/></div>
       <button type="button" className="duelist-shop-close" onClick={onClose} aria-label="Close shop">×</button>
     </header>
@@ -71,7 +72,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
     <div className="bs-layout">
       <div className="bs-stat-pane bs-separator"><FilterRail title="Stat filters" options={STAT_FILTERS} active={stats} onToggle={id=>toggle(setStats,id)} onClear={()=>setStats([])}>
         <button className="bs-quiet" type="button" aria-pressed={matchAll} onClick={()=>setMatchAll(v=>!v)}>{matchAll?'Match all':'Match any'}</button>
-      </FilterRail><small className="bs-muted">Passive benefits unlock at Tier III.</small></div>
+      </FilterRail><small className="bs-muted">Select a tier to see its current benefits.</small></div>
       <div className="bs-catalog bs-separator">
         <label className="bs-search"><span aria-hidden="true">⌕</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search items…" aria-label="Search shop items"/></label>
         {!items.length&&<p role="status">No items match. Clear a filter to see more.</p>}
@@ -94,7 +95,8 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
             {recipe.length>0&&<div className="bs-recipe"><small>OR combine Tier I</small><div className="bs-recipe-parts">{recipe.map(id=><BuildNode key={id} item={shopItem(id)} tier={1} owned={itemTier(owned,id)} selected={false} onSelect={()=>select(id,1)}/>)}</div></div>}
           </div>
         </section>
-        <p className="bs-passive"><strong>{tier===3?'Passive':'Tier III passive (locked)'}</strong> · {item.passive.text}</p>
+        {activePassive&&<p className="bs-passive"><strong>{tier===3?'Passive':'Early passive'}</strong> · {activePassive.text}</p>}
+        {tier<3&&<p className="bs-passive"><strong>Tier III passive (locked)</strong> · {item.passive.text}</p>}
         <div className="bs-tier-row" aria-label="Select purchase tier">{[1,2,3].map(t=><button key={t} type="button" aria-pressed={tier===t} onClick={()=>setSelectedTier(t)}>{ROMAN[t]}</button>)}<span>{current>=tier?'Owned':<Coin value={tierPrice(item,tier)-tierPrice(item,current)}/>}</span></div>
         <div className="bs-buy-row"><button className="bs-primary" type="button" disabled={!quote.ok} onClick={()=>buy()}> {current>=tier?'Owned':current?'Upgrade':'Buy'} Tier {ROMAN[tier]}</button>
           {recipe.length>0&&<button type="button" disabled={!combined.ok} onClick={()=>buy(true)}>Combine{combined.ok?' · '+combined.cost+' gold':''}</button>}</div>
