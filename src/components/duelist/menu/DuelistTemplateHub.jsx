@@ -1,3 +1,5 @@
+import OnlineArenaPreview from './OnlineArenaPreview.jsx';
+import {mapPicture} from './mapPictures.mjs';
 // Live Duelist Adventure menu UI. The two vector frames contain NO embedded words or character imagery.
 // Everything interactive is accessible React, driven by the actual game catalog / stored class progression.
 import { useEffect, useState } from 'react';
@@ -90,7 +92,7 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
           </div>
         </div>
         <aside className="dxt-mode-detail" aria-label="Selected game mode information">
-          <div className="dxt-detail-art" aria-hidden="true"><ModeIcon symbol={selectedIcon}/></div>
+          <div className="dxt-detail-art" aria-hidden="true" data-map-picture={Boolean(mapPicture(mode.route))}>{mapPicture(mode.route) ? <OnlineArenaPreview mode={mode.route} compact/> : <ModeIcon symbol={selectedIcon}/>}</div>
           <div className="dxt-detail-copy">
             <span className="dxt-eyebrow">{tab.title} / {mode.count || 'MODE'}</span>
             <h3>{mode.title}</h3><p>{mode.description}</p>

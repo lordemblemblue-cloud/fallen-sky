@@ -1,3 +1,5 @@
+import OnlineArenaPreview from './OnlineArenaPreview.jsx';
+import {mapPicture} from './mapPictures.mjs';
 // Duelist Adventure's menus, kept simple: a hub, a page for each mode, a Join page that puts you in any match
 // with players in it, your fighter, settings, and the story mission. Each page says what it is in one line
 // and offers one obvious button.
@@ -209,10 +211,8 @@ export function DuelistHub({ initialPanel = null }) {
             </div>
 
             <div className="duelist-hub-mode-detail">
-              <div className="duelist-hub-mode-art" aria-hidden="true">
-                <span className="duelist-hub-mode-art-glow" />
-                <SelectedIcon />
-                <span>{selected?.title || 'Choose a mode'}</span>
+              <div className="duelist-hub-mode-art" aria-hidden="true" data-map-picture={Boolean(mapPicture(selected?.route))}>
+                {mapPicture(selected?.route) ? <OnlineArenaPreview mode={selected.route} compact/> : <><span className="duelist-hub-mode-art-glow" /><SelectedIcon /><span>{selected?.title || 'Choose a mode'}</span></>}
               </div>
               <div className="duelist-hub-mode-content">
                 <h3>{selected?.title || 'Select a mode'}</h3>

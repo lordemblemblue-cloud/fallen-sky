@@ -351,3 +351,7 @@
   html .dxt-page--reference .dcm-frame { margin:8px 5px; padding:9px; border-radius:9px; }
   html .dxt-page--reference .dsm-frame { margin:8px 5px; padding:9px; border-radius:9px; }
 }
+
+@media (max-width: 900px) {
+  html .dxt-page .dxt-detail-art[data-map-picture="true"] {display:block;height:clamp(80px,21vh,130px);min-height:80px;}
+}

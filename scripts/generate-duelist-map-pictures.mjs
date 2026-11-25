@@ -16,11 +16,11 @@ import {MODES} from '../src/components/duelist/sim/match.mjs';
 const OUT='public/duelist/maps',W=960,H=540;
 await mkdir(OUT,{recursive:true});
 // Canvas texture authors record their base color for this offline flat-shaded illustration.
-globalThis.document={createElement(){const c={width:0,height:0};const ctx=new Proxy({fillStyle:'#64717e',createLinearGradient(){return {addColorStop(i,col){if(i===0)c.previewColor??=col;}}},createRadialGradient(){return {addColorStop(){}}},measureText(){return {width:100}},fillRect(x,y,w,h){if(typeof this.fillStyle==='string'&&/^#[0-9a-f]{6}$/i.test(this.fillStyle)&&w*h>=c.width*c.height*.5)c.previewColor??=this.fillStyle;},getImageData(x,y,w,h){return {data:new Uint8ClampedArray(w*h*4),width:w,height:h}},createImageData(w,h){return {data:new Uint8ClampedArray(w*h*4),width:w,height:h}}},{get(o,k){return o[k]??(()=>{});}});c.getContext=()=>ctx;return c;}};
+globalThis.document={createElement(){const c={width:0,height:0};const ctx=new Proxy({fillStyle:'#64717e',createLinearGradient(){return {addColorStop(i,col){if(i===0)c.previewColor??=col;}}},createRadialGradient(){return {addColorStop(){}}},measureText(){return {width:100}},fillRect(x,y,w,h){if(typeof this.fillStyle==='string'&&/^#[0-9a-f]{6}$/i.test(this.fillStyle)&&w*h>=c.width*c.height*.05)c.previewColor??=this.fillStyle;},getImageData(x,y,w,h){return {data:new Uint8ClampedArray(w*h*4),width:w,height:h}},createImageData(w,h){return {data:new Uint8ClampedArray(w*h*4),width:w,height:h}}},{get(o,k){return o[k]??(()=>{});}});c.getContext=()=>ctx;return c;}};
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const sun=new THREE.Vector3(-.45,.8,.55).normalize();
-const v=new THREE.Vector3(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),edge=new THREE.Vector3();
-const im=new THREE.Matrix4(),wm=new THREE.Matrix4(),cm=new THREE.Matrix4(),color=new THREE.Color();
+const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),edge=new THREE.Vector3();
+const im=new THREE.Matrix4(),wm=new THREE.Matrix4(),color=new THREE.Color();
 const modes=['duel','ctf','football','tdm','control','escort','ffa','practice'];
 for(const mode of modes){
  const scene=new THREE.Scene(),layout=getModeArenaLayout(mode),radius=layout?.radius??MODES[mode].arena;
@@ -35,7 +35,7 @@ for(const mode of modes){
   span=335;eye=[185,235,290];
  }else if(mode==='escort'){
   const map=createEscortArena(scene),props=createEscortProps(scene);props.update(95);disposals.push(()=>{props.dispose();map.dispose();});
-  span=455;eye=[210,315,410];look=[0,0,0];
+  span=345;eye=[190,260,360];look=[0,0,0];
  }else{
   const map=createArena({radius,footprint:layout?.footprint});scene.add(map.group);disposals.push(()=>map.dispose());
   const arch=createModeArchitecture(mode,layout);if(arch){map.group.add(arch.group);disposals.push(()=>arch.dispose());}
@@ -73,14 +73,13 @@ for(const mode of modes){
   const g=o.geometry,pos=g.attributes.position,index=g.index,vertexColors=g.attributes.color,n=index?index.count:pos.count,groups=g.groups.length?g.groups:[{start:0,count:n,materialIndex:0}];
   for(let inst=0;inst<(o.isInstancedMesh?o.count:1);inst++){
    wm.copy(o.matrixWorld);if(o.isInstancedMesh){o.getMatrixAt(inst,im);wm.multiply(im);}
-   cm.multiplyMatrices(camera.matrixWorldInverse,wm);
    for(const group of groups){
     const mat=Array.isArray(o.material)?o.material[group.materialIndex]:o.material;
     if(!mat||mat.visible===false||mat.isShadowMaterial||mat.opacity<.30||mat.wireframe)continue;
     const raw=mat.map?.image?.previewColor;
     color.copy(mat.color??new THREE.Color(0x4a6379));
     if(mat.isShaderMaterial)color.setHex(0x263b53);
-    else if(raw&&/^#[0-9a-f]{6}$/i.test(raw)&&color.r>.8&&color.g>.8&&color.b>.8)color.set(raw);
+    else if(raw&&/^#[0-9a-f]{6}$/i.test(raw))color.multiply(new THREE.Color(raw));
     if(mat.emissive&&mat.emissiveIntensity>.25)color.lerp(mat.emissive,Math.min(.65,mat.emissiveIntensity*.45));
     if(o.instanceColor){const ic=new THREE.Color();o.getColorAt(inst,ic);color.multiply(ic);}
     const base=color.clone();
