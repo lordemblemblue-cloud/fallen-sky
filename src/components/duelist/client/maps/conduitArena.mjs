@@ -2,6 +2,7 @@
 // Draft import; not registered in live TDM until authoritative collision and traversal are validated.
 import * as THREE from 'three';
 import { createConduitLighting } from './conduitLighting.mjs';
+import { auditConduitPlacement, chooseConduitSpawn, resolveConduitPickupPosition } from '../../sim/conduitPlacement.mjs';
         const CFG = Object.freeze({
             foundationR: 44.8,
             pitRadius: 24.0,
@@ -989,6 +990,12 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 { id: 't0_core',  label: 'T0 Core Overcharge',  pos: [  0.0, -5.0,   0.0], respawn: 90, mat: MAT.cyanGlow,   avail: true, timer: 0, apply: s => { s.shield = Math.min(s.maxShield, s.shield + 50); s.energy = s.maxEnergy; } },
                 { id: 'crown',    label: 'Crown Offensive 1.5x (15s)',pos: [  0.0,  5.0,   0.0], respawn: 90, mat: MAT.redGlow,    avail: true, timer: 0, apply: s => { s.dmgMult = 1.5; s.dmgBuffTimer=15; } }
             ];
+            const pickupPlacement = pickups.map(pk => {
+                const original=pk.pos.slice();
+                const resolved=resolveConduitPickupPosition(world,pk.id,original);
+                if(resolved)pk.pos=resolved;
+                return {id:pk.id,original,position:pk.pos.slice(),ok:!!resolved};
+            });
             pickups.forEach(pk => {
                 const g = new THREE.Group(); g.position.set(...pk.pos); scene.add(g);
                 const ped = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.22, 8), MAT.gunmetal); ped.position.y = 0.11; g.add(ped);
@@ -1010,24 +1017,14 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             };
             addTeamSpawns('blue', [0, 1]); addTeamSpawns('red', [2, 3]);
 
-            function selectTDMSpawn(team, enemies = [], occupants = []) {
-                const list = tdmSpawns[team] || [];
-                let best = null, bestScore = -Infinity;
-                for (const s of list) {
-                    const sup=world.getSweptSupportHeight(s.x,s.y+.2,s.y-.3,s.z,CFG.capsuleRadius,.25);
-                    if(!Number.isFinite(sup)||Math.abs(sup-s.y)>.25||world.isEmbedded(new THREE.Vector3(s.x,s.y,s.z),CFG.capsuleRadius,CFG.capsuleHeight).embedded||world.isInShaftOpening(s.x,s.y,s.z,.1))continue;
-                    if([...occupants,...enemies].some(o=>Math.abs(o.y-s.y)<CFG.capsuleHeight&&Math.hypot(o.x-s.x,o.z-s.z)<CFG.capsuleRadius*2+.2))continue;
-                    let sc = 0;
-                    for (const e of enemies) {
-                        const d = Math.hypot(s.x - e.x, s.y - e.y, s.z - e.z);
-                        sc += Math.min(d, 35);
-                        if (d < 10) sc -= 40;
-                        if (world.hasLineOfSight(new THREE.Vector3(s.x, s.y + 1.4, s.z), new THREE.Vector3(e.x, e.y + 1.4, e.z))) sc -= 25;
-                    }
-                    if (sc > bestScore) { bestScore = sc; best = s; }
-                }
-                return best;
+            function selectTDMSpawn(team, enemies = [], occupants = [], policy = {}) {
+                // Candidate policy only: the future authoritative host owns reservation,
+                // visibility, retries and recent-spawn history.
+                const list=Object.hasOwn(tdmSpawns,team)?tdmSpawns[team]:[];
+                const chosen=chooseConduitSpawn(world,list,{...policy,enemies,occupants});
+                return chosen?.spawn??null;
             }
+            const spawnPlacement=Object.values(tdmSpawns).flat().map(p=>({id:p.id,...auditConduitPlacement(world,p)}));
 
             // Genuine 3-Tier A* Navigation Graph (walk, stair, ramp, jump_pad, drop)
             const navGroup = new THREE.Group(); navGroup.visible = false; scene.add(navGroup);
@@ -1109,7 +1106,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             }
     hostScene.add(scene);
     let disposed=false;
-    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting,
+    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting, pickupPlacement, spawnPlacement,
         spawnCandidates:tdmSpawns, selectTDMSpawn, navGraph:{nodes:navNodes,findPath:findAStarPath},
         pickups:pickups.map(p=>({id:p.id,label:p.label,position:p.pos.slice(),respawn:p.respawn})),
         setPickupAvailable(id,available){const p=pickups.find(p=>p.id===id);if(p)p.sym.visible=!!available;},
