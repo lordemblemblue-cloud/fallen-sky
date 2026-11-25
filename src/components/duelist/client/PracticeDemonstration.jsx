@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { demonstrationCatalog, demonstrationClasses } from '../core/demonstrationCatalog.mjs';
+import { keyLabel } from './bindings.mjs';
 import './practiceDemonstration.css';
 
-export default function PracticeDemonstration({open,onOpenChange,selection,onPlay,onStop,disabled=false}) {
+export default function PracticeDemonstration({open,onOpenChange,selection,onPlay,onStop,keys,disabled=false}) {
   const [classId,setClassId]=useState('duelist');
   const rows=demonstrationCatalog(classId);
+  const shortcut=row=>{const command=({combo:'light',directional:'light',guard:'block',doubleJump:'jump',airDash:'dash'})[row.command]||row.command;return command && keys?.[command] ? keyLabel(keys[command],{short:true}):null;};
   const groups=[...new Set(rows.map(r=>r.group))];
   return <div className="duelist-demo" data-open={open}>
     <button className="duelist-demo-toggle" type="button" aria-expanded={open} aria-controls="duelist-demo-panel" disabled={disabled} onClick={()=>onOpenChange(!open)}>▶ Demonstrations</button>
@@ -14,7 +16,7 @@ export default function PracticeDemonstration({open,onOpenChange,selection,onPla
       {selection&&<div className="duelist-demo-playing" role="status"><strong>Demo active</strong><button type="button" onClick={onStop}>Return to practice</button></div>}
       <div className="duelist-demo-list">
         {groups.map(group=><section key={group}><h3>{group}</h3>{rows.filter(r=>r.group===group).map(row=><div className="duelist-demo-row" key={row.id}>
-          <div><strong>{row.name}</strong><small>{row.text}</small>{row.move?.cooldown>0&&<small>Base cooldown: {row.move.cooldown}s</small>}</div>
+          <div><strong>{row.name}</strong>{shortcut(row)&&<small>Input: {shortcut(row)}</small>}<small>{row.text}</small>{row.move?.cooldown>0&&<small>Base cooldown: {row.move.cooldown}s</small>}</div>
           {row.command&&<button type="button" aria-label={'Play '+row.name} title={'Play '+row.name} disabled={disabled} onClick={()=>onPlay({classId,id:row.id})}>▶</button>}
         </div>)}</section>)}
       </div>

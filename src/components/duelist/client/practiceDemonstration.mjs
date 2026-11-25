@@ -6,7 +6,7 @@ import { respawnFighter, bodyOf } from '../sim/world.mjs';
 import { createBot, think } from '../sim/bots.mjs';
 
 const empty = () => ({move:{x:0,z:0},presses:[]});
-const dir = {forward:[0,1],back:[0,-1],left:[-1,0],right:[1,0],forwardLeft:[-1,1],forwardRight:[1,1],backLeft:[-1,-1],backRight:[1,-1],stand:[0,0]};
+const dir = {forward:[0,1],back:[0,-1],left:[1,0],right:[-1,0],forwardLeft:[1,1],forwardRight:[-1,1],backLeft:[1,-1],backRight:[-1,-1],stand:[0,0]};
 export function createPracticeDemonstration(match, selection) {
   const row = demonstrationCatalog(selection.classId).find(r=>r.id===selection.id && r.command);
   const enemy = [...match.seats.values()].find(s=>s.id!=='you');
@@ -52,7 +52,7 @@ export function createPracticeDemonstration(match, selection) {
       }else if(cmd==='sprint'){
         if(t>=.35&&t<1.5){a.move={x:1,z:0};a.run=true;a.sprint=true;}
       }else if(cmd==='directional'){
-        const d=dir[row.direction]||[0,0];a.move={x:d[0],z:d[1]};
+        const d=dir[row.direction]||[0,0];if(t>=.35&&t<.37)a.move={x:d[0],z:d[1]};
         once('cut',t>=.35,a,'light');
         if(fired.has('cut')&&t>.37)a.move={x:0,z:0};
       }else if(cmd==='resist'){
@@ -60,7 +60,7 @@ export function createPracticeDemonstration(match, selection) {
         if(!fired.has('resist')&&t>=.35){f.vitals.will=f.vitals.max.will;f.vitals.collapsed=false;f.breaches[enemy.id]=world.time+5;}
         once('resist',t>=.35,a,'resist');
       }else{
-        if(cmd==='roll'||cmd==='dash')a.move=t<.37?{x:1,z:0}:{x:0,z:0};
+        if(cmd==='roll'||cmd==='dash')a.move=t>=.35&&t<.37?{x:1,z:0}:{x:0,z:0};
         once('action',t>=.35,a,cmd);
         if(row.id==='grip')once('release',t>=1.1,a,'release');
         if(['rage','empower','quickstep','quickstepAura'].includes(row.id)){

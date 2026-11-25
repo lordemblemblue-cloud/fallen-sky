@@ -1025,7 +1025,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         </button>
       )}
       {!demonstration && match?.me?.training && <PracticeSettings live value={match.me.training} onOpenChange={setTrainingOpen} onChange={(id,value)=>sourceRef.current?.setPracticeOption?.(id,value)}/>}
-      {!online && (demonstration || (match?.me?.training && !testMode && (mode==='practice'||mode==='duel'))) && <PracticeDemonstration open={demoOpen} selection={demonstration} disabled={status!=='ready' || !!showPicker}
+      {!online && (demonstration || (match?.me?.training && !testMode && (mode==='practice'||mode==='duel'))) && <PracticeDemonstration open={demoOpen} selection={demonstration} keys={bound} disabled={status!=='ready' || !!showPicker}
         onOpenChange={open=>{if(document.pointerLockElement)document.exitPointerLock?.();if(!open&&demonstration)setDemonstration(null);setDemoOpen(open);}}
         onPlay={selection=>{if(!demonstration)savedPractice.current={source:sourceRef.current,confirmed:initialChosenRef.current};setShopOpen(false);setTrainingOpen(false);setDemonstration(selection);}}
         onStop={()=>setDemonstration(null)}/>}

@@ -1,0 +1,23 @@
+name: Duelist Practice Demonstrations
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/**'
+      - 'tests/duelist-practice-demonstration.test.mjs'
+      - '.github/workflows/duelist-practice-demonstration.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  demonstration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: node --test tests/duelist-practice-demonstration.test.mjs tests/duelist-practice-training.test.mjs
+      - run: npx eslint src/components/duelist/core/demonstrationCatalog.mjs src/components/duelist/client/practiceDemonstration.mjs src/components/duelist/client/PracticeDemonstration.jsx src/components/duelist/client/localSource.mjs tests/duelist-practice-demonstration.test.mjs --quiet
+      - run: npm run build
