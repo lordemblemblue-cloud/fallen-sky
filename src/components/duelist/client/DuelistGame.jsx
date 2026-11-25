@@ -1020,6 +1020,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       {shopOpen && match && match.phase !== 'over' && <ShopPanel
         me={match.me} answer={sourceRef.current?.shopAnswer || null}
         onBuy={(id, tier, combine) => sourceRef.current?.buyItem?.(id, tier, combine)}
+        onSell={match.me?.training ? id => sourceRef.current?.sellItem?.(id) : null}
         onClose={() => setShopOpen(false)} />}
       {quest && quest.phase === 'live' && <button type="button" className="duelist-shop-toggle"
         onClick={() => { if (document.pointerLockElement) document.exitPointerLock?.(); setShopOpen(true); }}>
