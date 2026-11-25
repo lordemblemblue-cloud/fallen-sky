@@ -5,27 +5,13 @@ import { makeControlPoints } from '../src/components/duelist/sim/control.mjs';
 import { ESCORT_LENGTH, payloadPose } from '../src/components/duelist/sim/escort.mjs';
 import { MODES, createMatch, joinMatch } from '../src/components/duelist/sim/match.mjs';
 
-test('three distinct layouts fit existing arena bounds and contain mode-specific architecture',()=>{
-  const ids=new Set();
-  for(const mode of ['tdm']){
-    const map=getModeArenaLayout(mode);
-    ids.add(map.id);
-    assert.equal(map.radius,MODES[mode].arena);
-    assert.equal(new Set(map.parts.map(p=>p.id)).size,map.parts.length);
-    for(const p of map.parts){
-      assert.ok(p.x0<p.x1 && p.z0<p.z1 && p.y0<p.y1,p.id);
-      for(const x of [p.x0,p.x1]) for(const z of [p.z0,p.z1]){
-        assert.ok(Math.hypot(x,z)<map.radius-0.5,p.id);
-      }
-    }
-    assert.equal(map.parts.filter(p=>p.kind==='deck').length,mode==='control'?3:2);
-    assert.equal(map.parts.filter(p=>p.kind==='step').length,mode==='control'?0:16);
-    assert.equal(map.parts.filter(p=>p.kind==='duct').length,mode==='control'?0:32);
-  }
-  ids.add(getModeArenaLayout('escort').id);assert.equal(ids.size,2);assert.equal(getModeArenaLayout('escort').radius,MODES.escort.arena);assert.ok(getModeArenaLayout('escort').escortImported);
-  for(const mode of ['duel','practice','ffa','football','story','constructor']){
-    assert.equal(getModeArenaLayout(mode),null);
-  }
+test('Conduit is the regular shared TDM and FFA arena; other layouts retain their identity',()=>{
+ const t=getModeArenaLayout('tdm'),f=getModeArenaLayout('ffa');
+ assert.equal(t.id,'the-conduit');assert.equal(f.id,t.id);assert.equal(f.world,t.world);
+ assert.equal(t.radius,44.8);assert.equal(MODES.tdm.arena,t.radius);assert.equal(MODES.ffa.arena,f.radius);
+ assert.equal(t.capacity,8);assert.equal(f.capacity,6);
+ assert.ok(getModeArenaLayout('escort').escortImported);
+ for(const mode of ['duel','practice','football','story','constructor'])assert.equal(getModeArenaLayout(mode),null);
 });
 
 test('approved Control Point objectives are accessible on their correct elevation',()=>{
@@ -46,64 +32,34 @@ test('entire transport objective centerline follows supported walkable surfaces'
  const map=getModeArenaLayout('escort');for(let d=0;d<=ESCORT_LENGTH;d+=.4){const p=payloadPose(d);assert.ok(arenaFloorContains(map,p.x,p.z,.05));assert.equal(arenaBodyBlockers(map,{...p,radius:.38,height:1.8}).length,0);}
 });
 
-test('ground tunnel stays open; roof supports landing and has separate collision height',()=>{
-  const map=getModeArenaLayout('tdm');
-  const body={x:-7,y:0,z:2,radius:0.35,height:1.8};
-  assert.deepEqual(arenaBodyBlockers(map,body),[]);
-  assert.ok(arenaBodyBlockers(map,{...body,x:-10.2}).some(p=>p.kind==='wall'));
-  assert.ok(arenaBodyBlockers(map,{...body,y:2}).some(p=>p.kind==='deck'));
-  assert.deepEqual(arenaBodyBlockers(map,{...body,y:3.2}),[]);
-  assert.equal(arenaLandingHeight(map,{x:-7,z:2,previousY:4,nextY:2}),3.2);
-  assert.equal(arenaLandingHeight(map,{x:-7,z:2,previousY:0.1,nextY:-0.1}),0);
-  assert.equal(arenaLandingHeight(map,{x:-7,z:2,previousY:1,nextY:2}),null);
-});
-
-test('team deathmatch architecture is rotationally symmetric',()=>{
-  const {parts}=getModeArenaLayout('tdm');
-  for(const p of parts){
-    assert.ok(parts.some(q=>q.kind===p.kind &&
-      Math.abs(q.x0+p.x1)<1e-6 && Math.abs(q.x1+p.x0)<1e-6 &&
-      Math.abs(q.z0+p.z1)<1e-6 && Math.abs(q.z1+p.z0)<1e-6 &&
-      Math.abs(q.y0-p.y0)<1e-6 && Math.abs(q.y1-p.y1)<1e-6),p.id);
+test('Conduit actual spawn and collision rules work in regular and private test entry',()=>{
+ for(const mode of ['tdm','ffa']){
+  const map=getModeArenaLayout(mode),match=createMatch({mode});
+  assert.equal(match.world.arenaLayout,map);assert.equal(match.capacity,map.capacity);
+  assert.equal(match.seats.size,map.capacity);
+  for(const seat of match.seats.values()){
+   const b=match.world.bodies.get(seat.id),f=match.world.fighters.get(seat.id);
+   assert.equal(f.vitals.dead,false,seat.id);assert.ok(arenaGrounded(map,b),seat.id);
+   assert.equal(arenaBodyBlockers(map,{...b,radius:.4,height:1.8}).length,0);
+   if(mode==='tdm')assert.ok(seat.team==='blue'?b.z<0:b.z>0);
+   else assert.equal(seat.team,null);
   }
+  const solo=createMatch({mode,testMode:true,seats:1,players:[{id:'you'}]});
+  assert.equal(solo.world.arenaLayout,map);
+  for(let i=0;i<map.capacity;i++)assert.equal(joinMatch(match,{id:'human'+i}).ok,true);
+  assert.equal(joinMatch(match,{id:'overflow'}).ok,false);
+ }
+ const map=getModeArenaLayout('tdm'),b={x:0,y:-5,z:2.6};
+ assert.ok(arenaGrounded(map,b));
+ assert.ok(arenaBodyBlockers(map,{x:0,y:-5,z:0,radius:.4,height:1.8}).length);
+ moveArenaBody(map,b,0,.2,-.06);assert.equal(b.y,-5);
+ assert.equal(arenaLineClear(map,{x:0,y:-5,z:0},{x:0,y:5,z:0}),false);
+ assert.ok(arenaRayFraction(map,{x:0,y:-4,z:-2.5},{x:0,y:-4,z:2.5})<1);
+ assert.equal(arenaLandingHeight(map,{x:0,z:2.6,previousY:-4,nextY:-5.1}),-5);
 });
-
-test('low-poly architecture stays under 65 boxes, with balanced mode capacity',()=>{
-  for(const [mode,capacity] of [['escort',10],['tdm',8]]){
-    const map=getModeArenaLayout(mode);
-    if(mode==='tdm')assert.ok(map.parts.length<=65);else assert.ok(map.escortImported);
-    assert.equal(map.capacity,capacity);
-    const match=createMatch({mode});
-    assert.equal(match.world.arenaLayout,map);
-    assert.equal(match.capacity,capacity);
-    assert.equal(match.seats.size,capacity);
-    for(let i=0;i<capacity;i++)assert.equal(joinMatch(match,{id:'human'+i}).ok,true);
-    assert.equal(joinMatch(match,{id:'overflow'}).ok,false);
-  }
-});
-test('swept collisions stop crossing walls even on a large movement delta',()=>{
-  const map=getModeArenaLayout('tdm');
-  const body={x:-12,y:0,z:2};
-  moveArenaBody(map,body,6,0,0);
-  assert.ok(body.x<-10.8);
-  assert.equal(arenaBodyBlockers(map,{...body,radius:0.4,height:1.8}).length,0);
-});
-test('steps climb to roof and downward movement lands rather than clips',()=>{
-  const map=getModeArenaLayout('tdm');
-  const body={x:-5.4,y:0,z:-7};
-  for(let i=0;i<100;i++)moveArenaBody(map,body,0,0.09,-0.02);
-  assert.ok(body.z>1.5,JSON.stringify(body));
-  assert.ok(Math.abs(body.y-3.2)<0.001,JSON.stringify(body));
-  assert.ok(arenaGrounded(map,body));
-  const falling={x:-7,y:5,z:2};
-  moveArenaBody(map,falling,0,0,-4);
-  assert.ok(Math.abs(falling.y-3.2)<0.001);
-});
-test('lower tunnel remains traversable while attacks through a roof or wall are obstructed',()=>{
-  const map=getModeArenaLayout('tdm');
-  const body={x:-7,y:0,z:5.5};
-  moveArenaBody(map,body,0,-5,0);
-  assert.ok(body.z<0.6);
-  assert.equal(arenaLineClear(map,{x:-7,y:0,z:2},{x:-7,y:3.2,z:2}),false);
-  assert.ok(arenaRayFraction(map,{x:-12,y:1.2,z:2},{x:-7,y:1.2,z:2})<1);
+test('escort capacity is unchanged',()=>{
+ const map=getModeArenaLayout('escort'),match=createMatch({mode:'escort'});
+ assert.equal(map.capacity,10);assert.equal(match.capacity,10);
+ for(let i=0;i<10;i++)assert.equal(joinMatch(match,{id:'human'+i}).ok,true);
+ assert.equal(joinMatch(match,{id:'overflow'}).ok,false);
 });
