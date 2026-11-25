@@ -39,7 +39,7 @@ function BuildNode({item,tier,owned,selected,onSelect}) {
     {owned>=tier&&<small>Owned</small>}
   </button>;
 }
-export default function ShopPanel({ me, answer, onBuy, onClose }) {
+export default function ShopPanel({ me, answer, onBuy, onSell, onClose }) {
   const [stats,setStats]=useState([]);
   const [statuses,setStatuses]=useState([]);
   const [matchAll,setMatchAll]=useState(true);
@@ -63,7 +63,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
   return <section className="duelist-shop bs-shop" role="dialog" aria-modal="true" aria-label="In-match item shop" data-mobile-pane={mobilePane}>
     <header className="duelist-shop-head bs-head">
       <div className="bs-title"><span aria-hidden="true">◇</span><strong>Battle Shop</strong><small>Match equipment · Tier III unlocks full passive</small></div>
-      <div className="duelist-shop-balance"><Coin value={Math.floor(gold)}/></div>
+      <div className="duelist-shop-balance"><Coin value={me?.unlimitedGold ? '∞' : Math.floor(gold)}/></div>
       <button type="button" className="duelist-shop-close" onClick={onClose} aria-label="Close shop">×</button>
     </header>
     <nav className="bs-mobile-tabs" aria-label="Shop sections">
@@ -99,6 +99,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
         {tier<3&&<p className="bs-passive"><strong>Tier III passive (locked)</strong> · {item.passive.text}</p>}
         <div className="bs-tier-row" aria-label="Select purchase tier">{[1,2,3].map(t=><button key={t} type="button" aria-pressed={tier===t} onClick={()=>setSelectedTier(t)}>{ROMAN[t]}</button>)}<span>{current>=tier?'Owned':<Coin value={tierPrice(item,tier)-tierPrice(item,current)}/>}</span></div>
         <div className="bs-buy-row"><button className="bs-primary" type="button" disabled={!quote.ok} onClick={()=>buy()}> {current>=tier?'Owned':current?'Upgrade':'Buy'} Tier {ROMAN[tier]}</button>
+          {me?.training && current > 0 && onSell && <button type="button" onClick={()=>onSell(item.id)}>Sell item</button>}
           {recipe.length>0&&<button type="button" disabled={!combined.ok} onClick={()=>buy(true)}>Combine{combined.ok?' · '+combined.cost+' gold':''}</button>}</div>
         <small className="bs-muted">{recipe.length?'Combining consumes both Tier I components. ':''}{!quote.ok&&current<tier?(names[quote.reason]||'Purchase unavailable'):''}</small>
       </div>
@@ -109,7 +110,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
       <div className="duelist-shop-slots" aria-label="Equipped item slots">
         {Array.from({length:SHOP_RULES.slots},(_,i)=>{const entry=owned[i],it=entry&&shopItem(entry.id);return <button type="button" className="duelist-shop-slot" key={i} title={it?.name||'Empty item slot'} disabled={!it} onClick={()=>select(it.id,entry.tier)}>{it?<><ItemIcon item={it} tier={entry.tier}/><span className="duelist-slot-tier">{ROMAN[entry.tier]}</span></>:<span className="duelist-shop-empty">+</span>}</button>;})}
       </div>
-      <div className="duelist-shop-note" aria-live="polite">{answer&&!answer.ok?(names[answer.reason]||'Purchase not available'):answer?.ok?'Purchased '+(shopItem(answer.id)?.name||'item')+' · Tier '+ROMAN[answer.tier]:!me?.canShop?'Move back to spawn or buy while respawning.':'Gold and equipment reset each match.'}</div>
+      <div className="duelist-shop-note" aria-live="polite">{answer&&!answer.ok?(names[answer.reason]||'Purchase not available'):answer?.ok?(answer.sold?'Sold ':'Purchased ')+(shopItem(answer.id)?.name||'item')+' · Tier '+ROMAN[answer.tier]:!me?.canShop?'Move back to spawn or buy while respawning.':'Gold and equipment reset each match.'}</div>
     </footer>
   </section>;
 }
