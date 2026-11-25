@@ -6,10 +6,13 @@ export async function actorLobby(){
   try{
     const base44=await actorClient();
     const result=await Promise.all(DEFAULT_PUBLIC_ROOMS.map(async room=>{
+      try {
       const value=await base44.actors.DuelistArena(actorInstanceId(room.id)).status({});
       return value?.protocol===PROTOCOL&&value.room?.id===room.id&&value.room?.mode===room.mode?value.room:null;
+      } catch { return null; }
     }));
-    return result.every(Boolean)?result:null;
+    const available=result.filter(Boolean);
+    return available.length?available:null;
   }catch{return null;}
 }
 export function createActorSocket({mode,matchId}){
