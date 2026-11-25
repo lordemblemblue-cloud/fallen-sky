@@ -53,6 +53,15 @@ export function animationGrounded(body, arenaLayout = null) {
   return arenaLayout ? arenaGrounded(arenaLayout, body) : body.y <= 0.08;
 }
 
+// A reverse-sampled backflip is a forward somersault, with no ground-roll travel.
+export function airJumpPose(library, elapsed) {
+  const phase = Math.max(0, elapsed / 0.82);
+  if (phase >= 1) return null;
+  if (library.Front_Flip) return { clip: 'Front_Flip', time: phase * library.Front_Flip.duration, fade: 0.045 };
+  if (library.Back_Flip) return { clip: 'Back_Flip', time: Math.max(0, Math.min(library.Back_Flip.duration - 0.001, (1 - phase) * library.Back_Flip.duration)), fade: 0.045 };
+  return null;
+}
+
 export function createFighterAnimator({ model, clips, stance = 'sword', secondHand = null }) {
   const mixer = new THREE.AnimationMixer(model);
   const pack = clips.pack || {};
@@ -193,9 +202,9 @@ export function createFighterAnimator({ model, clips, stance = 'sword', secondHa
     }
     if (body.jumped && airborne && (!a || a.id === 'jump')) {
       settle = null;
-      if (body.airJumpAt != null && library.Back_Flip) {
-        const phase = Math.min(1, Math.max(0, (now - body.airJumpAt) / 0.82));
-        if (phase < 1) return { clip: 'Back_Flip', time: phase * library.Back_Flip.duration, fade: 0.045 };
+      if (body.airJumpAt != null) {
+        const flip = airJumpPose(library, now - body.airJumpAt);
+        if (flip) return flip;
       }
       if (library.jumpLoop) return { clip: 'jumpLoop', time: elapsed % library.jumpLoop.duration, fade: 0.07 };
     }
