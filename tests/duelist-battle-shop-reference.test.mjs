@@ -101,7 +101,7 @@ test('Actor negotiates explicit tier protocol and refuses malformed or repeated 
  engine.connect(conn);engine.message(conn,{t:'hello',v:PROTOCOL});
  assert.equal(messages.find(m=>m.t==='welcome').shopBuild,true);
  engine.message(conn,{t:'join',mode:'duel',matchId:'m1',cls:'healer'});
- const seat=engine.match.seats.get('hero');seat.gold=800;
+ const seat=engine.match.seats.get(messages.find(m=>m.t==='welcome').id);seat.gold=800;
  engine.message(conn,{t:'shopBuild',id:'ironfang',tier:3,combine:false});
  assert.equal(messages.at(-1).ok,true);assert.equal(messages.at(-1).tier,3);assert.equal(seat.gold,500);
  engine.message(conn,{t:'shopBuild',id:'ironfang',tier:3,combine:false});
