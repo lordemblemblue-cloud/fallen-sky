@@ -15,7 +15,7 @@ const BRIEFS = {
 
 const STAGES = ['CHOOSE MODE', 'SELECT FIGHTER', 'PREPARE ARENA', 'ENTER MATCH'];
 
-export default function MatchLoadingScreen({ mode = 'practice', message = 'Preparing arena…', variant = 'loading', note = '' }) {
+export default function MatchLoadingScreen({ mode = 'practice', message = 'Preparing arena…', variant = 'loading', note = '', onRetry, onLeave }) {
   const [title, rule] = BRIEFS[mode] || BRIEFS.practice;
   const isError = variant === 'error';
   return (
@@ -32,7 +32,10 @@ export default function MatchLoadingScreen({ mode = 'practice', message = 'Prepa
         </ol>
         <div className="duelist-match-loading__message">{message}</div>
         {note && <p className="duelist-match-loading__rule">{note}</p>}
-        <div className="duelist-match-loading__rail" aria-hidden="true" />
+        {isError ? <div className="flex flex-wrap justify-center gap-3 mt-4">
+          {onRetry && <button type="button" className="rounded border border-cyan-300/50 px-4 py-2 text-white" onClick={onRetry}>Retry loading</button>}
+          {onLeave && <button type="button" className="rounded border border-white/30 px-4 py-2 text-white" onClick={onLeave}>Return to menu</button>}
+        </div> : <div className="duelist-match-loading__rail" aria-hidden="true" />}
       </div>
     </div>
   );
