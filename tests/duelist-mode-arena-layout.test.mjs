@@ -23,7 +23,7 @@ test('three distinct layouts fit existing arena bounds and contain mode-specific
     assert.equal(map.parts.filter(p=>p.kind==='duct').length,mode==='control'?0:32);
   }
   ids.add(getModeArenaLayout('escort').id);assert.equal(ids.size,2);assert.equal(getModeArenaLayout('escort').radius,MODES.escort.arena);assert.ok(getModeArenaLayout('escort').escortImported);
-  for(const mode of ['duel','practice','ffa','ctf','football','story','constructor']){
+  for(const mode of ['duel','practice','ffa','football','story','constructor']){
     assert.equal(getModeArenaLayout(mode),null);
   }
 });

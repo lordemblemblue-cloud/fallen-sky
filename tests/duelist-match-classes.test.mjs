@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, matchView, queueMatchClass, stepMatch, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, matchView, queueMatchClass, stepMatch, COUNTDOWN, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
 
 const STEP = 1 / 60;
 function advance(match, seconds) {
@@ -16,7 +16,7 @@ test('a player can select an Assassin before a match, but class and weapon chang
   assert.equal(m.seats.get('me').pendingClass, 'assassin');
   assert.equal(m.world.fighters.get('me').weapon, 'sword', 'no mid-frame weapon swapping');
   assert.equal(matchView(m, 'me').me.pendingClass, 'assassin');
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   assert.equal(m.phase, 'live');
   assert.equal(m.world.fighters.get('me').weapon, 'staff');
   assert.equal(m.seats.get('me').classId, 'assassin');
@@ -26,7 +26,7 @@ test('a player can select an Assassin before a match, but class and weapon chang
 
 test('the match rejects alive midfight class changes and never trusts a client-supplied death status', () => {
   const m = createMatch({ mode: 'tdm', players: [{ id: 'me', name: 'Me', team: 'red' }], seats: 2 });
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   assert.equal(m.phase, 'live');
   const oldWeapon = m.world.fighters.get('me').weapon;
   const denied = queueMatchClass(m, 'me', 'duelist');
@@ -42,7 +42,7 @@ test('the match rejects alive midfight class changes and never trusts a client-s
 
 test('a defeated player may queue Duelist; next respawn applies dual blades with spawn protection', () => {
   const m = createMatch({ mode: 'practice', players: [{ id: 'me' }], seats: 2 });
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   const old = m.world.fighters.get('me');
   old.vitals.dead = true;
   m.seats.get('me').respawnAt = m.world.time + 0.05;
@@ -59,7 +59,7 @@ test('a defeated player may queue Duelist; next respawn applies dual blades with
 
 test('duel class selection between rounds is applied at the next round spawn', () => {
   const m = createMatch({ mode: 'duel', players: [{ id: 'me' }, { id: 'foe' }] });
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   m.phase = 'roundOver';
   m.phaseUntil = m.world.time + 0.05;
   assert.equal(queueMatchClass(m, 'me', 'assassin').accepted, true);
@@ -76,7 +76,7 @@ test('special meter is server-owned, starts at zero and is visible only to the s
   assert.equal(matchView(m, 'a').me.specialMeter, null, 'legacy class has no invented charge');
   assert.equal(queueMatchClass(m, 'a', 'assassin').accepted, true);
   assert.equal(queueMatchClass(m, 'b', 'healer').accepted, true);
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   assert.equal(matchView(m, 'a').me.specialMeter, 0);
   assert.equal(matchView(m, 'b').me.specialMeter, 0);
   assert.equal(matchView(m, 'a').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
@@ -91,7 +91,7 @@ test('special meter is server-owned, starts at zero and is visible only to the s
 test('special meter belongs to a seat and never transfers to a replacement bot', () => {
   const m = createMatch({ mode: 'practice', players: [{ id: 'a' }], seats: 2 });
   queueMatchClass(m, 'a', 'duelist');
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   m.seats.get('a').specialMeter = 95;
   assert.equal(matchView(m, 'a').me.specialMeter, 95);
   // Leaving a match destroys the player seat; a replacement is a new bot.
@@ -105,7 +105,7 @@ test('only a server-confirmed CTF capture awards objective charge to a classed h
     { id: 'redPlayer', team: 'red' }, { id: 'bluePlayer', team: 'blue' },
   ], seats: 2 });
   assert.equal(queueMatchClass(m, 'redPlayer', 'healer').accepted, true);
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   // Client claims, including fabricated objective/meter fields, are not trusted.
   stepMatch(m, STEP, { redPlayer: { objective: true, specialMeter: 100 } });
   assert.equal(m.seats.get('redPlayer').specialMeter, 0);
@@ -117,6 +117,7 @@ test('only a server-confirmed CTF capture awards objective charge to a classed h
   const body = m.world.bodies.get('redPlayer');
   assert.ok(body, 'world owns the fighter body');
   body.x = own.home.x;
+  body.y = own.home.y;
   body.z = own.home.z;
   stepMatch(m, STEP);
   assert.equal(m.scores.redPlayer.captures, 1);
@@ -131,7 +132,7 @@ test('only a server-confirmed CTF capture awards objective charge to a classed h
 test('switching class at a legal respawn resets old special charge, but same-class respawn retains it', () => {
   const m = createMatch({ mode: 'practice', players: [{ id: 'me' }], seats: 2 });
   assert.equal(queueMatchClass(m, 'me', 'assassin').accepted, true);
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   const seat = m.seats.get('me');
   seat.specialMeter = 75;
   let fighter = m.world.fighters.get('me');
@@ -160,7 +161,7 @@ test('each class transition spends no old-class charge and starts the next class
     const to = classes[(i + 1) % classes.length];
     const m = createMatch({ mode: 'practice', players: [{ id: 'me' }], seats: 2 });
     assert.equal(queueMatchClass(m, 'me', from).accepted, true);
-    advance(m, COUNTDOWN + 0.1);
+    advance(m, matchCountdownSeconds(m.mode) + 0.1);
     const seat = m.seats.get('me');
     assert.equal(seat.classId, from);
     seat.specialMeter = 100;
@@ -181,7 +182,7 @@ test('each class transition spends no old-class charge and starts the next class
 test('duel round class change cannot carry special meter into the new class', () => {
   const m = createMatch({ mode: 'duel', players: [{ id: 'me' }, { id: 'foe' }] });
   assert.equal(queueMatchClass(m, 'me', 'assassin').accepted, true);
-  advance(m, COUNTDOWN + 0.1);
+  advance(m, matchCountdownSeconds(m.mode) + 0.1);
   const seat = m.seats.get('me');
   assert.equal(seat.classId, 'assassin');
   seat.specialMeter = 100;

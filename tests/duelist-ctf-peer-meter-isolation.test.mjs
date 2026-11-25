@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  createMatch, queueMatchClass, matchView, stepMatch, COUNTDOWN,
+  createMatch, queueMatchClass, matchView, stepMatch, COUNTDOWN, matchCountdownSeconds,
 } from '../src/components/duelist/sim/match.mjs';
 
 const STEP = 1 / 60;
@@ -16,7 +16,7 @@ test('confirmed CTF capture charges only the credited classed seat, not its oppo
   });
   assert.equal(queueMatchClass(match, 'redPlayer', 'warrior').accepted, true);
   assert.equal(queueMatchClass(match, 'bluePlayer', 'healer').accepted, true);
-  advance(match, COUNTDOWN + 0.1);
+  advance(match, matchCountdownSeconds(match.mode) + 0.1);
 
   const red = match.seats.get('redPlayer');
   const blue = match.seats.get('bluePlayer');
@@ -39,6 +39,7 @@ test('confirmed CTF capture charges only the credited classed seat, not its oppo
   const body = match.world.bodies.get('redPlayer');
   assert.ok(body);
   body.x = home.x;
+  body.y = home.y;
   body.z = home.z;
   stepMatch(match, STEP);
 

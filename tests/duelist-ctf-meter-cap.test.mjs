@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, queueMatchClass, stepMatch, matchView, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, queueMatchClass, stepMatch, matchView, COUNTDOWN, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
 
 const TICK = 1 / 60;
 function start(match) {
-  for (let i = 0; i < Math.ceil((COUNTDOWN + 0.1) / TICK); i++) stepMatch(match, TICK);
+  for (let i = 0; i < Math.ceil((matchCountdownSeconds(match.mode) + 0.1) / TICK); i++) stepMatch(match, TICK);
   assert.equal(match.phase, 'live');
 }
 
@@ -22,6 +22,7 @@ test('CTF objective charge caps at 100, remains private and cannot be replayed b
   const home = match.flags.red.home;
   const body = match.world.bodies.get('red');
   body.x = home.x;
+  body.y = home.y;
   body.z = home.z;
 
   stepMatch(match, TICK, { red: { objective: true, specialMeter: 999, classId: 'assassin' } });

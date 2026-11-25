@@ -2,7 +2,7 @@
 // without rewarding an opposing seat or replaying a returned flag.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, queueMatchClass, stepMatch, matchView, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, queueMatchClass, stepMatch, matchView, COUNTDOWN, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
 
 const DT = 1 / 60;
 function advance(match, seconds) {
@@ -16,7 +16,7 @@ test('CTF objective caps the credited class at 100 and cannot be replayed', () =
   ], seats: 2 });
   assert.equal(queueMatchClass(match, 'carrier', 'warrior').accepted, true);
   assert.equal(queueMatchClass(match, 'opponent', 'healer').accepted, true);
-  advance(match, COUNTDOWN + 0.1);
+  advance(match, matchCountdownSeconds(match.mode) + 0.1);
   assert.equal(match.phase, 'live');
 
   const carrier = match.seats.get('carrier');
@@ -35,6 +35,7 @@ test('CTF objective caps the credited class at 100 and cannot be replayed', () =
   const body = match.world.bodies.get('carrier');
   assert.ok(body);
   body.x = match.flags.red.home.x;
+  body.y = match.flags.red.home.y;
   body.z = match.flags.red.home.z;
   stepMatch(match, DT);
 
