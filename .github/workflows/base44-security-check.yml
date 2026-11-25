@@ -6,7 +6,8 @@ on:
     paths:
       - 'base44/entities/**'
       - 'base44/functions/**'
-      - 'src/components/game3d/clan/**'
+      - 'src/**'
+      - 'server/**'
       - 'package.json'
       - 'package-lock.json'
       - 'src/components/fantasybattle/**'
@@ -18,7 +19,8 @@ on:
     paths:
       - 'base44/entities/**'
       - 'base44/functions/**'
-      - 'src/components/game3d/clan/**'
+      - 'src/**'
+      - 'server/**'
       - 'package.json'
       - 'package-lock.json'
       - 'src/components/fantasybattle/**'
@@ -49,5 +51,9 @@ jobs:
         run: npm audit --audit-level=low
       - name: Verify client combat labels never render untrusted HTML
         run: node --test tests/security-dom-sinks.test.mjs
+      - name: Audit standalone Duelist server dependencies
+        run: |
+          npm install --prefix server/duelist --package-lock-only --ignore-scripts --no-fund
+          npm audit --prefix server/duelist --audit-level=low
       - name: Verify application builds with secure dependencies
         run: npm run build
