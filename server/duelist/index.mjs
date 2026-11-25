@@ -7,6 +7,7 @@
 //   PORT                     default 5321
 //   DUELIST_ALLOWED_ORIGINS  comma-separated exact origins allowed to connect (default: any)
 //   DUELIST_ALLOW_GUESTS     1 lets players without an account in as guests: local testing only
+//   DUELIST_CONTINUOUS_PUBLIC_ROOMS  0 pauses empty public rooms; default 1
 //   DUELIST_BOT_LEVEL        trainee | duelist | master (default duelist)
 //   DUELIST_PROGRESS_FILE    where each account's class EXP is kept (a JSON file on a disk that lasts); without
 //                            it, levels last only while the server runs
@@ -39,6 +40,7 @@ const log = (...a) => console.log('[duelist]', ...a);
 const progress = createProgressStore({ file: process.env.DUELIST_PROGRESS_FILE || null, log });
 const server = createDuelistServer({
   authenticate, port, allowedOrigins, botLevel: process.env.DUELIST_BOT_LEVEL || 'duelist', progress,
+  continuousPublicRooms: process.env.DUELIST_CONTINUOUS_PUBLIC_ROOMS !== '0',
   log,
 });
 const address = await server.listen();
