@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
 import { arenaFloorTwin } from './duelistNodes.mjs';
+import { controlFloorPatterns, clippedPatternGeometry } from './controlFloorTrim.mjs';
 
 export const FLOOR_VERTEX = /* glsl */`
   varying vec2 vXZ;
@@ -116,6 +117,21 @@ export function createArena({ radius = 18, footprint = null } = {}) {
   shadow.position.y = 0.002;
   shadow.receiveShadow = true;
   group.add(shadow);
+  if (footprint) {
+    const patterns=controlFloorPatterns(footprint);
+    // Same hex and telekinesis shader as practice, darker alloy palette at both boundaries.
+    const darkUniforms={...floorUniforms,uBase:{value:new THREE.Color(0x070d16)},uLine:{value:new THREE.Color(0x22537d)},uEdge:{value:new THREE.Color(0x000000)}};
+    const dark=keep(setNodeTwin(new THREE.ShaderMaterial({vertexShader:FLOOR_VERTEX,fragmentShader:FLOOR_FRAGMENT,uniforms:darkUniforms}),arenaFloorTwin));
+    const layers=[
+      ['A dark perimeter',patterns.trim,dark,.004],
+      ['A angular edge inlay',patterns.inlay,keep(new THREE.MeshBasicMaterial({color:0x4386ab})),.008],
+      ['A circuit diamonds',patterns.motifs,keep(new THREE.MeshBasicMaterial({color:0x305775})),.008],
+    ];
+    for(const [name,polygons,material,y] of layers){
+      const mesh=new THREE.Mesh(keep(clippedPatternGeometry(floor.geometry,polygons)),material);
+      mesh.name=name;mesh.position.y=y;group.add(mesh);
+    }
+  }
   // the platform's rim and underside
   if (outline) {
     const foundation = new THREE.Mesh(keep(new THREE.ExtrudeGeometry(outline, { depth: 1.1, bevelEnabled: false })), keep(new THREE.MeshStandardMaterial({ color: 0x1a2232, metalness: 0.6, roughness: 0.5 })));

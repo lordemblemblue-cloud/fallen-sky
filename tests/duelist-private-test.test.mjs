@@ -30,3 +30,26 @@ test('A foundation is isolated from public control and has four center entrances
   moveArenaBody(map,body,0,12,0);
   assert.ok(body.z<8);
 });
+
+test('decorative trim follows the A outer and inner edges and clips to the foundation',async()=>{
+  const THREE=await import('three');
+  const {controlFloorPatterns,clippedPatternGeometry}=await import('../src/components/duelist/client/controlFloorTrim.mjs');
+  const map=getModeArenaLayout('control',true);
+  const trace=(shape,ring)=>{ring.forEach(([x,z],i)=>i?shape.lineTo(x,-z):shape.moveTo(x,-z));shape.closePath();};
+  const outline=new THREE.Shape();trace(outline,map.footprint.outer);
+  for(const ring of map.footprint.holes){const hole=new THREE.Path();trace(hole,ring);outline.holes.push(hole);}
+  const floor=new THREE.ShapeGeometry(outline);
+  const patterns=controlFloorPatterns(map.footprint);
+  for(const polygons of Object.values(patterns)){
+    const geometry=clippedPatternGeometry(floor,polygons);
+    const p=geometry.attributes.position;
+    assert.ok(p.count>0 && p.count<20000);
+    for(let i=0;i<p.count;i+=3){
+      const x=(p.getX(i)+p.getX(i+1)+p.getX(i+2))/3;
+      const z=(p.getZ(i)+p.getZ(i+1)+p.getZ(i+2))/3;
+      assert.ok(arenaFloorContains(map,x,z),`trim escaped foundation: ${x},${z}`);
+    }
+    geometry.dispose();
+  }
+  floor.dispose();
+});

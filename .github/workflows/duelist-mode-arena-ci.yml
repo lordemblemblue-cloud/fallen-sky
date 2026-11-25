@@ -19,6 +19,6 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: node --test tests/duelist-mode-arena-layout.test.mjs tests/duelist-escort.test.mjs tests/duelist-server.test.mjs
+      - run: node --test tests/duelist-private-test.test.mjs tests/duelist-mode-arena-layout.test.mjs tests/duelist-escort.test.mjs tests/duelist-server.test.mjs
       - run: npx eslint src/components/duelist/sim/modeArenaLayout.mjs src/components/duelist/client/modeArchitecture.mjs tests/duelist-mode-arena-layout.test.mjs
       - run: npm run build
