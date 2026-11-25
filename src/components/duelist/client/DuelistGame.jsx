@@ -26,6 +26,7 @@ import { arenaRayFraction, arenaLineClear } from '../sim/modeArenaLayout.mjs';
 import { createDepot, createMarkerOverlay, DEPOT } from './depot.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
+import { specialActivationLocked } from '../sim/world.mjs';
 import MobileTouchControls from '../../mobile/MobileTouchControls.jsx';
 import { isMobileTouchDevice } from '../../mobile/mobileTouchModel.mjs';
 import { keysFrom, keyLabel, helpLine } from './bindings.mjs';
@@ -840,6 +841,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
             classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),
+            specialState: online ? source.specialState?.() : specialActivationLocked(mine, world.time) ? 'active' : null,
             dead: !!mine?.vitals.dead,
             meId: mineId,
             kills: inMatch ? feed.kills(clock).slice() : null,
@@ -973,7 +975,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         abilityStatus={hud?.abilities}
         willValue={hud?.you?.willValue}
         specialReady={!!hud?.classId && Number.isFinite(hud?.specialMeter) &&
-          hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead}
+          hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead && !hud.specialState}
         specialCharge={hud?.specialMeter}
         lockActive={!!hud?.lockOn}
         disabled={!hud || !!showPicker || shopOpen || waiting || hud.dead ||

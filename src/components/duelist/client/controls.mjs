@@ -18,6 +18,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
   const touchHeld = new Set(); // virtual controls are independent of physical keys
   let touchMove = { x: 0, y: 0 };
   const presses = [];
+  const queuePress = command => { if (command !== 'special' || !presses.includes(command)) presses.push(command); };
   let yaw = 0;
   let pitch = 0.32;
   let lockRequested = false;
@@ -31,7 +32,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
     held.add(action);
     const kind = KIND[action];
     if (action === 'lock') lockRequested = true;
-    else if (kind === 'press' || kind === 'ability') presses.push(action);
+    else if (kind === 'press' || kind === 'ability') queuePress(action);
     else if (kind === 'guard') presses.push('blockDown');
     return true;
   };
@@ -150,7 +151,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
       touchHeld.add(action);
       if (action === 'lock') lockRequested = true;
       else if (KIND[action] === 'guard') presses.push('blockDown');
-      else if (KIND[action] === 'press' || KIND[action] === 'ability') presses.push(action);
+      else if (KIND[action] === 'press' || KIND[action] === 'ability') queuePress(action);
     },
     touchActionUp(action) {
       if (!touchHeld.delete(action)) return;
@@ -164,7 +165,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
         THREE.MathUtils.clamp(Number(dy) || 0, -120, 120) * 0.0022 * sensitivity, -0.2, 1.1);
     },
     // Existing on-screen HUD and automated test compatibility.
-    press(command) { if (command) presses.push(command); },
+    press(command) { if (command) queuePress(command); },
     takeLockToggle() { const r = lockRequested; lockRequested = false; return r; },
     yaw: () => yaw,
     pitch: () => pitch,

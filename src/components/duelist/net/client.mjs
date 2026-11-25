@@ -12,7 +12,7 @@
 // in the tab's session storage too, so a reload sits back down as well; leaving for the menu gives it up.
 /* global window, WebSocket, performance, fetch, setTimeout */
 import { createWorld } from '../sim/world.mjs';
-import { createFighter } from '../core/index.mjs';
+import { createFighter, MOVES } from '../core/index.mjs';
 import { cleanPracticeSettings } from '../core/practiceSettings.mjs';
 import { MODES } from '../sim/match.mjs';
 import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
@@ -131,6 +131,9 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   let escortDistance = 0;
   let status = 'connecting';
   let seq = 0;
+  let pendingSpecial = null;
+  let authoritativeSpecialActive = false;
+  const specialState = () => pendingSpecial !== null ? 'pending' : authoritativeSpecialActive ? 'active' : null;
   let stepClock = 0; // time waiting to be played in whole steps
   let predictor = null; // the player's own fighter, a step ahead (made once the server says who the player is)
   // When the server stops acting on the player's inputs (fallen, grabbed, the round over), the predicted
@@ -208,6 +211,8 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       send({ t: 'join', mode, ...(story ? { mission } : {}), ...(wantedClass && !story ? { cls: wantedClass } : {}), ...how });
     } else if (msg.t === 'joined') {
       // a new match or mission (the next one, or another after the seat was given up): nothing of the old one stays
+      pendingSpecial = null;
+      authoritativeSpecialActive = false;
       const fresh = !!msg.rematch || (joinedOnce && !msg.resumed);
       joinedOnce = true;
       matchMode = msg.mode;
@@ -238,6 +243,12 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       setStatus('ready', msg.mode);
     } else if (msg.t === 'seats') { seats = dress(msg.seats); seatsVersion += 1; }
     else if (msg.t === 'snap') {
+      // A processed input is acknowledged even if the special was refused.
+      // Use the newest server state, not the delayed animation or local guess.
+      if (pendingSpecial !== null && Number.isInteger(msg.ack) && msg.ack >= pendingSpecial) pendingSpecial = null;
+      const specialOwner = msg.fighters.find(f => f.id === meId);
+      if (specialOwner) authoritativeSpecialActive = !(specialOwner.v[4] & DEAD) &&
+        (!!MOVES[specialOwner.a?.[0]]?.special || (Number.isFinite(specialOwner.sa) && specialOwner.sa > msg.time));
       const at = local();
       const estimate = msg.time - at;
       // the newest snapshot that arrived soonest after it was sent sets the clock (jitter only delays)
@@ -373,6 +384,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     escortDistance: () => escortDistance,
     /** The connection as the player feels it: the round trip (seconds) and how the prediction is going. */
     netStats: () => ({ roundTrip, lag, ...(predictor ? predictor.stats() : { predicting: false }) }),
+    specialState,
     /**
      * Each frame: read, send and play the player's input in whole 60 Hz steps; move the picture to (server
      * time - 100 ms); return the effects and events that happened up to then (and what just happened to the
@@ -394,7 +406,15 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
           stepClock -= STEP;
           const given = typeof input === 'function' ? input() : input;
           if (!given) break;
-          const wire = encodeInput(seq, given);
+          let queuedSpecial = false;
+          const presses = (given.presses || []).filter(command => {
+            if (command !== 'special') return true;
+            if (specialState() || queuedSpecial) return false;
+            queuedSpecial = true;
+            return true;
+          });
+          const wire = encodeInput(seq, { ...given, presses });
+          if (wire.p?.slice(0, 8).includes('special')) pendingSpecial = seq;
           send(wire);
           sentAt.set(seq, local());
           if (sentAt.size > 600) sentAt.delete(sentAt.keys().next().value);

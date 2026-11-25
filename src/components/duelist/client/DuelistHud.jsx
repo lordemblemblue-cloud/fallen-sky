@@ -94,7 +94,7 @@ function Special({ hud, onPower }) {
   if (!cls) return null;
   const value = specialPercent(hud.specialMeter);
   const cost = cls.special.cost;
-  const ready = value !== null && hud.specialMeter + 1e-6 >= cost && !hud.dead;
+  const ready = value !== null && hud.specialMeter + 1e-6 >= cost && !hud.dead && !hud.specialState;
   const Icon = SPECIAL_ICONS[cls.special.id] || Sparkles;
   // a special that costs less than the whole meter marks each charge on it
   const marks = cost < 100 ? Array.from({ length: Math.floor(100 / cost + 1e-6) - 1 }, (_, i) => ((i + 1) * cost) / 100) : [];
@@ -112,7 +112,7 @@ function Special({ hud, onPower }) {
           <b style={{ width: `${value ?? 0}%` }} />
           {marks.map((k) => <i key={k} style={{ left: `${k * 100}%` }} />)}
         </div>
-        <span className="dh-special-key"><kbd>{hud.specialKey}</kbd>{ready ? 'Ready' : ''}</span>
+        <span className="dh-special-key"><kbd>{hud.specialKey}</kbd>{hud.specialState === 'pending' ? 'Activating…' : hud.specialState === 'active' ? 'Active' : ready ? 'Ready' : ''}</span>
       </div>
     </section>
   );

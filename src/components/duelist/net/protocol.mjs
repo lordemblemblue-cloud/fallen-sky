@@ -142,6 +142,7 @@ export function encodeFighter(f, body, { own = false } = {}) {
     hb: f.heldBy || 0,
     br: Object.keys(f.breaches),
     c: f.classId || 0, mb: f.matchBoost || 0, it: f.items || [], st: Number.isFinite(f.activeRelicUntil) ? r3(f.activeRelicUntil) : null,
+    sa: finite(f.specialActiveUntil) ? f.specialActiveUntil : null,
     fx: effectFlags(f),
     cd: own ? Object.fromEntries(Object.entries(f.cooldowns).map(([k, t]) => [k, r3(t)])) : undefined,
   };
@@ -173,6 +174,7 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   f.items = Array.isArray(data.it) ? data.it.map((x) => ({ id: x.id, tier: x.tier })) : [];
   f.shopStats = itemBonuses(f.items);
   f.activeRelicUntil = Number.isFinite(data.st) ? data.st : -Infinity;
+  f.specialActiveUntil = finite(data.sa) ? data.sa : -Infinity;
   f.effects = effectsFromBits(data.fx || 0);
   if (data.cd) f.cooldowns = { ...data.cd };
   if (data.a) {
@@ -229,7 +231,7 @@ export function encodeOwn(f, body, time) {
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
       f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until, f.activeAnchorAt.y ?? null] : null],
-    mt: f.meter || 0, sg: f.specialTarget || 0,
+    mt: f.meter || 0, sg: f.specialTarget || 0, sa: when(f.specialActiveUntil ?? -Infinity),
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
     m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done), r5(m.baseY ?? 0)],
@@ -266,6 +268,7 @@ export function applyOwn(f, body, data) {
   f.classId = data.cl || null;
   f.meter = data.mt || 0;
   f.specialTarget = data.sg || null;
+  f.specialActiveUntil = then(data.sa);
   f.effects = Object.fromEntries(Object.entries(data.fx || {}).map(([k, e]) => [k, { ...e, until: then(e.until) }]));
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
