@@ -293,7 +293,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         imported.setLayerVisibility('trusses',false);
         const daylight=applyControlPointDaylight({scene,camera,renderer,lights,materials:imported.materials});
         const updatePoints=points=>{for(const cp of imported.capturePoints){const point=points?.find(p=>p.id===cp.letter);if(!point)continue;const color=point.contested?0xfbbf24:point.owner==='red'?0xef4444:point.owner==='blue'?0x3b82f6:0xdbeafe;cp.outerRingMesh.material=point.contested?imported.materials.contestedCaptureEmissive:point.owner==='red'?imported.materials.redTeamEmissive:point.owner==='blue'?imported.materials.blueTeamEmissive:imported.materials.neutralCaptureEmissive;const progressColor=new THREE.Color(point.capturing==='red'?0xef4444:point.capturing==='blue'?0x3b82f6:color);for(let i=0;i<24;i++)cp.segmentInstancedMesh.setColorAt(i,i<Math.round(point.progress*24)?progressColor:new THREE.Color(0x101724));cp.segmentInstancedMesh.instanceColor.needsUpdate=true;}};
-        arena={group:imported.root,dispose(){daylight.dispose();imported.dispose();},arc(){},update(){},updatePoints};scene.add(arena.group);return;
+        arena={group:imported.root,dispose(){daylight.dispose();imported.dispose();},arc(){},update(dt){daylight.update(dt);},updatePoints};scene.add(arena.group);return;
       }
       arena = level ? createDepot({ level, def: source.def, scene, lights }) : createArena({ radius: MODES[m]?.arena || 18, footprint: world.arenaLayout?.footprint });
       scene.add(arena.group);

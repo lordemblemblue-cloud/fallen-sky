@@ -38,7 +38,8 @@ export default function ImportedControlPointPreview() {
         if(!active)return;
         resize();if(typeof ResizeObserver!=='undefined'){observer=new ResizeObserver(resize);observer.observe(mount);}
         setStatus(`Imported map · ${sceneRendererApi(renderer)||'renderer ready'} · visual inspection only`);
-        const draw=()=>{if(!active)return;try{controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(draw);}catch{fail();}};draw();
+        let lastTime=performance.now();
+        const draw=(time=performance.now())=>{if(!active)return;try{daylight.update((time-lastTime)/1000);lastTime=time;controls.update();renderer.render(scene,camera);frame=requestAnimationFrame(draw);}catch{fail();}};draw();
       }).catch(fail);
     }catch{fail();}
     return()=>{active=false;cancelAnimationFrame(frame);observer?.disconnect();controls?.dispose();daylight?.dispose();map?.dispose();if(renderer){renderer.domElement.remove();destroySceneRenderer(renderer);}};
