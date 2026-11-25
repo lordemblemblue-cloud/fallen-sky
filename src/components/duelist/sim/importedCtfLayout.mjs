@@ -68,7 +68,7 @@ export function ctfSpawn(team,bodies,id){const occupied=[...bodies].filter(([k])
  const score=s=>occupied.reduce((d,b)=>Math.min(d,Math.hypot(s.x-b.x,s.y-b.y,s.z-b.z)),Infinity);
  // Prefer upper spawn deck for initial flag access; lower deck remains available.
  valid.sort((a,b)=>Math.min(6,score(b))-Math.min(6,score(a))||b.y-a.y);
- if(!valid.length)throw Error('No valid industrial CTF spawn');const {x,y,z,yaw}=valid[0];return {x,y,z,yaw};
+ if(!valid.length)throw Error('No valid industrial CTF spawn');const {x,y,z}=valid[0];return {x,y,z,yaw:team==='red'?Math.PI/2:-Math.PI/2};
 }
 export function ctfSafe(p,team,carrying=false){return !ctfRestricted(team,p,carrying)&&!ctfBlockers({...p,radius:.48}).length&&Math.abs(ctfSupport(p.x,p.z,p.y+.06)-p.y)<.08;}
 export function ctfEmbedded(b){return ctfBlockers({...b,radius:.20}).length>0;}

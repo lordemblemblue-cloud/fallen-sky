@@ -1,3 +1,4 @@
+import { ctfSpawn, ctfSupport, ctfSafe, ctfZone, ctfRestricted, ctfEmbedded, ctfRecovery, ctfRay } from './importedCtfLayout.mjs';
 import { escortSpawn, escortEnemyZone, escortEmbedded, escortSupport, escortBlockers, escortRecoverySpot } from './importedEscortLayout.mjs';
 // Matches: the five ways to play Duelist Adventure, on top of the arena world. Pure and seeded, so the match
 // server (phase 5) runs exactly the rules the browser practises with.
@@ -34,7 +35,7 @@ export const MODES = Object.freeze({
   duel: Object.freeze({ id: 'duel', name: 'Duel', teams: false, seats: 2, arena: 14, rounds: 3, roundClock: 90, respawn: 0, protect: 0, scoreToWin: 0, clock: 0 }),
   ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 22, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
   tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
-  ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
+  ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 60, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
   escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 10, arena: 215, respawn: 4, protect: 1.5, clock: 300 }),
   football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
   control: Object.freeze({ id: 'control', name: 'Control Point', teams: true, seats: 8, arena: 150, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
@@ -43,7 +44,7 @@ export const CTF = Object.freeze({ pickup: 1.3, capture: 2.2, autoReturn: 20, ba
 export const COUNTDOWN = 3;
 export const ESCORT_PREPARATION_SECONDS=30;
 export const ESCORT_START_COUNTDOWN=5;
-export function matchCountdownSeconds(mode){return mode==='escort'?ESCORT_PREPARATION_SECONDS+ESCORT_START_COUNTDOWN:COUNTDOWN;}
+export function matchCountdownSeconds(mode){return (mode==='escort'||mode==='ctf')?ESCORT_PREPARATION_SECONDS+ESCORT_START_COUNTDOWN:COUNTDOWN;}
 export const ROUND_BREAK = 2.5;
 const BOT_NAMES = ['Kestrel', 'Vael', 'Oren', 'Sable', 'Tamsin', 'Corvin', 'Maren', 'Quill', 'Rhys', 'Ashby', 'Nyra', 'Talon'];
 
@@ -63,7 +64,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     phase: 'countdown', phaseUntil: matchCountdownSeconds(def.id), clock: 0,
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
     seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 }, damageLog: new Map(),
-    flags: def.flags ? makeFlags(def) : null,
+    flags: def.flags ? makeFlags(def,arenaLayout) : null,
     escort: def.id === 'escort' ? makeEscort() : null,
     ball: def.football ? makeBall() : null,
     controlPoints: def.control ? makeControlPoints(arenaLayout?.radius ?? def.arena, controlLayout ?? arenaLayout?.controlPoints) : null,
@@ -74,10 +75,10 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
   return match;
 }
 
-function makeFlags(def) {
+function makeFlags(def,layout) {
   const z = def.arena - CTF.baseInset;
-  const flag = (team, home) => ({ team, home, x: home.x, z: home.z, state: 'home', carrier: null, droppedAt: 0 });
-  return { red: flag('red', { x: 0, z: -z }), blue: flag('blue', { x: 0, z }) };
+  const flag = (team, home) => ({ team, home, x: home.x, y: home.y??0, z: home.z, state: 'home', carrier: null, droppedAt: 0 });
+  return { red: flag('red', layout?.flags?.red??{ x: 0, z: -z }), blue: flag('blue', layout?.flags?.blue??{ x: 0, z }) };
 }
 
 function lighterTeam(match) {
@@ -92,6 +93,7 @@ function lighterTeam(match) {
 function spawnFor(match, id, team) {
   const { def, world } = match;
   const R = def.arena;
+  if(world.arenaLayout?.ctfImported && team)return ctfSpawn(team,world.bodies,id);
   if(world.arenaLayout?.escortImported && team)return escortSpawn(team,match.escort?.stage??0,world.bodies,id);
   if(world.arenaLayout?.imported && team)return importedSpawn(world.arenaLayout,team,world.bodies,id);
   if (world.arenaLayout?.footprint && team) {
@@ -330,12 +332,17 @@ function dropFlagOf(match, id, at) {
     const flag = match.flags[t];
     if (flag.carrier !== id) continue;
     flag.carrier = null;
-    if (at) { flag.state = 'dropped'; flag.x = at.x; flag.z = at.z; flag.droppedAt = match.world.time; event(match, { type: 'flagDropped', team: t, by: id }); }
-    else { goHome(flag); }
+    if(at&&match.world.arenaLayout?.ctfImported){
+      const y=ctfSupport(at.x,at.z,at.y+.15);
+      const candidate={x:at.x,y,z:at.z};
+      at=Number.isFinite(y)&&ctfSafe(candidate,null)&&!ctfZone('red',candidate)&&!ctfZone('blue',candidate)?candidate:null;
+    }
+    if (at) { flag.state = 'dropped'; flag.x = at.x; flag.y=at.y??0; flag.z = at.z; flag.droppedAt = match.world.time; event(match, { type: 'flagDropped', team: t, by: id }); }
+    else { goHome(flag); event(match,{type:'flagReturned',team:t,by:null}); }
   }
 }
 
-function goHome(flag) { flag.state = 'home'; flag.carrier = null; flag.x = flag.home.x; flag.z = flag.home.z; }
+function goHome(flag) { flag.state = 'home'; flag.carrier = null; flag.x = flag.home.x; flag.y=flag.home.y??0; flag.z = flag.home.z; }
 
 // What a bot is after besides the nearest fight: the objective of the mode.
 function goalFor(match, s) {
@@ -358,16 +365,16 @@ function goalFor(match, s) {
   const me = bodyOf(world, s.id);
   const own = match.flags[s.team];
   const theirs = match.flags[s.team === 'red' ? 'blue' : 'red'];
-  if (theirs.carrier === s.id) return { x: own.home.x, z: own.home.z, urgent: true }; // run it home
-  if (own.state === 'dropped') return { x: own.x, z: own.z, urgent: true }; // return ours
-  if (own.carrier) { const c = bodyOf(world, own.carrier); if (c) return { x: c.x, z: c.z, urgent: true, hunt: own.carrier }; } // chase the thief
+  if (theirs.carrier === s.id) return { x: own.home.x, y:own.home.y, z: own.home.z, urgent: true }; // run it home
+  if (own.state === 'dropped') return { x: own.x, y:own.y, z: own.z, urgent: true }; // return ours
+  if (own.carrier) { const c = bodyOf(world, own.carrier); if (c) return { x: c.x, y:c.y, z: c.z, urgent: true, hunt: own.carrier }; } // chase the thief
   // half the team goes for their flag, the rest guards ours (stable per bot)
-  const attacker = (Number(s.id.replace(/\D/g, '')) || 0) % 2 === 0;
+  const attacker = match.order.filter(id=>match.seats.get(id)?.team===s.team).indexOf(s.id)%2===0;
   if (attacker || theirs.state !== 'home') {
-    if (theirs.carrier) { const c = bodyOf(world, theirs.carrier); if (c) return { x: c.x, z: c.z }; } // escort our carrier
-    return { x: theirs.x, z: theirs.z };
+    if (theirs.carrier) { const c = bodyOf(world, theirs.carrier); if (c) return { x: c.x, y:c.y, z: c.z }; } // escort our carrier
+    return { x: theirs.x, y:theirs.y, z: theirs.z, urgent:true };
   }
-  const guard = { x: own.home.x + Math.sin(world.time * 0.3 + me.x) * 3, z: own.home.z + (s.team === 'red' ? 4 : -4) };
+  const guard = { x: own.home.x + Math.sin(world.time * 0.3 + me.x) * 2, y:own.home.y, z: own.home.z + (s.team === 'red' ? 3 : -3), urgent:true };
   return guard;
 }
 
@@ -406,18 +413,46 @@ function recoverEscortBodies(match,dt){
   }
 }
 
+function recoverCtfBodies(match,dt){
+  if(!match.world.arenaLayout?.ctfImported)return;
+  const w=match.world;
+  for(const seat of match.seats.values()){
+    const f=w.fighters.get(seat.id),b=bodyOf(w,seat.id);
+    if(!f||!b||f.vitals.dead||b.y< -2)continue;
+    const carry=carrying(match,seat.id),restricted=ctfRestricted(seat.team,b,carry);
+    if(restricted||ctfEmbedded(b)){
+      seat.embeddedFor=(seat.embeddedFor||0)+dt;
+      if(restricted||seat.embeddedFor>=.15){
+        let spot=ctfRecovery(b,seat.team,w.bodies,seat.id,seat.lastSafe,carry);
+        if(!spot){dropFlagOf(match,seat.id,null);spot=ctfRecovery(b,seat.team,w.bodies,seat.id,seat.lastSafe,false);}
+        Object.assign(b,spot,{vy:0,kx:0,kz:0,motion:null,jumped:false,airDashReady:false,airJumpAt:null,moving:false,speed:0});
+        f.action=null;f.guard=null;f.buffer=null;f.heldBy=null;f.seizedBy=null;
+        for(const other of w.fighters.values()){if(other.heldBy===seat.id)other.heldBy=null;if(other.seizedBy===seat.id)other.seizedBy=null;}
+        seat.embeddedFor=0;seat.lastSafe={...spot};seat.recoveryCount=(seat.recoveryCount||0)+1;
+        event(match,{type:'positionRecovered',id:seat.id,feed:false});
+      }
+    }else{seat.embeddedFor=0;if(ctfSafe(b,seat.team,carry))seat.lastSafe={x:b.x,y:b.y,z:b.z,yaw:b.yaw};}
+  }
+}
+function syncCtfCarriers(match){if(match.flags)match.world.ctfCarriers=new Set(Object.values(match.flags).map(f=>f.carrier).filter(Boolean));}
 export function stepMatch(match, dt, inputs = {}) {
   match.events = [];
   const { world } = match;
+  syncCtfCarriers(match);
+  if(match.flags&&match.phase==='countdown'&&world.time<match.phaseUntil-1e-9&&world.time+dt>match.phaseUntil+1e-9){
+    const pre=match.phaseUntil-world.time;
+    const a=stepMatch(match,pre,{}),b=stepMatch(match,dt-pre,{});
+    match.events=[...a.events,...b.events];return {effects:[...a.effects,...b.effects],events:match.events};
+  }
   if (match.phase !== 'live') {
     // nobody fights during a countdown or between rounds; bodies still settle and recover
     const effects = step(world, dt, {});
-    if(match.phase==='countdown')recoverEscortBodies(match,dt);
-    if (match.phase !== 'over' && world.time >= match.phaseUntil) {
+    if(match.phase==='countdown'){recoverEscortBodies(match,dt);recoverCtfBodies(match,dt);}
+    if (match.phase !== 'over' && world.time >= match.phaseUntil-1e-9) {
       if (match.phase === 'roundOver') nextRound(match);
       else {
         // On initial countdown, apply queued class selections before any attacks.
-        for (const seat of match.seats.values()) {if (seat.pendingClass) spawnSeat(match, seat, match.def.protect);else if(match.escort)protect(match,seat.id);}
+        for (const seat of match.seats.values()) {if (seat.pendingClass) spawnSeat(match, seat, match.def.protect);else if(match.escort||match.flags)protect(match,seat.id);}
         match.phase = 'live';
         event(match, { type: 'fight', round: match.round, feed: false });
       }
@@ -486,11 +521,11 @@ export function stepMatch(match, dt, inputs = {}) {
     if (f) f.meter = s.classId ? s.specialMeter : 0;
   }
   const effects = step(world, dt, all);
-  recoverEscortBodies(match,dt);
+  recoverEscortBodies(match,dt);recoverCtfBodies(match,dt);
   if(world.arenaLayout?.imported)for(const s of match.seats.values()){
     const b=bodyOf(world,s.id),f=world.fighters.get(s.id);
-    if(!b||b.y>=-18||f?.vitals.dead)continue;
-    if(match.escort){
+    if(!b||b.y>=(match.flags?-2:-18)||f?.vitals.dead)continue;
+    if(match.escort||match.flags){
       // Falling off the canyon must not bypass a defender's respawn penalty.
       f.vitals.hp=0;f.vitals.dead=true;f.action=null;f.guard=null;f.buffer=null;
       b.vy=0;b.motion=null;effects.push({type:'defeat',defender:s.id,by:null});
@@ -510,7 +545,7 @@ export function stepMatch(match, dt, inputs = {}) {
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
   if (match.phase === 'live') {
     if(!match.escort)respawns(match);
-    if (match.flags) flagsStep(match);
+    if (match.flags){flagsStep(match);syncCtfCarriers(match);}
     if (match.controlPoints) stepControlPoints(match, dt);
     if (match.escort) {
       const winner = stepEscort(match, dt);
@@ -611,6 +646,7 @@ function respawns(match) {
   }
 }
 
+function ctfReach(b,p,r){return !!b&&dist(b,p)<=r&&Math.abs(b.y-(p.y??0))<=1.8&&ctfRay({x:b.x,y:b.y+1,z:b.z},{x:p.x,y:(p.y??0)+1,z:p.z})>=.999;}
 function flagsStep(match) {
   const { world } = match;
   const now = world.time;
@@ -619,11 +655,14 @@ function flagsStep(match) {
     if (flag.carrier) {
       const f = world.fighters.get(flag.carrier);
       const b = bodyOf(world, flag.carrier);
-      if (!f || f.vitals.dead || isDown(f, now) || f.heldBy) { dropFlagOf(match, flag.carrier, b || flag.home); continue; }
+      if (!f || !b || !match.seats.has(flag.carrier) || f.team===team || !TEAMS.includes(f.team) || f.vitals.dead || isDown(f, now) || f.heldBy || f.seizedBy) { dropFlagOf(match, flag.carrier, b || flag.home); continue; }
       flag.x = b.x;
+      flag.y = b.y;
       flag.z = b.z;
       const own = match.flags[f.team];
-      if (own.state === 'home' && dist(b, own.home) < CTF.capture) {
+      if(ctfRestricted(f.team,b,true)){dropFlagOf(match,f.id,null);continue;}
+      if(now<(f.activeRelicUntil??-Infinity))continue;
+      if (own.state === 'home' && ctfReach(b, own.home, CTF.capture)) {
         match.teamScores[f.team] += 1;
         match.scores[f.id].captures += 1;
         // Award only for a server-confirmed enemy flag capture, never for
@@ -634,14 +673,17 @@ function flagsStep(match) {
         }
         goHome(flag);
         event(match, { type: 'captured', team: f.team, by: f.id });
+        if(match.overtime||match.teamScores[f.team]>=match.def.scoreToWin){finish(match,f.team);return;}
+      }else if(own.state!=='home'&&ctfReach(b,own.home,CTF.capture)){
+        const seat=match.seats.get(f.id);if(now>=(seat.captureBlockedUntil??-Infinity)){seat.captureBlockedUntil=now+2;event(match,{type:'captureBlocked',id:f.id,team:f.team,feed:false});}
       }
       continue;
     }
-    if (flag.state === 'dropped' && now - flag.droppedAt > CTF.autoReturn) { goHome(flag); event(match, { type: 'flagReturned', team, by: null }); continue; }
+    if (flag.state === 'dropped' && now - flag.droppedAt >= CTF.autoReturn) { goHome(flag); event(match, { type: 'flagReturned', team, by: null }); continue; }
     for (const f of world.fighters.values()) {
       if (f.vitals.dead || isDown(f, now) || f.heldBy || now < (f.activeRelicUntil ?? -Infinity) || !f.team) continue;
       const b = bodyOf(world, f.id);
-      if (dist(b, flag) > CTF.pickup) continue;
+      if (!ctfReach(b,flag,CTF.pickup)||ctfZone(f.team,b)||f.seizedBy) continue;
       if (f.team !== team && !carrying(match, f.id)) {
         flag.state = 'carried';
         flag.carrier = f.id;
@@ -688,6 +730,7 @@ function nextRound(match) {
 
 function checkEnd(match) {
   const { def } = match;
+  if(match.phase==='over')return;
   if (match.testMode && def.id === 'duel' && match.order.length < 2) return;
   if (def.id === 'duel') {
     if (match.roundClock >= def.roundClock) {
@@ -703,8 +746,10 @@ function checkEnd(match) {
   if (def.teams) {
     const top = TEAMS.find((t) => match.teamScores[t] >= def.scoreToWin);
     if (top) { finish(match, top); return; }
+    if(match.phase==='over')return;
     if (def.clock && match.clock >= def.clock) {
       const { red, blue } = match.teamScores;
+      if(match.flags&&red===blue){if(!match.overtime){match.overtime=true;event(match,{type:'overtime'});}return;}
       finish(match, red === blue ? 'draw' : red > blue ? 'red' : 'blue');
     }
     return;
@@ -736,10 +781,11 @@ export function matchView(match, forId = null) {
   return {
     mode: def.id, name: def.name, phase: match.phase, winner: match.winner, matchBoost: match.boostTier,
     countdown: match.phase === 'countdown' || match.phase === 'roundOver' ? Math.max(0, match.phaseUntil - world.time) : 0,
-    ...(match.escort?{preparation:match.phase==='countdown'?Math.max(0,match.phaseUntil-world.time-ESCORT_START_COUNTDOWN):0,startCountdown:ESCORT_START_COUNTDOWN}:{}),
+    ...((match.escort||match.flags)?{preparation:match.phase==='countdown'?Math.max(0,match.phaseUntil-world.time-ESCORT_START_COUNTDOWN):0,startCountdown:ESCORT_START_COUNTDOWN}:{}),
     clockLeft: match.escort ? Math.max(0,def.clock+match.escort.bonusTime-match.clock) : def.clock ? Math.max(0, def.clock - match.clock) : def.roundClock ? Math.max(0, def.roundClock - match.roundClock) : null,
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
+    overtime:!!match.overtime,
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,
     ball: match.ball ? { x: match.ball.x, z: match.ball.z } : null,
     ...(match.escort ? { escort: { ...match.escort } } : {}),
