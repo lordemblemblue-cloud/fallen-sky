@@ -97,22 +97,21 @@ test('Story screen is reconstructed with one DOM frame and scenery-only artwork'
   assert.match(story, /disabled=\{!online\}/);
 });
 
-test('Settings uses real controls within responsive dark-blue panels instead of screenshot overlays', () => {
-  const settingRules = css.split('/* SETTINGS REBUILD (2026-11-21)')[1];
-  assert.ok(settingRules, 'dedicated Settings-only layout is present');
-  assert.match(settingRules, /\.dxr-art--settings/);
-  assert.match(settingRules, /grid-template-areas:"tabs controls preview" "tabs actions preview"/);
-  assert.match(settingRules, /grid-area:tabs/);
-  assert.match(settingRules, /grid-area:controls/);
-  assert.match(settingRules, /grid-area:preview/);
-  assert.match(settingRules, /grid-area:actions/);
-  assert.match(settingRules, /@media \(min-width:801px\) and \(max-width:1120px\)/);
-  assert.match(settingRules, /@media \(max-width:800px\)/);
-  assert.match(settingRules, /background:var\(--settings-panel\)/);
-  assert.doesNotMatch(settingRules, /url\(/, 'settings controls should never sit on baked-in screenshot labels');
-  assert.match(ui, /dxr-settings-tabs/);
-  assert.match(ui, /dxr-settings-controls/);
-  assert.match(ui, /dxr-settings-actions/);
+test('Settings is a single shaded liquid-glass surface with left categories and right content', () => {
+  const settingRules = css.split('/* SETTINGS LIQUID GLASS (2026-11-25)')[1];
+  assert.ok(settingRules);
+  assert.ok(settingRules.includes('grid-template-areas:"heading heading heading" "tabs divider controls" "tabs divider actions"'));
+  for (const area of ['tabs','divider','controls','actions']) assert.ok(settingRules.includes('grid-area:'+area));
+  assert.ok(settingRules.includes('linear-gradient(to bottom,transparent 0%,rgba(175,227,238,.48) 50%,transparent 100%)'));
+  assert.ok(settingRules.includes('backdrop-filter:blur(12px)'));
+  assert.ok(settingRules.includes('pointer-events:none'));
+  assert.ok(settingRules.includes('orientation:landscape'));
+  assert.ok(settingRules.includes('prefers-reduced-transparency'));
+  assert.ok(!settingRules.includes('url('));
+  assert.ok(ui.includes('dxr-settings-divider" aria-hidden="true"'));
+  assert.ok(ui.includes('aria-labelledby="duelist-settings-active-title"'));
+  assert.ok(ui.includes('dxr-settings-status" role="status"'));
+  assert.ok(!ui.includes('<aside className="dxr-settings-preview"'));
 });
 
 test('settings remains functional with a draft, Apply, Revert and persisted audio/prefs', () => {
