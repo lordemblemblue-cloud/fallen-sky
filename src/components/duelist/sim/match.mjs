@@ -29,7 +29,7 @@ import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from 
 import { makeEscort, stepEscort, ESCORT_RADIUS, defenderRespawnDelay } from './escort.mjs';
 import { importedSpawn } from './importedControlLayout.mjs';
 import { getModeArenaLayout, arenaLineClear } from './modeArenaLayout.mjs';
-import {createConduitLiveMatch} from './conduitLiveLayout.mjs';
+import {createConduitLiveMatch,conduitPickupDefinitions} from './conduitLiveLayout.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
 export const MODES = Object.freeze({
@@ -72,7 +72,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     controlPoints: def.control ? makeControlPoints(arenaLayout?.radius ?? def.arena, controlLayout ?? arenaLayout?.controlPoints) : null,
     feed: [], events: [], winner: null, nextBot: 1,
   };
-  if(arenaLayout?.conduitImported)match.conduit=createConduitLiveMatch(def.id,match.random);
+  if(arenaLayout?.conduitImported){match.conduit=createConduitLiveMatch(def.id,match.random);match.conduitPickups=conduitPickupDefinitions.map(p=>({...p,readyAt:0}));}
   for (const p of players) seat(match, { ...p, kind: 'player' });
   while (match.seats.size < match.capacity) seat(match, { kind: 'bot' });
   return match;
@@ -562,6 +562,7 @@ export function stepMatch(match, dt, inputs = {}) {
   if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
   if (match.phase === 'live') {
+    if(match.conduit)stepConduitPickups(match);
     if(!match.escort)respawns(match);
     if (match.flags){flagsStep(match);syncCtfCarriers(match);}
     if (match.controlPoints) stepControlPoints(match, dt);
@@ -651,6 +652,26 @@ function onDefeat(match, e) {
     who.respawnStartedAt=world.time;
     const delay=match.escort&&who.team==='blue'?defenderRespawnDelay(match.escort):def.respawn;
     who.respawnAt=world.time+delay;
+  }
+}
+
+function stepConduitPickups(match){
+  const {world}=match;
+  for(const p of match.conduitPickups){
+    if(world.time<p.readyAt)continue;
+    const [x,y,z]=p.position,point={x,y,z};
+    for(const f of world.fighters.values()){
+      if(f.vitals.dead||f.heldBy||f.seizedBy||isDown(f,world.time))continue;
+      const b=bodyOf(world,f.id);if(!b||Math.abs(b.y-y)>.65||Math.hypot(b.x-x,b.z-z)>1.25||!arenaLineClear(world.arenaLayout,b,point))continue;
+      const v=f.vitals;
+      if(p.id==='armory'||p.id==='reactor')v.will=Math.min(v.max.will,v.will+(p.id==='armory'?35:40));
+      else if(p.id==='medbay')v.hp=Math.min(v.max.hp,v.hp+40);
+      else if(p.id==='barracks')v.shield=Math.min(v.max.shield,v.shield+35);
+      else if(p.id==='t0_core'){v.shield=Math.min(v.max.shield,v.shield+50);v.will=v.max.will;}
+      else if(p.id==='crown')f.conduitDamageUntil=world.time+15;
+      else continue;
+      p.readyAt=world.time+p.respawn;event(match,{type:'conduitPickup',id:p.id,by:f.id,feed:false});break;
+    }
   }
 }
 
@@ -805,6 +826,7 @@ export function matchView(match, forId = null) {
     mode: def.id, name: def.name, phase: match.phase, winner: match.winner, matchBoost: match.boostTier,
     countdown: match.phase === 'countdown' || match.phase === 'roundOver' ? Math.max(0, match.phaseUntil - world.time) : 0,
     ...((match.escort||match.flags)?{preparation:match.phase==='countdown'?Math.max(0,match.phaseUntil-world.time-ESCORT_START_COUNTDOWN):0,startCountdown:ESCORT_START_COUNTDOWN}:{}),
+    ...(match.conduit?{conduitPickups:match.conduitPickups.map(p=>({id:p.id,available:world.time>=p.readyAt,remaining:Math.max(0,p.readyAt-world.time)}))}:{}),
     clockLeft: match.escort ? Math.max(0,def.clock+match.escort.bonusTime-match.clock) : def.clock ? Math.max(0, def.clock - match.clock) : def.roundClock ? Math.max(0, def.roundClock - match.roundClock) : null,
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
