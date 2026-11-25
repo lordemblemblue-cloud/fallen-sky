@@ -1,11 +1,11 @@
 // Duelist Adventure in-match shop. Neither gold nor equipment persists to another match.
-// Five items per primary stat, ten dual-stat hybrids; every item has a functional passive.
+// Five items per primary stat, ten dual-stat hybrids; selected Damage paths have early passives.
 // Costs and bonuses are balance starting points, not a claim about another game's exact numbers.
 export const SHOP_STATS = Object.freeze(['power', 'defense', 'ability', 'health', 'tenacity', 'critChance', 'critSeverity', 'critDefense']);
 export const SHOP_RULES = Object.freeze({
   slots: 6, startingGold: 300, passiveGoldPerSecond: 5, eliminationGold: 100,
   // Each item's listed cost is its total Tier III price. Buying an upgrade pays only
-  // the delta. Tier I: 25%, Tier II: 60%, Tier III: 100% and unlocks its passive.
+  // the delta. Tier I: 25%, Tier II: 60%, Tier III: 100% and unlocks its full passive.
   tierShares: Object.freeze([0, 0.25, 0.60, 1]),
   assistGold: 50, objectiveGold: 120, goldCap: 9999,
   statCaps: Object.freeze({ power: 0.45, defense: 0.32, ability: 0.42, health: 160, tenacity: 0.45,
@@ -79,6 +79,27 @@ export const SHOP_ITEMS = Object.freeze([
   item('graspbreaker', 'Graspbreaker Charm', 'relic', 560, { health: 24, tenacity: 0.06 }, passive('gripEscape', 36, 'Negate one Telekinetic Grip every 36 s; the next grip can still hold you')),
 ]);
 
+// Phase 1: only the five primary Damage paths get tailored Tier I stats.
+// Early effects persist at their initial strength at Tier II until its own balance pass.
+// At Tier III the existing completed passive replaces the early one (never adds to it).
+const DAMAGE_TIER_ONE = Object.freeze({
+  ironfang: Object.freeze({ stats: Object.freeze({ power: 0.02, critChance: 0.02 }) }),
+  warbanner: Object.freeze({ stats: Object.freeze({ power: 0.02, critDefense: 0.025 }), passive: Object.freeze(passive('onKillShield', 3, 'Rally: Recover 3 shield after an elimination')) }),
+  eclipseedge: Object.freeze({ stats: Object.freeze({ power: 0.025, critSeverity: 0.04 }), passive: Object.freeze(passive('haste', 0.01, 'Echo: Class ability cooldowns 1% shorter')) }),
+  bloodrite: Object.freeze({ stats: Object.freeze({ power: 0.03 }), passive: Object.freeze(passive('lifesteal', 0.02, 'Blood Tribute: Restore HP equal to 2% of HP damage dealt')) }),
+  starbreaker: Object.freeze({ stats: Object.freeze({ power: 0.045 }) }),
+});
+export function tierItemStats(item, tier) {
+  if (!item || !Number.isInteger(tier) || tier < 1 || tier > 3) return {};
+  if (tier === 1 && Object.hasOwn(DAMAGE_TIER_ONE, item.id)) return DAMAGE_TIER_ONE[item.id].stats;
+  return Object.fromEntries(Object.entries(item.stats).map(([stat, value]) => [stat, value * SHOP_RULES.tierShares[tier]]));
+}
+export function tierItemPassive(item, tier) {
+  if (!item || !Number.isInteger(tier) || tier < 1 || tier > 3) return null;
+  if (tier === 3) return item.passive;
+  return Object.hasOwn(DAMAGE_TIER_ONE, item.id) ? DAMAGE_TIER_ONE[item.id].passive || null : null;
+}
+
 const byId = new Map(SHOP_ITEMS.map((item) => [item.id, item]));
 export const shopItem = (id) => typeof id === 'string' ? byId.get(id) || null : null;
 export const ownedItem = (entry) => typeof entry === 'string' ? { id: entry, tier: 3 }
@@ -104,10 +125,14 @@ export function itemBonuses(itemIds = []) {
     const item = owned && shopItem(owned.id);
     if (!item || unique.has(owned.id)) continue;
     unique.add(owned.id);
-    const share = SHOP_RULES.tierShares[owned.tier];
-    for (const stat of SHOP_STATS) stats[stat] += (item.stats[stat] || 0) * share;
-    // Passives activate at Tier III only. Neither shop perks nor gold are persistent.
-    if (owned.tier < 3) continue;
+    const tierStats = tierItemStats(item, owned.tier);
+    for (const stat of SHOP_STATS) stats[stat] += tierStats[stat] || 0;
+    // Only the three explicitly configured early Damage effects bypass the Tier III gate.
+    if (owned.tier < 3) {
+      const early = tierItemPassive(item, owned.tier);
+      if (early) passive[early.type] += early.amount;
+      continue;
+    }
     if (item.passive.type === 'retaliation') {
       // Retaliation relics do not stack: equip the strongest one only.
       if (!passive.retaliation || item.passive.amount > passive.retaliation.amount)
