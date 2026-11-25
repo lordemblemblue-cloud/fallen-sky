@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { CLASS_IDS, CLASSES, SPECIAL_MAX } from '../src/components/duelist/core/classes.mjs';
 import { settleSpecialSpend } from '../src/components/duelist/sim/specialMeterSettlement.mjs';
 
