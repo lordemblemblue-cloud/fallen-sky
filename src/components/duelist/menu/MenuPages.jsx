@@ -14,6 +14,7 @@ import { STORY_MISSIONS } from './missions.js';
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
+import ArmorQualitySettings from '../client/ArmorQualitySettings.jsx';
 import { HUB_MODE_CARDS, findHubMode } from './hubModeCatalog.mjs';
 import { CLASSES, CLASS_IDS } from '../core/classes.mjs';
 import { LEVEL_CAP, MILESTONES, levelFromXp, xpForLevel } from '../core/progression.mjs';
@@ -575,6 +576,7 @@ export function SettingsContent({ sharedPrefs, sharedUpdate } = {}) {
     <>
       <section className="duelist-menu-panel mb-5" aria-label="Graphics diagnostics">
         <GraphicsRuntimePanel sceneId="duelist-adventure"/>
+        <ArmorQualitySettings prefs={prefs} onChange={update}/>
       </section>
       <div className="duelist-settings-columns">
         <div className="duelist-settings-stack">

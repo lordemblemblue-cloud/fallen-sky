@@ -11,7 +11,10 @@ import { MOVES, FLOW, CLASS_MODE, modeOf, fighterVeil, isStunned } from '../core
 import { bodyOf, hostile, forwardOf, PROJECTILE_HEIGHT, shelterOf } from '../sim/world.mjs';
 import { MODES, CTF } from '../sim/match.mjs';
 import { clearLine, rayDistance } from '../sim/level.mjs';
-import { loadFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
+import { loadFighterBody, releaseFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
+import { readPrefs, usePrefs } from './prefs.mjs';
+import { armorQualityFor } from './armorQuality.mjs';
+import ArmorQualitySettings from './ArmorQualitySettings.jsx';
 import { clipsForBody } from './motionLibrary.mjs';
 import { bakeDuelMoves } from './duelMoves.mjs';
 import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
@@ -96,10 +99,10 @@ const BODY_REMAINS = 7; // seconds a fallen guard lies before it is cleared away
 
 // seat: { body, weapon ('sword' | 'sidearm'), kit (a guard's uniform), kind }; classId: the fighter's class (its
 // crystal form and colour), or null
-async function createActor(scene, seat, weaponColor, classId = null) {
+async function createActor(scene, seat, weaponColor, classId = null, quality) {
   const bodyId = seat.body;
-  const { model, clips } = await loadFighterBody(bodyId);
-  if (seat.kit) dressGuard(model, seat.kit); // fitted at rest, before anything poses the body
+  const { model, clips } = await loadFighterBody(bodyId, quality);
+  if (seat.kit) dressGuard(model, seat.kit, quality); // fitted at rest, before anything poses the body
   // the clip packs are retargeted from the body's rest pose: before anything poses it
   const [pack, dodges] = await Promise.all([
     clipsForBody(model, { rigKey: bodyId }),
@@ -152,7 +155,7 @@ async function createActor(scene, seat, weaponColor, classId = null) {
     },
     chest: () => (chestBone ? chestBone.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.2)),
     hand: () => (leftHand ? leftHand.getWorldPosition(new THREE.Vector3()) : group.position.clone().setY(1.3)),
-    dispose() { animator.dispose(); sword.dispose(); for (const t of trails) t.trail.dispose(); aim?.dispose(); group.removeFromParent(); },
+    dispose() { animator.dispose(); sword.dispose(); for (const t of trails) t.trail.dispose(); aim?.dispose(); group.removeFromParent(); releaseFighterBody(model); },
   };
 }
 
@@ -231,6 +234,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
   const [portrait, setPortrait] = useState(null); // a picture of the player's fighter, for the HUD
   const [muted, setMuted] = useState(false);
   const [showGpuDiagnostics, setShowGpuDiagnostics] = useState(false);
+  const [visualPrefs, updateVisualPrefs] = usePrefs();
   useEffect(() => {
     if (!shopOpen) return undefined;
     const onEscape = event => { if (event.key === 'Escape') setShopOpen(false); };
@@ -242,6 +246,8 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
     const mount = mountRef.current;
     if (!mount) return undefined;
     let disposed = false;
+    // Snapshot once per match: switching quality never disconnects a live match or changes stats.
+    const armorPrefs = readPrefs();
     setStatus('loading');
     initialChosenRef.current = entryClassConfirmed;
     setEntryClass({ generation, confirmed: entryClassConfirmed });
@@ -401,7 +407,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       if (!source.seats().some((x) => x.id === s.id)) { pending.delete(s.id); return; }
       building = true;
       const gen = generationSeen;
-      createActor(scene, s, color, cls).then((actor) => {
+      createActor(scene, s, color, cls, armorQualityFor(armorPrefs, s.id === me())).then((actor) => {
         if (disposed || gen !== generationSeen || !source.seats().some((x) => x.id === s.id)) { actor.dispose(); return; }
         actors[s.id] = actor;
         // Every opponent needs readable health above their head, including
@@ -1003,6 +1009,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         </button>
         {showGpuDiagnostics && <div id="duelist-live-gpu-panel" style={{ marginTop: 7 }}>
           <GraphicsRuntimePanel sceneId="duelist-adventure"/>
+          <ArmorQualitySettings prefs={visualPrefs} onChange={updateVisualPrefs}/>
         </div>}
       </div>
       {match?.me?.items?.some((it) => it.tier === 3 && ['thundermirror', 'siphonmirror'].includes(it.id)) && (

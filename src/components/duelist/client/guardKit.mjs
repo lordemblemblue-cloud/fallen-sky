@@ -3,6 +3,7 @@
 // who are not soldiers (hood, light), a cloth hood and only a belt and bracers. Original and procedural. The pieces are fitted from the skeleton at rest, so they suit either build, and each rides the
 // bone it belongs to.
 import * as THREE from 'three';
+import { armorPolicy } from './armorQuality.mjs';
 
 export const KITS = Object.freeze({
   gunner: Object.freeze({ suit: 0x252d3a, plate: 0x7486a3, glow: 0xff7a5a }),
@@ -23,24 +24,24 @@ export const KITS = Object.freeze({
   crane: Object.freeze({ suit: 0x1e2230, plate: 0xf0ead8, glow: 0xfff0b0 }),
 });
 
-let shapes = null;
-const getShapes = () => {
-  if (!shapes) {
-    shapes = {
-      ball: new THREE.SphereGeometry(1, 16, 12),
+const shapeCache = new Map();
+const getShapes = (low) => {
+  if (!shapeCache.has(low)) {
+    shapeCache.set(low, {
+      ball: new THREE.SphereGeometry(1, low ? 6 : 16, low ? 4 : 12),
       // a band across the front of a sphere (+Z): the visor
-      band: new THREE.SphereGeometry(1, 14, 3, Math.PI / 2 - 1.05, 2.1, 1.2, 0.3),
+      band: new THREE.SphereGeometry(1, low ? 4 : 14, low ? 2 : 3, Math.PI / 2 - 1.05, 2.1, 1.2, 0.3),
       // a hood: a sphere open at the face (+Z) and below the chin
-      hood: new THREE.SphereGeometry(1, 18, 12, Math.PI / 2 + 0.8, Math.PI * 2 - 1.6, 0, Math.PI * 0.74),
+      hood: new THREE.SphereGeometry(1, low ? 6 : 18, low ? 4 : 12, Math.PI / 2 + 0.8, Math.PI * 2 - 1.6, 0, Math.PI * 0.74),
       // a cloak: an open cone, wider at the hem
-      cloak: new THREE.CylinderGeometry(1, 1.45, 1, 18, 1, true),
+      cloak: new THREE.CylinderGeometry(1, 1.45, 1, low ? 6 : 18, 1, true),
       box: new THREE.BoxGeometry(1, 1, 1),
-      torso: new THREE.CylinderGeometry(1, 0.8, 1, 12),
-      ring: new THREE.CylinderGeometry(1, 1, 1, 12),
-      limb: new THREE.CylinderGeometry(1, 0.8, 1, 10),
-    };
+      torso: new THREE.CylinderGeometry(1, 0.8, 1, low ? 5 : 12),
+      ring: new THREE.CylinderGeometry(1, 1, 1, low ? 5 : 12),
+      limb: new THREE.CylinderGeometry(1, 0.8, 1, low ? 5 : 10),
+    });
   }
-  return shapes;
+  return shapeCache.get(low);
 };
 const materials = new Map();
 const kitMaterials = (kit) => {
@@ -62,16 +63,19 @@ const UP = new THREE.Vector3(0, 1, 0);
  * Dress a body (at rest: before anything has posed it, and not yet placed in the scene) in a kit
  * ({ suit, plate, glow } colours). The kit's materials are shared between everyone who wears it.
  */
-export function dressGuard(model, kit = KITS.gunner) {
-  const shape = getShapes();
+export function dressGuard(model, kit = KITS.gunner, quality = 'full') {
+  const policy = armorPolicy(quality);
   const mats = kitMaterials(kit);
   model.updateMatrixWorld(true);
   // the suit: skin becomes cloth, hair goes under the helmet
   model.traverse((n) => {
     if (!n.isSkinnedMesh) return;
-    if (/^hair/i.test(n.name) || /hair/i.test(n.material?.name || '')) n.visible = false;
-    else n.material = mats.suit;
+    if (/^hair/i.test(n.name) || /hair/i.test(n.material?.name || '')) { if (policy.attachedArmor) n.visible = false; }
+    else { n.material = mats.suit; n.userData.ownMaterial = false; }
   });
+  // Skip allocation and attachment entirely, not merely mesh.visible = false.
+  if (!policy.attachedArmor) return;
+  const shape = getShapes(policy.simplified);
   const find = (part) => model.getObjectByName(`mixamorig${part}`) || null;
   const at = (part) => { const b = find(part); return b ? b.getWorldPosition(new THREE.Vector3()) : null; };
   const piece = (geometry, material, parent, position, scale, quaternion = null) => {
@@ -80,7 +84,7 @@ export function dressGuard(model, kit = KITS.gunner) {
     mesh.position.copy(position);
     mesh.scale.copy(scale);
     if (quaternion) mesh.quaternion.copy(quaternion);
-    mesh.castShadow = true;
+    mesh.castShadow = policy.armorShadows;
     mesh.updateMatrixWorld(true);
     parent.attach(mesh); // keeps where it is, now in the bone's space
     return mesh;

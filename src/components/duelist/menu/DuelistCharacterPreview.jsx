@@ -5,7 +5,7 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
-import { loadFighterBody } from '../client/assets.mjs';
+import { loadFighterBody, releaseFighterBody } from '../client/assets.mjs';
 import { prepareIdlePreview } from './idlePreview.mjs';
 
 export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', classId = 'duelist', compact = false }) {
@@ -51,9 +51,9 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', cla
     scene.add(rim);
 
     loadFighterBody(fighter).then(async ({ model: loaded, clips }) => {
-      if (!active) return;
+      if (!active) { releaseFighterBody(loaded); return; }
       const prepared = await prepareIdlePreview({ model: loaded, bodyId: fighter, classId, embeddedIdle: clips?.idle });
-      if (!active) { prepared.dispose(); return; }
+      if (!active) { prepared.dispose(); releaseFighterBody(loaded); return; }
       model = loaded;
       // loadFighterBody already centres each asset at x/z=0, feet at y=0.
       model.rotation.y = 0;
@@ -96,7 +96,7 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', cla
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
       idlePose?.dispose();
-      if (model) scene.remove(model);
+      if (model) { scene.remove(model); releaseFighterBody(model); }
       // GLB geometries and textures belong to the shared asset loader's cache.
       renderer.dispose();
       renderer.domElement.remove();

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
-import { loadFighterBody } from '../client/assets.mjs';
+import { loadFighterBody, releaseFighterBody } from '../client/assets.mjs';
 import { prepareIdlePreview } from './idlePreview.mjs';
 
 /**
@@ -106,9 +106,9 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     scene.add(rim);
 
     loadFighterBody(fighter).then(async ({ model: next, clips }) => {
-      if (!active) return;
+      if (!active) { releaseFighterBody(next); return; }
       const prepared = await prepareIdlePreview({ model: next, bodyId: fighter, classId, embeddedIdle: clips?.idle });
-      if (!active) { prepared.dispose(); return; }
+      if (!active) { prepared.dispose(); releaseFighterBody(next); return; }
       model = next;
       model.position.x -= 1.48;
       model.rotation.y = 0; // Assets are authored facing +Z, toward the camera.
@@ -156,7 +156,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
       idlePose?.dispose();
-      if (model) scene.remove(model);
+      if (model) { scene.remove(model); releaseFighterBody(model); }
       // GLB geometry/materials are shared by the character loader's cache:
       // do not dispose them here. Only dispose geometry owned by this stage.
       world.traverse((object) => { if (object.isMesh) object.geometry.dispose(); });
