@@ -114,8 +114,8 @@ input.target = foe?.id || null;
     const destination=goal && (d>ENGAGE || Math.abs(mine.y-(theirs?.y??mine.y))>2 || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
     if(destination && (dist(mine,destination)>2.6 || Math.abs(mine.y-(destination.y??0))>1.2 || !arenaLineClear(world.arenaLayout,mine,destination))){
       const old=bot.importedPath;
-      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||now>=old.until){
-        bot.importedPath={target:{...destination},until:now+3,path:importedBotPath(world.arenaLayout,mine,destination)};
+      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||(!old.path.length&&now>=old.until)){
+        bot.importedPath={target:{...destination},until:now+1,path:importedBotPath(world.arenaLayout,mine,destination)};
       }
       const path=bot.importedPath.path;
       while(path.length&&Math.hypot(mine.x-path[0].x,mine.z-path[0].z,mine.y-path[0].y)<.45)path.shift();
