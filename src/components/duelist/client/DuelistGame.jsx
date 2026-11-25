@@ -820,7 +820,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
             mode: mine && Object.keys(FLOW[mine.weapon]?.modes || {}).length > 1 ? modeOf(mine) : null, // the twin blades and the staff have one
             modeKey: mine && CLASS_MODE[mine.classId] ? null : keyLabel(controls.keys.mode, { short: true }), // a class has one mode: no key
             classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
-            specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
+            specialMeter: mine?.classId ? (Number.isFinite(view?.me?.specialMeter) ? view.me.specialMeter : mine.meter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),
             dead: !!mine?.vitals.dead,
             meId: mineId,
