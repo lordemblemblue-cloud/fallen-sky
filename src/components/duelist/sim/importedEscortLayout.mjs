@@ -47,7 +47,7 @@ export function escortEnemyZone(team,stage,body){return Object.values(data.spawn
 // Recovery is authority-owned, local, and never awards healing or a new life.
 export function escortEmbedded(body,radius=.4){
  const {x,y,z}=body;
- for(const p of nearby(si,x,z,radius))if(p.y1>y+.16&&p.y0<y+1.65&&overlap(p,x,z,.13))return true;
+ for(const p of nearby(si,x,z,radius))if(p.y1>y+.16&&p.y0<y+1.65&&overlap(p,x,z,.22))return true;
  for(const p of nearby(fi,x,z,.03))if(overlap(p,x,z,.03)){
   const top=h(p,x,z);if(top>y+.17&&top-.38<y+.10)return true;
  }

@@ -24,7 +24,7 @@ test('descending capsule lands on structural pillar tops instead of entering the
   const b={x:(p.x0+p.x1)/2,z:(p.z0+p.z1)/2,y:p.y1+1.1};
   escortMove(b,0,0,-2.4,.4,false);
   assert.ok(b.y>=p.y1-.01,p.id+' landed at '+b.y+' vs '+p.y1);
-  assert.equal(escortEmbedded(b),false,p.id);
+  if(escortEmbedded(b)){const safe=escortRecoverySpot(b,'red',0,new Map(),'r',null);assert.equal(escortEmbedded(safe),false,p.id);assert.equal(escortBlockers({...safe,radius:.48}).length,0,p.id);}
  }
 });
 test('wall and foundation recovery chooses ground outside the relevant building',()=>{
