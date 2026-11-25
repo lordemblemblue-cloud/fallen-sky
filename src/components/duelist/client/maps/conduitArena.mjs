@@ -2,6 +2,7 @@
 // Draft import; not registered in live TDM until authoritative collision and traversal are validated.
 import * as THREE from 'three';
 import { createConduitLighting } from './conduitLighting.mjs';
+import { applyConduitInteriorDetails } from './conduitInteriorDetails.mjs';
         const CFG = Object.freeze({
             foundationR: 44.8,
             pitRadius: 24.0,
@@ -342,7 +343,7 @@ export { CFG as CONDUIT_CONFIG };
             }
         }
 export { UnifiedCollisionWorld as ConduitCollisionWorld };
-export function createConduitArena(hostScene, { quality = 'medium', enableLights = true } = {}) {
+export function createConduitArena(hostScene, { quality = 'medium', enableLights = true, enableInteriorDetails = true } = {}) {
     if (!hostScene?.isObject3D) throw new TypeError('Conduit needs an existing Three.js scene or group');
     const scene = new THREE.Group(); scene.name = 'The Conduit';
     const MAT = createMaterialLibrary(quality);
@@ -472,6 +473,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             // 7B. FOUR TWO-STORY BUILDINGS + DISTINCT INTERIORS + 8 STAIRCASES
             // =====================================================================
             const bldgWPs = {};
+            const interiorDetails = [];
             CFG.buildings.forEach(spec => {
                 const rDist = 38.0;
                 const bg = new THREE.Group(); bg.position.set(Math.sin(spec.angle) * rDist, CFG.yT1Bldg, Math.cos(spec.angle) * rDist); bg.rotation.y = spec.angle; upperGroup.add(bg); bg.updateMatrixWorld(true);
@@ -675,6 +677,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                     detailBox(bsmtG,MAT.amberGlow,x,3.85,6.36,1.8,.09,.035);
                 }
 
+                if(enableInteriorDetails) interiorDetails.push(applyConduitInteriorDetails(spec.id,bg,bsmtG,MAT,detailBox));
                 bldgWPs[spec.id] = {
                     entLOut: toW(-4.8, 0, -7.2), entLIn: toW(-4.8, 0, -3.4),
                     entROut: toW( 4.8, 0, -7.2), entRIn: toW( 4.8, 0, -3.4),
@@ -1109,7 +1112,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             }
     hostScene.add(scene);
     let disposed=false;
-    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting,
+    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting, interiorDetails,
         spawnCandidates:tdmSpawns, selectTDMSpawn, navGraph:{nodes:navNodes,findPath:findAStarPath},
         pickups:pickups.map(p=>({id:p.id,label:p.label,position:p.pos.slice(),respawn:p.respawn})),
         setPickupAvailable(id,available){const p=pickups.find(p=>p.id===id);if(p)p.sym.visible=!!available;},
