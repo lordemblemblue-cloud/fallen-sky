@@ -13,7 +13,7 @@ import '@/components/duelist/menu/duelistUnifiedVisual.css';
 // mode: practice | duel | ffa | tdm | ctf | football | control | online | any (Join) | story (mission: which);
 // online: on the match server, else against bots here. matchId: a listed match to join. from: 'duelist' when the
 // /duelist menu sent the player here (Menu goes back there).
-export default function DuelistArena({ mode = 'practice', online = false, room = null, mission = 'contraband', matchId = null, from = null, testMode = false }) {
+export default function DuelistArena({ mode = 'practice', online = false, room = null, mission = 'contraband', matchId = null, from = null, testMode = false, practiceMode = false }) {
   const [prefs] = useState(readPrefs);
   const [testBots, setTestBots] = useState(false);
   const [playing, setPlaying] = useState(mission); // a crew may play another mission (a friend's code, the next one)
@@ -46,10 +46,10 @@ export default function DuelistArena({ mode = 'practice', online = false, room =
           </div>
         ) : (
           <DuelistGame mode={mode} online={online} serverUrl={serverUrl} you={prefs.fighter} foe={prefs.foe} botLevel={prefs.level}
-            testMode={testMode} testBots={testBots} bots={prefs.bots} sensitivity={prefs.sensitivity} keys={prefs.keys} voicesOn={prefs.voices !== false} room={room} matchId={matchId}
+            testMode={testMode} practiceMode={practiceMode} testBots={testBots} bots={prefs.bots} sensitivity={prefs.sensitivity} keys={prefs.keys} voicesOn={prefs.voices !== false} room={room} matchId={matchId}
             classId={prefs.classId} onClassChange={testMode ? null : (id) => writePrefs({ classId: id })}
             progress={classProgressOf(prefs)}
-            onProgress={testMode ? null : (classId, total) => writePrefs({ classXp: { ...classProgressOf(readPrefs()), [classId]: total } })}
+            onProgress={testMode || practiceMode || mode === 'practice' ? null : (classId, total) => writePrefs({ classXp: { ...classProgressOf(readPrefs()), [classId]: total } })}
             mission={mission} onMission={setPlaying} onLeave={leave}
             onNext={(id) => navigate({ to: '/duelist-next/play', search: { mode: 'story', mission: id, online: 0, ...(from ? { from } : {}) } })} />
         )}
