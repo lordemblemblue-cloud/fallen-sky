@@ -4,6 +4,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { armorPolicy } from './armorQuality.mjs';
+import { ARMOR_VARIANTS } from './armorVariants.mjs';
+import { readPrefs } from './prefs.mjs';
 
 export const BODIES = Object.freeze({
   maskedWarrior: Object.freeze({ name: 'Masked Warrior', url: '/models/characters/duelist/masked-warrior.glb' }),
@@ -29,12 +32,32 @@ const load = (url) => {
  * A fresh body for one fighter: { model, clips } with the model 1.7 m tall, feet on the ground, facing +Z.
  * clips: { idle, walk, run, roll, backFlip, flipLeft, flipRight } (AnimationClips bound by bone name).
  */
-export async function loadFighterBody(bodyId = 'female') {
-  const [gltf, pack] = await Promise.all([load(BODY_URLS[bodyId] || BODY_URLS.female), load(MOVEMENT_PACK_URL).catch(() => null)]);
+export async function loadFighterBody(bodyId = 'female', quality = readPrefs().armorQuality) {
+  const policy = armorPolicy(quality);
+  const id = Object.hasOwn(BODY_URLS, bodyId) ? bodyId : 'female';
+  const variant = policy.simplified ? ARMOR_VARIANTS[id]?.[policy.quality] : null;
+  const original = BODY_URLS[id];
+  const [gltf, pack] = await Promise.all([variant ? load(variant).catch(() => load(original)) : load(original), load(MOVEMENT_PACK_URL).catch(() => null)]);
   const model = cloneSkinned(gltf.scene);
+  // SkeletonUtils shares cached geometry and textures, but each actor owns its skeleton.
+  // Do not mutate or dispose the shared material/texture data. Fused armor cannot be
+  // removed safely without an authored replacement body; reduce its material cost instead.
+  const ownedMaterials = new Set();
   model.traverse((n) => {
-    if (n.isSkinnedMesh) { n.frustumCulled = false; n.castShadow = true; n.receiveShadow = true; }
+    if (n.isSkinnedMesh) { n.frustumCulled = false; n.castShadow = policy.armorShadows; n.receiveShadow = policy.armorShadows; }
+    if (!policy.simplified || !n.isMesh || !n.material) return;
+    const simplify = (m) => {
+      const next = new THREE.MeshStandardMaterial({ color: m.color || 0xffffff, map: m.map || null,
+        alphaMap: m.alphaMap || null, alphaTest: m.alphaTest || 0, transparent: !!m.transparent,
+        opacity: m.opacity ?? 1, side: m.side, depthWrite: m.depthWrite, vertexColors: !!m.vertexColors,
+        roughness: 1, metalness: 0 });
+      next.name = m.name; ownedMaterials.add(next); return next;
+    };
+    n.material = Array.isArray(n.material) ? n.material.map(simplify) : simplify(n.material);
+    n.userData.ownMaterial = true;
+    n.castShadow = false; n.receiveShadow = false;
   });
+  model.userData.duelistOwnedMaterials = ownedMaterials;
   // 1.7 m tall, standing on y = 0, centred
   model.updateMatrixWorld(true);
   const box = new THREE.Box3();
@@ -59,4 +82,21 @@ export async function loadFighterBody(bodyId = 'female') {
   for (const [key, name] of Object.entries(LOCOMOTION_CLIPS)) clips[key] = byName(gltf.animations, name);
   for (const [key, name] of Object.entries(MOVEMENT_CLIPS)) clips[key] = byName(pack?.animations, name);
   return { model, clips, bodyId };
+}
+
+// Release only clone-owned resources. Cached source geometry/textures and shared guard
+// materials survive so other actors and future spawns remain intact.
+export function releaseFighterBody(model) {
+  if (!model) return;
+  const materials = new Set(model.userData.duelistOwnedMaterials || []);
+  const skeletons = new Set();
+  model.traverse(n => {
+    if (n.isSkinnedMesh && n.skeleton) skeletons.add(n.skeleton);
+    if (n.isMesh && n.userData.ownMaterial && n.material) {
+      for (const m of Array.isArray(n.material) ? n.material : [n.material]) materials.add(m);
+    }
+  });
+  for (const material of materials) material.dispose();
+  for (const skeleton of skeletons) skeleton.dispose();
+  delete model.userData.duelistOwnedMaterials;
 }

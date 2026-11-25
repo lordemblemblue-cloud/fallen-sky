@@ -13,6 +13,8 @@ import {
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { KeyBindings } from './MenuPages.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
+import ArmorQualitySettings from '../client/ArmorQualitySettings.jsx';
+import { normalizeArmorQuality } from '../client/armorQuality.mjs';
 import { BODIES } from '../client/assets.mjs';
 import { CLASSES, CLASS_IDS } from '../core/classes.mjs';
 import { classProgressOf } from '../client/prefs.mjs';
@@ -205,7 +207,7 @@ export function SettingsReferenceMenu({ prefs, onPrefs, close }) {
   const patchAudio=obj=>{setAudio(prev=>({...prev,...obj}));setMessage('Unsaved changes');};
   const apply=()=>{
     onPrefs({sensitivity:Number(draft.sensitivity), level:draft.level, bots:Number(draft.bots),
-      keys:draft.keys,voices:draft.voices!==false});
+      keys:draft.keys,voices:draft.voices!==false, armorQuality:normalizeArmorQuality(draft.armorQuality), otherArmorQuality:normalizeArmorQuality(draft.otherArmorQuality)});
     try {window.localStorage.setItem('duelist.audio',JSON.stringify(audio));} catch { /* session-only fallback */ }
     setMessage('Settings saved. New actions and matches use your selected preferences.');
   };
@@ -230,7 +232,7 @@ export function SettingsReferenceMenu({ prefs, onPrefs, close }) {
         <p><Volume2 size={16}/> Sound, sensitivity, bot practice and keybinding options are adjustable.</p>
         <p><CircleHelp size={16}/> Gameplay settings do not change the server-owned rules for competitive matches.</p>
       </div>}
-      {tab==='graphics' && <div className="dxr-settings-diagnostics"><GraphicsRuntimePanel sceneId="duelist-adventure"/></div>}
+      {tab==='graphics' && <div className="dxr-settings-diagnostics"><ArmorQualitySettings prefs={draft} onChange={patch}/><GraphicsRuntimePanel sceneId="duelist-adventure"/></div>}
       {tab==='audio' && <div className="dxr-settings-rows">
         <label><span>Master volume <strong>{Math.round(Number(audio.volume)*100)}%</strong></span>
           <input type="range" min="0" max="1" step=".05" value={audio.volume} onChange={e=>patchAudio({volume:Number(e.target.value)})}/></label>
