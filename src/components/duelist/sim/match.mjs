@@ -535,6 +535,11 @@ export function stepMatch(match, dt, inputs = {}) {
       }
     } else checkEnd(match);
   }
+  // Publish settled charge immediately, including in prediction snapshots.
+  for (const s of match.seats.values()) {
+    const f = world.fighters.get(s.id);
+    if (f) f.meter = s.classId ? s.specialMeter : 0;
+  }
   return { effects, events: match.events };
 }
 
