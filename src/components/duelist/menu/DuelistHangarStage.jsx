@@ -32,7 +32,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     let reportElapsed = 0;
     let hqFailed = false;
     let gpuFailed = false;
-    let hqFramed = false;
+    let hqFramed = headquarters;
     let modelOrigin = null;
     const clock = new THREE.Clock();
     const scene = new THREE.Scene();
@@ -40,6 +40,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 90);
     camera.position.set(0, 1.65, 5.8);
     camera.lookAt(-0.6, 1.18, 0);
+    if (headquarters) { camera.position.set(0, 1.25, 5.76); camera.fov = 62; camera.lookAt(0, 1.4, -2.88); camera.updateProjectionMatrix(); }
 
     renderer.setClearColor(0x020711, 0);
     renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
@@ -53,6 +54,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
 
     const world = new THREE.Group();
     scene.add(world);
+    world.visible = !headquarters;
     const steel = new THREE.MeshStandardMaterial({ color: 0x17283a, metalness: 0.78, roughness: 0.35 });
     const darker = new THREE.MeshStandardMaterial({ color: 0x091323, metalness: 0.7, roughness: 0.48 });
     const cyan = new THREE.MeshBasicMaterial({ color: 0x29b5ef });
@@ -142,7 +144,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     }
 
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const originalCamera = camera.position.clone();
+    const originalCamera = new THREE.Vector3(0, 1.65, 5.8);
     function placeFighter() {
       if (!model || !modelOrigin) return;
       model.position.copy(modelOrigin);
@@ -153,13 +155,19 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       model.rotation.y = Math.atan2(camera.position.x - model.position.x, camera.position.z - model.position.z);
     }
     function showOriginal() {
-      hqFramed = false;
+      hqFramed = headquarters;
       scene.background = null;
       world.visible = !headquarters;
       portal.visible = true;
-      camera.position.copy(originalCamera);
-      camera.fov = 42;
-      camera.lookAt(-0.6, 1.18, 0);
+      if (headquarters) {
+        camera.position.set(0, 1.25, 5.76);
+        camera.fov = 62;
+        camera.lookAt(0, 1.4, -2.88);
+      } else {
+        camera.position.copy(originalCamera);
+        camera.fov = 42;
+        camera.lookAt(-0.6, 1.18, 0);
+      }
       camera.updateProjectionMatrix();
       placeFighter();
     }
