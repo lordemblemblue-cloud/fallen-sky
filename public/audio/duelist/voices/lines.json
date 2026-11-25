@@ -1,52 +1,52 @@
 {
   "lines": [
     {
-      "id": "be53fca6",
+      "id": "714c306c",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Halvane's manifest says medical supplies. Nobody posts gunmen over bandages. Open the marked crates."
+      "text": "The clinic lost two patients last night. Same blue drug, same Halvane seal. Open the marked crates. Let's find where it came from."
     },
     {
-      "id": "c7a60232",
+      "id": "d339ed5e",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Packing foam. No medicine. Keep going."
+      "text": "Blue glass. Same vials we picked up outside the clinic. Get a look at the rest."
     },
     {
-      "id": "27e0bf8d",
+      "id": "edf6054f",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Serial plates filed off. Somebody wanted these never to be traced."
+      "text": "That's a pistol grip. Under the medicine tray. What else is in there?"
     },
     {
-      "id": "da9f7f3a",
+      "id": "0daa142c",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Sidearms. Crystal-forged, and the rounds are cut to tear at a Veil. Nobody builds that to hunt ordinary people. These were made for us."
+      "text": "A whole case of crystal sidearms. That stamp on the lid... the Ash Legion took the south bridge with guns like these."
     },
     {
-      "id": "1f77a692",
+      "id": "57d4fc3d",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Three signatures on every transfer: the quartermaster who builds them, the broker who sells them, the chief who keeps it quiet. They are inside."
+      "text": "Dask packed it. Perrin sold it. Rooke signed it out. Get their ledger cores. I want to know who keeps the money."
     },
     {
-      "id": "ebc11c49",
+      "id": "67e214e5",
+      "mission": "contraband",
+      "speaker": "Dask",
+      "text": "Put that down. I stamped every piece in that crate. I know when one's missing."
+    },
+    {
+      "id": "71428e3f",
       "mission": "contraband",
       "speaker": "Perrin",
-      "text": "Whatever your people offered, the buyer offered more. In crystal."
+      "text": "I sell to whoever clears the invoice. You got a purchase order?"
     },
     {
-      "id": "bc6273de",
+      "id": "8310e748",
       "mission": "contraband",
       "speaker": "Dask",
-      "text": "Veil-born, in my workshop. Good. I have wanted to see what these do to one of you."
-    },
-    {
-      "id": "6dc25f6d",
-      "mission": "contraband",
-      "speaker": "Dask",
-      "text": "I build what I am paid to build. Ask Perrin who pays."
+      "text": "Ask Perrin how a box of my work pays for a captain's house."
     },
     {
       "id": "0728f16c",
@@ -61,10 +61,10 @@
       "text": "Seal it. Nobody walks out of here with a core."
     },
     {
-      "id": "63f4367e",
+      "id": "578bc465",
       "mission": "contraband",
       "speaker": "Perrin",
-      "text": "The buyer never showed a face. And never needed the guns for themselves. Think about that."
+      "text": "Read the buyer column. The Legion paid on Friday. On Saturday the bridge fell."
     },
     {
       "id": "3c98a62a",
@@ -97,34 +97,34 @@
       "text": "Lift is coming. Half a minute. Do not let them pull you off it."
     },
     {
-      "id": "0e953960",
+      "id": "00c4f8bc",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "Perrin's records are open. The buyer paid in Will-forged crystal. Only one of us could make that."
+      "text": "Look at the deposits. The drug money bought the guns. Every Legion payment went back to one account."
     },
     {
-      "id": "e643e342",
+      "id": "e43d8853",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "There is a recording on the last core. You should hear it."
+      "text": "Last core's got a voice memo. I'll play it."
     },
     {
-      "id": "17e638cf",
+      "id": "4bf0b573",
       "mission": "contraband",
       "speaker": "Arden (recording)",
-      "text": "If you are hearing this, you came for the cores yourself. I taught you to finish what you start. The vault. I will not run."
+      "text": "I signed for those crates. Come to the vault. You deserve to ask me why."
     },
     {
-      "id": "29814813",
+      "id": "86da91ca",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "...That is Arden. That is your teacher's voice."
+      "text": "Arden? I... I've heard him call roll since I was six."
     },
     {
-      "id": "58cd7b94",
+      "id": "a352a7e4",
       "mission": "contraband",
       "speaker": "Arden",
-      "text": "The Houses hunt us with a word and a warrant. I gave the hunted something to shoot back with."
+      "text": "I let the first shipment through. Crane promised medicine for Saltmarch. By the time I saw the guns, she'd put my name on every crate."
     },
     {
       "id": "a6d78719",
@@ -133,28 +133,28 @@
       "text": "You still drop your guard after the third cut. I never could fix that."
     },
     {
-      "id": "57a069d5",
+      "id": "50ec7ed3",
       "mission": "contraband",
       "speaker": "Arden",
-      "text": "Enough. You have grown past me."
+      "text": "Enough. Take my seal. Check my story yourself."
     },
     {
-      "id": "83a68863",
+      "id": "d8dfa8b3",
       "mission": "contraband",
       "speaker": "Arden",
-      "text": "Take the cores. Decide for yourself who should hold them. I did."
+      "text": "Crane took a cut on every vial and every gun. Her next stop is Saltmarch. The people there kept the receipts."
     },
     {
-      "id": "eab529ca",
+      "id": "3b7e22bd",
       "mission": "contraband",
       "speaker": "Ione",
-      "text": "The lift is here. Whatever you decide about Arden, decide it outside."
+      "text": "I'll get the ledger out. You get to those witnesses before Crane does."
     },
     {
-      "id": "5dcec3bf",
+      "id": "759a1c80",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "The ledger's last shipment came here: Saltmarch, an old salt works. The Houses filed a warrant on it this morning."
+      "text": "Saltmarch kept the original receipts. Crane's on her way with a warrant to seize them. We need the witnesses alive."
     },
     {
       "id": "fb14369b",
@@ -181,34 +181,34 @@
       "text": "You will not take one of us. Not one."
     },
     {
-      "id": "725c99c8",
+      "id": "68eaf53c",
       "mission": "saltmarch",
       "speaker": "Hask",
-      "text": "Enough! ...You hold back. Wardens never hold back. Who sent you?"
+      "text": "You had a clear shot. Why'd you let me get back up?"
     },
     {
-      "id": "8e8500c0",
+      "id": "957dd95f",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "Tell him the truth. We are here because of the ledger."
+      "text": "Tell him about the blue glass. Show him Arden's seal."
     },
     {
-      "id": "ac7cc96d",
+      "id": "388ebd3d",
       "mission": "saltmarch",
       "speaker": "Hask",
-      "text": "Then you know Arden armed us. Do you know who put that ledger in the Houses' hands?"
+      "text": "My daughter counted jars on the late shift. When a case broke, Crane docked her pay. Here. That's her handwriting."
     },
     {
-      "id": "1a921846",
+      "id": "6f4b677d",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "...I did. I filed it with the House court. I thought it would stop the guns, not bring the warrants."
+      "text": "I... I sent her name to the court this morning. I thought they'd protect her. Crane signed for the file."
     },
     {
-      "id": "fb551ee7",
+      "id": "3e4e7260",
       "mission": "saltmarch",
       "speaker": "Hask",
-      "text": "Then help us leave. Ring the warning bells and the tunnel opens under the chapel. Hurry: wardens do not knock."
+      "text": "She's in the infirmary. Ring all three bells. Our people know the way out when they hear them."
     },
     {
       "id": "4ee694da",
@@ -241,10 +241,10 @@
       "text": "That is all of them. To the chapel: the tunnel door is behind the altar."
     },
     {
-      "id": "43bbd781",
+      "id": "4bf6c270",
       "mission": "saltmarch",
       "speaker": "Arden",
-      "text": "You came. I hoped you would, and hoped you would not."
+      "text": "I used to make Crane empty her pockets before practice. Loose change everywhere. I should've asked whose it was."
     },
     {
       "id": "27ad5c04",
@@ -259,46 +259,46 @@
       "text": "A second squad through the commons. Wardens and a marksman."
     },
     {
-      "id": "9e36b750",
+      "id": "10f26c43",
       "mission": "saltmarch",
       "speaker": "Hask",
-      "text": "The last of us are in the tunnel. Thank you, whoever you are."
+      "text": "My girl's through. She's still got her book. You hear that? We've got her out."
     },
     {
-      "id": "41c60eba",
+      "id": "0c92031b",
       "mission": "saltmarch",
       "speaker": "Crane",
-      "text": "Arden Vale. And company. I carry a warrant for the teacher, and a blank line beneath it."
+      "text": "Hand over the book. You can walk out with your teacher. I'll even pay you what I paid the Legion."
     },
     {
-      "id": "a41a1ec0",
+      "id": "8d021179",
       "mission": "saltmarch",
       "speaker": "Crane",
-      "text": "Arden taught you well. Arden taught me too, once."
+      "text": "What do you think kept my garrison fed? Those little blue bottles paid us for years!"
     },
     {
-      "id": "5c8c9976",
+      "id": "d25d5691",
       "mission": "saltmarch",
       "speaker": "Crane",
-      "text": "Go, then. All of you."
+      "text": "Call them off... please. My wardens will stand down."
     },
     {
-      "id": "986a8fe8",
+      "id": "7a94e9db",
       "mission": "saltmarch",
       "speaker": "Crane",
-      "text": "The warrant named a teacher. By morning it will name the students."
+      "text": "The account key's in my coat. Take it. Just let me stand when they come for me."
     },
     {
-      "id": "48caa292",
+      "id": "e0bb0820",
       "mission": "saltmarch",
       "speaker": "Arden",
-      "text": "The tunnel comes down behind us. Walk with me, or do not. Decide for yourselves. You always did."
+      "text": "The council put Saltmarch under your command. My company will serve here, if you'll have us."
     },
     {
-      "id": "291db56e",
+      "id": "bbb6bd23",
       "mission": "saltmarch",
       "speaker": "Ione",
-      "text": "There is a way out at the far end of the tunnel. Go with Arden. I will answer to the court."
+      "text": "Crane's in custody. First supply train just called in. Our people at the bridge finally have something to defend it with."
     }
   ]
 }

@@ -54,7 +54,7 @@ test('Saltmarch, start to finish, by a piloted crew of two: the refuge stands do
   assert.equal(crane.yielded, true, 'the Warden-Captain yields');
   assert.equal(m.world.fighters.get(crane.id).vitals.dead, false);
   const view = missionView(m, 'a');
-  assert.match(view.ending, /new warrant with your names/);
+  assert.match(view.ending, /Saltmarch became your base/);
   assert.equal(view.next, null, 'the last mission so far');
 });
 
