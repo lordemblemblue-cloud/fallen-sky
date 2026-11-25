@@ -28,7 +28,7 @@
 import { randomInt, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass, purchaseMatchItem } from '../../src/components/duelist/sim/match.mjs';
+import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, standInInput, noteEvent, MODES, queueMatchClass, purchaseMatchItem, sellPracticeItem, setPracticeOption } from '../../src/components/duelist/sim/match.mjs';
 import { createProgressStore } from './progress.mjs';
 import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS, claimStorySupply } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
@@ -178,7 +178,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
 
   function pickRoom(mode) {
     // the Join button ('any') looks for a match; crews are joined from the story page
-    const pool = [...rooms.values()].filter((r) => hasRoom(r) && (mode === 'any' ? !r.mission && humansIn(r) > 0 : r.mode === mode));
+    const pool = [...rooms.values()].filter((r) => hasRoom(r) && (mode === 'any' ? !r.mission && r.mode !== 'practice' && humansIn(r) > 0 : r.mode === mode));
     pool.sort(byPlayers);
     return pool[0] || (rooms.size < maxRooms ? openRoom(mode === 'any' ? 'duel' : mode) : null);
   }
@@ -601,6 +601,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         const res = queueMatchClass(client.room.match, client.id, msg.id);
         if (res.accepted) client.classId = msg.id;
         send(client, { t: 'class', ok: res.accepted, pending: res.pendingClass ?? null, reason: res.reason ?? null });
+      } else if (msg.t === 'practiceOption') {
+        if (client.room?.match) setPracticeOption(client.room.match, client.id, msg.option, msg.enabled);
+      } else if (msg.t === 'practiceSell') {
+        if (client.room?.match) send(client, { t: 'shop', ...sellPracticeItem(client.room.match, client.id, msg.id) });
       } else if (msg.t === 'shop' || msg.t === 'shopBuild') {
         // The client requests an item ID and optional explicit tier/recipe. Match rules validate every coin,
         // tier, loadout slot and eligibility; story missions have no item shop.
