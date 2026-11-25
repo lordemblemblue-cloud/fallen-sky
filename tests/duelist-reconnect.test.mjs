@@ -8,7 +8,7 @@ import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { WebSocket } from 'ws';
 import { createDuelistServer } from '../server/duelist/server.mjs';
-import { PROTOCOL, WS_PATH } from '../src/components/duelist/net/protocol.mjs';
+import { PROTOCOL, WS_PATH, ONLINE_MODES } from '../src/components/duelist/net/protocol.mjs';
 import { createOnlineSource } from '../src/components/duelist/net/client.mjs';
 
 // every server a test starts is closed at the end, even when the test fails (an open one keeps node running)
@@ -203,6 +203,8 @@ test('a connection that stops answering is noticed, and its seat waits for the p
 
 test('the browser\'s source reconnects by itself and sits back down; after a reload it does too; leaving gives the seat up', async () => {
   const { server, url } = await start({ speed: 1 });
+  const officialRoomCount = server.rooms.size;
+  assert.equal(officialRoomCount, ONLINE_MODES.length, 'one permanent arena for each official online mode');
   const kept = new Map();
   const storage = { getItem: (k) => kept.get(k) ?? null, setItem: (k, v) => kept.set(k, String(v)), removeItem: (k) => kept.delete(k) };
   const statuses = [];
@@ -217,14 +219,14 @@ test('the browser\'s source reconnects by itself and sits back down; after a rel
   assert.ok(await until(() => source.status === 'ready' && server.rooms.get(roomId).clients.get('ann')?.away === false, 4000), 'and sits back down by itself');
   assert.equal(source.code, code, 'in the same crew');
   assert.equal(source.meId, 'ann');
-  assert.equal(server.rooms.size, 6, 'no new room beyond five official arenas and this crew');
+  assert.equal(server.rooms.size, officialRoomCount + 1, 'no new room beyond official arenas and this crew');
   // a reload: the page goes without leaving; the new page finds the key in the tab's storage
   source.dispose({ keepSeat: true });
   assert.ok(kept.get('duelist.resume'), 'the key is kept in the tab');
   const reloaded = createOnlineSource({ url, token: 'ann', name: 'Ann', body: 'huntress', mode: 'story', room: 'new', storage });
   assert.ok(await until(() => reloaded.status === 'ready'));
   assert.equal(reloaded.code, code, 'the same crew, not a new room');
-  assert.equal(server.rooms.size, 6);
+  assert.equal(server.rooms.size, officialRoomCount + 1);
   assert.equal(server.rooms.get(roomId).clients.get('ann').away, false);
   // back to the menu: the seat is given up and the key forgotten
   reloaded.dispose();
