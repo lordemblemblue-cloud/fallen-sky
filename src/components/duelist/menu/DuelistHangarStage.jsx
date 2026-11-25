@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady, sceneRendererApi, onSceneDeviceLost } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
 import { prepareIdlePreview } from './idlePreview.mjs';
+import { createHQIdleGuests } from './hqIdleGuests.js';
 
 /**
  * Small, optional WebGL stage for the menu only.
@@ -29,6 +30,8 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     let model = null;
     let observer = null;
     let hq = null;
+    let guests = null;
+    let guestStarted = false;
     let reportElapsed = 0;
     let hqFailed = false;
     let gpuFailed = false;
@@ -166,6 +169,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       fighterAnchor.rotation.y = Math.atan2(camera.position.x - fighterAnchor.position.x, camera.position.z - fighterAnchor.position.z);
     }
     function showOriginal() {
+      guests?.setActive(false);
       hqFramed = headquarters;
       scene.background = null;
       world.visible = !headquarters;
@@ -231,7 +235,19 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
           try {
             if (hq && !hqFailed) {
               hq.updateGuildHeadquarters(dt);
-              if (elapsed < 0.5) hq.reportHostFrameTime(elapsed * 1000, elapsed);
+              // Only load optional cameos once the primary fighter and HQ are ready.
+              if (model && !guestStarted && hq.getHeadquartersPerformanceStats().active) {
+                guestStarted = true;
+                guests = createHQIdleGuests({ THREE, scene, selected: fighter,
+                  mobile: !!window.matchMedia?.('(pointer: coarse)').matches,
+                  reducedMotion: !!reducedMotion, loadBody: loadFighterBody, prepareIdle: prepareIdlePreview });
+                void guests.start();
+              }
+              guests?.update(dt);
+              if (elapsed < 0.5) {
+                guests?.reportFrame(elapsed * 1000, elapsed);
+                hq.reportHostFrameTime(elapsed * 1000, elapsed);
+              }
             }
             renderer.render(scene, camera);
             if (hq && !hqFailed) {
@@ -239,7 +255,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
               if (reportElapsed >= 1) {
                 reportElapsed = 0;
                 const stats = hq.getHeadquartersPerformanceStats();
-                onHqStatus?.({ ...stats, state: stats.stationary ? 'fallback' : 'active', backend: sceneRendererApi(renderer), frameMs: elapsed * 1000 });
+                onHqStatus?.({ ...stats, idleGuestCount: guests?.count || 0, state: stats.stationary ? 'fallback' : 'active', backend: sceneRendererApi(renderer), frameMs: elapsed * 1000 });
               }
             }
           } catch (error) {
@@ -259,6 +275,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       removeLossListener();
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
+      guests?.dispose();
       hq?.disposeGuildHeadquarters();
       idlePose?.dispose();
       if (model) fighterAnchor.remove(model);
