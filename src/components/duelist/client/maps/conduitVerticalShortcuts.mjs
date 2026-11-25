@@ -21,12 +21,13 @@ export function createConduitVerticalPlan(){
       const s=stages[j];
       boxes.push(box(id+'-deck-'+j,'deck',angle,s.r,s.t,s.y-.12,2.2,.24,1.65));
       guides.push(box(id+'-guide-'+j,'guide',angle,s.r-.72,s.t,s.y+.012,1.9,.024,.07));
+      // Under-deck crossmember connects the landing to the open frame.
+      boxes.push(box(id+'-beam-'+j,'frame',angle,s.r,0,s.y-.34,4.28,.20,.22));
     }
     // Open-sided support frame: no ceiling and no mandatory wall climb.
     for(const side of [-1,1]){
-      for(const r of [22.1,25.7]){
-        const base=r<24?0:.65;
-        const top=r<24?1.25:3.75;
+      for(const [r,top] of [[22.1,1.25],[24.0,2.50],[25.7,3.75]]){
+        const base=r<=24?0:.65;
         boxes.push(box(id+'-post-'+side+'-'+r,'frame',angle,r,side*2.05,(base+top)/2,.18,top-base,.18));
       }
     }
