@@ -225,6 +225,7 @@ export function setPracticeOption(match, playerId, option, enabled) {
   const seat = match.seats.get(playerId);
   if (!match.training || !seat?.training || seat.kind !== 'player' ||
       !['noCooldowns', 'unlimitedUltimate'].includes(option) || typeof enabled !== 'boolean') return false;
+  if (seat.training[option] === enabled) return true;
   seat.training[option] = enabled;
   if (option === 'unlimitedUltimate') {
     seat.specialMeter = enabled ? 100 : 0;
