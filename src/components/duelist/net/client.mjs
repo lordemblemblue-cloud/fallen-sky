@@ -13,6 +13,7 @@
 /* global window, WebSocket, performance, fetch, setTimeout */
 import { createWorld } from '../sim/world.mjs';
 import { createFighter } from '../core/index.mjs';
+import { cleanPracticeSettings } from '../core/practiceSettings.mjs';
 import { MODES } from '../sim/match.mjs';
 import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 import { MISSIONS } from '../sim/mission.mjs';
@@ -104,7 +105,7 @@ const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) 
  * seat's key is kept across a reload (this tab's session storage by default).
  */
 // classId: the class to fight as (core/classes.mjs); chooseClass changes it for the next spawn
-export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, matchId = null, classId = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
+export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, matchId = null, classId = null, practiceSettings = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
   let wantedClass = classId;
   let classAnswer = null; // the server's last answer: { ok, pending, reason }
   let shopAnswer = null;
@@ -210,6 +211,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       const fresh = !!msg.rematch || (joinedOnce && !msg.resumed);
       joinedOnce = true;
       matchMode = msg.mode;
+      if (msg.mode === 'practice' && !msg.resumed) for (const [option,enabled] of Object.entries(cleanPracticeSettings(practiceSettings))) send({t:'practiceOption',option,enabled});
       world.arenaLayout = getModeArenaLayout(msg.mode);
       world.arenaRadius = world.arenaLayout?.radius ?? (MODES[msg.mode]?.arena || world.arenaRadius);
       if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.world.escortStage=0; predictor.world.ctfCarriers=new Set(); predictor.fighter.team=msg.team??msg.seats?.find(s=>s.id===meId)?.team??null; predictor.reset(); }

@@ -18,6 +18,8 @@ import { MODE_TABS, TEMPLATE_MODES, templateTab, templateMode, firstTemplateMode
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { SettingsContent } from './MenuPages.jsx';
+import PracticeSettings from '../client/PracticeSettings.jsx';
+import { cleanPracticeSettings, PRACTICE_DEFAULTS } from '../core/practiceSettings.mjs';
 import { SettingsReferenceMenu } from './DuelistReferenceMenus.jsx';
 import DuelistCharacterMenu from './DuelistCharacterMenu.jsx';
 import DuelistStoryMenu from './DuelistStoryMenu.jsx';
@@ -111,6 +113,10 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
                 {Object.entries(BODIES).map(([id, character]) => <option key={id} value={id}>{character.name}</option>)}
               </select></label>
             </div>}
+            {category === 'practice' && supported && <>
+              {mode.route === 'practice' && <label>Practice bots <select value={prefs.bots} onChange={e=>onPrefs({bots:Number(e.target.value)})}>{[0,1,2,3].map(n=><option key={n} value={n}>{n}</option>)}</select></label>}
+              <PracticeSettings value={prefs.practiceSettings} onChange={(id,value)=>onPrefs({practiceSettings:{...cleanPracticeSettings(prefs.practiceSettings),[id]:value}})} onReset={()=>onPrefs({practiceSettings:{...PRACTICE_DEFAULTS}})}/>
+            </>}
             {!supported || category === 'ranked' || category === 'custom' ?
               <p className="dxt-unavailable" role="status">This option is a visual preview. Its matchmaking or lobby backend is not available yet.</p>
               : null}

@@ -55,3 +55,33 @@ test('local training launch enables options while standard offline battles remai
   assert.equal(DEFAULT_PUBLIC_ROOMS.find(r=>r.mode==='practice').id,'m8');
   assert.equal(QUICKPLAY_MODES.includes('practice'),false);
 });
+
+test('saved settings control initial local resources and finite training gold',()=>{
+  const source=createLocalSource({mode:'practice',bots:0,classId:'duelist',practiceSettings:{unlimitedGold:false,unlimitedWill:false,noCooldowns:false,unlimitedUltimate:false}});
+  assert.equal(source.view().me.gold,SHOP_RULES.startingGold);
+  assert.equal(source.view().me.training.noCooldowns,false);
+  assert.equal(source.view().me.specialMeter,0);
+  const item=SHOP_ITEMS[0];source.buyItem(item.id,1);
+  assert.equal(source.shopAnswer.ok,true);
+  assert.ok(source.view().me.gold<SHOP_RULES.startingGold);
+  source.sellItem(item.id);
+  assert.equal(source.view().me.gold,SHOP_RULES.startingGold);
+});
+test('resource and health restore only apply to enabled living training seats',()=>{
+  const m=createMatch({mode:'practice',practiceMode:true,players:[{id:'a',classId:'duelist'}],seats:1});
+  m.phase='live';const f=m.world.fighters.get('a');
+  f.vitals.will=1;f.vitals.stamina=1;f.vitals.hp=1;
+  assert.equal(setPracticeOption(m,'a','unlimitedStamina',true),true);
+  assert.equal(setPracticeOption(m,'a','autoHeal',true),true);
+  assert.equal(setPracticeOption(m,'a','autoHeal','true'),false);
+  stepMatch(m,1/60,{});
+  assert.equal(f.vitals.will,f.vitals.max.will);
+  assert.equal(f.vitals.stamina,f.vitals.max.stamina);
+  assert.equal(f.vitals.hp,f.vitals.max.hp);
+  setPracticeOption(m,'a','autoHeal',false);
+  f.vitals.hp=1;stepMatch(m,1/60,{});
+  assert.ok(f.vitals.hp<f.vitals.max.hp);
+  f.vitals.hp=0;f.vitals.dead=true;
+  setPracticeOption(m,'a','autoHeal',true);stepMatch(m,1/60,{});
+  assert.equal(f.vitals.dead,true);
+});

@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Home, ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
+import PracticeSettings from '../client/PracticeSettings.jsx';
+import { cleanPracticeSettings, PRACTICE_DEFAULTS } from '../core/practiceSettings.mjs';
 import { usePrefs, classProgressOf } from '../client/prefs.mjs';
 import { ACTIONS, DEFAULT_KEYS, keysFrom, rebind, keyLabel, bindable } from '../client/bindings.mjs';
 import { MENU_MODES, LEVELS } from './modes.js';
@@ -367,9 +369,11 @@ export function ModePage({ mode }) {
           ) : mode === 'practice' ? (
             <>
               <Choice label="Opponent" value={prefs.foe} onChange={(v) => update({ foe: v })} options={Object.entries(BODIES).map(([id, b]) => [id, b.name])} />
-              <Choice label="Bots" value={String(prefs.bots)} onChange={(v) => update({ bots: Number(v) })} options={[['1', '1'], ['2', '2'], ['3', '3']]} />
+              <Choice label="Bots" value={String(prefs.bots)} onChange={(v) => update({ bots: Number(v) })} options={[['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']]} />
               <Choice label="Level" value={prefs.level} onChange={(v) => update({ level: v })} options={LEVELS} />
+              <PracticeSettings value={prefs.practiceSettings} onChange={(id,value)=>update({practiceSettings:{...cleanPracticeSettings(prefs.practiceSettings),[id]:value}})} onReset={()=>update({practiceSettings:{...PRACTICE_DEFAULTS}})}/>
               <Button primary onClick={() => play(false)}><Play className="h-4 w-4" /> Start practice</Button>
+              <Button onClick={()=>play(true)}>Shared practice</Button>
             </>
           ) : (
             <>
@@ -622,10 +626,11 @@ export function SettingsContent({ sharedPrefs, sharedUpdate } = {}) {
               <span className="duelist-setting-label">Practice bots</span>
               <span className="duelist-menu-note">Number of computer-controlled fighters when using Practice mode.</span>
               <select value={String(prefs.bots)} onChange={(event) => update({ bots: Number(event.target.value) })}>
-                {[1, 2, 3].map((count) => <option key={count} value={count}>{count} {count === 1 ? 'bot' : 'bots'}</option>)}
+                {[0, 1, 2, 3].map((count) => <option key={count} value={count}>{count} {count === 1 ? 'bot' : 'bots'}</option>)}
               </select>
             </label>
           </section>
+          <PracticeSettings value={prefs.practiceSettings} onChange={(id,value)=>update({practiceSettings:{...cleanPracticeSettings(prefs.practiceSettings),[id]:value}})} onReset={()=>update({practiceSettings:{...PRACTICE_DEFAULTS}})}/>
           <div className="duelist-menu-panel">
             <span className="duelist-menu-eyebrow-text">SAVED PREFERENCES</span>
             <p className="duelist-menu-helper mt-2">Changes take effect for new actions and matches and are saved in this browser. Audio and mouse settings do not alter multiplayer combat rules.</p>

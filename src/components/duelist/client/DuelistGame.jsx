@@ -50,6 +50,7 @@ import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import { classChoiceSecondsLeft, shouldShowMatchClassPicker, CLASS_CHOICE_PROMPT_SECONDS } from './matchClassEntry.mjs';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
+import PracticeSettings from './PracticeSettings.jsx';
 import ShopPanel from './ShopPanel.jsx';
 import StorySupplyPanel from './StorySupplyPanel.jsx';
 import MatchLoadingScreen from './MatchLoadingScreen.jsx';
@@ -198,7 +199,7 @@ function OnlineClassEntry(props) {
   </div>;
 }
 
-function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1, testMode = false, practiceMode = false, testBots = false,
+function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1, testMode = false, practiceMode = false, practiceSettings = null, testBots = false,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
   onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, progress = null, onProgress = null }) {
   const bound = keysFrom(keys || {});
@@ -212,6 +213,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
   const [choiceSeconds, setChoiceSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
   const initialChosenRef = useRef(entryClassConfirmed);
   const [shopOpen, setShopOpen] = useState(false);
+  const [trainingOpen, setTrainingOpen] = useState(false);
   const controlsRef = useRef(null);
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
@@ -268,8 +270,8 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
     const story = mode === 'story';
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
     const source = story && !online ? createMissionSource({ id: mission, seed, youBody })
-      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, classId, onChange: (s, detail) => setNet({ status: s, detail }) })
-        : createLocalSource({ mode, botLevel, bots, testMode, practiceMode, testBots, seed, youBody, foeBody, classId, progress: progressRef.current });
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, classId, practiceSettings, onChange: (s, detail) => setNet({ status: s, detail }) })
+        : createLocalSource({ mode, botLevel, bots, testMode, practiceMode, practiceSettings, testBots, seed, youBody, foeBody, classId, progress: progressRef.current });
     const { world } = source;
     sourceRef.current = source;
     // a mission's rooms (matches are fought in the open arena); online they follow the crew to its next mission
@@ -921,8 +923,8 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
   // Inputs stay inactive while selecting a class. Explicitly reopening the
   // picker pauses controls too, including for online matches.
   useEffect(() => {
-    controlsRef.current?.setPaused(shopOpen || showPicker);
-  }, [shopOpen, showPicker]);
+    controlsRef.current?.setPaused(shopOpen || showPicker || trainingOpen);
+  }, [shopOpen, showPicker, trainingOpen]);
   // Five seconds tells the player to decide, but zero NEVER makes a choice or closes the menu.
   useEffect(() => {
     if (!match || quest || initialConfirmed || match.phase === 'over') return undefined;
@@ -1010,9 +1012,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
           {bound.itemActive ? keyLabel(bound.itemActive, {short:true}) + ' · ' : ''}Use relic
         </button>
       )}
-      {match?.me?.training && <div className="duelist-practice-tools" style={{position:'absolute',top:50,left:12,zIndex:59,display:'flex',flexWrap:'wrap',gap:6,maxWidth:'min(360px, 80vw)',color:'#e4efff',background:'rgba(8,17,30,.68)',padding:8,borderRadius:12}}>
-        {Object.entries({noCooldowns:'No ability cooldowns',unlimitedUltimate:'Unlimited ultimate'}).map(([id,label])=><button key={id} type="button" aria-pressed={match.me.training[id]} onClick={()=>{if(document.pointerLockElement)document.exitPointerLock?.();sourceRef.current?.setPracticeOption?.(id,!match.me.training[id]);}}>{label}: {match.me.training[id]?'On':'Off'}</button>)}
-      </div>}
+      {match?.me?.training && <PracticeSettings live value={match.me.training} onOpenChange={setTrainingOpen} onChange={(id,value)=>sourceRef.current?.setPracticeOption?.(id,value)}/>}
       {match && <button type="button" className="duelist-shop-toggle" onClick={() => {
         if (document.pointerLockElement) document.exitPointerLock?.();
         setShopOpen(true);

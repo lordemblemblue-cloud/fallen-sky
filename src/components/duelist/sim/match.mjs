@@ -21,6 +21,7 @@ import { createBot, think, createRandom } from './bots.mjs';
 import { isDown, MOVES, SHOP_RULES, purchaseRule, equipItems, shopItem, tierPrice } from '../core/index.mjs';
 import { recordKill, resetKillChain } from '../core/killAnnouncements.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
+import { cleanPracticeSettings, validPracticeOption } from '../core/practiceSettings.mjs';
 import { settleSpecialSpend } from './specialMeterSettlement.mjs';
 import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt, XP } from '../core/progression.mjs';
 import { makeBall, stepFootball } from './football.mjs';
@@ -155,7 +156,7 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
   const bot = kind === 'bot' ? createBot(seatId, { level: match.botLevel, seed: match.seed * 131 + n * 17 }) : null;
   const spot = spawnFor(match, seatId, seatTeam);
   const cls = kind === 'bot' ? CLASS_IDS[(n - 1 + match.seed) % CLASS_IDS.length] : classById(classId) ? classId : null;
-  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, respawnStartedAt: null, classId: cls, pendingClass: null, specialMeter: 0, training: match.training && kind === 'player' ? { noCooldowns: true, unlimitedUltimate: true } : null,
+  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, respawnStartedAt: null, classId: cls, pendingClass: null, specialMeter: 0, training: match.training && kind === 'player' ? cleanPracticeSettings() : null,
     progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0,
     matchBoost: boostAt(match.clock), gold: SHOP_RULES.startingGold,
     goldFraction: 0, classXpFraction: 0, items: [] };
@@ -209,22 +210,22 @@ export function purchaseMatchItem(match, playerId, itemId, targetTier, combine =
   const spawn = match.conduit?seat.conduitSpawn:spawnFor(match, playerId, seat.team);
   const atSpawn = body && spawn && Math.hypot(body.x - spawn.x, body.z - spawn.z,match.conduit?body.y-spawn.y:0) <= 3;
   const allowed = match.training || match.phase !== 'live' || !!fighter?.vitals.dead || atSpawn;
-  const result = purchaseRule({ gold: match.training ? SHOP_RULES.goldCap : seat.gold, items: seat.items, id: itemId, allowed, targetTier, combine });
+  const result = purchaseRule({ gold: seat.training?.unlimitedGold ? SHOP_RULES.goldCap : seat.gold, items: seat.items, id: itemId, allowed, targetTier, combine });
   if (!result.ok) return { ok: false, reason: result.reason, cost: result.cost || 0 };
-  if (!match.training) seat.gold -= result.cost;
+  if (!seat.training?.unlimitedGold) seat.gold -= result.cost;
   seat.items = result.items;
   if (fighter) equipItems(fighter, seat.items);
   match.events.push({ type: 'itemBought', id: playerId, itemId, tier: result.tier,
     cost: result.cost, at: match.world.time });
   return { ok: true, id: itemId, tier: result.tier, cost: result.cost,
-    gold: match.training ? SHOP_RULES.goldCap : seat.gold, items: seat.items.map((item) => ({ ...item })) };
+    gold: seat.training?.unlimitedGold ? SHOP_RULES.goldCap : seat.gold, items: seat.items.map((item) => ({ ...item })) };
 }
 
 // Practice controls are scoped to the actual match and the caller's human seat.
 export function setPracticeOption(match, playerId, option, enabled) {
   const seat = match.seats.get(playerId);
   if (!match.training || !seat?.training || seat.kind !== 'player' ||
-      !['noCooldowns', 'unlimitedUltimate'].includes(option) || typeof enabled !== 'boolean') return false;
+      !validPracticeOption(option, enabled)) return false;
   if (seat.training[option] === enabled) return true;
   seat.training[option] = enabled;
   if (option === 'unlimitedUltimate') {
@@ -242,13 +243,20 @@ export function sellPracticeItem(match, playerId, itemId) {
   seat.items = seat.items.filter(item => item.id !== itemId);
   const fighter = match.world.fighters.get(playerId);
   if (fighter) equipItems(fighter, seat.items);
-  return { ok: true, sold: true, id: itemId, tier: owned.tier, refund: tierPrice(shopItem(itemId), owned.tier), gold: SHOP_RULES.goldCap, items: seat.items.map(item => ({ ...item })) };
+  const refund = tierPrice(shopItem(itemId), owned.tier);
+  if (!seat.training.unlimitedGold) seat.gold = Math.min(SHOP_RULES.goldCap, seat.gold + refund);
+  return { ok: true, sold: true, id: itemId, tier: owned.tier, refund, gold: seat.training.unlimitedGold ? SHOP_RULES.goldCap : seat.gold, items: seat.items.map(item => ({ ...item })) };
 }
 function refreshPracticeSeat(match, seat) {
   if (!seat.training) return;
   const fighter = match.world.fighters.get(seat.id);
   if (!fighter) return;
   const kit = classById(seat.classId);
+  if (!fighter.vitals.dead) {
+    if (seat.training.unlimitedWill) { fighter.vitals.will = fighter.vitals.max.will; fighter.vitals.collapsed = false; }
+    if (seat.training.unlimitedStamina) { fighter.vitals.stamina = fighter.vitals.max.stamina; fighter.vitals.winded = false; }
+    if (seat.training.autoHeal) fighter.vitals.hp = fighter.vitals.max.hp;
+  }
   if (seat.training.noCooldowns && kit) for (const ability of kit.abilities) delete fighter.cooldowns[ability.id];
   if (seat.training.unlimitedUltimate && kit) {
     seat.specialMeter = 100;
@@ -691,7 +699,7 @@ function onDefeat(match, e) {
   } else if (def.respawn) {
     who.respawnStartedAt=world.time;
     const delay=match.escort&&who.team==='blue'?defenderRespawnDelay(match.escort):def.respawn;
-    who.respawnAt=world.time+delay;
+    who.respawnAt=world.time+(who.training?.instantRespawn && !match.escort ? 0 : delay);
   }
 }
 
@@ -878,8 +886,8 @@ export function matchView(match, forId = null) {
     zones: world.zones.map((z) => ({ id: z.id, kind: z.kind, team: z.team, owner: z.owner, x: z.x, z: z.z, radius: z.radius, until: z.until })),
     people, me: forId && match.seats.has(forId) ? { ...people.find((p) => p.id === forId), pendingClass: match.seats.get(forId).pendingClass,
       specialMeter: match.seats.get(forId).classId ? (match.seats.get(forId).training?.unlimitedUltimate ? 100 : match.seats.get(forId).specialMeter) : null,
-      ...(match.seats.get(forId).training ? { training: { ...match.seats.get(forId).training }, unlimitedGold: true } : {}),
-      gold: match.training ? SHOP_RULES.goldCap : match.seats.get(forId).gold, items: match.seats.get(forId).items.map((item) => ({ ...item })),
+      ...(match.seats.get(forId).training ? { training: { ...match.seats.get(forId).training }, unlimitedGold: match.seats.get(forId).training.unlimitedGold } : {}),
+      gold: match.seats.get(forId).training?.unlimitedGold ? SHOP_RULES.goldCap : match.seats.get(forId).gold, items: match.seats.get(forId).items.map((item) => ({ ...item })),
       canShop: match.phase !== 'over' && (match.training || match.phase !== 'live' ||
         world.fighters.get(forId)?.vitals.dead ||
         (() => {

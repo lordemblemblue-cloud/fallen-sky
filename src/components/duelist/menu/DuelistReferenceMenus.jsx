@@ -11,6 +11,8 @@ import {
   Trophy, UserRound, Users, Volume2, X, Zap
 } from 'lucide-react';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
+import { PracticeOptions } from '../client/PracticeSettings.jsx';
+import { cleanPracticeSettings, PRACTICE_DEFAULTS } from '../core/practiceSettings.mjs';
 import { KeyBindings } from './MenuPages.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import { BODIES } from '../client/assets.mjs';
@@ -41,6 +43,7 @@ const SETTINGS_TABS = [
   { id:'graphics', label:'GRAPHICS', Icon:Monitor },
   { id:'audio', label:'AUDIO', Icon:Volume2 },
   { id:'controls', label:'CONTROLS', Icon:Gamepad2 },
+  { id:'practice', label:'PRACTICE', Icon:SlidersHorizontal },
   { id:'keys', label:'KEYBINDINGS', Icon:Keyboard },
   { id:'accessibility', label:'ACCESSIBILITY', Icon:Accessibility },
 ];
@@ -205,7 +208,7 @@ export function SettingsReferenceMenu({ prefs, onPrefs, close }) {
   const patchAudio=obj=>{setAudio(prev=>({...prev,...obj}));setMessage('Unsaved changes');};
   const apply=()=>{
     onPrefs({sensitivity:Number(draft.sensitivity), level:draft.level, bots:Number(draft.bots),
-      keys:draft.keys,voices:draft.voices!==false});
+      keys:draft.keys,voices:draft.voices!==false,practiceSettings:cleanPracticeSettings(draft.practiceSettings)});
     try {window.localStorage.setItem('duelist.audio',JSON.stringify(audio));} catch { /* session-only fallback */ }
     setMessage('Settings saved. New actions and matches use your selected preferences.');
   };
@@ -243,8 +246,9 @@ export function SettingsReferenceMenu({ prefs, onPrefs, close }) {
         <label><span>AI difficulty</span><select value={draft.level} onChange={e=>patch({level:e.target.value})}>
           {LEVELS.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
         <label><span>Practice bots</span><select value={String(draft.bots)} onChange={e=>patch({bots:Number(e.target.value)})}>
-          {[1,2,3].map(n=><option key={n} value={n}>{n} bot{n>1?'s':''}</option>)}</select></label>
+          {[0,1,2,3].map(n=><option key={n} value={n}>{n} bot{n>1?'s':''}</option>)}</select></label>
       </div>}
+      {tab==='practice' && <PracticeOptions value={draft.practiceSettings} onChange={(id,value)=>patch({practiceSettings:{...cleanPracticeSettings(draft.practiceSettings),[id]:value}})} onReset={()=>patch({practiceSettings:{...PRACTICE_DEFAULTS}})}/>}
       {tab==='keys' && <div className="dxr-settings-keys"><p>Click a binding, then press a key or mouse button. Escape cancels rebinding.</p>
         <KeyBindings keys={draft.keys||{}} onChange={keys=>patch({keys})}/></div>}
       {tab==='accessibility' && <div className="dxr-settings-rows">
