@@ -9,7 +9,7 @@ const STEP = 1 / 60;
 // progress: the player's EXP per class from this browser (client/prefs.mjs): offline, the browser keeps the levels
 export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bots = 1, testMode = false, practiceMode = false, testBots = false, seed = 1, youBody = BODY_IDS[0], foeBody = BODY_IDS[1], classId = null, progress = null } = {}) {
   const def = MODES[mode] || MODES.practice;
-  const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You', classId, progress }], testMode, practiceMode, seats: testMode ? (testBots ? def.seats : 1) : def.id === 'practice' ? 1 + bots : null });
+  const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You', classId, progress }], testMode, practiceMode: practiceMode || def.id === 'practice', seats: testMode ? (testBots ? def.seats : 1) : def.id === 'practice' ? 1 + bots : null });
   let classAnswer = null;
   let shopAnswer = null;
   // bodies: yours; the duel or practice opponent's; everyone else in turn from the rest
