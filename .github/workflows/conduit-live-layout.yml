@@ -1,11 +1,14 @@
 name: Conduit live layout generation
 on:
   push:
-    branches: ['conduit/normal-match-activation']
+    branches: ['conduit/normal-match-activation', 'conduit/match-release-fixes']
   pull_request:
     paths:
       - 'src/components/duelist/sim/conduitLive*'
       - 'src/components/duelist/sim/modeArenaLayout.mjs'
+      - 'src/components/duelist/sim/match.mjs'
+      - 'src/components/duelist/sim/bots.mjs'
+      - 'src/components/duelist/net/protocol.mjs'
       - 'src/components/duelist/client/maps/conduitArena.mjs'
       - '.github/workflows/conduit-live-layout.yml'
 permissions:
