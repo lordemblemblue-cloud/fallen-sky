@@ -9,12 +9,13 @@ export function summarizeFrameTimes(frameTimesMs, { warmupFrames = 0 } = {}) {
     throw new RangeError('warmupFrames must be a nonnegative integer');
   }
   const samples = frameTimesMs.slice(warmupFrames);
-  if (samples.some((ms) => typeof ms !== 'number' || !Number.isFinite(ms) || ms <= 0)) {
+  if ([...samples].some((ms) => typeof ms !== 'number' || !Number.isFinite(ms) || ms <= 0)) {
     throw new RangeError('frame times must be finite positive milliseconds');
   }
   if (samples.length === 0) return null;
   const sorted = [...samples].sort((a, b) => a - b);
   const sum = samples.reduce((total, ms) => total + ms, 0);
+  if (!Number.isFinite(sum)) throw new RangeError('frame time total must be finite');
   const meanFrameMs = sum / samples.length;
   const percentile = (p) => sorted[Math.ceil(p * sorted.length) - 1];
   // Slowest 1% frames, averaged as frame rates. This is an explicit
@@ -22,11 +23,16 @@ export function summarizeFrameTimes(frameTimesMs, { warmupFrames = 0 } = {}) {
   const slowCount = Math.max(1, Math.ceil(samples.length * 0.01));
   const slowest = sorted.slice(-slowCount);
   const slowMeanMs = slowest.reduce((total, ms) => total + ms, 0) / slowCount;
+  const averageFps = 1000 / meanFrameMs;
+  const onePercentLowFps = 1000 / slowMeanMs;
+  if (!Number.isFinite(averageFps) || !Number.isFinite(onePercentLowFps)) {
+    throw new RangeError('frame rates must be finite');
+  }
   return {
     sampleCount: samples.length,
     meanFrameMs,
-    averageFps: 1000 / meanFrameMs,
-    onePercentLowFps: 1000 / slowMeanMs,
+    averageFps,
+    onePercentLowFps,
     p95FrameMs: percentile(0.95),
     p99FrameMs: percentile(0.99),
     maxFrameMs: sorted[sorted.length - 1],
@@ -43,7 +49,9 @@ export function frameTimesFromTimestamps(timestampsMs) {
     if (!Number.isFinite(before) || !Number.isFinite(after) || after <= before) {
       throw new RangeError('timestamps must be finite and strictly increasing');
     }
-    durations.push(after - before);
+    const duration = after - before;
+    if (!Number.isFinite(duration)) throw new RangeError('timestamp difference must be finite');
+    durations.push(duration);
   }
   if (timestampsMs.length === 1 && !Number.isFinite(timestampsMs[0])) {
     throw new RangeError('timestamps must be finite');

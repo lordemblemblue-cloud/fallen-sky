@@ -38,3 +38,18 @@ test('convert strictly increasing timestamps into durations', () => {
   assert.throws(() => frameTimesFromTimestamps([100, 100]), RangeError);
   assert.throws(() => frameTimesFromTimestamps([100, Infinity]), RangeError);
 });
+
+test('reject sparse retained samples but ignore excluded warmup holes', () => {
+  assert.throws(() => summarizeFrameTimes(Array(2)), RangeError);
+  assert.throws(() => summarizeFrameTimes([16, , 20]), RangeError);
+  assert.equal(summarizeFrameTimes([, 20], { warmupFrames: 1 }).averageFps, 50);
+});
+test('reject nonfinite totals and derived frame rates', () => {
+  assert.throws(() => summarizeFrameTimes([Number.MAX_VALUE, Number.MAX_VALUE]), RangeError);
+  assert.throws(() => summarizeFrameTimes([Number.MIN_VALUE]), RangeError);
+});
+test('reject overflowing timestamp differences and sparse timestamps', () => {
+  assert.throws(() => frameTimesFromTimestamps([-Number.MAX_VALUE, Number.MAX_VALUE]), RangeError);
+  assert.throws(() => frameTimesFromTimestamps([1, , 3]), RangeError);
+  assert.deepEqual(frameTimesFromTimestamps([-10, 10]), [20]);
+});
