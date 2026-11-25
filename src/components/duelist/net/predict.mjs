@@ -141,6 +141,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       shown.riseUntil = fighter.riseUntil + shift;
       shown.heldBy = null;
       shown.breaches = fighter.breaches;
+      shown.effects = Object.fromEntries(Object.entries(fighter.effects || {}).map(([kind, effect]) => [kind, { ...effect, until: effect.until + shift }]));
       const a = fighter.action;
       if (!a) shown.action = null;
       else {
