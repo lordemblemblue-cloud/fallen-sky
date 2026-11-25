@@ -38,12 +38,15 @@ export function selectConduitLights(plan,budget,profile='all',focus=null) {
     const score=p=>Math.hypot(p.position[0]-focus.x,(p.position[1]-focus.y)*2.2,p.position[2]-focus.z);
     return eligible.slice().sort((a,b)=>score(a)-score(b)||a.id.localeCompare(b.id)).slice(0,budget);
   }
-  if(profile!=='all')return eligible.slice(0,budget);
+  if(profile!=='all'){
+    const priority=p=>p.id==='undercroft-core'||p.id==='courtyard-center'?0:p.overview?1:2;
+    return eligible.slice().sort((a,b)=>priority(a)-priority(b)).slice(0,budget);
+  }
   // Stable overview, no camera-dependent light switching unless explicitly requested.
   // Interleave opposite quadrants at low quality, preserving coverage of all three floors.
   const byTier=['t0','t1','t2'].map(tier=>eligible.filter(p=>p.tier===tier&&p.overview));
   const order=[0,2,1,3,4,6,5,7];
-  const selected=[];
+  const selected=eligible.filter(p=>p.id==='undercroft-core'||p.id==='courtyard-center');
   for(const i of order)for(const group of byTier)if(group[i])selected.push(group[i]);
   for(const p of eligible)if(!selected.includes(p))selected.push(p);
   return selected.slice(0,budget);
