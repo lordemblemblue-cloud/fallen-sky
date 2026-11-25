@@ -1,0 +1,2106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DUELIST ADVENTURE — Phase 8 Modular CTF Gameplay System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.webgpu.min.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.webgpu.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg-panel: rgba(13, 17, 25, 0.86);
+      --bg-card: rgba(20, 26, 38, 0.72);
+      --border-subtle: rgba(140, 158, 188, 0.24);
+      --text-primary: #eef3fa;
+      --text-secondary: #98a6be;
+      --accent-red: #FF394B;
+      --accent-blue: #20BFFF;
+      --accent-cyan: #7BE5FF;
+      --accent-amber: #DF9B32;
+      --accent-green: #2ee58d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #0c0f16; color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+    }
+
+    #viewport { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #101520; }
+    #viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; transition: opacity 0.2s ease; }
+    #hud.clean-hidden { opacity: 0; visibility: hidden; }
+
+    .panel {
+      pointer-events: auto;
+      background: var(--bg-panel);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+    }
+
+    /* Top Left Telemetry Pill */
+    #top-left {
+      position: absolute; top: 12px; left: 12px;
+      padding: 8px 13px; display: flex; flex-direction: column; gap: 4px;
+    }
+    .brand-row { display: flex; align-items: center; gap: 8px; }
+    .brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent-amber); box-shadow: 0 0 10px var(--accent-amber); }
+    .brand-title { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .sys-row {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-secondary);
+    }
+    .sys-ok { color: var(--accent-green); font-weight: 700; }
+    .sys-fb { color: var(--accent-amber); font-weight: 700; }
+
+    /* Top Center Scoreboard */
+    #scoreboard {
+      position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+      padding: 8px 16px; display: flex; align-items: center; gap: 14px;
+      max-width: calc(100vw - 24px);
+    }
+    .team-score-box { display: flex; align-items: center; gap: 10px; min-width: 118px; }
+    .team-score-box.blue { flex-direction: row-reverse; text-align: right; }
+    .score-num {
+      font-family: 'JetBrains Mono', monospace; font-size: 26px; font-weight: 800; line-height: 1;
+      min-width: 28px; text-align: center;
+    }
+    .score-num.red { color: var(--accent-red); text-shadow: 0 0 16px rgba(255, 57, 75, 0.45); }
+    .score-num.blue { color: var(--accent-blue); text-shadow: 0 0 16px rgba(32, 191, 255, 0.45); }
+    .flag-pill {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+      padding: 2px 7px; border-radius: 5px; letter-spacing: 0.04em; text-transform: uppercase;
+      border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06);
+      display: inline-block; margin-top: 2px;
+    }
+    .flag-pill.home { color: #b7f7d8; border-color: rgba(46, 229, 141, 0.45); background: rgba(46, 229, 141, 0.14); }
+    .flag-pill.carried { color: #ffe09e; border-color: rgba(223, 155, 50, 0.65); background: rgba(223, 155, 50, 0.22); }
+    .flag-pill.dropped { color: #ffb3ba; border-color: rgba(255, 57, 75, 0.65); background: rgba(255, 57, 75, 0.22); }
+
+    .clock-center {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 0 12px; border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle);
+      min-width: 112px;
+    }
+    .phase-tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-amber);
+    }
+    .phase-tag.active { color: var(--accent-green); }
+    .phase-tag.overtime { color: var(--accent-red); animation: pulse 1s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+    #hud-clock { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: #ffffff; }
+    .cap-sub { font-size: 10px; color: var(--text-secondary); }
+
+    /* Big Center Callout Banner (5..1 / FIGHT! / OVERTIME / VICTORY) */
+    #callout-banner {
+      position: fixed; top: 38%; left: 50%; transform: translate(-50%, -50%) scale(0.84);
+      font-size: 56px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase;
+      color: #ffffff; text-shadow: 0 0 32px rgba(223, 155, 50, 0.9), 0 6px 22px rgba(0, 0, 0, 0.85);
+      opacity: 0; pointer-events: none; z-index: 40; transition: all 0.22s ease; text-align: center;
+    }
+    #callout-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+
+    /* Objective Notification Feed */
+    #event-feed {
+      position: absolute; top: 82px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      pointer-events: none; width: min(440px, 90vw);
+    }
+    .feed-toast {
+      background: rgba(13, 18, 28, 0.9); border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--accent-amber); border-radius: 8px;
+      padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--text-primary);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45); animation: fadeSlide 0.2s ease;
+    }
+    .feed-toast.red { border-left-color: var(--accent-red); }
+    .feed-toast.blue { border-left-color: var(--accent-blue); }
+    .feed-toast.green { border-left-color: var(--accent-green); }
+    @keyframes fadeSlide { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Top Right Quick Toggle */
+    #top-right { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; pointer-events: auto; }
+
+    /* Clean View Restore */
+    #clean-restore { position: fixed; top: 12px; right: 12px; z-index: 30; display: none; }
+    #clean-restore.visible { display: block; }
+
+    /* Right-Side Testing Inspector */
+    #inspector {
+      position: absolute; top: 56px; right: 12px; width: 348px;
+      max-height: calc(100vh - 150px); overflow-y: auto;
+      padding: 12px; display: flex; flex-direction: column; gap: 11px;
+    }
+    #inspector.collapsed { display: none; }
+    #inspector::-webkit-scrollbar { width: 5px; }
+    #inspector::-webkit-scrollbar-thumb { background: rgba(152, 166, 190, 0.3); border-radius: 4px; }
+
+    .sec-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-secondary); margin-bottom: 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .btn {
+      appearance: none; border: 1px solid var(--border-subtle);
+      background: rgba(26, 33, 47, 0.92); color: var(--text-primary);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      padding: 7px 10px; border-radius: 8px; cursor: pointer;
+      transition: all 0.14s ease; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      white-space: nowrap;
+    }
+    .btn:hover { background: rgba(40, 50, 70, 0.96); border-color: rgba(165, 184, 214, 0.45); }
+    .btn:active { transform: translateY(1px); }
+    .btn.active { background: rgba(32, 191, 255, 0.22); border-color: var(--accent-blue); color: #ffffff; }
+    .btn.amber { background: rgba(223, 155, 50, 0.18); border-color: rgba(223, 155, 50, 0.65); color: #ffd996; }
+    .btn.amber:hover { background: rgba(223, 155, 50, 0.3); }
+    .btn.red { border-color: rgba(255, 57, 75, 0.55); color: #ffc0c6; }
+    .btn.red.active { background: rgba(255, 57, 75, 0.28); border-color: var(--accent-red); color: #fff; }
+    .btn.blue { border-color: rgba(32, 191, 255, 0.55); color: #bfefff; }
+    .btn.blue.active { background: rgba(32, 191, 255, 0.28); border-color: var(--accent-blue); color: #fff; }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row .btn { flex: 1; }
+
+    .cfg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .cfg-field {
+      background: var(--bg-card); border: 1px solid rgba(140, 158, 188, 0.16);
+      border-radius: 7px; padding: 5px 7px; display: flex; flex-direction: column; gap: 3px;
+    }
+    .cfg-field label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
+    .cfg-field input {
+      background: rgba(9, 12, 18, 0.85); border: 1px solid rgba(140, 158, 188, 0.24);
+      border-radius: 5px; color: #fff; font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; font-weight: 600; padding: 3px 6px; width: 100%;
+    }
+
+    /* Audit List */
+    #audit-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 240px; overflow-y: auto; }
+    .audit-item {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+      background: rgba(10, 14, 21, 0.72); border: 1px solid rgba(140, 158, 188, 0.14);
+      border-radius: 7px; padding: 6px 8px; font-size: 11px; line-height: 1.3;
+    }
+    .audit-name { font-weight: 600; color: var(--text-primary); }
+    .audit-detail { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-secondary); margin-top: 2px; }
+    .badge-pass { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; color: #082917; background: var(--accent-green); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+    .badge-fail { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 700; color: #fff; background: var(--accent-red); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+
+    /* Bottom Player & Class Bar */
+    #bottom-bar {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      padding: 9px 14px; display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 24px);
+    }
+    .hp-wrap { display: flex; flex-direction: column; gap: 3px; min-width: 136px; }
+    .hp-label {
+      display: flex; justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-secondary);
+    }
+    .hp-track { width: 100%; height: 8px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
+    .hp-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #2ee58d, #7be5ff); transition: width 0.12s ease; }
+
+    .elev-readout {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600;
+      padding: 5px 9px; border-radius: 7px; background: var(--bg-card);
+      border: 1px solid rgba(140, 158, 188, 0.2); color: var(--accent-cyan);
+    }
+
+    /* Mobile Touch Controls */
+    #mobile-controls { position: fixed; inset: 0; pointer-events: none; z-index: 15; display: none; }
+    #mobile-controls.visible { display: block; }
+    #joystick-zone {
+      position: absolute; bottom: 86px; left: 18px; width: 114px; height: 114px; border-radius: 50%;
+      background: rgba(14, 19, 28, 0.58); border: 2px solid rgba(123, 229, 255, 0.35);
+      pointer-events: auto; touch-action: none;
+    }
+    #joystick-knob {
+      position: absolute; top: 50%; left: 50%; width: 44px; height: 44px;
+      margin-left: -22px; margin-top: -22px; border-radius: 50%;
+      background: rgba(32, 191, 255, 0.78); border: 2px solid #ffffff;
+    }
+    .mobile-actions { position: absolute; bottom: 92px; right: 18px; display: flex; gap: 10px; pointer-events: auto; }
+    .touch-btn {
+      width: 58px; height: 58px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.35); background: rgba(16, 22, 34, 0.8);
+      color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+      display: flex; align-items: center; justify-content: center; touch-action: none;
+    }
+    .touch-btn.atk { border-color: var(--accent-red); color: #ffb5bc; }
+    .touch-btn.jmp { border-color: var(--accent-amber); color: #ffd996; }
+
+    /* Loader */
+    #loader {
+      position: fixed; inset: 0; z-index: 50; background: #0c0f16;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; transition: opacity 0.3s ease;
+    }
+    #loader.done { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid rgba(123, 229, 255, 0.2); border-top-color: var(--accent-amber);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 820px) {
+      #top-left { display: none; }
+      #inspector { width: calc(100vw - 24px); max-height: 46vh; top: 54px; }
+      .team-score-box { min-width: 84px; }
+      .score-num { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport"><canvas id="ctf-canvas"></canvas></div>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
+      Initializing Phase 8 Modular CTF System...
+    </div>
+    <div id="loader-status" style="font-size:11px;color:#98a6be;font-family:'JetBrains Mono',monospace;">
+      Checking native WebGPU support
+    </div>
+  </div>
+
+  <div id="callout-banner">FIGHT!</div>
+
+  <div id="clean-restore">
+    <button class="btn amber" id="btn-exit-clean">Exit Clean View (H)</button>
+  </div>
+
+  <div id="hud">
+    <!-- Top Left Renderer & FPS -->
+    <div id="top-left" class="panel">
+      <div class="brand-row">
+        <div class="brand-dot"></div>
+        <div class="brand-title">Duelist Adventure — Phase 8 CTF</div>
+      </div>
+      <div class="sys-row">
+        <span>Backend: <span id="stat-backend">Init...</span></span>
+        <span>FPS: <span id="stat-fps">--</span></span>
+      </div>
+    </div>
+
+    <!-- Top Center Tactical Scoreboard -->
+    <div id="scoreboard" class="panel">
+      <div class="team-score-box red">
+        <div class="score-num red" id="score-red">0</div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent-red);letter-spacing:0.06em;">RED BASE</div>
+          <span class="flag-pill home" id="flag-status-red">HOME</span>
+        </div>
+      </div>
+
+      <div class="clock-center">
+        <div class="phase-tag" id="hud-phase">IDLE</div>
+        <div id="hud-clock">05:00</div>
+        <div class="cap-sub" id="hud-cap-limit">First to 3</div>
+      </div>
+
+      <div class="team-score-box blue">
+        <div class="score-num blue" id="score-blue">0</div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:var(--accent-blue);letter-spacing:0.06em;">BLUE BASE</div>
+          <span class="flag-pill home" id="flag-status-blue">HOME</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top Right Controls -->
+    <div id="top-right">
+      <button class="btn" id="btn-cam-mode">Cam: Follow</button>
+      <button class="btn" id="btn-toggle-inspector">Inspector</button>
+      <button class="btn amber" id="btn-clean-view">Clean (H)</button>
+    </div>
+
+    <!-- Objective Notification Feed -->
+    <div id="event-feed"></div>
+
+    <!-- Collapsible Right-Side Testing Inspector -->
+    <div id="inspector" class="panel">
+      <div>
+        <div class="sec-title">
+          <span>Match &amp; Rule Config</span>
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--accent-cyan);">PHASE 8 API</span>
+        </div>
+        <div class="cfg-grid" style="margin-bottom:6px;">
+          <div class="cfg-field">
+            <label for="cfg-duration">Match (s)</label>
+            <input id="cfg-duration" type="number" min="15" max="1800" value="300" />
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-caplimit">Cap Limit</label>
+            <input id="cfg-caplimit" type="number" min="1" max="10" value="3" />
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-respawn">Respawn (s)</label>
+            <input id="cfg-respawn" type="number" min="1" max="30" value="5" />
+          </div>
+          <div class="cfg-field">
+            <label for="cfg-autoreturn">Auto-Ret (s)</label>
+            <input id="cfg-autoreturn" type="number" min="3" max="60" value="15" />
+          </div>
+          <div class="cfg-field" style="grid-column: span 2;">
+            <label for="cfg-prep">Prep Duration (s) + 5s Countdown</label>
+            <input id="cfg-prep" type="number" min="1" max="60" value="30" />
+          </div>
+        </div>
+        <button class="btn amber" id="btn-apply-cfg" style="width:100%;">Apply Config &amp; Reset Match</button>
+      </div>
+
+      <div>
+        <div class="sec-title">Match &amp; Simulation Controls</div>
+        <div class="grid-2">
+          <button class="btn amber" id="btn-start-match">Start Match (30+5s)</button>
+          <button class="btn" id="btn-skip-prep">Skip Prep to 5s</button>
+          <button class="btn active" id="btn-toggle-bots">Bots: ON</button>
+          <button class="btn" id="btn-reset-match">Reset Match</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-title">Direct Flag &amp; State Testing</div>
+        <div class="grid-2">
+          <button class="btn" id="btn-force-pickup">Force Pickup Flag</button>
+          <button class="btn red" id="btn-defeat-carrier">Defeat Carrier</button>
+          <button class="btn" id="btn-friendly-return">Friendly Return</button>
+          <button class="btn amber" id="btn-force-overtime">Force Overtime Tie</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-title">
+          <span>12-Test Gameplay Audit</span>
+          <span id="audit-summary" style="font-family:'JetBrains Mono',monospace;color:var(--text-secondary);">READY</span>
+        </div>
+        <button class="btn amber" id="btn-run-audit" style="width:100%;">
+          Run 12-Test Gameplay Audit
+        </button>
+        <div id="audit-list"></div>
+      </div>
+    </div>
+
+    <!-- Bottom Player, Team & Class Bar -->
+    <div id="bottom-bar" class="panel">
+      <div style="display:flex;gap:4px;">
+        <button class="btn red active" id="btn-team-red">Red</button>
+        <button class="btn blue" id="btn-team-blue">Blue</button>
+      </div>
+
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+        <button class="btn active" data-class="Warrior/Juggernaut">Warrior/Juggernaut</button>
+        <button class="btn" data-class="Duelist">Duelist</button>
+        <button class="btn" data-class="Assassin">Assassin</button>
+        <button class="btn" data-class="Healer">Healer</button>
+      </div>
+
+      <div class="hp-wrap">
+        <div class="hp-label">
+          <span id="hud-hp-txt">HP 250 / 250</span>
+          <span id="hud-state-txt" style="color:var(--accent-green);">ALIVE</span>
+        </div>
+        <div class="hp-track"><div class="hp-fill" id="hud-hp-fill"></div></div>
+      </div>
+
+      <div class="elev-readout" id="hud-elev">Y: 4.8m (BRIDGE)</div>
+
+      <div style="display:flex;gap:5px;">
+        <button class="btn red" id="btn-player-attack">Attack [E]</button>
+        <button class="btn" id="btn-test-under">Test Under-Flag (Y=0)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Touch Controls -->
+  <div id="mobile-controls">
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <div class="mobile-actions">
+      <button class="touch-btn atk" id="touch-atk">ATK</button>
+      <button class="touch-btn jmp" id="touch-jmp">JUMP</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // =========================================================================
+    // MODULE 1: CTF_DEFAULT_CONFIG (EXACT PHASE 1-7 COORDINATES & RULES)
+    // =========================================================================
+    const CTF_DEFAULT_CONFIG = Object.freeze({
+      flags: {
+        red:  { x: -31, y: 4.8, z: 0 },
+        blue: { x:  31, y: 4.8, z: 0 }
+      },
+      elevations: {
+        ground: 0.0,
+        bridge: 4.8,
+        gallery: 9.6
+      },
+      spawnZones: {
+        red:  { minX: -50, maxX: -38, minY: 0, maxY: 12, minZ: -16, maxZ: 16 },
+        blue: { minX:  38, maxX:  50, minY: 0, maxY: 12, minZ: -16, maxZ: 16 }
+      },
+      spawnPoints: {
+        red:  { x: -43, y: 4.8, z: 0 },
+        blue: { x:  43, y: 4.8, z: 0 }
+      },
+      rules: {
+        matchDurationSec: 300,
+        captureLimit: 3,
+        prepDurationSec: 30,
+        countdownDurationSec: 5,
+        flagAutoReturnSec: 15,
+        respawnDurationSec: 5,
+        pickupRadiusXZ: 2.2,
+        maxVerticalDelta: 1.8,
+        captureRadiusXZ: 2.4
+      },
+      classes: {
+        'Warrior/Juggernaut': { hp: 250, speed: 6.2, damage: 45, heal: 0,  color: '#e67e22' },
+        'Duelist':            { hp: 175, speed: 7.8, damage: 55, heal: 0,  color: '#3498db' },
+        'Assassin':           { hp: 130, speed: 9.4, damage: 75, heal: 0,  color: '#9b59b6' },
+        'Healer':             { hp: 160, speed: 7.4, damage: 35, heal: 40, color: '#2ecc71' }
+      }
+    });
+
+    // =========================================================================
+    // MODULE 2: CTFGameplayEngine (100% PURE JS — ZERO THREE.JS DEPENDENCIES)
+    // Authoritative-networking ready via getSnapshot() / applySnapshot()
+    // =========================================================================
+    class CTFGameplayEngine {
+      constructor(customConfig = {}) {
+        this._listeners = new Map();
+        this._disposed = false;
+        this.init(customConfig);
+      }
+
+      /**
+       * Initialize or re-initialize the engine with merged default + custom config.
+       */
+      init(customConfig = {}) {
+        this.config = {
+          flags: {
+            red:  { ...CTF_DEFAULT_CONFIG.flags.red,  ...(customConfig.flags?.red || {}) },
+            blue: { ...CTF_DEFAULT_CONFIG.flags.blue, ...(customConfig.flags?.blue || {}) }
+          },
+          elevations: { ...CTF_DEFAULT_CONFIG.elevations, ...(customConfig.elevations || {}) },
+          spawnZones: {
+            red:  { ...CTF_DEFAULT_CONFIG.spawnZones.red,  ...(customConfig.spawnZones?.red || {}) },
+            blue: { ...CTF_DEFAULT_CONFIG.spawnZones.blue, ...(customConfig.spawnZones?.blue || {}) }
+          },
+          spawnPoints: {
+            red:  { ...CTF_DEFAULT_CONFIG.spawnPoints.red,  ...(customConfig.spawnPoints?.red || {}) },
+            blue: { ...CTF_DEFAULT_CONFIG.spawnPoints.blue, ...(customConfig.spawnPoints?.blue || {}) }
+          },
+          rules: { ...CTF_DEFAULT_CONFIG.rules, ...(customConfig.rules || {}) },
+          classes: { ...CTF_DEFAULT_CONFIG.classes, ...(customConfig.classes || {}) }
+        };
+
+        this.players = new Map();
+        this._captureBlockedCooldown = new Map();
+        this._spawnBlockedCooldown = new Map();
+        this.resetMatch(false);
+        return this;
+      }
+
+      /** Subscribe to gameplay events. */
+      on(event, fn) {
+        if (!this._listeners.has(event)) this._listeners.set(event, new Set());
+        this._listeners.get(event).add(fn);
+        return () => this.off(event, fn);
+      }
+
+      /** Unsubscribe from gameplay events. */
+      off(event, fn) {
+        const set = this._listeners.get(event);
+        if (set) set.delete(fn);
+      }
+
+      /** Emit a structured gameplay event. */
+      emit(event, payload = {}) {
+        if (this._disposed) return;
+        const set = this._listeners.get(event);
+        if (!set) return;
+        for (const fn of set) {
+          try { fn(payload); } catch (err) { console.error(`CTF event [${event}] handler error:`, err); }
+        }
+      }
+
+      /** Register a player entity into the authoritative simulation. */
+      registerPlayer(playerInput) {
+        const team = playerInput.team === 'blue' ? 'blue' : 'red';
+        const className = this.config.classes[playerInput.className] ? playerInput.className : 'Warrior/Juggernaut';
+        const cls = this.config.classes[className];
+        const sp = this.config.spawnPoints[team];
+
+        const p = {
+          id: playerInput.id,
+          name: playerInput.name || playerInput.id,
+          team,
+          className,
+          isBot: !!playerInput.isBot,
+          x: playerInput.x ?? sp.x,
+          y: playerInput.y ?? sp.y,
+          z: playerInput.z ?? sp.z,
+          hp: cls.hp,
+          maxHp: cls.hp,
+          speed: cls.speed,
+          damage: cls.damage,
+          heal: cls.heal || 0,
+          alive: true,
+          respawnTimer: 0,
+          carryingFlag: null,
+          inOwnSpawn: false
+        };
+        this.players.set(p.id, p);
+        this.enforceSpawnProtection(p);
+        return p;
+      }
+
+      /** Change a player's Duelist Adventure class and update stats. */
+      setPlayerClass(playerId, className) {
+        const p = this.players.get(playerId);
+        const cls = this.config.classes[className];
+        if (!p || !cls) return false;
+        p.className = className;
+        p.maxHp = cls.hp;
+        p.hp = p.alive ? cls.hp : 0;
+        p.speed = cls.speed;
+        p.damage = cls.damage;
+        p.heal = cls.heal || 0;
+        return true;
+      }
+
+      /** Start the match sequence: full PREP -> separate COUNTDOWN -> ACTIVE. */
+      startMatch() {
+        this.resetMatch(false);
+        this.phase = 'PREP';
+        this.prepTimer = this.config.rules.prepDurationSec;
+        this.countdownTimer = this.config.rules.countdownDurationSec;
+        this.lastCountdownDigit = -1;
+        this.emit('phaseChange', { phase: 'PREP', prepTimer: this.prepTimer });
+      }
+
+      /** Convenience test helper: skip straight to the 5-second countdown. */
+      skipPrepToCountdown() {
+        if (this.phase === 'IDLE' || this.phase === 'ENDED') {
+          this.resetMatch(false);
+        }
+        this.phase = 'COUNTDOWN';
+        this.prepTimer = 0;
+        this.countdownTimer = this.config.rules.countdownDurationSec;
+        this.lastCountdownDigit = -1;
+        this.emit('phaseChange', { phase: 'COUNTDOWN', countdownTimer: this.countdownTimer });
+      }
+
+      /** Reset scores, flags, timers, and respawn all registered players. */
+      resetMatch(emitEvent = true) {
+        this.phase = 'IDLE';
+        this.winner = null;
+        this.scores = { red: 0, blue: 0 };
+        this.prepTimer = this.config.rules.prepDurationSec;
+        this.countdownTimer = this.config.rules.countdownDurationSec;
+        this.matchTimer = this.config.rules.matchDurationSec;
+        this.lastCountdownDigit = -1;
+        this.tick = 0;
+
+        this.flags = {
+          red: {
+            team: 'red',
+            state: 'HOME',
+            carrierId: null,
+            position: { ...this.config.flags.red },
+            returnTimer: 0
+          },
+          blue: {
+            team: 'blue',
+            state: 'HOME',
+            carrierId: null,
+            position: { ...this.config.flags.blue },
+            returnTimer: 0
+          }
+        };
+
+        this._captureBlockedCooldown.clear();
+        this._spawnBlockedCooldown.clear();
+
+        let redIdx = 0, blueIdx = 0;
+        for (const p of this.players.values()) {
+          const idx = p.team === 'red' ? redIdx++ : blueIdx++;
+          const sp = this.config.spawnPoints[p.team];
+          p.x = sp.x + (p.team === 'red' ? -1.5 * Math.floor(idx / 3) : 1.5 * Math.floor(idx / 3));
+          p.y = sp.y;
+          p.z = sp.z + ((idx % 3) - 1) * 3.0;
+          p.hp = p.maxHp;
+          p.alive = true;
+          p.respawnTimer = 0;
+          p.carryingFlag = null;
+          this.enforceSpawnProtection(p);
+        }
+
+        if (emitEvent) {
+          this.emit('phaseChange', { phase: 'IDLE' });
+        }
+      }
+
+      /** True only when combat and objective scoring are enabled. */
+      isCombatEnabled() {
+        return this.phase === 'ACTIVE' || this.phase === 'OVERTIME';
+      }
+
+      /** 3D AABB containment test. */
+      _isInsideAABB(x, y, z, box) {
+        return (
+          x >= box.minX && x <= box.maxX &&
+          y >= box.minY && y <= box.maxY &&
+          z >= box.minZ && z <= box.maxZ
+        );
+      }
+
+      /**
+       * Enforce 3D Protected Spawn-Zone rules:
+       * - Enemy players are pushed out of the opposing spawn AABB.
+       * - Friendly players inside their own spawn AABB are marked invulnerable (`inOwnSpawn = true`).
+       */
+      enforceSpawnProtection(player) {
+        if (!player || !player.alive) return false;
+        const ownZone = this.config.spawnZones[player.team];
+        const enemyTeam = player.team === 'red' ? 'blue' : 'red';
+        const enemyZone = this.config.spawnZones[enemyTeam];
+
+        player.inOwnSpawn = this._isInsideAABB(player.x, player.y, player.z, ownZone);
+
+        if (this._isInsideAABB(player.x, player.y, player.z, enemyZone)) {
+          // Push enemy player cleanly outside the doorway boundary of the protected zone
+          if (enemyTeam === 'blue') {
+            player.x = enemyZone.minX - 0.6;
+          } else {
+            player.x = enemyZone.maxX + 0.6;
+          }
+          const lastCd = this._spawnBlockedCooldown.get(player.id) || 0;
+          if (this.tick - lastCd > 45) {
+            this._spawnBlockedCooldown.set(player.id, this.tick);
+            this.emit('spawnBlocked', { playerId: player.id, team: player.team, blockedZone: enemyTeam });
+          }
+          return true;
+        }
+        return false;
+      }
+
+      /**
+       * Authoritative combat rule check:
+       * - Combat disabled in PREP, COUNTDOWN, IDLE, ENDED.
+       * - Friendly fire disabled.
+       * - Players inside their own spawn zone cannot attack enemies AND cannot be damaged.
+       */
+      canAttack(attackerId, targetId) {
+        if (!this.isCombatEnabled()) return false;
+        const a = this.players.get(attackerId);
+        const t = this.players.get(targetId);
+        if (!a || !t || !a.alive || !t.alive) return false;
+        if (a.team === t.team) return false;
+        this.enforceSpawnProtection(a);
+        this.enforceSpawnProtection(t);
+        if (a.inOwnSpawn || t.inOwnSpawn) return false;
+        return true;
+      }
+
+      /** Apply damage from attacker to victim; triggers defeatPlayer if HP <= 0. */
+      applyDamage(attackerId, victimId, amount = null) {
+        if (!this.canAttack(attackerId, victimId)) return false;
+        const a = this.players.get(attackerId);
+        const v = this.players.get(victimId);
+        const dmg = amount !== null ? amount : a.damage;
+        v.hp = Math.max(0, v.hp - dmg);
+        if (v.hp <= 0) {
+          this.defeatPlayer(victimId, attackerId);
+        }
+        return true;
+      }
+
+      /** Defeat a player, drop any carried flag at their exact position, and start respawn timer. */
+      defeatPlayer(victimId, attackerId = null) {
+        const v = this.players.get(victimId);
+        if (!v || !v.alive) return false;
+
+        v.alive = false;
+        v.hp = 0;
+        v.respawnTimer = this.config.rules.respawnDurationSec;
+        v.inOwnSpawn = false;
+
+        let droppedTeam = null;
+        if (v.carryingFlag) {
+          droppedTeam = v.carryingFlag;
+          const flag = this.flags[droppedTeam];
+          flag.state = 'DROPPED';
+          flag.carrierId = null;
+          flag.position = { x: v.x, y: v.y, z: v.z };
+          flag.returnTimer = this.config.rules.flagAutoReturnSec;
+          v.carryingFlag = null;
+          this.emit('flagDrop', { flagTeam: droppedTeam, droppedBy: v.id, position: { ...flag.position }, returnTimer: flag.returnTimer });
+        }
+
+        this.emit('playerDefeat', { victimId: v.id, victimName: v.name, victimTeam: v.team, attackerId, droppedFlag: droppedTeam });
+        return true;
+      }
+
+      /** Respawn a defeated player back inside their team's protected spawn room. */
+      respawnPlayer(playerId) {
+        const p = this.players.get(playerId);
+        if (!p) return false;
+        const sp = this.config.spawnPoints[p.team];
+        p.x = sp.x;
+        p.y = sp.y;
+        p.z = sp.z + (Math.random() - 0.5) * 4.0;
+        p.hp = p.maxHp;
+        p.alive = true;
+        p.respawnTimer = 0;
+        p.carryingFlag = null;
+        this.enforceSpawnProtection(p);
+        this.emit('playerRespawn', { playerId: p.id, team: p.team, position: { x: p.x, y: p.y, z: p.z } });
+        return true;
+      }
+
+      /**
+       * Elevation-aware distance check so players beneath a flag pedestal (e.g., Y=0 under Y=4.8)
+       * can NEVER collect, return, or capture through the floor.
+       */
+      _isWithinObjectiveRange(player, targetPos, radiusXZ) {
+        const dx = player.x - targetPos.x;
+        const dz = player.z - targetPos.z;
+        const dy = Math.abs(player.y - targetPos.y);
+        return Math.hypot(dx, dz) <= radiusXZ && dy <= this.config.rules.maxVerticalDelta;
+      }
+
+      /**
+       * Evaluate all flag interactions for a single player:
+       * 1. Enemy flag pickup (from HOME or DROPPED)
+       * 2. Friendly dropped flag instant touch-return
+       * 3. Flag capture at friendly pedestal (requires friendly flag HOME)
+       */
+      tryFlagInteraction(playerId) {
+        if (!this.isCombatEnabled()) return null;
+        const p = this.players.get(playerId);
+        if (!p || !p.alive) return null;
+
+        const enemyTeam = p.team === 'red' ? 'blue' : 'red';
+        const enemyFlag = this.flags[enemyTeam];
+        const ownFlag = this.flags[p.team];
+
+        // 1. Friendly dropped flag touch -> immediate return to HOME
+        if (ownFlag.state === 'DROPPED' && this._isWithinObjectiveRange(p, ownFlag.position, this.config.rules.pickupRadiusXZ)) {
+          ownFlag.state = 'HOME';
+          ownFlag.carrierId = null;
+          ownFlag.position = { ...this.config.flags[p.team] };
+          ownFlag.returnTimer = 0;
+          this.emit('flagReturn', { flagTeam: p.team, reason: 'friendly_touch', returnedBy: p.id, returnedByName: p.name });
+          return 'RETURNED';
+        }
+
+        // 2. Enemy flag pickup (from HOME or DROPPED)
+        if (!p.carryingFlag && (enemyFlag.state === 'HOME' || enemyFlag.state === 'DROPPED')) {
+          if (this._isWithinObjectiveRange(p, enemyFlag.position, this.config.rules.pickupRadiusXZ)) {
+            enemyFlag.state = 'CARRIED';
+            enemyFlag.carrierId = p.id;
+            enemyFlag.returnTimer = 0;
+            enemyFlag.position = { x: p.x, y: p.y, z: p.z };
+            p.carryingFlag = enemyTeam;
+            this.emit('flagPickup', { flagTeam: enemyTeam, carrierId: p.id, carrierName: p.name, carrierTeam: p.team });
+            return 'PICKED_UP';
+          }
+        }
+
+        // 3. Score capture at own home pedestal (MUST have own flag HOME)
+        if (p.carryingFlag === enemyTeam) {
+          const homePos = this.config.flags[p.team];
+          if (this._isWithinObjectiveRange(p, homePos, this.config.rules.captureRadiusXZ)) {
+            if (ownFlag.state === 'HOME') {
+              this.scoreCapture(p.team, p.id);
+              return 'CAPTURED';
+            } else {
+              const lastCd = this._captureBlockedCooldown.get(p.id) || 0;
+              if (this.tick - lastCd > 90) {
+                this._captureBlockedCooldown.set(p.id, this.tick);
+                this.emit('captureBlocked', { team: p.team, carrierId: p.id, reason: 'friendly_flag_away', ownFlagState: ownFlag.state });
+              }
+              return 'CAPTURE_BLOCKED';
+            }
+          }
+        }
+
+        return null;
+      }
+
+      /** Process spawn protection and flag interactions across all active players. */
+      processFlagInteractions() {
+        for (const p of this.players.values()) {
+          if (!p.alive) continue;
+          this.enforceSpawnProtection(p);
+          // Sync carried flag position with live carrier coordinates
+          if (p.carryingFlag) {
+            const f = this.flags[p.carryingFlag];
+            f.position.x = p.x;
+            f.position.y = p.y;
+            f.position.z = p.z;
+          }
+          this.tryFlagInteraction(p.id);
+        }
+      }
+
+      /** Award a capture point, return captured flag home, and check victory/overtime end. */
+      scoreCapture(team, carrierId) {
+        const enemyTeam = team === 'red' ? 'blue' : 'red';
+        const enemyFlag = this.flags[enemyTeam];
+        const carrier = this.players.get(carrierId);
+
+        this.scores[team] += 1;
+        if (carrier) carrier.carryingFlag = null;
+
+        enemyFlag.state = 'HOME';
+        enemyFlag.carrierId = null;
+        enemyFlag.position = { ...this.config.flags[enemyTeam] };
+        enemyFlag.returnTimer = 0;
+
+        this.emit('flagCapture', {
+          scoringTeam: team,
+          carrierId,
+          carrierName: carrier ? carrier.name : carrierId,
+          scores: { ...this.scores }
+        });
+
+        // Victory check: capture limit reached OR Sudden Death Overtime capture
+        if (this.phase === 'OVERTIME' || this.scores[team] >= this.config.rules.captureLimit) {
+          this.phase = 'ENDED';
+          this.winner = team;
+          this.emit('phaseChange', { phase: 'ENDED', winner: team });
+          this.emit('matchEnd', { winner: team, reason: this.scores[team] >= this.config.rules.captureLimit ? 'capture_limit' : 'overtime_capture', scores: { ...this.scores } });
+        }
+      }
+
+      /** Main authoritative simulation tick (dt in seconds). */
+      update(dt) {
+        if (this._disposed || dt <= 0) return;
+        this.tick++;
+
+        // 1. Phase State Machine
+        if (this.phase === 'PREP') {
+          this.prepTimer = Math.max(0, this.prepTimer - dt);
+          if (this.prepTimer <= 0) {
+            this.phase = 'COUNTDOWN';
+            this.countdownTimer = this.config.rules.countdownDurationSec;
+            this.lastCountdownDigit = -1;
+            this.emit('phaseChange', { phase: 'COUNTDOWN', countdownTimer: this.countdownTimer });
+          }
+        } else if (this.phase === 'COUNTDOWN') {
+          this.countdownTimer = Math.max(0, this.countdownTimer - dt);
+          const digit = Math.ceil(this.countdownTimer);
+          if (digit >= 1 && digit <= 5 && digit !== this.lastCountdownDigit) {
+            this.lastCountdownDigit = digit;
+            this.emit('phaseChange', { phase: 'COUNTDOWN', digit });
+          }
+          if (this.countdownTimer <= 0) {
+            this.phase = 'ACTIVE';
+            this.emit('phaseChange', { phase: 'ACTIVE', callout: 'FIGHT!' });
+          }
+        } else if (this.phase === 'ACTIVE') {
+          this.matchTimer = Math.max(0, this.matchTimer - dt);
+          if (this.matchTimer <= 0) {
+            if (this.scores.red === this.scores.blue) {
+              this.phase = 'OVERTIME';
+              this.emit('phaseChange', { phase: 'OVERTIME', callout: 'OVERTIME!' });
+            } else {
+              this.phase = 'ENDED';
+              this.winner = this.scores.red > this.scores.blue ? 'red' : 'blue';
+              this.emit('phaseChange', { phase: 'ENDED', winner: this.winner });
+              this.emit('matchEnd', { winner: this.winner, reason: 'time_expired', scores: { ...this.scores } });
+            }
+          }
+        }
+
+        // 2. Player Respawn Timers
+        for (const p of this.players.values()) {
+          if (!p.alive) {
+            p.respawnTimer = Math.max(0, p.respawnTimer - dt);
+            if (p.respawnTimer <= 0) {
+              this.respawnPlayer(p.id);
+            }
+          }
+        }
+
+        // 3. Dropped Flag Automatic Return Timers
+        for (const team of ['red', 'blue']) {
+          const f = this.flags[team];
+          if (f.state === 'DROPPED') {
+            f.returnTimer = Math.max(0, f.returnTimer - dt);
+            if (f.returnTimer <= 0) {
+              f.state = 'HOME';
+              f.carrierId = null;
+              f.position = { ...this.config.flags[team] };
+              this.emit('flagReturn', { flagTeam: team, reason: 'auto_timer' });
+            }
+          }
+        }
+
+        // 4. Spawn Protection & Flag Objective Interactions
+        this.processFlagInteractions();
+      }
+
+      /** Serialize full authoritative match state for multiplayer network replication. */
+      getSnapshot() {
+        const playersArr = [];
+        for (const p of this.players.values()) {
+          playersArr.push({
+            id: p.id, name: p.name, team: p.team, className: p.className, isBot: p.isBot,
+            x: p.x, y: p.y, z: p.z, hp: p.hp, maxHp: p.maxHp, alive: p.alive,
+            respawnTimer: p.respawnTimer, carryingFlag: p.carryingFlag, inOwnSpawn: p.inOwnSpawn
+          });
+        }
+        return {
+          tick: this.tick,
+          phase: this.phase,
+          winner: this.winner,
+          prepTimer: this.prepTimer,
+          countdownTimer: this.countdownTimer,
+          matchTimer: this.matchTimer,
+          scores: { ...this.scores },
+          flags: {
+            red:  { ...this.flags.red,  position: { ...this.flags.red.position } },
+            blue: { ...this.flags.blue, position: { ...this.flags.blue.position } }
+          },
+          players: playersArr
+        };
+      }
+
+      /** Apply an authoritative network snapshot onto this engine instance. */
+      applySnapshot(snap) {
+        if (!snap) return;
+        this.tick = snap.tick;
+        this.phase = snap.phase;
+        this.winner = snap.winner;
+        this.prepTimer = snap.prepTimer;
+        this.countdownTimer = snap.countdownTimer;
+        this.matchTimer = snap.matchTimer;
+        this.scores = { ...snap.scores };
+        this.flags = {
+          red:  { ...snap.flags.red,  position: { ...snap.flags.red.position } },
+          blue: { ...snap.flags.blue, position: { ...snap.flags.blue.position } }
+        };
+        this.players.clear();
+        for (const p of snap.players) {
+          const cls = this.config.classes[p.className] || this.config.classes['Warrior/Juggernaut'];
+          this.players.set(p.id, { ...p, speed: cls.speed, damage: cls.damage, heal: cls.heal || 0 });
+        }
+      }
+
+      /** Cleanly release event listeners and state references. */
+      dispose() {
+        this._disposed = true;
+        this._listeners.clear();
+        this.players.clear();
+        this._captureBlockedCooldown.clear();
+        this._spawnBlockedCooldown.clear();
+      }
+    }
+
+    // =========================================================================
+    // MODULE 3: CTFVisualAdapter (THREE.JS VISUAL BINDING LAYER)
+    // =========================================================================
+    class CTFVisualAdapter {
+      constructor(scene, config = CTF_DEFAULT_CONFIG) {
+        this.scene = scene;
+        this.config = config;
+        this.root = new THREE.Group();
+        this.root.name = 'Phase8_CTFVisualAdapter';
+        this.scene.add(this.root);
+
+        this._disposables = [];
+        this.pedestals = {};
+        this.flagRig = {};
+
+        this._buildPedestal('red',  config.flags.red,  0xFF394B, 0xFF8592);
+        this._buildPedestal('blue', config.flags.blue, 0x20BFFF, 0x7BE5FF);
+        this._buildFlagMesh('red',  0xFF394B, '#C52B3E');
+        this._buildFlagMesh('blue', 0x20BFFF, '#167BC7');
+      }
+
+      _track(resource) {
+        this._disposables.push(resource);
+        return resource;
+      }
+
+      _createFlagTexture(team, bgHex) {
+        const c = document.createElement('canvas'); c.width = 256; c.height = 170;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = bgHex; ctx.fillRect(0, 0, 256, 170);
+        ctx.strokeStyle = '#1b202b'; ctx.lineWidth = 10; ctx.strokeRect(5, 5, 246, 160);
+        ctx.fillStyle = '#eef4fa';
+        ctx.beginPath();
+        ctx.moveTo(128, 28); ctx.lineTo(176, 85); ctx.lineTo(128, 142); ctx.lineTo(80, 85); ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = bgHex;
+        ctx.beginPath();
+        ctx.moveTo(128, 52); ctx.lineTo(154, 85); ctx.lineTo(128, 118); ctx.lineTo(102, 85); ctx.closePath();
+        ctx.fill();
+        const tex = this._track(new THREE.CanvasTexture(c));
+        tex.colorSpace = THREE.SRGBColorSpace;
+        return tex;
+      }
+
+      _buildPedestal(team, pos, primaryHex, glowHex) {
+        const g = new THREE.Group();
+        g.position.set(pos.x, pos.y, pos.z);
+
+        const baseGeo = this._track(new THREE.CylinderGeometry(1.75, 1.9, 0.14, 32));
+        const baseMat = this._track(new THREE.MeshStandardMaterial({ color: 0x292E38, roughness: 0.6, metalness: 0.5 }));
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.y = 0.07;
+        g.add(base);
+
+        const outerGeo = this._track(new THREE.RingGeometry(1.38, 1.58, 32));
+        const outerMat = this._track(new THREE.MeshBasicMaterial({ color: primaryHex, side: THREE.DoubleSide }));
+        const outerRing = new THREE.Mesh(outerGeo, outerMat);
+        outerRing.rotation.x = -Math.PI / 2;
+        outerRing.position.y = 0.15;
+        g.add(outerRing);
+
+        const innerGeo = this._track(new THREE.RingGeometry(0.68, 0.85, 28));
+        const innerMat = this._track(new THREE.MeshBasicMaterial({ color: glowHex, side: THREE.DoubleSide }));
+        const innerRing = new THREE.Mesh(innerGeo, innerMat);
+        innerRing.rotation.x = -Math.PI / 2;
+        innerRing.position.y = 0.152;
+        g.add(innerRing);
+
+        this.root.add(g);
+        this.pedestals[team] = { group: g, outerRing, innerRing };
+      }
+
+      _buildFlagMesh(team, primaryHex, fabricHex) {
+        const g = new THREE.Group();
+
+        const poleGeo = this._track(new THREE.CylinderGeometry(0.04, 0.04, 3.0, 10));
+        const poleMat = this._track(new THREE.MeshStandardMaterial({ color: 0x9aa4b4, roughness: 0.4, metalness: 0.7 }));
+        const pole = new THREE.Mesh(poleGeo, poleMat);
+        pole.position.y = 1.5;
+        g.add(pole);
+
+        const orbGeo = this._track(new THREE.OctahedronGeometry(0.13));
+        const orbMat = this._track(new THREE.MeshBasicMaterial({ color: primaryHex }));
+        const orb = new THREE.Mesh(orbGeo, orbMat);
+        orb.position.y = 3.05;
+        g.add(orb);
+
+        // Subdivided cloth plane for real-time vertex waving
+        const clothGeo = this._track(new THREE.PlaneGeometry(1.45, 0.95, 12, 6));
+        clothGeo.translate(0.725, 0, 0);
+        const basePos = Float32Array.from(clothGeo.attributes.position.array);
+        const clothMat = this._track(new THREE.MeshStandardMaterial({
+          map: this._createFlagTexture(team, fabricHex),
+          roughness: 0.65,
+          metalness: 0.08,
+          side: THREE.DoubleSide
+        }));
+        const cloth = new THREE.Mesh(clothGeo, clothMat);
+        cloth.position.set(0.04, 2.48, 0);
+        g.add(cloth);
+
+        // Dropped rotating return-timer ring (visible only when DROPPED)
+        const dropRingGeo = this._track(new THREE.RingGeometry(0.95, 1.18, 24, 1, 0, Math.PI * 1.5));
+        const dropRingMat = this._track(new THREE.MeshBasicMaterial({ color: primaryHex, side: THREE.DoubleSide, transparent: true, opacity: 0.85 }));
+        const dropRing = new THREE.Mesh(dropRingGeo, dropRingMat);
+        dropRing.rotation.x = -Math.PI / 2;
+        dropRing.position.y = 0.08;
+        dropRing.visible = false;
+        g.add(dropRing);
+
+        this.root.add(g);
+        this.flagRig[team] = { group: g, clothGeo, basePos, dropRing, phase: team === 'red' ? 0 : 1.9 };
+      }
+
+      /**
+       * Synchronize Three.js flag visuals to an authoritative CTFGameplayEngine snapshot.
+       * @param {object} snapshot - Output of engine.getSnapshot()
+       * @param {Map<string, {x,y,z,yaw}>} avatarTransforms - Optional live yaw/pos for carried back-mount
+       * @param {number} elapsed - Seconds since start for vertex wave animation
+       */
+      sync(snapshot, avatarTransforms, elapsed) {
+        // Pulse pedestal rings
+        ['red', 'blue'].forEach((team, idx) => {
+          const ped = this.pedestals[team];
+          const p = 1.0 + Math.sin(elapsed * 3.5 + idx * Math.PI) * 0.045;
+          ped.outerRing.scale.set(p, p, 1);
+          const q = 1.0 + Math.cos(elapsed * 3.5 + idx * Math.PI) * 0.065;
+          ped.innerRing.scale.set(q, q, 1);
+
+          const fState = snapshot.flags[team];
+          const rig = this.flagRig[team];
+
+          if (fState.state === 'CARRIED' && fState.carrierId) {
+            const tr = avatarTransforms?.get(fState.carrierId);
+            const cx = tr ? tr.x : fState.position.x;
+            const cy = tr ? tr.y : fState.position.y;
+            const cz = tr ? tr.z : fState.position.z;
+            const yaw = tr ? tr.yaw : 0;
+            // Attach upright slightly behind the carrier's back
+            const backOffset = 0.42;
+            rig.group.position.set(
+              cx + Math.sin(yaw) * backOffset,
+              cy + 0.55,
+              cz + Math.cos(yaw) * backOffset
+            );
+            rig.group.rotation.y = yaw + Math.PI * 0.5;
+            rig.group.scale.setScalar(0.78);
+            rig.dropRing.visible = false;
+          } else if (fState.state === 'DROPPED') {
+            rig.group.position.set(fState.position.x, fState.position.y, fState.position.z);
+            rig.group.rotation.y = 0;
+            rig.group.scale.setScalar(1.0);
+            rig.dropRing.visible = true;
+            rig.dropRing.rotation.z = elapsed * 2.8;
+          } else {
+            // HOME
+            rig.group.position.set(fState.position.x, fState.position.y + 0.14, fState.position.z);
+            rig.group.rotation.y = team === 'red' ? 0 : Math.PI;
+            rig.group.scale.setScalar(1.0);
+            rig.dropRing.visible = false;
+          }
+
+          // Animate vertex cloth wave (faster when carried)
+          const posAttr = rig.clothGeo.attributes.position;
+          const base = rig.basePos;
+          const speed = fState.state === 'CARRIED' ? 8.5 : 4.8;
+          const amp = fState.state === 'CARRIED' ? 0.18 : 0.12;
+          for (let i = 0; i < posAttr.count; i++) {
+            const bx = base[i * 3];
+            const by = base[i * 3 + 1];
+            const w = bx / 1.45;
+            posAttr.setZ(i, Math.sin(elapsed * speed - bx * 4.2 + by * 1.4 + rig.phase) * amp * w);
+          }
+          posAttr.needsUpdate = true;
+        });
+      }
+
+      /** Cleanly dispose all geometries, materials, and textures. */
+      dispose() {
+        this.scene.remove(this.root);
+        for (const r of this._disposables) {
+          if (r && typeof r.dispose === 'function') r.dispose();
+        }
+        this._disposables = [];
+      }
+    }
+
+    // Export Reusable Phase 8 Namespace for Direct Integration into Phase 1-7 Arena
+    window.PHASE8_CTF = {
+      CTF_DEFAULT_CONFIG,
+      CTFGameplayEngine,
+      CTFVisualAdapter
+    };
+
+    // =========================================================================
+    // 12-TEST DETERMINISTIC GAMEPLAY AUDIT (RUNS ON ISOLATED ENGINE INSTANCE)
+    // =========================================================================
+    function run12TestGameplayAudit() {
+      const results = [];
+      const dt = 0.1;
+
+      const makeActiveEngine = (customRules = {}) => {
+        const eng = new CTFGameplayEngine({ rules: { prepDurationSec: 30, countdownDurationSec: 5, ...customRules } });
+        eng.registerPlayer({ id: 'r1', name: 'Red1', team: 'red',  className: 'Duelist', x: -35, y: 4.8, z: 0 });
+        eng.registerPlayer({ id: 'b1', name: 'Blue1', team: 'blue', className: 'Assassin', x: 35, y: 4.8, z: 0 });
+        eng.startMatch();
+        eng.update(30.0); // finishes PREP -> COUNTDOWN
+        eng.update(5.0);  // finishes COUNTDOWN -> ACTIVE
+        return eng;
+      };
+
+      // 1. Elevation-Aware Rejection (Y=0 player directly under Y=4.8 flag blocked)
+      {
+        const eng = makeActiveEngine();
+        const r1 = eng.players.get('r1');
+        r1.x = 31; r1.y = 0.0; r1.z = 0; // Directly beneath Blue Flag (31, 4.8, 0)
+        eng.update(dt);
+        const blocked = eng.flags.blue.state === 'HOME' && r1.carryingFlag === null;
+        results.push({ id: 1, name: 'Elevation-Aware Objective Rejection', pass: blocked, detail: `Player @ (31, Y=0.0, 0) vs Flag Y=4.8 -> ${eng.flags.blue.state}` });
+        eng.dispose();
+      }
+
+      // 2. Enemy Flag Pickup & Carrier Attachment
+      {
+        const eng = makeActiveEngine();
+        const r1 = eng.players.get('r1');
+        r1.x = 31; r1.y = 4.8; r1.z = 0;
+        eng.update(dt);
+        r1.x = 10; r1.z = 2;
+        eng.update(dt);
+        const ok = eng.flags.blue.state === 'CARRIED' && eng.flags.blue.carrierId === 'r1' && eng.flags.blue.position.x === 10;
+        results.push({ id: 2, name: 'Enemy Flag Pickup & Carrier Sync', pass: ok, detail: `Carrier=${eng.flags.blue.carrierId}, FlagX=${eng.flags.blue.position.x}` });
+        eng.dispose();
+      }
+
+      // 3. Home-Flag Requirement (scoring blocked when friendly flag is away)
+      {
+        const eng = makeActiveEngine();
+        const r1 = eng.players.get('r1'), b1 = eng.players.get('b1');
+        let blockedEvent = false;
+        eng.on('captureBlocked', () => { blockedEvent = true; });
+        r1.x = 31; r1.y = 4.8; r1.z = 0;  // Red picks up Blue flag
+        b1.x = -31; b1.y = 4.8; b1.z = 0; // Blue picks up Red flag
+        eng.update(dt);
+        r1.x = -31; r1.y = 4.8; r1.z = 0; // Red returns to home while Red flag is carried
+        eng.update(dt);
+        const ok = eng.scores.red === 0 && blockedEvent && eng.flags.blue.state === 'CARRIED';
+        results.push({ id: 3, name: 'Home-Flag Scoring Requirement', pass: ok, detail: `Score=${eng.scores.red}, captureBlocked=${blockedEvent}` });
+        eng.dispose();
+      }
+
+      // 4. Valid Flag Capture & Score Increment
+      {
+        const eng = makeActiveEngine();
+        const r1 = eng.players.get('r1');
+        r1.x = 31; r1.y = 4.8; r1.z = 0; eng.update(dt);
+        r1.x = -31; r1.y = 4.8; r1.z = 0; eng.update(dt);
+        const ok = eng.scores.red === 1 && eng.flags.blue.state === 'HOME' && r1.carryingFlag === null;
+        results.push({ id: 4, name: 'Valid Flag Capture & Scoring', pass: ok, detail: `Red Score=${eng.scores.red}, Blue Flag=${eng.flags.blue.state}` });
+        eng.dispose();
+      }
+
+      // 5. Simultaneous Flag Hold Stalemate & Resolution
+      {
+        const eng = makeActiveEngine();
+        const r1 = eng.players.get('r1'), b1 = eng.players.get('b1');
+        r1.x = 31; r1.y = 4.8; r1.z = 0;
+        b1.x = -31; b1.y = 4.8; b1.z = 0;
+        eng.update(dt);
+        const bothCarried = eng.flags.red.state === 'CARRIED' && eng.flags.blue.state === 'CARRIED';
+        // Defeat Blue carrier -> Red touches dropped Red flag -> Red scores!
+        b1.x = 0; b1.y = 4.8; b1.z = 0;
+        eng.defeatPlayer('b1', 'r1');
+        r1.x = 0; r1.y = 4.8; r1.z = 0; eng.update(dt);   // Red returns own dropped flag
+        r1.x = -31; r1.y = 4.8; r1.z = 0; eng.update(dt); // Red scores!
+        const ok = bothCarried && eng.scores.red === 1 && eng.flags.red.state === 'HOME' && eng.flags.blue.state === 'HOME';
+        results.push({ id: 5, name: 'Simultaneous Hold & Resolution', pass: ok, detail: `Stalemate resolved -> Red Score=${eng.scores.red}` });
+        eng.dispose();
+      }
+
+      // 6. Flag Drop on Defeat & Friendly Touch Return
+      {
+        const eng = makeActiveEngine();
+        const r1 = eng.players.get('r1'), b1 = eng.players.get('b1');
+        r1.x = 31; r1.y = 4.8; r1.z = 0; eng.update(dt);
+        r1.x = 12; r1.y = 4.8; r1.z = 0; eng.update(dt);
+        eng.defeatPlayer('r1', 'b1');
+        const droppedOk = eng.flags.blue.state === 'DROPPED' && Math.abs(eng.flags.blue.position.x - 12) < 0.01;
+        b1.x = 12; b1.y = 4.8; b1.z = 0; eng.update(dt);
+        const returnedOk = eng.flags.blue.state === 'HOME';
+        results.push({ id: 6, name: 'Flag Drop & Friendly Touch Return', pass: droppedOk && returnedOk, detail: `Dropped @ X=12 -> Touch Returned=${returnedOk}` });
+        eng.dispose();
+      }
+
+      // 7. Automatic Dropped-Flag Return Timer
+      {
+        const eng = makeActiveEngine({ flagAutoReturnSec: 10 });
+        const r1 = eng.players.get('r1');
+        r1.x = 31; r1.y = 4.8; r1.z = 0; eng.update(dt);
+        r1.x = 5; r1.y = 4.8; r1.z = 0; eng.update(dt);
+        eng.defeatPlayer('r1', 'b1');
+        eng.update(5.0);
+        const stillDropped = eng.flags.blue.state === 'DROPPED' && Math.abs(eng.flags.blue.returnTimer - 5.0) < 0.2;
+        eng.update(5.2);
+        const autoReturned = eng.flags.blue.state === 'HOME';
+        results.push({ id: 7, name: 'Automatic Dropped-Flag Return Timer', pass: stillDropped && autoReturned, detail: `5s=${stillDropped?'DROPPED':'ERR'} -> 10s=${eng.flags.blue.state}` });
+        eng.dispose();
+      }
+
+      // 8. Protected Spawn-Zone Enemy Exclusion & Invulnerable Attack Block
+      {
+        const eng = makeActiveEngine();
+        const r1 = eng.players.get('r1'), b1 = eng.players.get('b1');
+        // Red attempts to enter Blue spawn (minX: 38)
+        r1.x = 42; r1.y = 4.8; r1.z = 0;
+        eng.enforceSpawnProtection(r1);
+        const pushedOut = r1.x < 38.0;
+        // Blue inside own spawn cannot attack Red and cannot be attacked
+        b1.x = 42; b1.y = 4.8; b1.z = 0;
+        eng.enforceSpawnProtection(b1);
+        const attackBlockedOut = !eng.canAttack('b1', 'r1');
+        const attackBlockedIn  = !eng.canAttack('r1', 'b1');
+        results.push({ id: 8, name: 'Spawn Protection & Invulnerable Lock', pass: pushedOut && attackBlockedOut && attackBlockedIn, detail: `PushedX=${r1.x.toFixed(1)} | NoAtkInSpawn=${attackBlockedOut && attackBlockedIn}` });
+        eng.dispose();
+      }
+
+      // 9. 30s Preparation + Separate 5s Countdown (35s Total)
+      {
+        const eng = new CTFGameplayEngine();
+        eng.startMatch();
+        const p0 = eng.phase === 'PREP';
+        eng.update(29.5);
+        const stillPrep = eng.phase === 'PREP' && !eng.isCombatEnabled();
+        eng.update(1.0);
+        const inCountdown = eng.phase === 'COUNTDOWN' && !eng.isCombatEnabled();
+        eng.update(5.0);
+        const isActive = eng.phase === 'ACTIVE' && eng.isCombatEnabled();
+        results.push({ id: 9, name: '30s Prep + Separate 5s Countdown', pass: p0 && stillPrep && inCountdown && isActive, detail: `29.5s=PREP -> 30.5s=COUNTDOWN -> 35.5s=ACTIVE` });
+        eng.dispose();
+      }
+
+      // 10. Overtime Sudden-Death Trigger & Victory Condition
+      {
+        const eng = makeActiveEngine({ matchDurationSec: 10, captureLimit: 3 });
+        eng.update(10.5); // Tied 0-0 -> OVERTIME
+        const inOT = eng.phase === 'OVERTIME';
+        const b1 = eng.players.get('b1');
+        b1.x = -31; b1.y = 4.8; b1.z = 0; eng.update(dt);
+        b1.x =  31; b1.y = 4.8; b1.z = 0; eng.update(dt);
+        const wonOT = eng.phase === 'ENDED' && eng.winner === 'blue';
+        results.push({ id: 10, name: 'Overtime Sudden-Death & Victory', pass: inOT && wonOT, detail: `Tie->OVERTIME=${inOT} | Blue Cap->Winner=${eng.winner}` });
+        eng.dispose();
+      }
+
+      // 11. Configurable Respawn Timer & All 4 Duelist Adventure Classes
+      {
+        const eng = makeActiveEngine({ respawnDurationSec: 4 });
+        const classes = ['Warrior/Juggernaut', 'Duelist', 'Assassin', 'Healer'];
+        const clsOk = classes.every((c) => {
+          eng.setPlayerClass('r1', c);
+          return eng.players.get('r1').maxHp === CTF_DEFAULT_CONFIG.classes[c].hp;
+        });
+        eng.defeatPlayer('r1', 'b1');
+        eng.update(2.0);
+        const deadAt2 = !eng.players.get('r1').alive;
+        eng.update(2.2);
+        const aliveAt4 = eng.players.get('r1').alive && eng.players.get('r1').hp === eng.players.get('r1').maxHp;
+        results.push({ id: 11, name: 'Respawn Timer & All 4 Classes', pass: clsOk && deadAt2 && aliveAt4, detail: `4/4 classes verified, respawned @ 4s` });
+        eng.dispose();
+      }
+
+      // 12. Match Reset, Network Snapshot Serialization & Clean Dispose
+      {
+        const eng1 = makeActiveEngine();
+        eng1.scoreCapture('red', 'r1');
+        const snap = eng1.getSnapshot();
+        const eng2 = new CTFGameplayEngine();
+        eng2.applySnapshot(snap);
+        const syncOk = eng2.scores.red === 1 && eng2.phase === 'ACTIVE' && eng2.players.size === 2;
+        eng1.resetMatch();
+        const resetOk = eng1.scores.red === 0 && eng1.phase === 'IDLE';
+        eng1.dispose(); eng2.dispose();
+        const disposedOk = eng1._disposed && eng1.players.size === 0;
+        results.push({ id: 12, name: 'Reset, Network Snapshot & Dispose', pass: syncOk && resetOk && disposedOk, detail: `SnapshotSync=${syncOk} | Reset=${resetOk} | Disposed=${disposedOk}` });
+      }
+
+      return results;
+    }
+
+    // =========================================================================
+    // LIGHTWEIGHT 3-ELEVATION NAVIGATION SURFACE HELPER (TESTING VIEWER ONLY)
+    // =========================================================================
+    const VIEWER_SURFACES = [
+      // Ground floor (Y = 0)
+      { type: 'flat', minX: -50, maxX: 50, minZ: -28, maxZ: 28, y: 0.0 },
+      // Central Bridge (Y = 4.8)
+      { type: 'flat', minX: -23, maxX: 23, minZ: -4, maxZ: 4, y: 4.8 },
+      // Red Flag Platform + Red Spawn Extension (Y = 4.8)
+      { type: 'flat', minX: -50, maxX: -23, minZ: -8, maxZ: 8, y: 4.8 },
+      // Blue Flag Platform + Blue Spawn Extension (Y = 4.8)
+      { type: 'flat', minX:  23, maxX:  50, minZ: -8, maxZ: 8, y: 4.8 },
+      // Upper Observation Gallery (Y = 9.6)
+      { type: 'flat', minX: -33, maxX: 33, minZ: -24, maxZ: -18, y: 9.6 },
+      // Front Ramps: Ground (Y=0, Z=16.64) -> Flag Platforms (Y=4.8, Z=8.0)
+      { type: 'ramp', minX: -32.2, maxX: -27.8, startZ: 16.64, endZ: 8.0, startY: 0.0, endY: 4.8 },
+      { type: 'ramp', minX:  27.8, maxX:  32.2, startZ: 16.64, endZ: 8.0, startY: 0.0, endY: 4.8 },
+      // Rear Ramps: Flag Platforms (Y=4.8, Z=-8.0) -> Upper Gallery (Y=9.6, Z=-18.0)
+      { type: 'ramp', minX: -32.2, maxX: -27.8, startZ: -8.0, endZ: -18.0, startY: 4.8, endY: 9.6 },
+      { type: 'ramp', minX:  27.8, maxX:  32.2, startZ: -8.0, endZ: -18.0, startY: 4.8, endY: 9.6 }
+    ];
+
+    function sampleElevation(x, z, currentY) {
+      let bestY = 0.0;
+      for (const s of VIEWER_SURFACES) {
+        if (s.type === 'flat') {
+          if (x >= s.minX - 0.3 && x <= s.maxX + 0.3 && z >= s.minZ - 0.3 && z <= s.maxZ + 0.3) {
+            if (s.y <= currentY + 0.75 && s.y > bestY) bestY = s.y;
+          }
+        } else {
+          const minZ = Math.min(s.startZ, s.endZ), maxZ = Math.max(s.startZ, s.endZ);
+          if (x >= s.minX - 0.25 && x <= s.maxX + 0.25 && z >= minZ - 0.25 && z <= maxZ + 0.25) {
+            const t = THREE.MathUtils.clamp((z - s.startZ) / (s.endZ - s.startZ), 0, 1);
+            const ry = s.startY + t * (s.endY - s.startY);
+            if (ry <= currentY + 0.85 && ry > bestY) bestY = ry;
+          }
+        }
+      }
+      return bestY;
+    }
+
+    // =========================================================================
+    // RENDERER INITIALIZATION (NATIVE WEBGPU + FRESH-CANVAS WEBGL2 FALLBACK)
+    // =========================================================================
+    async function initRenderer() {
+      const viewport = document.getElementById('viewport');
+      let canvas = document.getElementById('ctf-canvas');
+      const status = document.getElementById('loader-status');
+
+      let renderer = null;
+      let backendLabel = 'WebGL2 Fallback';
+
+      if (navigator.gpu) {
+        try {
+          status.textContent = 'Initializing native Three.js WebGPU renderer...';
+          renderer = new THREE.WebGPURenderer({ antialias: true, powerPreference: 'high-performance', canvas });
+          await renderer.init();
+          backendLabel = (renderer.backend && renderer.backend.isWebGPUBackend) ? 'WebGPU' : 'WebGL2 Fallback';
+        } catch (err) {
+          console.warn('WebGPU unavailable, creating fresh canvas for WebGL2 fallback:', err);
+          renderer = null;
+        }
+      }
+
+      if (!renderer) {
+        status.textContent = 'Initializing fresh-canvas WebGL2 fallback...';
+        const freshCanvas = document.createElement('canvas');
+        freshCanvas.id = 'ctf-canvas';
+        viewport.innerHTML = '';
+        viewport.appendChild(freshCanvas);
+        canvas = freshCanvas;
+
+        if (typeof THREE.WebGLRenderer === 'function') {
+          renderer = new THREE.WebGLRenderer({ canvas: freshCanvas, antialias: true, powerPreference: 'high-performance' });
+        } else {
+          renderer = new THREE.WebGPURenderer({ canvas: freshCanvas, antialias: true, forceWebGL: true, powerPreference: 'high-performance' });
+          await renderer.init();
+        }
+        backendLabel = 'WebGL2 Fallback';
+      }
+
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      return { renderer, canvas, backendLabel };
+    }
+
+    // =========================================================================
+    // LIGHTWEIGHT 3D TESTING ARENA GEOMETRY
+    // =========================================================================
+    function buildSimplifiedReferenceArena(scene) {
+      const root = new THREE.Group();
+      scene.add(root);
+
+      const matGround  = new THREE.MeshStandardMaterial({ color: 0x262c38, roughness: 0.85, metalness: 0.15 });
+      const matBridge  = new THREE.MeshStandardMaterial({ color: 0x3b4252, roughness: 0.72, metalness: 0.28 });
+      const matGallery = new THREE.MeshStandardMaterial({ color: 0x313746, roughness: 0.75, metalness: 0.25 });
+      const matRamp    = new THREE.MeshStandardMaterial({ color: 0x4b5365, roughness: 0.78, metalness: 0.30 });
+      const matTrim    = new THREE.MeshStandardMaterial({ color: 0xDF9B32, roughness: 0.45, metalness: 0.45 });
+
+      // 1. Ground Floor (76x56m at Y=0) + Grid
+      const ground = new THREE.Mesh(new THREE.BoxGeometry(100, 0.8, 56), matGround);
+      ground.position.set(0, -0.4, 0);
+      root.add(ground);
+
+      const grid = new THREE.GridHelper(100, 50, 0x3e495e, 0x202633);
+      grid.position.y = 0.02;
+      root.add(grid);
+
+      // 2. Central Bridge (46x8m at Y=4.8) + Red/Blue Flag Platforms + Spawn Decks
+      const addDeck = (minX, maxX, minZ, maxZ, topY, thick, mat) => {
+        const w = maxX - minX, d = maxZ - minZ;
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, thick, d), mat);
+        m.position.set((minX + maxX) * 0.5, topY - thick * 0.5, (minZ + maxZ) * 0.5);
+        root.add(m);
+        // Subtle amber edge strip
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(w, 0.08, 0.14), matTrim);
+        edge.position.set((minX + maxX) * 0.5, topY - 0.04, maxZ);
+        root.add(edge);
+      };
+
+      addDeck(-23, 23, -4, 4, 4.8, 0.55, matBridge);
+      addDeck(-50, -23, -8, 8, 4.8, 0.55, matBridge);
+      addDeck( 23,  50, -8, 8, 4.8, 0.55, matBridge);
+      addDeck(-33,  33, -24, -18, 9.6, 0.45, matGallery);
+
+      // Simple Support Pillars under bridge
+      const pillarGeo = new THREE.BoxGeometry(0.9, 4.25, 0.9);
+      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x232834, roughness: 0.65, metalness: 0.5 });
+      [-18, -6, 6, 18].forEach((px) => {
+        [-3.4, 3.4].forEach((pz) => {
+          const p = new THREE.Mesh(pillarGeo, pillarMat);
+          p.position.set(px, 2.12, pz);
+          root.add(p);
+        });
+      });
+
+      // 3. Walkable Ramps connecting Y=0 <-> Y=4.8 <-> Y=9.6
+      VIEWER_SURFACES.filter(s => s.type === 'ramp').forEach((r) => {
+        const run = Math.abs(r.endZ - r.startZ);
+        const rise = r.endY - r.startY;
+        const len = Math.hypot(run, rise);
+        const dirZ = Math.sign(r.endZ - r.startZ);
+        const angle = Math.atan2(rise, run) * (dirZ < 0 ? 1 : -1);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(r.maxX - r.minX, 0.24, len), matRamp);
+        mesh.position.set((r.minX + r.maxX) * 0.5, (r.startY + r.endY) * 0.5 - 0.12, (r.startZ + r.endZ) * 0.5);
+        mesh.rotation.x = angle;
+        root.add(mesh);
+      });
+
+      // 4. Translucent Glowing 3D Wireframe Volumes for Red & Blue Protected Spawn Zones
+      ['red', 'blue'].forEach((team) => {
+        const z = CTF_DEFAULT_CONFIG.spawnZones[team];
+        const col = team === 'red' ? 0xFF394B : 0x20BFFF;
+        const w = z.maxX - z.minX, h = z.maxY - z.minY, d = z.maxZ - z.minZ;
+        const boxGeo = new THREE.BoxGeometry(w, h, d);
+
+        const fill = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.08, side: THREE.DoubleSide, depthWrite: false }));
+        fill.position.set((z.minX + z.maxX) * 0.5, (z.minY + z.maxY) * 0.5, (z.minZ + z.maxZ) * 0.5);
+        root.add(fill);
+
+        const wire = new THREE.LineSegments(new THREE.EdgesGeometry(boxGeo), new THREE.LineBasicMaterial({ color: col, transparent: true, opacity: 0.72 }));
+        wire.position.copy(fill.position);
+        root.add(wire);
+      });
+
+      return root;
+    }
+
+    // =========================================================================
+    // AVATAR VISUAL FACTORY (PLAYER + AI BOTS WITH OVERHEAD HP BAR)
+    // =========================================================================
+    function createAvatarMesh(player, scene) {
+      const g = new THREE.Group();
+      const teamCol = player.team === 'red' ? 0xFF394B : 0x20BFFF;
+      const clsCol = new THREE.Color(CTF_DEFAULT_CONFIG.classes[player.className].color);
+
+      const bodyMat = new THREE.MeshStandardMaterial({ color: teamCol, roughness: 0.45, metalness: 0.35 });
+      const visorMat = new THREE.MeshStandardMaterial({ color: clsCol, emissive: clsCol, emissiveIntensity: 0.7, roughness: 0.25 });
+
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.92, 6, 12), bodyMat);
+      body.position.y = 0.88;
+      g.add(body);
+
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.16, 0.24), visorMat);
+      visor.position.set(0, 1.38, -0.24);
+      g.add(visor);
+
+      // Overhead HP Bar
+      const hpBg = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.14), new THREE.MeshBasicMaterial({ color: 0x0b0e14, side: THREE.DoubleSide }));
+      hpBg.position.y = 2.18;
+      g.add(hpBg);
+
+      const hpBar = new THREE.Mesh(new THREE.PlaneGeometry(1.04, 0.09), new THREE.MeshBasicMaterial({ color: teamCol, side: THREE.DoubleSide }));
+      hpBar.position.set(0, 2.18, 0.01);
+      g.add(hpBar);
+
+      scene.add(g);
+      return { group: g, bodyMat, visorMat, hpBg, hpBar, yaw: player.team === 'red' ? -Math.PI / 2 : Math.PI / 2, vy: 0, grounded: true, atkCooldown: 0 };
+    }
+
+    // =========================================================================
+    // MAIN INTERACTIVE TESTING VIEWER APPLICATION
+    // =========================================================================
+    async function main() {
+      const { renderer, canvas, backendLabel } = await initRenderer();
+
+      const backendEl = document.getElementById('stat-backend');
+      backendEl.textContent = backendLabel;
+      backendEl.className = backendLabel === 'WebGPU' ? 'sys-ok' : 'sys-fb';
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x101520);
+
+      // Clean balanced lighting
+      const hemi = new THREE.HemisphereLight(0xdceeff, 0x353c4a, 1.5);
+      scene.add(hemi);
+      const dir = new THREE.DirectionalLight(0xffe6bd, 2.0);
+      dir.position.set(-14, 28, -22);
+      scene.add(dir);
+
+      const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.15, 260);
+      camera.position.set(0, 22, 34);
+
+      const orbit = new OrbitControls(camera, canvas);
+      orbit.enableDamping = true; orbit.dampingFactor = 0.07;
+      orbit.maxDistance = 110; orbit.minDistance = 4;
+      orbit.target.set(0, 4.8, 0);
+      orbit.update();
+
+      buildSimplifiedReferenceArena(scene);
+
+      // Instantiate Reusable Phase 8 Modules
+      const engine = new CTFGameplayEngine();
+      const visualAdapter = new CTFVisualAdapter(scene, engine.config);
+
+      // Register Playable User + 4 Simulated AI Bots (2 Red, 2 Blue)
+      const userPlayer = engine.registerPlayer({ id: 'user', name: 'You', team: 'red', className: 'Warrior/Juggernaut', isBot: false });
+      const botList = [
+        engine.registerPlayer({ id: 'bot_r1', name: 'Red Vanguard', team: 'red',  className: 'Duelist',  isBot: true }),
+        engine.registerPlayer({ id: 'bot_r2', name: 'Red Striker',  team: 'red',  className: 'Assassin', isBot: true }),
+        engine.registerPlayer({ id: 'bot_b1', name: 'Blue Guard',   team: 'blue', className: 'Warrior/Juggernaut', isBot: true }),
+        engine.registerPlayer({ id: 'bot_b2', name: 'Blue Shadow',  team: 'blue', className: 'Healer',   isBot: true })
+      ];
+
+      const avatars = new Map();
+      for (const p of engine.players.values()) {
+        avatars.set(p.id, createAvatarMesh(p, scene));
+      }
+
+      // HUD Notification & Callout Helpers
+      const feedEl = document.getElementById('event-feed');
+      function pushNotification(text, tone = '') {
+        const div = document.createElement('div');
+        div.className = `feed-toast ${tone}`;
+        div.textContent = text;
+        feedEl.prepend(div);
+        while (feedEl.children.length > 4) feedEl.removeChild(feedEl.lastChild);
+        setTimeout(() => { if (div.parentNode) div.remove(); }, 3400);
+      }
+
+      const calloutEl = document.getElementById('callout-banner');
+      let calloutTimer = null;
+      function showCallout(text, durationMs = 950) {
+        calloutEl.textContent = text;
+        calloutEl.classList.add('show');
+        clearTimeout(calloutTimer);
+        calloutTimer = setTimeout(() => calloutEl.classList.remove('show'), durationMs);
+      }
+
+      // Bind Engine Events to Tactical HUD
+      engine.on('phaseChange', (e) => {
+        if (e.phase === 'COUNTDOWN' && e.digit) showCallout(String(e.digit), 750);
+        else if (e.callout) showCallout(e.callout, 1200);
+        if (e.phase === 'PREP') pushNotification(`Preparation started (${engine.config.rules.prepDurationSec}s + ${engine.config.rules.countdownDurationSec}s countdown)`);
+        if (e.phase === 'OVERTIME') pushNotification('TIED SCORE — SUDDEN DEATH OVERTIME!', 'red');
+      });
+      engine.on('flagPickup', (e) => pushNotification(`${e.carrierName} picked up the ${e.flagTeam.toUpperCase()} Flag!`, e.carrierTeam));
+      engine.on('flagDrop', (e) => pushNotification(`${e.flagTeam.toUpperCase()} Flag dropped! Auto-return in ${e.returnTimer.toFixed(0)}s.`, e.flagTeam));
+      engine.on('flagReturn', (e) => pushNotification(e.reason === 'auto_timer' ? `${e.flagTeam.toUpperCase()} Flag auto-returned to base!` : `${e.returnedByName} returned the ${e.flagTeam.toUpperCase()} Flag!`, 'green'));
+      engine.on('flagCapture', (e) => {
+        pushNotification(`${e.carrierName} CAPTURED for ${e.scoringTeam.toUpperCase()}! (${e.scores.red} - ${e.scores.blue})`, e.scoringTeam);
+        showCallout(`${e.scoringTeam.toUpperCase()} SCORES!`, 1100);
+      });
+      engine.on('captureBlocked', (e) => pushNotification(`Cannot score: ${e.team.toUpperCase()} Flag must be HOME!`, 'amber'));
+      engine.on('spawnBlocked', (e) => { if (e.playerId === 'user') pushNotification(`Blocked by ${e.blockedZone.toUpperCase()} Protected Spawn Zone!`, 'red'); });
+      engine.on('playerDefeat', (e) => pushNotification(`${e.victimName} defeated! Respawning in ${engine.config.rules.respawnDurationSec}s.`, e.victimTeam));
+      engine.on('matchEnd', (e) => {
+        const isVictory = e.winner === userPlayer.team;
+        showCallout(isVictory ? 'VICTORY!' : 'DEFEAT', 3000);
+        pushNotification(`MATCH OVER — ${e.winner.toUpperCase()} TEAM WINS (${e.scores.red} - ${e.scores.blue})`, e.winner);
+      });
+
+      // Viewer State & Controls
+      let camMode = 'follow'; // 'follow' | 'orbit'
+      let botsEnabled = true;
+      let cleanView = false;
+      const keys = Object.create(null);
+      const joy = { x: 0, y: 0 };
+
+      function toggleCleanView() {
+        cleanView = !cleanView;
+        document.getElementById('hud').classList.toggle('clean-hidden', cleanView);
+        document.getElementById('clean-restore').classList.toggle('visible', cleanView);
+      }
+
+      function performUserAttack() {
+        if (!engine.isCombatEnabled()) {
+          pushNotification('Combat is disabled until the match starts!');
+          return;
+        }
+        if (!userPlayer.alive) return;
+        let hitTarget = null, bestDist = 4.6;
+        for (const p of engine.players.values()) {
+          if (p.id === 'user' || p.team === userPlayer.team || !p.alive) continue;
+          const d = Math.hypot(p.x - userPlayer.x, p.z - userPlayer.z);
+          if (d < bestDist && Math.abs(p.y - userPlayer.y) < 2.2) {
+            bestDist = d; hitTarget = p;
+          }
+        }
+        if (!hitTarget) {
+          pushNotification('No enemy in melee/duel range (4.6m).');
+          return;
+        }
+        if (!engine.canAttack('user', hitTarget.id)) {
+          pushNotification('Attack blocked by Protected Spawn Zone rules!', 'red');
+          return;
+        }
+        engine.applyDamage('user', hitTarget.id);
+        pushNotification(`Hit ${hitTarget.name} for ${userPlayer.damage} dmg (${hitTarget.hp} HP left)`, userPlayer.team);
+      }
+
+      // Keyboard & Touch Listeners
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'KeyH') toggleCleanView();
+        if (e.code === 'Space') {
+          const av = avatars.get('user');
+          if (av && av.grounded && userPlayer.alive) { av.vy = 9.0; av.grounded = false; }
+        }
+        if (e.code === 'KeyE') performUserAttack();
+      });
+      window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+      // Show mobile controls on touch screens
+      if ('ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth < 820) {
+        document.getElementById('mobile-controls').classList.add('visible');
+      }
+      const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
+      let joyId = null;
+      const moveJoy = (cx, cy) => {
+        const r = joyZone.getBoundingClientRect(), mx = r.left + r.width / 2, my = r.top + r.height / 2, maxR = r.width * 0.36;
+        let dx = cx - mx, dy = cy - my, d = Math.hypot(dx, dy);
+        if (d > maxR) { dx = (dx / d) * maxR; dy = (dy / d) * maxR; }
+        joyKnob.style.transform = `translate(${dx}px, ${dy}px)`; joy.x = dx / maxR; joy.y = dy / maxR;
+      };
+      joyZone.addEventListener('touchstart', (e) => { e.preventDefault(); joyId = e.changedTouches[0].identifier; moveJoy(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+      joyZone.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === joyId) moveJoy(t.clientX, t.clientY); }, { passive: false });
+      const endJoy = (e) => { for (const t of e.changedTouches) if (t.identifier === joyId) { joyId = null; joy.x = 0; joy.y = 0; joyKnob.style.transform = 'translate(0,0)'; } };
+      joyZone.addEventListener('touchend', endJoy); joyZone.addEventListener('touchcancel', endJoy);
+      document.getElementById('touch-jmp').addEventListener('touchstart', (e) => { e.preventDefault(); const av = avatars.get('user'); if (av && av.grounded && userPlayer.alive) { av.vy = 9.0; av.grounded = false; } }, { passive: false });
+      document.getElementById('touch-atk').addEventListener('touchstart', (e) => { e.preventDefault(); performUserAttack(); }, { passive: false });
+
+      // UI Button Bindings
+      document.getElementById('btn-clean-view').addEventListener('click', toggleCleanView);
+      document.getElementById('btn-exit-clean').addEventListener('click', toggleCleanView);
+      document.getElementById('btn-toggle-inspector').addEventListener('click', () => document.getElementById('inspector').classList.toggle('collapsed'));
+      document.getElementById('btn-cam-mode').addEventListener('click', (e) => {
+        camMode = camMode === 'follow' ? 'orbit' : 'follow';
+        e.target.textContent = camMode === 'follow' ? 'Cam: Follow' : 'Cam: Orbit';
+        orbit.enabled = camMode === 'orbit';
+      });
+      orbit.enabled = false;
+
+      document.getElementById('btn-apply-cfg').addEventListener('click', () => {
+        const rules = {
+          matchDurationSec: Math.max(15, parseInt(document.getElementById('cfg-duration').value, 10) || 300),
+          captureLimit: Math.max(1, parseInt(document.getElementById('cfg-caplimit').value, 10) || 3),
+          respawnDurationSec: Math.max(1, parseInt(document.getElementById('cfg-respawn').value, 10) || 5),
+          flagAutoReturnSec: Math.max(3, parseInt(document.getElementById('cfg-autoreturn').value, 10) || 15),
+          prepDurationSec: Math.max(1, parseInt(document.getElementById('cfg-prep').value, 10) || 30)
+        };
+        Object.assign(engine.config.rules, rules);
+        engine.resetMatch();
+        pushNotification(`Rules Updated: ${rules.matchDurationSec}s, First to ${rules.captureLimit}`, 'green');
+      });
+
+      document.getElementById('btn-start-match').addEventListener('click', () => engine.startMatch());
+      document.getElementById('btn-skip-prep').addEventListener('click', () => engine.skipPrepToCountdown());
+      document.getElementById('btn-reset-match').addEventListener('click', () => { engine.resetMatch(); pushNotification('Match Reset to IDLE'); });
+      document.getElementById('btn-toggle-bots').addEventListener('click', (e) => {
+        botsEnabled = !botsEnabled;
+        e.target.textContent = botsEnabled ? 'Bots: ON' : 'Bots: PAUSED';
+        e.target.classList.toggle('active', botsEnabled);
+      });
+
+      // Direct Flag & State Testing Buttons
+      document.getElementById('btn-force-pickup').addEventListener('click', () => {
+        if (!engine.isCombatEnabled()) engine.phase = 'ACTIVE';
+        const enemyTeam = userPlayer.team === 'red' ? 'blue' : 'red';
+        const pos = engine.flags[enemyTeam].position;
+        userPlayer.x = pos.x; userPlayer.y = pos.y; userPlayer.z = pos.z;
+        engine.tryFlagInteraction('user');
+      });
+
+      document.getElementById('btn-defeat-carrier').addEventListener('click', () => {
+        const carrierId = engine.flags.red.carrierId || engine.flags.blue.carrierId;
+        if (!carrierId) { pushNotification('No active flag carrier to defeat.'); return; }
+        engine.defeatPlayer(carrierId, 'inspector');
+      });
+
+      document.getElementById('btn-friendly-return').addEventListener('click', () => {
+        const ownFlag = engine.flags[userPlayer.team];
+        if (ownFlag.state !== 'DROPPED') { pushNotification('Your team flag is not currently dropped.'); return; }
+        userPlayer.x = ownFlag.position.x; userPlayer.y = ownFlag.position.y; userPlayer.z = ownFlag.position.z;
+        engine.tryFlagInteraction('user');
+      });
+
+      document.getElementById('btn-force-overtime').addEventListener('click', () => {
+        engine.phase = 'ACTIVE';
+        engine.scores.red = 1; engine.scores.blue = 1;
+        engine.matchTimer = 0.05;
+      });
+
+      // Team & Class Selectors
+      const syncUserVisual = () => {
+        const av = avatars.get('user');
+        av.bodyMat.color.setHex(userPlayer.team === 'red' ? 0xFF394B : 0x20BFFF);
+        const cCol = new THREE.Color(CTF_DEFAULT_CONFIG.classes[userPlayer.className].color);
+        av.visorMat.color.copy(cCol); av.visorMat.emissive.copy(cCol);
+        av.hpBar.material.color.setHex(userPlayer.team === 'red' ? 0xFF394B : 0x20BFFF);
+      };
+
+      const switchTeam = (team) => {
+        if (userPlayer.carryingFlag) engine.defeatPlayer('user', null);
+        userPlayer.team = team;
+        engine.respawnPlayer('user');
+        document.getElementById('btn-team-red').classList.toggle('active', team === 'red');
+        document.getElementById('btn-team-blue').classList.toggle('active', team === 'blue');
+        syncUserVisual();
+        pushNotification(`Switched to ${team.toUpperCase()} Team`, team);
+      };
+      document.getElementById('btn-team-red').addEventListener('click', () => switchTeam('red'));
+      document.getElementById('btn-team-blue').addEventListener('click', () => switchTeam('blue'));
+
+      document.querySelectorAll('[data-class]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-class]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          engine.setPlayerClass('user', btn.dataset.class);
+          syncUserVisual();
+          pushNotification(`Class: ${btn.dataset.class} (HP ${userPlayer.maxHp}, Spd ${userPlayer.speed})`);
+        });
+      });
+
+      document.getElementById('btn-player-attack').addEventListener('click', performUserAttack);
+      document.getElementById('btn-test-under').addEventListener('click', () => {
+        const enemyTeam = userPlayer.team === 'red' ? 'blue' : 'red';
+        const fp = engine.config.flags[enemyTeam];
+        userPlayer.x = fp.x; userPlayer.y = 0.0; userPlayer.z = fp.z;
+        const av = avatars.get('user'); av.vy = 0; av.grounded = true;
+        pushNotification(`Teleported under ${enemyTeam.toUpperCase()} Flag at Y=0.0m (Pickup blocked by elevation!)`);
+      });
+
+      // 12-Test Gameplay Audit Button
+      const auditListEl = document.getElementById('audit-list');
+      const auditSumEl = document.getElementById('audit-summary');
+      document.getElementById('btn-run-audit').addEventListener('click', () => {
+        const res = run12TestGameplayAudit();
+        const passed = res.filter(r => r.pass).length;
+        auditSumEl.textContent = `${passed}/${res.length} PASS`;
+        auditSumEl.style.color = passed === res.length ? 'var(--accent-green)' : 'var(--accent-red)';
+        auditListEl.innerHTML = res.map(r => `
+          <div class="audit-item">
+            <div><div class="audit-name">${r.id}. ${r.name}</div><div class="audit-detail">${r.detail}</div></div>
+            <span class="${r.pass ? 'badge-pass' : 'badge-fail'}">${r.pass ? 'PASS' : 'FAIL'}</span>
+          </div>
+        `).join('');
+        pushNotification(`12-Test Gameplay Audit: ${passed}/${res.length} Passed`, passed === res.length ? 'green' : 'red');
+      });
+
+      // Simple Autonomous Bot AI (navigates bridge, seeks flags, returns dropped flags, fights)
+      function updateBots(dt) {
+        if (!botsEnabled || !engine.isCombatEnabled()) return;
+        for (const bot of botList) {
+          if (!bot.alive) continue;
+          const av = avatars.get(bot.id);
+          av.atkCooldown = Math.max(0, av.atkCooldown - dt);
+
+          const enemyTeam = bot.team === 'red' ? 'blue' : 'red';
+          const ownFlag = engine.flags[bot.team];
+          const enemyFlag = engine.flags[enemyTeam];
+
+          let tx = 0, tz = 0;
+          if (bot.carryingFlag) {
+            tx = engine.config.flags[bot.team].x;
+            tz = engine.config.flags[bot.team].z;
+          } else if (ownFlag.state === 'DROPPED') {
+            tx = ownFlag.position.x; tz = ownFlag.position.z;
+          } else if (ownFlag.state === 'CARRIED' && ownFlag.carrierId) {
+            const carrier = engine.players.get(ownFlag.carrierId);
+            if (carrier) { tx = carrier.x; tz = carrier.z; }
+          } else if (enemyFlag.state === 'HOME' || enemyFlag.state === 'DROPPED') {
+            tx = enemyFlag.position.x; tz = enemyFlag.position.z;
+          } else {
+            tx = 0; tz = bot.team === 'red' ? 2.0 : -2.0;
+          }
+
+          // Keep bots navigating cleanly along the Y=4.8 bridge corridor
+          if (Math.abs(bot.x) < 22 && Math.abs(tz) > 3.2) tz = Math.sign(tz) * 2.5;
+
+          const dx = tx - bot.x, dz = tz - bot.z, dist = Math.hypot(dx, dz);
+          if (dist > 0.5) {
+            const spd = bot.speed * 0.72 * dt;
+            bot.x = THREE.MathUtils.clamp(bot.x + (dx / dist) * spd, -48, 48);
+            bot.z = THREE.MathUtils.clamp(bot.z + (dz / dist) * spd, -25, 25);
+            av.yaw = Math.atan2(-dx, -dz);
+          }
+          bot.y = sampleElevation(bot.x, bot.z, bot.y);
+
+          // Combat check against nearby enemies
+          if (av.atkCooldown <= 0) {
+            for (const other of engine.players.values()) {
+              if (other.team === bot.team || !other.alive) continue;
+              if (Math.hypot(other.x - bot.x, other.z - bot.z) < 3.4 && Math.abs(other.y - bot.y) < 1.8) {
+                if (engine.canAttack(bot.id, other.id)) {
+                  engine.applyDamage(bot.id, other.id);
+                  av.atkCooldown = 1.35;
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Start match automatically in PREP so user immediately sees the live system
+      engine.startMatch();
+
+      // DOM Telemetry References
+      const scoreRedEl = document.getElementById('score-red');
+      const scoreBlueEl = document.getElementById('score-blue');
+      const flagRedEl = document.getElementById('flag-status-red');
+      const flagBlueEl = document.getElementById('flag-status-blue');
+      const hudPhaseEl = document.getElementById('hud-phase');
+      const hudClockEl = document.getElementById('hud-clock');
+      const hudCapLimitEl = document.getElementById('hud-cap-limit');
+      const hudHpTxt = document.getElementById('hud-hp-txt');
+      const hudStateTxt = document.getElementById('hud-state-txt');
+      const hudHpFill = document.getElementById('hud-hp-fill');
+      const hudElevEl = document.getElementById('hud-elev');
+      const statFpsEl = document.getElementById('stat-fps');
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      document.getElementById('loader').classList.add('done');
+
+      let lastTime = performance.now(), fpsFrames = 0, fpsTimer = 0;
+
+      function formatClock(sec) {
+        const s = Math.max(0, Math.ceil(sec));
+        return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        const elapsed = now * 0.001;
+        lastTime = now;
+
+        // 1. User Avatar Movement
+        const uAv = avatars.get('user');
+        if (userPlayer.alive) {
+          let mx = 0, mz = 0;
+          if (keys['KeyW'] || keys['ArrowUp']) mz -= 1;
+          if (keys['KeyS'] || keys['ArrowDown']) mz += 1;
+          if (keys['KeyA'] || keys['ArrowLeft']) mx -= 1;
+          if (keys['KeyD'] || keys['ArrowRight']) mx += 1;
+          mx += joy.x; mz += joy.y;
+
+          const mag = Math.hypot(mx, mz);
+          if (mag > 0.05) {
+            const nx = mx / mag, nz = mz / mag, norm = Math.min(1, mag);
+            const spd = userPlayer.speed * norm * dt;
+            userPlayer.x = THREE.MathUtils.clamp(userPlayer.x + nx * spd, -49, 49);
+            userPlayer.z = THREE.MathUtils.clamp(userPlayer.z + nz * spd, -26, 26);
+            uAv.yaw = Math.atan2(-nx, -nz);
+          }
+
+          uAv.vy -= 22.0 * dt;
+          userPlayer.y += uAv.vy * dt;
+          const supY = sampleElevation(userPlayer.x, userPlayer.z, userPlayer.y);
+          if (userPlayer.y <= supY + (uAv.grounded ? 0.35 : 0.05) && uAv.vy <= 0.1) {
+            userPlayer.y = supY; uAv.vy = 0; uAv.grounded = true;
+          } else {
+            uAv.grounded = false;
+          }
+        }
+
+        // 2. Bots & Authoritative CTF Engine Step
+        updateBots(dt);
+        engine.update(dt);
+
+        // 3. Sync 3D Avatars & Phase 8 CTFVisualAdapter
+        const snapshot = engine.getSnapshot();
+        const transformMap = new Map();
+        for (const p of snapshot.players) {
+          const av = avatars.get(p.id);
+          if (!av) continue;
+          av.group.visible = p.alive;
+          av.group.position.set(p.x, p.y, p.z);
+          av.group.rotation.y = av.yaw;
+          const hpRatio = Math.max(0.001, p.hp / p.maxHp);
+          av.hpBar.scale.x = hpRatio;
+          av.hpBg.lookAt(camera.position);
+          av.hpBar.lookAt(camera.position);
+          transformMap.set(p.id, { x: p.x, y: p.y, z: p.z, yaw: av.yaw });
+        }
+        visualAdapter.sync(snapshot, transformMap, elapsed);
+
+        // 4. Camera Update
+        if (camMode === 'orbit') {
+          orbit.update();
+        } else {
+          const desired = new THREE.Vector3(userPlayer.x, userPlayer.y + 11.5, userPlayer.z + 15.5);
+          camera.position.lerp(desired, Math.min(1, dt * 8));
+          camera.lookAt(userPlayer.x, userPlayer.y + 1.4, userPlayer.z);
+        }
+
+        renderer.render(scene, camera);
+
+        // 5. Sync Tactical HUD
+        scoreRedEl.textContent = snapshot.scores.red;
+        scoreBlueEl.textContent = snapshot.scores.blue;
+        hudCapLimitEl.textContent = `First to ${engine.config.rules.captureLimit}`;
+
+        const setFlagBadge = (el, f) => {
+          el.className = `flag-pill ${f.state.toLowerCase()}`;
+          el.textContent = f.state === 'DROPPED' ? `DROPPED ${Math.ceil(f.returnTimer)}s` : f.state;
+        };
+        setFlagBadge(flagRedEl, snapshot.flags.red);
+        setFlagBadge(flagBlueEl, snapshot.flags.blue);
+
+        hudPhaseEl.className = `phase-tag ${snapshot.phase === 'ACTIVE' ? 'active' : (snapshot.phase === 'OVERTIME' ? 'overtime' : '')}`;
+        hudPhaseEl.textContent = snapshot.phase;
+        if (snapshot.phase === 'PREP') hudClockEl.textContent = formatClock(snapshot.prepTimer);
+        else if (snapshot.phase === 'COUNTDOWN') hudClockEl.textContent = `00:0${Math.ceil(snapshot.countdownTimer)}`;
+        else if (snapshot.phase === 'OVERTIME') hudClockEl.textContent = 'SUDDEN DEATH';
+        else if (snapshot.phase === 'ENDED') hudClockEl.textContent = `${snapshot.winner?.toUpperCase()} WINS`;
+        else hudClockEl.textContent = formatClock(snapshot.matchTimer);
+
+        hudHpTxt.textContent = `HP ${Math.ceil(userPlayer.hp)} / ${userPlayer.maxHp}`;
+        hudHpFill.style.width = `${Math.round((userPlayer.hp / userPlayer.maxHp) * 100)}%`;
+        if (!userPlayer.alive) {
+          hudStateTxt.textContent = `RESPAWN ${Math.ceil(userPlayer.respawnTimer)}s`;
+          hudStateTxt.style.color = 'var(--accent-red)';
+        } else if (userPlayer.inOwnSpawn) {
+          hudStateTxt.textContent = 'INVULNERABLE (SPAWN)';
+          hudStateTxt.style.color = 'var(--accent-cyan)';
+        } else if (userPlayer.carryingFlag) {
+          hudStateTxt.textContent = `CARRYING ${userPlayer.carryingFlag.toUpperCase()} FLAG`;
+          hudStateTxt.style.color = 'var(--accent-amber)';
+        } else {
+          hudStateTxt.textContent = 'COMBAT READY';
+          hudStateTxt.style.color = 'var(--accent-green)';
+        }
+
+        const elevName = userPlayer.y >= 9.2 ? 'GALLERY' : (userPlayer.y >= 4.4 ? 'BRIDGE' : (userPlayer.y <= 0.2 ? 'GROUND' : 'RAMP'));
+        hudElevEl.textContent = `Y: ${userPlayer.y.toFixed(1)}m (${elevName})`;
+
+        fpsFrames++; fpsTimer += dt;
+        if (fpsTimer >= 0.35) {
+          statFpsEl.textContent = String(Math.round(fpsFrames / fpsTimer));
+          fpsFrames = 0; fpsTimer = 0;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    main().catch((err) => {
+      console.error('Phase 8 Init Error:', err);
+      document.getElementById('loader-status').textContent = 'Error: ' + err.message;
+    });
+  </script>
+</body>
+</html>
