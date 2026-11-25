@@ -80,8 +80,8 @@ export class DuelistRoomEngine {
       if(r.accepted)c.classId=msg.id;
       this.send(c,{t:'class',ok:r.accepted,pending:r.pendingClass??null,reason:r.reason??null});return;
     }
-    if(msg.t==='shop'){
-      const r=typeof msg.id==='string'&&msg.id.length<=48?purchaseMatchItem(this.match,c.id,msg.id):{ok:false,reason:'invalid'};
+    if(msg.t==='shop'||msg.t==='shopBuild'){
+      const r=typeof msg.id==='string'&&msg.id.length<=48?(msg.t==='shopBuild' && (!Number.isInteger(msg.tier)||typeof msg.combine!=='boolean') ? {ok:false,reason:'invalid-tier'} : purchaseMatchItem(this.match,c.id,msg.id,msg.t==='shopBuild'?msg.tier:undefined,msg.t==='shopBuild'?msg.combine:false)):{ok:false,reason:'invalid'};
       this.send(c,{t:'shop',...r});return;
     }
     if(msg.t!=='input')return;
