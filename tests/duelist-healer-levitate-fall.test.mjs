@@ -40,8 +40,10 @@ test('first damaging attack drops the victim, then landing starts knockdown and 
   for(let i=0;i<120&&effectOn(target,'levitateFall',w.time);i++)tick({},hostileInput);
   assert.ok(y>0.5);assert.equal(b.y,0);
   assert.ok(target.downUntil>w.time&&target.riseUntil>target.downUntil);
-  for(let i=0;i<180&&w.time<target.riseUntil;i++)tick({},hostileInput);
+  for(let i=0;i<180&&w.time+dt<target.riseUntil;i++)tick({},hostileInput);
   assert.equal(b.x,x);assert.equal(b.z,z);
+  // Cross the deadline with no new attack or jump queued on the first free tick.
+  tick();tick();
   tick({}, {move:{x:1,z:0},run:true});
   assert.ok(b.x>x);
 });
@@ -75,4 +77,20 @@ test('raised platform lift retains its height reference and lands on actual supp
   assert.ok(b.y>4.5);assert.equal(b.x,-7);
   for(let i=0;i<180&&!Number.isFinite(f.downUntil);i++)step(w,dt,{target:hostileInput});
   assert.ok(Math.abs(b.y-3.2)<.01);assert.ok(f.riseUntil>w.time);
+});
+
+test('a target caught mid-jump cannot steer or double jump out of levitation',()=>{
+  const w=createWorld({arenaRadius:40});
+  addFighter(w,{id:'healer',classId:'healer',x:0,z:-2,yaw:0});
+  const f=addFighter(w,{id:'target',classId:'duelist',x:0,z:0});
+  const b=bodyOf(w,'target');
+  step(w,dt,{target:{presses:['jump']}});
+  for(let i=0;i<10;i++)step(w,dt);
+  step(w,dt,{healer:{presses:['ability3'],target:'target'}});
+  for(let i=0;i<30&&!effectOn(f,'levitate',w.time);i++)step(w,dt);
+  assert.ok(effectOn(f,'levitate',w.time));assert.ok(b.y>0.5);
+  const x=b.x,z=b.z,y=b.y;
+  for(let i=0;i<20;i++)step(w,dt,{target:hostileInput});
+  assert.equal(b.x,x);assert.equal(b.z,z);assert.ok(Math.abs(b.y-y)<1e-6);
+  assert.equal(b.airDashReady,false);assert.equal(b.jumped,false);
 });
