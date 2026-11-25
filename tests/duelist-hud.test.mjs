@@ -29,26 +29,34 @@ test('the kill feed keeps the last five eliminations for a few seconds, with nam
   assert.equal(feed.kills(20.1).length, 0, 'a fall nobody caused is not a kill');
 });
 
-test('kill streaks: yours at 3, 5, 7 and 10; others\' from 5; a fall ends a streak', () => {
+test('personal sapphire kill announcements distinguish rapid chains from life streaks; other player feed stays intact', () => {
   const feed = createHudFeed();
   let t = 0;
-  const kill = (by, who) => { t += 1; feed.event({ type: 'defeat', by, who }, t, ctx); return text(feed.banners(t + 0.1).event); };
-  assert.equal(kill('you', 'foe'), null);
-  assert.equal(kill('you', 'foe2'), null);
-  assert.equal(kill('you', 'foe'), 'gold: 3 PLAYER KILL STREAK!');
-  t += 10;
-  assert.equal(kill('you', 'foe2'), null);
-  assert.equal(kill('you', 'foe'), 'gold: 5 PLAYER KILL STREAK!');
-  t += 10;
-  kill('foe', 'you'); // you fall: the streak is over
+  const kill = (by, who, delay = 1) => { t += delay; feed.event({ type: 'defeat', by, who, at: t }, t, ctx); return feed.banners(t + 0.1); };
+  assert.equal(kill('you', 'foe').kill.text, 'KO');
+  assert.equal(kill('you', 'foe2').kill.text, 'DOUBLE KILL');
+  const triple = kill('you', 'foe').kill;
+  assert.equal(triple.text, 'TRIPLE KILL');
+  assert.equal(triple.subtitle, 'KILLING SPREE');
+  assert.equal(kill('you', 'foe2', 10).kill.text, 'KO');
+  assert.equal(kill('you', 'foe', 10).kill.text, 'SLAUGHTER');
+  assert.equal(kill('you', 'foe2', 10).kill.text, 'KO');
+  assert.equal(kill('you', 'foe', 10).kill.text, 'UNSTOPPABLE');
+  for (let i = 8; i <= 12; i++) {
+    const b = kill('you', 'foe', 10).kill;
+    if(i === 10) assert.equal(b.text, 'UNTOUCHABLE');
+    if(i === 12) assert.equal(b.text, 'GODLIKE');
+  }
+  kill('foe', 'you', 10);
   assert.equal(feed.streakOf('you'), 0);
+  assert.equal(kill('you', 'foe2').kill.text, 'KO');
   t += 10;
   for (let i = 0; i < 3; i++) kill('foe', 'ally');
-  assert.equal(text(feed.banners(t + 0.1).event), null, 'an enemy\'s four is not announced');
-  assert.equal(kill('foe', 'ally'), 'bad: KESTREL: 5 KILL STREAK');
+  assert.equal(text(feed.banners(t + 0.1).event), null);
+  assert.equal(kill('foe', 'ally').event.text, 'KESTREL: 5 KILL STREAK');
   t += 10;
   for (let i = 0; i < 4; i++) kill('ally', 'foe2');
-  assert.equal(kill('ally', 'foe2'), 'good: MAREN: 5 KILL STREAK');
+  assert.equal(kill('ally', 'foe2').event.text, 'MAREN: 5 KILL STREAK');
 });
 
 test('Capture the Flag: each flag event has its banner, and the indicator shows returned and captured for a moment', () => {
