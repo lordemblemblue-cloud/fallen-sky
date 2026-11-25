@@ -1,0 +1,11 @@
+import * as THREE from 'three';
+import {writeFileSync} from 'node:fs';
+import {CTF_ARENA_SPEC,ArenaCollisionWorld,buildArenaGeometry} from '../src/components/duelist/client/maps/industrialCtfArena.mjs';
+const mat=new THREE.MeshStandardMaterial();
+const mats=new Proxy({},{get:(_,k)=>k.startsWith('make')?()=>mat:mat});
+const collision=new ArenaCollisionWorld();
+const arena=buildArenaGeometry(new THREE.Scene(),mats,collision);
+const {walkableFloors,stairRamps,solidBoxes,ceilingPlanes}=collision;
+const data={floors:walkableFloors,ramps:stairRamps,solids:solidBoxes,ceilings:ceilingPlanes,spawns:CTF_ARENA_SPEC.spawns,spawnZones:CTF_ARENA_SPEC.spawnZones,flags:CTF_ARENA_SPEC.flags,cargo:CTF_ARENA_SPEC.cargoContainers,portals:CTF_ARENA_SPEC.portals};
+writeFileSync('src/components/duelist/sim/importedCtfData.mjs','// Generated from Phase 6 real Three.js geometry builder.\nexport default '+JSON.stringify(data)+';\n');
+console.log({floors:walkableFloors.length,ramps:stairRamps.length,solids:solidBoxes.length,ceilings:ceilingPlanes.length,spawns:data.spawns.length,fans:arena.animatedFans.length,cloths:arena.animatedCloths.length});
