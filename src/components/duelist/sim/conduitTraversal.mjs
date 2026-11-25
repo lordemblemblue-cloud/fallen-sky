@@ -1,6 +1,7 @@
 // Renderer-independent traversal candidate for The Conduit. Never register in
 // live matches until the actual geometry and server/client authority are certified.
 // All coordinates are metres; feet may be below zero. No DOM or Three.js dependency.
+import {registerConduitBroadphase,conduitCandidates} from './conduitBroadphase.mjs';
 const EPS=1e-5;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const local=(s,x,z)=>{const dx=x-s.cx,dz=z-s.cz;return [dx*s.cos-dz*s.sin,dx*s.sin+dz*s.cos];};
@@ -26,31 +27,29 @@ export function snapshotConduitCollision(world){
   if(!world||REGISTRY_KEYS.some(k=>!Array.isArray(world[k])))throw new TypeError('Invalid Conduit collision registry');
   const clone=JSON.parse(JSON.stringify(Object.fromEntries(REGISTRY_KEYS.map(k=>[k,world[k]]))));
   const freeze=o=>{if(o&&typeof o==='object'){Object.values(o).forEach(freeze);Object.freeze(o);}return o;};
-  return freeze(clone);
+  const snapshot=freeze(clone);
+  registerConduitBroadphase(snapshot);
+  return snapshot;
 }
 // Flat landing contact uses the capsule footprint; ramps keep the center plane.
 // A capsule can meet a deck edge before its center reaches the deck.
-function surfaces(world,x,z,contactRadius=0){
-  const out=[];
-  for(const s of world.obbs)if(s.walkable&&boxOverlap(s,x,z,contactRadius))out.push(s.cy+s.hy);
-  for(const s of world.discs)if(s.walkable&&discOverlap(s,x,z,contactRadius))out.push(s.yMax);
-  for(const s of world.annuli)if(s.walkable&&annulusOverlap(s,x,z,contactRadius))out.push(s.yMax);
-  for(const s of world.ramps){const y=rampY(s,x,z);if(y!==null)out.push(y);}
-  return out;
-}
 export function conduitSupport(world,x,z,upper,lower=-Infinity,contactRadius=0){
   let best=-Infinity;
-  for(const y of surfaces(world,x,z,contactRadius))if(y<=upper+EPS&&y>=lower-EPS&&y>best)best=y;
+  const consider=y=>{if(y<=upper+EPS&&y>=lower-EPS&&y>best)best=y;};
+  for(const s of conduitCandidates(world,'obbs',x,z,contactRadius))if(s.walkable&&boxOverlap(s,x,z,contactRadius))consider(s.cy+s.hy);
+  for(const s of world.discs)if(s.walkable&&discOverlap(s,x,z,contactRadius))consider(s.yMax);
+  for(const s of world.annuli)if(s.walkable&&annulusOverlap(s,x,z,contactRadius))consider(s.yMax);
+  for(const s of conduitCandidates(world,'ramps',x,z)){const y=rampY(s,x,z);if(y!==null)consider(y);}
   return best;
 }
 export function conduitBlockers(world,body,radius=.4,height=1.8){
   const {x,y,z}=body,out=[];
   const hit=(s,lo,hi,overlap)=>{if(overlap&&y<hi-EPS&&y+height>lo+EPS)out.push(s.label||'unnamed collider');};
-  for(const s of world.obbs)hit(s,s.cy-s.hy,s.cy+s.hy,boxOverlap(s,x,z,radius));
+  for(const s of conduitCandidates(world,'obbs',x,z,radius))if(y<s.cy+s.hy-EPS&&y+height>s.cy-s.hy+EPS)hit(s,s.cy-s.hy,s.cy+s.hy,boxOverlap(s,x,z,radius));
   for(const s of world.discs)hit(s,s.yMin,s.yMax,discOverlap(s,x,z,radius));
   for(const s of world.annuli)hit(s,s.yMin,s.yMax,annulusOverlap(s,x,z,radius));
-  for(const s of world.cylinders)hit(s,s.yMin,s.yMax,Math.hypot(x-s.cx,z-s.cz)<s.radius+radius-EPS);
-  for(const s of world.ramps){
+  for(const s of conduitCandidates(world,'cylinders',x,z,radius))if(y<s.yMax-EPS&&y+height>s.yMin+EPS)hit(s,s.yMin,s.yMax,Math.hypot(x-s.cx,z-s.cz)<s.radius+radius-EPS);
+  for(const s of conduitCandidates(world,'ramps',x,z)){
     // The analytic center surface is the walking plane. Treat its underside
     // as a slab, not a solid wedge extending all the way to the basement.
     const sy=rampY(s,x,z);
