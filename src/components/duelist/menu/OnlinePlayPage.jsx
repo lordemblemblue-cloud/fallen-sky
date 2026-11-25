@@ -5,7 +5,7 @@ import { MenuShell } from './MenuPages.jsx';
 import { MENU_MODES } from './modes.js';
 import { useLobby } from './useLobby.js';
 import OnlineArenaPreview from './OnlineArenaPreview.jsx';
-import { ONLINE_SERVER_MODES, persistentServerCards, serverJoinSearch } from './serverBrowser.mjs';
+import { ONLINE_SERVER_MODES, persistentServerCards, serverJoinSearch, localArenaSearch } from './serverBrowser.mjs';
 
 // Every 3D card represents one exact public room, not a mode queue.
 export default function OnlinePlayPage() {
@@ -15,6 +15,10 @@ export default function OnlinePlayPage() {
     ONLINE_SERVER_MODES.includes(search?.mode) ? search.mode : 'all');
   const lobby = useLobby();
   const rooms = persistentServerCards(lobby.online ? lobby.matches : null, mode);
+  const playLocal = room => {
+    const local = localArenaSearch(room);
+    if (local) navigate({ to: '/duelist-next/play', search: local });
+  };
   const join = room => {
     const exactServer = serverJoinSearch(room);
     if (lobby.online && exactServer) {
@@ -42,7 +46,7 @@ export default function OnlinePlayPage() {
         </div>
         <p role="status" aria-live="polite" className="text-sm text-white/70">
           {lobby.online ? `${lobby.players} players online · Permanent public rooms`
-            : !lobby.loaded ? 'Connecting to public rooms…' : 'Connection unavailable · Public rooms remain listed; reconnect to enter.'}
+            : !lobby.loaded ? 'Connecting to public rooms…' : !lobby.serverUrl ? 'Online host is not configured. You can enter any arena locally against bots.' : 'Connection unavailable · Refresh to reconnect, or play an arena locally.'}
         </p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3" role="list" aria-label="Public arena rooms">
           {rooms.map(room => {
@@ -67,6 +71,10 @@ export default function OnlinePlayPage() {
                   <span className="flex items-center gap-1 text-sm font-bold text-amber-200">{canJoin ? 'Join room' : 'Join when ready'} <ArrowRight size={15} aria-hidden="true"/></span>
                 </div>
               </button>
+              {!canJoin && <button type="button" onClick={() => playLocal(room)}
+                className="block w-full border-t border-white/10 px-3 py-3 text-left text-sm font-bold text-cyan-200 hover:bg-white/10">
+                Play {title} locally (bots only)
+              </button>}
             </article>;
           })}
         </div>
