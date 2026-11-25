@@ -354,7 +354,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             s.kind === 'enemy' ? 0xffc9b8 : s.kind === 'ally' ? 0xd9c6ff : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5,
             enemy);
         }
-      }).catch((error) => { console.error('[duelist] could not load a fighter', error); setStatus('error'); })
+      }).catch((error) => { if (!disposed) { console.error('[duelist] could not load a fighter', error); setStatus('error'); } })
         .finally(() => { pending.delete(s.id); building = false; });
     };
 
@@ -971,7 +971,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         <MatchLoadingScreen mode={mode} message={(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]} />
       )}
       {waiting && (net.status === 'error' || net.status === 'closed') && (
-        <MatchLoadingScreen mode={mode} variant="error" message={net.detail || 'Not connected.'} />
+        <MatchLoadingScreen mode={mode} variant="error" message={net.detail || 'Not connected.'} onRetry={again} onLeave={onLeave} />
       )}
       {waiting && net.status === 'reconnecting' && (
         <MatchLoadingScreen mode={mode} message={net.detail || 'Connection lost. Reconnecting…'}
@@ -981,7 +981,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       {!online && status === 'loading' && (
         <MatchLoadingScreen mode={mode} message={mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'} />
       )}
-      {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The fighters could not be loaded." />}
+      {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The arena or its fighters could not finish loading." onRetry={again} onLeave={onLeave} />}
       {showPicker && (
         <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} fighter={youBody} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass}
