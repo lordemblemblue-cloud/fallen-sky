@@ -1,0 +1,2722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DUELIST ADVENTURE — Phase 9 Modular Engineering &amp; Performance System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.175.0/build/three.webgpu.js",
+      "three/tsl": "https://unpkg.com/three@0.175.0/build/three.tsl.js",
+      "three/addons/": "https://unpkg.com/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --glass-bg: rgba(12, 16, 25, 0.82);
+      --glass-card: rgba(20, 27, 40, 0.72);
+      --glass-border: rgba(146, 166, 198, 0.22);
+      --text-main: #eef3fb;
+      --text-dim: #95a4be;
+      --red: #FF394B;
+      --blue: #20BFFF;
+      --cyan: #7BE5FF;
+      --amber: #DF9B32;
+      --green: #2ee58d;
+      --purple: #b77cff;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #0a0e16; color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+    }
+
+    #viewport { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #0d121d; }
+    #viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; transition: opacity 0.2s ease; }
+    #hud.clean-hidden { opacity: 0; visibility: hidden; }
+
+    .glass {
+      pointer-events: auto;
+      background: var(--glass-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--glass-border);
+      border-radius: 13px;
+      box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Top Telemetry Bar */
+    #top-bar {
+      position: absolute; top: 10px; left: 10px; right: 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 8px; flex-wrap: wrap; pointer-events: none;
+    }
+
+    .telemetry-strip {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 7px 12px;
+    }
+
+    .brand-pill { display: flex; align-items: center; gap: 8px; padding-right: 10px; border-right: 1px solid var(--glass-border); }
+    .brand-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 10px var(--amber); flex-shrink: 0; }
+    .brand-title { font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+
+    .t-metric { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+    .t-val { color: var(--text-main); font-weight: 700; }
+    .t-val.gpu { color: var(--green); }
+    .t-val.gl { color: var(--amber); }
+
+    .scope-badge {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700;
+      padding: 4px 9px; border-radius: 7px; letter-spacing: 0.05em;
+      background: rgba(223, 155, 50, 0.16); color: #ffd996;
+      border: 1px solid rgba(223, 155, 50, 0.55);
+      pointer-events: auto;
+    }
+
+    .top-actions { display: flex; align-items: center; gap: 6px; pointer-events: auto; }
+
+    .btn {
+      appearance: none; border: 1px solid var(--glass-border);
+      background: rgba(25, 33, 48, 0.9); color: var(--text-main);
+      font-family: inherit; font-size: 11px; font-weight: 600;
+      padding: 7px 10px; border-radius: 8px; cursor: pointer;
+      transition: all 0.14s ease; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+      white-space: nowrap;
+    }
+    .btn:hover { background: rgba(39, 50, 72, 0.96); border-color: rgba(168, 188, 220, 0.45); }
+    .btn:active { transform: translateY(1px); }
+    .btn.active { background: rgba(32, 191, 255, 0.22); border-color: var(--blue); color: #fff; box-shadow: 0 0 10px rgba(32, 191, 255, 0.22); }
+    .btn.amber { background: rgba(223, 155, 50, 0.18); border-color: rgba(223, 155, 50, 0.65); color: #ffdc9b; }
+    .btn.amber:hover { background: rgba(223, 155, 50, 0.3); }
+    .btn.red { border-color: rgba(255, 57, 75, 0.55); color: #ffc1c7; }
+    .btn.blue { border-color: rgba(32, 191, 255, 0.55); color: #c0efff; }
+
+    #clean-restore { position: fixed; top: 10px; right: 10px; z-index: 30; display: none; }
+    #clean-restore.visible { display: block; }
+
+    /* Right Tabbed Engineering Inspector */
+    #inspector {
+      position: absolute; top: 58px; right: 10px; width: 378px;
+      max-height: calc(100vh - 118px); display: flex; flex-direction: column; overflow: hidden;
+    }
+    #inspector.collapsed { display: none; }
+
+    .tab-bar {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+      padding: 8px; border-bottom: 1px solid var(--glass-border);
+      background: rgba(10, 14, 22, 0.6);
+    }
+    .tab-btn {
+      appearance: none; border: 1px solid transparent; background: transparent;
+      color: var(--text-dim); font-family: inherit; font-size: 11px; font-weight: 700;
+      padding: 6px 4px; border-radius: 7px; cursor: pointer; transition: all 0.14s ease;
+    }
+    .tab-btn:hover { color: var(--text-main); background: rgba(255,255,255,0.05); }
+    .tab-btn.active { color: #fff; background: rgba(32, 191, 255, 0.2); border-color: rgba(32, 191, 255, 0.55); }
+
+    .tab-body {
+      padding: 11px; overflow-y: auto; display: none; flex-direction: column; gap: 11px;
+    }
+    .tab-body.active { display: flex; }
+    .tab-body::-webkit-scrollbar { width: 5px; }
+    .tab-body::-webkit-scrollbar-thumb { background: rgba(152, 166, 190, 0.3); border-radius: 4px; }
+
+    .sec-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em;
+      color: var(--text-dim); margin-bottom: 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row .btn { flex: 1; }
+
+    .stat-card {
+      background: var(--glass-card); border: 1px solid rgba(146, 166, 198, 0.14);
+      border-radius: 8px; padding: 6px 8px;
+    }
+    .stat-lbl { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-dim); }
+    .stat-num { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--text-main); margin-top: 2px; }
+
+    /* DPR Range */
+    .slider-row {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--glass-card); border: 1px solid rgba(146, 166, 198, 0.14);
+      border-radius: 8px; padding: 6px 9px; font-size: 11px;
+    }
+    .slider-row input[type="range"] { flex: 1; accent-color: var(--cyan); cursor: pointer; }
+
+    /* Audit Results */
+    #audit-summary-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--glass-card); border: 1px solid rgba(146, 166, 198, 0.18);
+      border-radius: 8px; padding: 7px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    }
+    #audit-results { display: flex; flex-direction: column; gap: 5px; }
+    .audit-item {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+      background: rgba(10, 14, 22, 0.72); border: 1px solid rgba(146, 166, 198, 0.14);
+      border-radius: 8px; padding: 7px 9px; font-size: 11px; line-height: 1.35;
+    }
+    .audit-name { font-weight: 700; color: var(--text-main); }
+    .audit-detail { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; color: var(--text-dim); margin-top: 2px; word-break: break-word; }
+    .audit-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+    .tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 8.5px; font-weight: 700;
+      padding: 1px 5px; border-radius: 4px; letter-spacing: 0.03em;
+    }
+    .tag.demo { background: rgba(32, 191, 255, 0.18); color: #9ee5ff; border: 1px solid rgba(32, 191, 255, 0.4); }
+    .tag.prod { background: rgba(223, 155, 50, 0.18); color: #ffd996; border: 1px solid rgba(223, 155, 50, 0.45); }
+    .tag.unit { background: rgba(183, 124, 255, 0.18); color: #e0c2ff; border: 1px solid rgba(183, 124, 255, 0.4); }
+
+    .badge-pass { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: #062815; background: var(--green); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+    .badge-fail { font-family: 'JetBrains Mono', monospace; font-size: 9.5px; font-weight: 800; color: #fff; background: var(--red); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+
+    /* Sparkline & Perf Advice */
+    #sparkline-canvas {
+      width: 100%; height: 64px; display: block;
+      background: rgba(8, 11, 18, 0.85); border: 1px solid rgba(146, 166, 198, 0.18); border-radius: 8px;
+    }
+    .advice-box {
+      background: var(--glass-card); border: 1px solid rgba(146, 166, 198, 0.15);
+      border-radius: 8px; padding: 8px 10px; font-size: 11px; line-height: 1.45; color: var(--text-dim);
+    }
+    .advice-box strong { color: var(--text-main); }
+
+    /* Manifest Pre */
+    #manifest-json {
+      background: rgba(8, 11, 18, 0.88); border: 1px solid rgba(146, 166, 198, 0.18);
+      border-radius: 8px; padding: 9px; font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; line-height: 1.45; color: #b8e4ff;
+      max-height: 360px; overflow: auto; white-space: pre-wrap; user-select: text;
+    }
+
+    /* Bottom Playtest / Controls Bar */
+    #bottom-bar {
+      position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      padding: 7px 14px; font-size: 11px; color: var(--text-dim);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center;
+      max-width: calc(100vw - 20px);
+    }
+    .kbd {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 4px; padding: 1px 5px; color: #fff;
+    }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 56px; left: 50%; transform: translateX(-50%) translateY(8px);
+      z-index: 35; padding: 8px 14px; font-size: 12px; font-weight: 600;
+      border-color: var(--amber); color: #ffe1a8; opacity: 0; pointer-events: none; transition: all 0.2s ease;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* Mobile Landscape Touch Controls */
+    #mobile-controls { position: fixed; inset: 0; pointer-events: none; z-index: 15; display: none; }
+    #mobile-controls.visible { display: block; }
+    #joystick-zone {
+      position: absolute; bottom: 20px; left: 20px; width: 118px; height: 118px; border-radius: 50%;
+      background: rgba(14, 19, 28, 0.58); border: 2px solid rgba(123, 229, 255, 0.35);
+      pointer-events: auto; touch-action: none;
+    }
+    #joystick-knob {
+      position: absolute; top: 50%; left: 50%; width: 46px; height: 46px;
+      margin-left: -23px; margin-top: -23px; border-radius: 50%;
+      background: rgba(32, 191, 255, 0.78); border: 2px solid #fff;
+    }
+    .mobile-actions { position: absolute; bottom: 24px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
+    .touch-btn {
+      width: 58px; height: 58px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.35); background: rgba(16, 22, 34, 0.82);
+      color: #fff; font-size: 10px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; touch-action: none;
+    }
+    .touch-btn.jmp { border-color: var(--amber); color: #ffd996; }
+    .touch-btn.rol { border-color: var(--purple); color: #e2c5ff; }
+    .touch-btn.dsh { border-color: var(--cyan); color: #bff2ff; }
+
+    /* Loader */
+    #loader {
+      position: fixed; inset: 0; z-index: 50; background: #0a0e16;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; transition: opacity 0.3s ease;
+    }
+    #loader.done { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 3px solid rgba(123, 229, 255, 0.2); border-top-color: var(--amber);
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 820px) {
+      #inspector { width: calc(100vw - 20px); max-height: 52vh; }
+      #bottom-bar { display: none; }
+      .brand-pill { border-right: none; padding-right: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport"><canvas id="phase9-canvas"></canvas></div>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">
+      Initializing Phase 9 Engineering &amp; Performance System...
+    </div>
+    <div id="loader-status" style="font-size:11px;color:#95a4be;font-family:'JetBrains Mono',monospace;">
+      Detecting Three.js 0.175.0 WebGPU backend
+    </div>
+  </div>
+
+  <div id="clean-restore">
+    <button class="btn amber" id="btn-exit-clean">Exit Clean View (H)</button>
+  </div>
+
+  <div id="toast" class="glass"></div>
+
+  <div id="hud">
+    <!-- Top Telemetry Bar -->
+    <div id="top-bar">
+      <div class="glass telemetry-strip">
+        <div class="brand-pill">
+          <div class="brand-dot"></div>
+          <div class="brand-title">Phase 9 Engineering</div>
+        </div>
+        <div class="t-metric">Renderer: <span class="t-val" id="stat-renderer">Init...</span></div>
+        <div class="t-metric">FPS: <span class="t-val" id="stat-fps">--</span></div>
+        <div class="t-metric">Frame: <span class="t-val" id="stat-ms">--ms</span></div>
+        <div class="t-metric">Draws: <span class="t-val" id="stat-draws">--</span></div>
+        <div class="t-metric">Tris: <span class="t-val" id="stat-tris">--</span></div>
+        <div class="t-metric">Pos: <span class="t-val" id="stat-pos">0.0, 0.0, 0.0</span></div>
+      </div>
+
+      <div class="scope-badge" title="Demonstration geometry verifies Phase 9 logic; re-run audits on the assembled Phase 6+7+8 production arena.">
+        SIMPLIFIED DEMO GEOMETRY — RE-RUN ON PRODUCTION ARENA
+      </div>
+
+      <div class="top-actions">
+        <button class="btn active" id="btn-mode-orbit">Orbit</button>
+        <button class="btn" id="btn-mode-play">3rd-Person Playtest</button>
+        <button class="btn" id="btn-toggle-inspector">Inspector</button>
+        <button class="btn amber" id="btn-clean-view">Clean (H)</button>
+      </div>
+    </div>
+
+    <!-- Right Tabbed Engineering Inspector -->
+    <div id="inspector" class="glass">
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="overview">Overview</button>
+        <button class="tab-btn" data-tab="audits">Audits</button>
+        <button class="tab-btn" data-tab="perf">Perf</button>
+        <button class="tab-btn" data-tab="manifest">Manifest</button>
+      </div>
+
+      <!-- TAB 1: OVERVIEW / OVERLAYS -->
+      <div class="tab-body active" id="tab-overview">
+        <div>
+          <div class="sec-title">Camera Presets</div>
+          <div class="grid-2">
+            <button class="btn" data-cam="overview">Overview</button>
+            <button class="btn" data-cam="bridge">Main Bridge</button>
+            <button class="btn" data-cam="gallery">Upper Gallery</button>
+            <button class="btn" data-cam="lower">Lower Floor</button>
+            <button class="btn red" data-cam="redBase">Red Base (-X)</button>
+            <button class="btn blue" data-cam="blueBase">Blue Base (+X)</button>
+            <button class="btn amber" id="btn-cam-playtest" style="grid-column: span 2;">Switch to 3rd-Person Playtest</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-title">Engineering Overlays &amp; Simulation</div>
+          <div class="grid-2">
+            <button class="btn" id="btn-ov-collision">Collision Wireframes</button>
+            <button class="btn active" id="btn-ov-navgraph">NavGraph Overlay</button>
+            <button class="btn" id="btn-ov-spawns">24 Spawn Markers</button>
+            <button class="btn active" id="btn-ov-bots">Demo Bots: ON</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-title">
+            <span>Quality Profile &amp; DPR</span>
+            <span id="profile-label" style="font-family:'JetBrains Mono',monospace;color:var(--amber);">MEDIUM</span>
+          </div>
+          <div class="grid-3" style="margin-bottom:6px;">
+            <button class="btn" data-profile="low">Low</button>
+            <button class="btn active" data-profile="medium">Medium</button>
+            <button class="btn" data-profile="high">High</button>
+          </div>
+          <div class="slider-row">
+            <span style="font-family:'JetBrains Mono',monospace;color:var(--text-dim);">DPR Cap</span>
+            <input id="dpr-slider" type="range" min="0.75" max="2.0" step="0.25" value="1.5" />
+            <span id="dpr-val" style="font-family:'JetBrains Mono',monospace;font-weight:700;min-width:34px;text-align:right;">1.50</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="sec-title">Live Playtest Recovery &amp; Stress Tools</div>
+          <div class="grid-2">
+            <button class="btn" id="btn-test-embed">Embed in Pillar</button>
+            <button class="btn" id="btn-test-oob">Test Out-of-Bounds</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: AUDITS -->
+      <div class="tab-body" id="tab-audits">
+        <div class="grid-2">
+          <button class="btn amber" id="btn-audit-all" style="grid-column: span 2;">Run All Phase 9 Audits</button>
+          <button class="btn" id="btn-audit-col">Collision &amp; Recovery</button>
+          <button class="btn" id="btn-audit-nav">Navigation &amp; 6 Routes</button>
+          <button class="btn" id="btn-audit-p8">Phase 8 &amp; Timing</button>
+          <button class="btn" id="btn-audit-gpu">WebGPU / WebGL2 Cert</button>
+        </div>
+
+        <div id="audit-summary-bar">
+          <span id="audit-scope-txt" style="color:var(--text-dim);">Ready to execute</span>
+          <span id="audit-score-txt" style="font-weight:800;color:var(--cyan);">-- / --</span>
+        </div>
+
+        <div id="audit-results"></div>
+      </div>
+
+      <!-- TAB 3: PERFORMANCE -->
+      <div class="tab-body" id="tab-perf">
+        <div>
+          <div class="sec-title">
+            <span>Frame Time Sparkline (Target 16.6ms)</span>
+            <span id="perf-avg-ms" style="font-family:'JetBrains Mono',monospace;color:var(--green);">-- ms</span>
+          </div>
+          <canvas id="sparkline-canvas" width="350" height="64"></canvas>
+        </div>
+
+        <div class="grid-2">
+          <div class="stat-card"><div class="stat-lbl">Draw Calls</div><div class="stat-num" id="perf-draws">--</div></div>
+          <div class="stat-card"><div class="stat-lbl">Triangles</div><div class="stat-num" id="perf-tris">--</div></div>
+          <div class="stat-card"><div class="stat-lbl">Est. Texture Mem</div><div class="stat-num" id="perf-texmb">-- MB</div></div>
+          <div class="stat-card"><div class="stat-lbl">Geometries</div><div class="stat-num" id="perf-geos">--</div></div>
+          <div class="stat-card"><div class="stat-lbl">Shared Materials</div><div class="stat-num" id="perf-mats">--</div></div>
+          <div class="stat-card"><div class="stat-lbl">Fixed Sim Tick</div><div class="stat-num" id="perf-simhz">60 Hz</div></div>
+        </div>
+
+        <div>
+          <div class="sec-title">Instancing, Culling &amp; Batching Advisor</div>
+          <div class="advice-box" id="perf-advisor">Analyzing scene graph...</div>
+        </div>
+      </div>
+
+      <!-- TAB 4: INTEGRATION MANIFEST -->
+      <div class="tab-body" id="tab-manifest">
+        <div class="row">
+          <button class="btn amber" id="btn-copy-manifest">Copy Manifest JSON</button>
+          <button class="btn" id="btn-check-singletons">Verify Singleton Guards</button>
+        </div>
+        <pre id="manifest-json"></pre>
+      </div>
+    </div>
+
+    <!-- Bottom Controls Bar -->
+    <div id="bottom-bar" class="glass">
+      <span id="hint-orbit">
+        <span class="kbd">Left Drag</span> Orbit &nbsp;·&nbsp;
+        <span class="kbd">Right Drag</span> Pan &nbsp;·&nbsp;
+        <span class="kbd">Scroll</span> Zoom &nbsp;·&nbsp;
+        <span class="kbd">H</span> Clean View
+      </span>
+      <span id="hint-play" style="display:none;">
+        <span class="kbd">WASD</span> Move &nbsp;·&nbsp;
+        <span class="kbd">Drag</span> Look &nbsp;·&nbsp;
+        <span class="kbd">Shift</span> Sprint &nbsp;·&nbsp;
+        <span class="kbd">Space</span> Jump / Double-Jump &nbsp;·&nbsp;
+        <span class="kbd">C</span> Roll &nbsp;·&nbsp;
+        <span class="kbd">E</span> Aerial Dash &nbsp;·&nbsp;
+        <span class="kbd">R</span> Reset Spawn
+      </span>
+    </div>
+  </div>
+
+  <!-- Mobile Landscape Touch Controls -->
+  <div id="mobile-controls">
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <div class="mobile-actions">
+      <button class="touch-btn rol" id="touch-roll">ROLL</button>
+      <button class="touch-btn dsh" id="touch-dash">DASH</button>
+      <button class="touch-btn jmp" id="touch-jump">JUMP</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // =========================================================================
+    // SECTION 1: REUSABLE PHASE 9 ENGINEERING & PERFORMANCE MODULE
+    // Completely decoupled from the Demo Viewer below.
+    // Exposed globally via `window.PHASE9_ENGINEERING` for Phase 10 integration.
+    // =========================================================================
+
+    // -------------------------------------------------------------------------
+    // 1.1 SINGLETON REGISTRY GUARD (Prevents duplicate renderers/loops/engines)
+    // -------------------------------------------------------------------------
+    window.__DUELIST_SINGLETONS__ = window.__DUELIST_SINGLETONS__ || {
+      renderer: null,
+      animationLoopId: null,
+      collisionRegistry: null,
+      matchController: null
+    };
+
+    function registerSingleton(key, instance) {
+      const store = window.__DUELIST_SINGLETONS__;
+      if (store[key] && store[key] !== instance) {
+        console.warn(`[PHASE9] Replacing existing singleton "${key}". Dispose old instance before mounting new one.`);
+      }
+      store[key] = instance;
+      return instance;
+    }
+
+    function releaseSingleton(key, instance) {
+      const store = window.__DUELIST_SINGLETONS__;
+      if (store[key] === instance) store[key] = null;
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.2 MASTER ARENA SPECIFICATIONS (`PHASE9_MASTER_SPEC`)
+    // -------------------------------------------------------------------------
+    const PHASE9_MASTER_SPEC = Object.freeze({
+      version: '9.0.0',
+      units: 'meters',
+      building: { width: 76, depth: 56, height: 21, halfW: 38, halfD: 28, wallThickness: 1.0 },
+      elevations: { ground: 0.0, bridge: 4.8, gallery: 9.6 },
+      platforms: {
+        groundFloor:  { id: 'floor_ground',  minX: -38, maxX: 38, minZ: -28, maxZ: 28, topY: 0.0, thickness: 1.0 },
+        centralBridge:{ id: 'floor_bridge',  minX: -23, maxX: 23, minZ: -4,  maxZ: 4,  topY: 4.8, thickness: 0.6 },
+        redPlatform:  { id: 'floor_red',     minX: -36, maxX: -23, minZ: -8, maxZ: 8,  topY: 4.8, thickness: 0.6 },
+        bluePlatform: { id: 'floor_blue',    minX:  23, maxX:  36, minZ: -8, maxZ: 8,  topY: 4.8, thickness: 0.6 },
+        upperGallery: { id: 'floor_gallery', minX: -33, maxX:  33, minZ: -24, maxZ: -18, topY: 9.6, thickness: 0.45 },
+        centralBalcony:{ id: 'floor_balcony',minX:  -7, maxX:   7, minZ: -18, maxZ: -15, topY: 9.6, thickness: 0.45 }
+      },
+      flags: {
+        red:  { x: -31, y: 4.8, z: 0 },
+        blue: { x:  31, y: 4.8, z: 0 }
+      },
+      staircases: [
+        // 6 Original Arena Staircases
+        { id: 'stair_red_front',    group: 'arena', side: 'red',  centerX: -30,   width: 3.6, startZ:  16.64, endZ:   8.0, startY: 0.0, endY: 4.8 },
+        { id: 'stair_blue_front',   group: 'arena', side: 'blue', centerX:  30,   width: 3.6, startZ:  16.64, endZ:   8.0, startY: 0.0, endY: 4.8 },
+        { id: 'stair_red_rear',     group: 'arena', side: 'red',  centerX: -30,   width: 3.6, startZ:  -9.36, endZ: -18.0, startY: 4.8, endY: 9.6, connector: { minZ: -9.36, maxZ: -8.0, topY: 4.8 } },
+        { id: 'stair_blue_rear',    group: 'arena', side: 'blue', centerX:  30,   width: 3.6, startZ:  -9.36, endZ: -18.0, startY: 4.8, endY: 9.6, connector: { minZ: -9.36, maxZ: -8.0, topY: 4.8 } },
+        { id: 'stair_red_central',  group: 'arena', side: 'red',  centerX: -12,   width: 3.6, startZ: -12.64, endZ:  -4.0, startY: 0.0, endY: 4.8 },
+        { id: 'stair_blue_central', group: 'arena', side: 'blue', centerX:  12,   width: 3.6, startZ: -12.64, endZ:  -4.0, startY: 0.0, endY: 4.8 },
+        // 4 Internal Spawn-Room Staircases
+        { id: 'spawn_red_stair_f',  group: 'spawn', side: 'red',  centerX: -47.4, width: 3.2, startZ:  16.64, endZ:   8.0, startY: 0.0, endY: 4.8 },
+        { id: 'spawn_red_stair_b',  group: 'spawn', side: 'red',  centerX: -47.4, width: 3.2, startZ: -16.64, endZ:  -8.0, startY: 0.0, endY: 4.8 },
+        { id: 'spawn_blue_stair_f', group: 'spawn', side: 'blue', centerX:  47.4, width: 3.2, startZ:  16.64, endZ:   8.0, startY: 0.0, endY: 4.8 },
+        { id: 'spawn_blue_stair_b', group: 'spawn', side: 'blue', centerX:  47.4, width: 3.2, startZ: -16.64, endZ:  -8.0, startY: 0.0, endY: 4.8 }
+      ],
+      cargo: [
+        { id: 'cargo_bridge_center', x:   0, y: 4.8, z:   0.0, w: 4.2, d: 2.2, h: 2.4, stacked: false },
+        { id: 'cargo_bridge_red',    x: -14, y: 4.8, z:   1.6, w: 2.6, d: 1.8, h: 1.3, stacked: false },
+        { id: 'cargo_bridge_blue',   x:  14, y: 4.8, z:   1.6, w: 2.6, d: 1.8, h: 1.3, stacked: false },
+        { id: 'cargo_ground_center', x:   0, y: 0.0, z:  12.5, w: 4.5, d: 3.2, h: 1.8, stacked: true, topW: 2.8, topD: 2.0, topH: 1.4 },
+        { id: 'cargo_ground_red',    x: -12, y: 0.0, z:  10.0, w: 3.2, d: 2.4, h: 1.8, stacked: false },
+        { id: 'cargo_ground_blue',   x:  12, y: 0.0, z:  10.0, w: 3.2, d: 2.4, h: 1.8, stacked: false },
+        { id: 'cargo_gallery_red',   x: -18, y: 9.6, z: -21.5, w: 2.8, d: 1.6, h: 1.4, stacked: false },
+        { id: 'cargo_gallery_blue',  x:  18, y: 9.6, z: -21.5, w: 2.8, d: 1.6, h: 1.4, stacked: false }
+      ],
+      entrances: [
+        { id: 'portal_red_base',      wall: 'west',  team: 'red',     x: -38, y: 4.8, z:   0, width: 6.0, height: 4.6, inPt: [-41.5, 4.8,   0], outPt: [-34.5, 4.8,   0] },
+        { id: 'portal_blue_base',     wall: 'east',  team: 'blue',    x:  38, y: 4.8, z:   0, width: 6.0, height: 4.6, inPt: [ 41.5, 4.8,   0], outPt: [ 34.5, 4.8,   0] },
+        { id: 'portal_red_flank_f',   wall: 'west',  team: 'red',     x: -38, y: 0.0, z:  14, width: 5.6, height: 4.4, inPt: [-41.5, 0.0,  14], outPt: [-34.5, 0.0,  14] },
+        { id: 'portal_red_flank_b',   wall: 'west',  team: 'red',     x: -38, y: 0.0, z: -14, width: 5.6, height: 4.4, inPt: [-41.5, 0.0, -14], outPt: [-34.5, 0.0, -14] },
+        { id: 'portal_blue_flank_f',  wall: 'east',  team: 'blue',    x:  38, y: 0.0, z:  14, width: 5.6, height: 4.4, inPt: [ 41.5, 0.0,  14], outPt: [ 34.5, 0.0,  14] },
+        { id: 'portal_blue_flank_b',  wall: 'east',  team: 'blue',    x:  38, y: 0.0, z: -14, width: 5.6, height: 4.4, inPt: [ 41.5, 0.0, -14], outPt: [ 34.5, 0.0, -14] },
+        { id: 'portal_upper_neutral', wall: 'north', team: 'neutral', x:   0, y: 9.6, z: -28, width: 5.6, height: 4.4, inPt: [  0.0, 9.6, -29.8], outPt: [  0.0, 9.6, -22.0] }
+      ],
+      windows: [
+        { id: 'win_left',   cx: -22, cy: 17.0, z: -28, w: 14.0, h: 4.6 },
+        { id: 'win_center', cx:   0, cy: 17.0, z: -28, w: 11.0, h: 4.6 },
+        { id: 'win_right',  cx:  22, cy: 17.0, z: -28, w: 14.0, h: 4.6 }
+      ],
+      spawnZones: {
+        red:  { team: 'red',  minX: -50.0, maxX: -38.1, minY: 0.0, maxY: 11.0, minZ: -18.5, maxZ: 18.5 },
+        blue: { team: 'blue', minX:  38.1, maxX:  50.0, minY: 0.0, maxY: 11.0, minZ: -18.5, maxZ: 18.5 }
+      },
+      spawns: [
+        // 12 Red Spawns (6 Upper Y=4.8, 6 Lower Y=0.0)
+        { id: 'red_u1', team: 'red', elevation: 4.8, x: -41.5, y: 4.8, z: -4.5, yaw: -Math.PI / 2 },
+        { id: 'red_u2', team: 'red', elevation: 4.8, x: -41.5, y: 4.8, z:  0.0, yaw: -Math.PI / 2 },
+        { id: 'red_u3', team: 'red', elevation: 4.8, x: -41.5, y: 4.8, z:  4.5, yaw: -Math.PI / 2 },
+        { id: 'red_u4', team: 'red', elevation: 4.8, x: -44.8, y: 4.8, z: -4.5, yaw: -Math.PI / 2 },
+        { id: 'red_u5', team: 'red', elevation: 4.8, x: -44.8, y: 4.8, z:  0.0, yaw: -Math.PI / 2 },
+        { id: 'red_u6', team: 'red', elevation: 4.8, x: -44.8, y: 4.8, z:  4.5, yaw: -Math.PI / 2 },
+        { id: 'red_l1', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z: -14.0, yaw: -Math.PI / 2 },
+        { id: 'red_l2', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z:  -4.0, yaw: -Math.PI / 2 },
+        { id: 'red_l3', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z:   4.0, yaw: -Math.PI / 2 },
+        { id: 'red_l4', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z:  14.0, yaw: -Math.PI / 2 },
+        { id: 'red_l5', team: 'red', elevation: 0.0, x: -44.5, y: 0.0, z: -14.0, yaw: -Math.PI / 2 },
+        { id: 'red_l6', team: 'red', elevation: 0.0, x: -44.5, y: 0.0, z:  14.0, yaw: -Math.PI / 2 },
+        // 12 Blue Spawns (6 Upper Y=4.8, 6 Lower Y=0.0)
+        { id: 'blue_u1', team: 'blue', elevation: 4.8, x: 41.5, y: 4.8, z: -4.5, yaw: Math.PI / 2 },
+        { id: 'blue_u2', team: 'blue', elevation: 4.8, x: 41.5, y: 4.8, z:  0.0, yaw: Math.PI / 2 },
+        { id: 'blue_u3', team: 'blue', elevation: 4.8, x: 41.5, y: 4.8, z:  4.5, yaw: Math.PI / 2 },
+        { id: 'blue_u4', team: 'blue', elevation: 4.8, x: 44.8, y: 4.8, z: -4.5, yaw: Math.PI / 2 },
+        { id: 'blue_u5', team: 'blue', elevation: 4.8, x: 44.8, y: 4.8, z:  0.0, yaw: Math.PI / 2 },
+        { id: 'blue_u6', team: 'blue', elevation: 4.8, x: 44.8, y: 4.8, z:  4.5, yaw: Math.PI / 2 },
+        { id: 'blue_l1', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z: -14.0, yaw: Math.PI / 2 },
+        { id: 'blue_l2', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z:  -4.0, yaw: Math.PI / 2 },
+        { id: 'blue_l3', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z:   4.0, yaw: Math.PI / 2 },
+        { id: 'blue_l4', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z:  14.0, yaw: Math.PI / 2 },
+        { id: 'blue_l5', team: 'blue', elevation: 0.0, x: 44.5, y: 0.0, z: -14.0, yaw: Math.PI / 2 },
+        { id: 'blue_l6', team: 'blue', elevation: 0.0, x: 44.5, y: 0.0, z:  14.0, yaw: Math.PI / 2 }
+      ],
+      capsule: { radius: 0.4, height: 1.8, stepUpHeight: 0.58, gravity: 22.0 },
+      classes: ['Warrior/Juggernaut', 'Duelist', 'Assassin', 'Healer']
+    });
+
+    // -------------------------------------------------------------------------
+    // 1.3 UNIFIED CAPSULE PHYSICS SOLVER & COLLISION VERIFIER
+    // Accepts any external registry: { floors, ramps, solids, ceilings, railings, windows, doorways, spawnZones }
+    // -------------------------------------------------------------------------
+    class CapsulePhysicsSolver {
+      constructor(registry, config = PHASE9_MASTER_SPEC.capsule) {
+        this.registry = registry;
+        this.config = { ...PHASE9_MASTER_SPEC.capsule, ...config };
+      }
+
+      _getAllSolids() {
+        const reg = this.registry;
+        return [
+          ...(reg.solids || []),
+          ...(reg.railings || []),
+          ...(reg.windows || [])
+        ];
+      }
+
+      isInsideZone(x, y, z, zone) {
+        if (!zone) return false;
+        return x >= zone.minX && x <= zone.maxX && y >= zone.minY && y <= zone.maxY && z >= zone.minZ && z <= zone.maxZ;
+      }
+
+      getOverlappingSolid(x, footY, z, radius = this.config.radius, height = this.config.height, footClearance = 0.22) {
+        const yMin = footY + footClearance;
+        const yMax = footY + height - 0.05;
+        const boxes = this._getAllSolids();
+        for (let i = 0; i < boxes.length; i++) {
+          const b = boxes[i];
+          if (yMax <= b.minY || yMin >= b.maxY) continue;
+          const cx = Math.max(b.minX, Math.min(x, b.maxX));
+          const cz = Math.max(b.minZ, Math.min(z, b.maxZ));
+          const dx = x - cx, dz = z - cz;
+          if (dx * dx + dz * dz < radius * radius - 1e-5) return b;
+        }
+        return null;
+      }
+
+      /**
+       * Elevation-aware support surface query.
+       * Strictly considers surfaces at or below `footY + maxStepUp` so overlapping floors
+       * (Ground Y=0 vs Bridge Y=4.8 vs Gallery Y=9.6) remain completely independent.
+       */
+      getSupportHeight(x, z, footY, radius = this.config.radius, maxStepUp = this.config.stepUpHeight) {
+        let bestY = -Infinity;
+        let supportId = null;
+        const margin = radius * 0.42;
+        const h = this.config.height;
+
+        const floors = this.registry.floors || [];
+        for (let i = 0; i < floors.length; i++) {
+          const f = floors[i];
+          if (x >= f.minX - margin && x <= f.maxX + margin && z >= f.minZ - margin && z <= f.maxZ + margin) {
+            if (f.topY <= footY + maxStepUp && f.topY > bestY) {
+              bestY = f.topY;
+              supportId = f.id;
+            }
+          }
+        }
+
+        const ramps = this.registry.ramps || [];
+        for (let i = 0; i < ramps.length; i++) {
+          const r = ramps[i];
+          const minZ = Math.min(r.startZ, r.endZ), maxZ = Math.max(r.startZ, r.endZ);
+          if (x >= r.minX - radius * 0.2 && x <= r.maxX + radius * 0.2 && z >= minZ - 0.22 && z <= maxZ + 0.22) {
+            const t = Math.max(0, Math.min(1, (z - r.startZ) / (r.endZ - r.startZ)));
+            const ry = r.startY + t * (r.endY - r.startY);
+            if (ry <= footY + maxStepUp + 0.20 && ry > bestY) {
+              bestY = ry;
+              supportId = r.id;
+            }
+          }
+        }
+
+        const solids = this.registry.solids || [];
+        for (let i = 0; i < solids.length; i++) {
+          const b = solids[i];
+          if (!b.landable) continue;
+          if (x >= b.minX - margin && x <= b.maxX + margin && z >= b.minZ - margin && z <= b.maxZ + margin) {
+            if (b.maxY <= footY + maxStepUp && b.maxY > bestY) {
+              if (!this.getOverlappingSolid(x, b.maxY + 0.04, z, radius * 0.72, h - 0.1, 0.05)) {
+                bestY = b.maxY;
+                supportId = b.id + '_roof';
+              }
+            }
+          }
+        }
+
+        return { y: bestY, id: supportId };
+      }
+
+      /**
+       * Swept capsule physics step supporting walk, sprint, consecutive rolls
+       * (zero backward snap), jump, double-jump, and aerial dash.
+       */
+      step(state, moveDX, moveDZ, dt, options = {}) {
+        const r = this.config.radius;
+        const h = this.config.height;
+        const team = options.team || null;
+        const carryingFlag = !!options.carryingFlag;
+        const boxes = this._getAllSolids();
+        const ceilings = this.registry.ceilings || [];
+        const spawnZones = this.registry.spawnZones || {};
+
+        const totalDist = Math.hypot(moveDX, moveDZ) + Math.abs(state.vy * dt);
+        const subSteps = Math.max(1, Math.min(12, Math.ceil(totalDist / 0.15)));
+        const subDt = dt / subSteps;
+        const sdx = moveDX / subSteps;
+        const sdz = moveDZ / subSteps;
+
+        let hitCeiling = false;
+        let hitSolid = null;
+        let hitSpawnBarrier = false;
+
+        for (let s = 0; s < subSteps; s++) {
+          const preX = state.x, preZ = state.z;
+          state.x += sdx;
+          state.z += sdz;
+
+          // Protected spawn zone enforcement (blocks enemies AND blocks flag carriers from entering own spawn)
+          if (team) {
+            const enemyZone = team === 'red' ? spawnZones.blue : spawnZones.red;
+            const ownZone = team === 'red' ? spawnZones.red : spawnZones.blue;
+            if (enemyZone && this.isInsideZone(state.x, state.y + 0.5, state.z, enemyZone)) {
+              state.x = team === 'red' ? enemyZone.minX - r - 0.02 : enemyZone.maxX + r + 0.02;
+              hitSpawnBarrier = true;
+            }
+            if (carryingFlag && ownZone && this.isInsideZone(state.x, state.y + 0.5, state.z, ownZone)) {
+              state.x = team === 'red' ? ownZone.maxX + r + 0.02 : ownZone.minX - r - 0.02;
+              hitSpawnBarrier = true;
+            }
+          }
+
+          // Iterative horizontal push-out against solid boxes, railings, and windows
+          for (let iter = 0; iter < 4; iter++) {
+            for (let i = 0; i < boxes.length; i++) {
+              const b = boxes[i];
+              if (state.y + h - 0.06 <= b.minY || state.y + 0.24 >= b.maxY) continue;
+              const cx = Math.max(b.minX, Math.min(state.x, b.maxX));
+              const cz = Math.max(b.minZ, Math.min(state.z, b.maxZ));
+              const dx = state.x - cx, dz = state.z - cz;
+              const d2 = dx * dx + dz * dz;
+              if (d2 < r * r) {
+                hitSolid = b;
+                if (d2 > 1e-8) {
+                  const dist = Math.sqrt(d2);
+                  const push = r - dist;
+                  state.x += (dx / dist) * push;
+                  state.z += (dz / dist) * push;
+                } else {
+                  const pL = Math.abs(state.x - b.minX), pR = Math.abs(b.maxX - state.x);
+                  const pB = Math.abs(state.z - b.minZ), pF = Math.abs(b.maxZ - state.z);
+                  const m = Math.min(pL, pR, pB, pF);
+                  if (m === pL) state.x = b.minX - r - 0.01;
+                  else if (m === pR) state.x = b.maxX + r + 0.01;
+                  else if (m === pB) state.z = b.minZ - r - 0.01;
+                  else state.z = b.maxZ + r + 0.01;
+                }
+              }
+            }
+          }
+
+          // Consecutive-roll anti-snap guard: never revert behind preX/preZ when no obstacle was hit
+          if (!hitSolid && !hitSpawnBarrier && state.isRolling) {
+            const dot = (state.x - preX) * sdx + (state.z - preZ) * sdz;
+            if (dot < -1e-6) { state.x = preX + sdx; state.z = preZ + sdz; }
+          }
+
+          // Swept vertical motion & ceiling/underside checks
+          const prevY = state.y;
+          state.vy -= this.config.gravity * subDt;
+          state.y += state.vy * subDt;
+
+          if (state.vy > 0) {
+            for (let i = 0; i < ceilings.length; i++) {
+              const c = ceilings[i];
+              if (state.x + r <= c.minX || state.x - r >= c.maxX || state.z + r <= c.minZ || state.z - r >= c.maxZ) continue;
+              if (prevY + h <= c.y + 0.12 && state.y + h > c.y) {
+                state.y = c.y - h; state.vy = 0; hitCeiling = true;
+              }
+            }
+            for (let i = 0; i < boxes.length; i++) {
+              const b = boxes[i];
+              if (state.x + r <= b.minX || state.x - r >= b.maxX || state.z + r <= b.minZ || state.z - r >= b.maxZ) continue;
+              if (prevY + h <= b.minY + 0.12 && state.y + h > b.minY) {
+                state.y = b.minY - h; state.vy = 0; hitCeiling = true;
+              }
+            }
+          }
+
+          // Elevation-aware floor / ramp / rooftop landing (NO invisible outside ground clamp!)
+          const sup = this.getSupportHeight(state.x, state.z, prevY, r);
+          if (sup.y > -Infinity) {
+            const snapTol = state.grounded ? 0.34 : 0.06;
+            if (state.y <= sup.y + snapTol && state.vy <= 0.12) {
+              state.y = sup.y;
+              state.vy = 0;
+              state.grounded = true;
+              state.jumpsRemaining = 2;
+              state.supportId = sup.id;
+            } else {
+              state.grounded = false;
+            }
+          } else {
+            state.grounded = false;
+          }
+        }
+
+        return { hitCeiling, hitSolid, hitSpawnBarrier };
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.4 AUTOMATIC SAFE RECOVERY SYSTEM (`SafeRecoverySystem`)
+    // Strictly preserves HP, cooldowns, ultimate charge, and respawn timers.
+    // -------------------------------------------------------------------------
+    class SafeRecoverySystem {
+      constructor(solver) {
+        this.solver = solver;
+      }
+
+      /**
+       * Inspects player state and recovers if embedded inside a solid or fallen out of bounds.
+       * Guarantees ZERO mutation to hp, cooldowns, ultCharge, or respawnTimer.
+       */
+      recoverIfNeeded(state, options = {}) {
+        const team = options.team || null;
+        const r = this.solver.config.radius;
+        const h = this.solver.config.height;
+        const spawnZones = this.solver.registry.spawnZones || {};
+        const enemyZone = team === 'red' ? spawnZones.blue : (team === 'blue' ? spawnZones.red : null);
+
+        const embedded = this.solver.getOverlappingSolid(state.x, state.y, state.z, r * 0.85, h, 0.22);
+        const inEnemy = enemyZone ? this.solver.isInsideZone(state.x, state.y + 0.5, state.z, enemyZone) : false;
+        const outOfBounds = state.y < -1.25 || Math.abs(state.x) > 52.0 || Math.abs(state.z) > 33.5;
+
+        if (!embedded && !inEnemy && !outOfBounds) {
+          return { recovered: false, reason: null, obstacleId: null };
+        }
+
+        const origY = Math.max(0, state.y);
+        const radii = [0.6, 1.15, 1.8, 2.6, 3.6, 4.8];
+        const angles = 16;
+
+        // Spiral search preserving current elevation band first
+        if (!outOfBounds) {
+          let best = null, bestDist = Infinity;
+          for (const rad of radii) {
+            for (let a = 0; a < angles; a++) {
+              const ang = (a / angles) * Math.PI * 2;
+              const cx = state.x + Math.cos(ang) * rad;
+              const cz = state.z + Math.sin(ang) * rad;
+              if (Math.abs(cx) > 49.0 || Math.abs(cz) > 30.0) continue;
+
+              const sup = this.solver.getSupportHeight(cx, cz, origY, r, 0.65);
+              if (sup.y === -Infinity) continue;
+              if (sup.y > origY + 0.65 || sup.y < origY - 1.2) continue;
+              if (enemyZone && this.solver.isInsideZone(cx, sup.y + 0.5, cz, enemyZone)) continue;
+              if (this.solver.getOverlappingSolid(cx, sup.y, cz, r + 0.05, h, 0.18)) continue;
+
+              const d = Math.hypot(cx - state.x, cz - state.z);
+              if (d < bestDist) {
+                bestDist = d;
+                best = { x: cx, y: sup.y, z: cz, supportId: sup.id };
+              }
+            }
+            if (best) break;
+          }
+
+          if (best) {
+            state.x = best.x; state.y = best.y; state.z = best.z;
+            state.vy = 0; state.grounded = true; state.supportId = best.supportId;
+            return {
+              recovered: true,
+              reason: embedded ? 'embedded_solid' : 'enemy_spawn_violation',
+              obstacleId: embedded ? embedded.id : 'enemy_spawn_zone',
+              to: best
+            };
+          }
+        }
+
+        // Verified fallback positions (explicitly checked for support & zero obstruction)
+        const fallbacks = [
+          team === 'blue' ? { x: 41.5, y: 4.8, z: 0 } : (team === 'red' ? { x: -41.5, y: 4.8, z: 0 } : { x: 0, y: 0.0, z: 21.5 }),
+          { x: 0, y: 0.0, z: 21.5 },
+          { x: -20, y: 0.0, z: 21.5 },
+          { x: 20, y: 0.0, z: 21.5 }
+        ];
+        for (const fb of fallbacks) {
+          if (enemyZone && this.solver.isInsideZone(fb.x, fb.y + 0.5, fb.z, enemyZone)) continue;
+          const sup = this.solver.getSupportHeight(fb.x, fb.z, fb.y, r, 0.5);
+          if (sup.y !== -Infinity && !this.solver.getOverlappingSolid(fb.x, sup.y, fb.z, r + 0.05, h, 0.18)) {
+            state.x = fb.x; state.y = sup.y; state.z = fb.z;
+            state.vy = 0; state.grounded = true; state.supportId = sup.id;
+            return {
+              recovered: true,
+              reason: outOfBounds ? 'out_of_bounds' : 'fallback_recovery',
+              obstacleId: embedded ? embedded.id : 'arena_void',
+              to: { x: fb.x, y: sup.y, z: fb.z }
+            };
+          }
+        }
+        return { recovered: false, reason: 'no_safe_spot', obstacleId: embedded?.id || null };
+      }
+
+      /**
+       * If a flag carrier falls out of bounds, returns the flag to the last valid supported
+       * drop coordinate (if supported & unobstructed) or safely resets it to its home pedestal.
+       */
+      handleOutOfBoundsFlagCarrier(carrierState, flagState, lastValidPos, homePos) {
+        if (!flagState) return { action: 'none' };
+        if (lastValidPos) {
+          const sup = this.solver.getSupportHeight(lastValidPos.x, lastValidPos.z, lastValidPos.y, 0.4, 0.5);
+          const blocked = this.solver.getOverlappingSolid(lastValidPos.x, sup.y, lastValidPos.z, 0.4, 1.8, 0.18);
+          if (sup.y > -Infinity && !blocked) {
+            flagState.state = 'DROPPED';
+            flagState.carrierId = null;
+            flagState.position = { x: lastValidPos.x, y: sup.y, z: lastValidPos.z };
+            carrierState.carryingFlag = null;
+            return { action: 'dropped_at_last_valid', position: { ...flagState.position } };
+          }
+        }
+        flagState.state = 'HOME';
+        flagState.carrierId = null;
+        flagState.position = { ...homePos };
+        carrierState.carryingFlag = null;
+        return { action: 'returned_home', position: { ...flagState.position } };
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.5 COLLISION & NAVIGATION CERTIFIER (`CollisionVerifier` + `NavigationCertifier`)
+    // -------------------------------------------------------------------------
+    class CollisionVerifier {
+      constructor(solver, recovery) {
+        this.solver = solver;
+        this.recovery = recovery;
+      }
+
+      runAll(scopeTag = 'DEMO GEOM') {
+        const res = [];
+        const dt = 1 / 60;
+        const mk = (x, y, z) => ({ x, y, z, vy: 0, grounded: true, jumpsRemaining: 2, isRolling: false, hp: 120, maxHp: 200, cooldowns: { roll: 0.8 }, ultCharge: 42, respawnTimer: 0 });
+
+        // 1. Overlapping floor independence (Ground Y=0 vs Bridge Y=4.8 vs Gallery Y=9.6)
+        {
+          const a0 = mk(0, 0.0, 0), a1 = mk(-8, 4.8, 0), a2 = mk(0, 9.6, -19.5);
+          for (let i = 0; i < 20; i++) { this.solver.step(a0, 0, 0, dt); this.solver.step(a1, 0, 0, dt); this.solver.step(a2, 0, 0, dt); }
+          const pass = Math.abs(a0.y) < 0.02 && Math.abs(a1.y - 4.8) < 0.02 && Math.abs(a2.y - 9.6) < 0.02;
+          res.push({ id: 'C1', name: 'Overlapping Floor Support Independence', pass, scope: scopeTag, detail: `L0=${a0.y.toFixed(2)}m, L1=${a1.y.toFixed(2)}m, L2=${a2.y.toFixed(2)}m` });
+        }
+
+        // 2. Solid platform underside & warehouse ceiling collision
+        {
+          const aUnder = mk(0, 0.0, 0); aUnder.vy = 14.5; aUnder.grounded = false;
+          let hitBridgeUnder = false, maxHeadUnder = 0;
+          for (let i = 0; i < 40; i++) {
+            if (this.solver.step(aUnder, 0, 0, dt).hitCeiling) hitBridgeUnder = true;
+            maxHeadUnder = Math.max(maxHeadUnder, aUnder.y + 1.8);
+          }
+          const aRoof = mk(0, 18.2, 0); aRoof.vy = 14.0; aRoof.grounded = false;
+          let hitRoof = false;
+          for (let i = 0; i < 30; i++) if (this.solver.step(aRoof, 0, 0, dt).hitCeiling) hitRoof = true;
+          const pass = hitBridgeUnder && maxHeadUnder <= 4.25 && hitRoof && (aRoof.y + 1.8) <= 21.05;
+          res.push({ id: 'C2', name: 'Platform Underside & Roof Ceiling', pass, scope: scopeTag, detail: `UnderHead=${maxHeadUnder.toFixed(2)}m<=4.20m | RoofHit=${hitRoof}` });
+        }
+
+        // 3. Walls, pillars, railings (jumpable 1.15m) & window barriers
+        {
+          const aPillar = mk(-9.0, 0.0, 3.35);
+          for (let i = 0; i < 70; i++) this.solver.step(aPillar, 6.0 * dt, 0, dt);
+          const pillarOk = aPillar.x < -6.8;
+
+          const aRailWalk = mk(0, 4.8, 2.5);
+          for (let i = 0; i < 60; i++) this.solver.step(aRailWalk, 0, 6.0 * dt, dt);
+          const railBlock = aRailWalk.z < 3.65;
+
+          const aRailJump = mk(0, 4.8, 3.0); aRailJump.vy = 9.2; aRailJump.grounded = false;
+          for (let i = 0; i < 45; i++) this.solver.step(aRailJump, 0, 5.2 * dt, dt);
+          const railJumpOver = aRailJump.z > 4.25;
+
+          const aWin = mk(-22, 16.0, -26.0); aWin.grounded = false;
+          for (let i = 0; i < 40; i++) { aWin.vy = 0; this.solver.step(aWin, 0, -6.0 * dt, dt); }
+          const winBlock = aWin.z > -27.75;
+
+          const pass = pillarOk && railBlock && railJumpOver && winBlock;
+          res.push({ id: 'C3', name: 'Pillars, Jumpable Railings & Window Barriers', pass, scope: scopeTag, detail: `Pillar=${pillarOk} RailBlk=${railBlock} RailJmp=${railJumpOver} WinBlk=${winBlock}` });
+        }
+
+        // 4. Consecutive rolls (zero backward snapping) + Double-jump + Aerial dash
+        {
+          const a = mk(-20, 0.0, 21.5); a.isRolling = true;
+          let snappedBack = false;
+          let prevX = a.x;
+          for (let roll = 0; roll < 2; roll++) {
+            for (let i = 0; i < 20; i++) {
+              this.solver.step(a, 13.5 * dt, 0, dt);
+              if (a.x < prevX - 1e-4) snappedBack = true;
+              prevX = a.x;
+            }
+          }
+          a.isRolling = false;
+          // Double jump height test
+          a.vy = 9.0; a.grounded = false; a.jumpsRemaining = 1;
+          for (let i = 0; i < 18; i++) this.solver.step(a, 0, 0, dt);
+          const midAirY = a.y;
+          a.vy = 9.0; a.jumpsRemaining = 0; // 2nd jump
+          let peakY = midAirY;
+          for (let i = 0; i < 25; i++) { this.solver.step(a, 0, 0, dt); peakY = Math.max(peakY, a.y); }
+          const pass = !snappedBack && a.x > -12.0 && peakY > 3.2;
+          res.push({ id: 'C4', name: 'Consecutive Rolls (No Snap) & Double-Jump', pass, scope: scopeTag, detail: `SnapBack=${snappedBack} RollX=${a.x.toFixed(1)}m Peak2ndJmp=${peakY.toFixed(2)}m` });
+        }
+
+        // 5. Staircase underside blocking
+        {
+          const a = mk(-30, 0.0, 6.0);
+          for (let i = 0; i < 80; i++) this.solver.step(a, 0, 5.5 * dt, dt);
+          const pass = a.z < 8.6;
+          res.push({ id: 'C5', name: 'Staircase Underside Collision', pass, scope: scopeTag, detail: `Stopped under front stair @ Z=${a.z.toFixed(2)}m` });
+        }
+
+        // 6. Embedded recovery + strict non-cheat invariant (HP/cooldowns/ult unchanged)
+        {
+          const a = mk(-6.0, 0.2, 3.35);
+          const snapBefore = { hp: a.hp, cd: a.cooldowns.roll, ult: a.ultCharge, rt: a.respawnTimer };
+          const rec = this.recovery.recoverIfNeeded(a, { team: 'red' });
+          const free = !this.solver.getOverlappingSolid(a.x, a.y, a.z);
+          const invariantOk = a.hp === snapBefore.hp && a.cooldowns.roll === snapBefore.cd && a.ultCharge === snapBefore.ult && a.respawnTimer === snapBefore.rt;
+          const pass = rec.recovered && free && invariantOk && a.y < 0.6;
+          res.push({ id: 'C6', name: 'Safe Recovery & Non-Cheat Invariants', pass, scope: scopeTag, detail: `Obstacle=${rec.obstacleId} -> (${a.x.toFixed(1)},${a.y.toFixed(1)},${a.z.toFixed(1)}) Invariants=${invariantOk}` });
+        }
+
+        // 7. Out-of-bounds carrier flag return (no invisible outside ground plane)
+        {
+          const a = mk(58.0, 0.0, 42.0); a.grounded = false; a.carryingFlag = 'blue';
+          for (let i = 0; i < 40; i++) this.solver.step(a, 0, 0, dt);
+          const fellBelow = a.y < -1.5; // Proves no invisible ground plane exists outside arena
+          const flagState = { state: 'CARRIED', carrierId: 'p1', position: { x: a.x, y: a.y, z: a.z } };
+          const fRes = this.recovery.handleOutOfBoundsFlagCarrier(a, flagState, { x: 10, y: 4.8, z: 0 }, PHASE9_MASTER_SPEC.flags.blue);
+          const pass = fellBelow && fRes.action === 'dropped_at_last_valid' && flagState.state === 'DROPPED' && Math.abs(flagState.position.y - 4.8) < 0.05;
+          res.push({ id: 'C7', name: 'No Invisible Void Floor & OOB Flag Return', pass, scope: scopeTag, detail: `VoidY=${a.y.toFixed(1)}m | Flag=${fRes.action} @ Y=${flagState.position.y.toFixed(1)}m` });
+        }
+
+        return res;
+      }
+    }
+
+    class NavigationCertifier {
+      constructor(solver) {
+        this.solver = solver;
+      }
+
+      _walkSegment(agent, tx, tz, speed = 7.8, maxSteps = 950, team = null) {
+        const dt = 1 / 60;
+        let blocker = null, minY = agent.y, maxY = agent.y;
+        for (let i = 0; i < maxSteps; i++) {
+          const dx = tx - agent.x, dz = tz - agent.z;
+          const dist = Math.hypot(dx, dz);
+          if (dist < 0.28) break;
+          const step = Math.min(dist, speed * dt);
+          const r = this.solver.step(agent, (dx / dist) * step, (dz / dist) * step, dt, { team });
+          if (r.hitSolid) blocker = r.hitSolid.id;
+          minY = Math.min(minY, agent.y); maxY = Math.max(maxY, agent.y);
+        }
+        const rem = Math.hypot(tx - agent.x, tz - agent.z);
+        return { reached: rem < 0.48, finalX: agent.x, finalY: agent.y, finalZ: agent.z, minY, maxY, blocker };
+      }
+
+      _walkWaypoints(sx, sy, sz, waypoints, speed = 8.2, team = null) {
+        const agent = { x: sx, y: sy, z: sz, vy: 0, grounded: true, jumpsRemaining: 2 };
+        const visitedY = [sy];
+        for (const [tx, tz] of waypoints) {
+          const r = this._walkSegment(agent, tx, tz, speed, 900, team);
+          visitedY.push(agent.y);
+          if (!r.reached) {
+            return { ok: false, failCoord: `(${agent.x.toFixed(2)}, ${agent.y.toFixed(2)}, ${agent.z.toFixed(2)})`, target: `(${tx}, ${tz})`, blocker: r.blocker || 'unreached_gap', visitedY };
+          }
+        }
+        return { ok: true, finalY: agent.y, visitedY };
+      }
+
+      runAll(scopeTag = 'DEMO GEOM') {
+        const res = [];
+        const dt = 1 / 60;
+
+        // N1: All 24 individual spawn positions
+        {
+          let ok = 0, failInfo = '';
+          for (const sp of PHASE9_MASTER_SPEC.spawns) {
+            const sup = this.solver.getSupportHeight(sp.x, sp.z, sp.y);
+            const blk = this.solver.getOverlappingSolid(sp.x, sp.y, sp.z);
+            if (Math.abs(sup.y - sp.y) < 0.05 && !blk) ok++;
+            else if (!failInfo) failInfo = `${sp.id} @ (${sp.x},${sp.y},${sp.z}) blk=${blk?.id || 'no_floor'}`;
+          }
+          res.push({ id: 'N1', name: 'All 24 Individual Spawn Locations', pass: ok === 24, scope: scopeTag, detail: ok === 24 ? '24/24 supported & unobstructed' : `${ok}/24 | Fail: ${failInfo}` });
+        }
+
+        // N2: All 10 staircases (6 arena + 4 internal spawn) in both directions
+        {
+          let ok = 0, failInfo = '';
+          for (const st of PHASE9_MASTER_SPEC.staircases) {
+            const dZ = Math.sign(st.endZ - st.startZ);
+            const up = this._walkWaypoints(st.centerX, st.startY, st.startZ - dZ * 0.55, [[st.centerX, st.endZ + dZ * 0.65]], 6.0);
+            const dn = this._walkWaypoints(st.centerX, st.endY, st.endZ + dZ * 0.65, [[st.centerX, st.startZ - dZ * 0.55]], 6.0);
+            if (up.ok && dn.ok && Math.abs(up.finalY - st.endY) < 0.1 && Math.abs(dn.finalY - st.startY) < 0.1) ok++;
+            else if (!failInfo) failInfo = `${st.id} ${!up.ok ? up.failCoord + ' blk=' + up.blocker : dn.failCoord + ' blk=' + dn.blocker}`;
+          }
+          res.push({ id: 'N2', name: 'All 10 Staircases (Bidirectional)', pass: ok === 10, scope: scopeTag, detail: ok === 10 ? '10/10 stairs (20 directions) verified' : `${ok}/10 | Fail: ${failInfo}` });
+        }
+
+        // N3: All 7 original industrial entrances & spawn exits
+        {
+          let ok = 0, failInfo = '';
+          for (const ent of PHASE9_MASTER_SPEC.entrances) {
+            const team = ent.team === 'neutral' ? null : ent.team;
+            const r = this._walkWaypoints(ent.inPt[0], ent.inPt[1], ent.inPt[2], [[ent.outPt[0], ent.outPt[2]]], 7.0, team);
+            if (r.ok) ok++;
+            else if (!failInfo) failInfo = `${ent.id} @ ${r.failCoord} blk=${r.blocker}`;
+          }
+          res.push({ id: 'N3', name: 'All 7 Industrial Entrances & Spawn Exits', pass: ok === 7, scope: scopeTag, detail: ok === 7 ? '7/7 portals traversed cleanly' : `${ok}/7 | Fail: ${failInfo}` });
+        }
+
+        // N4: All 8 cargo containers (solid collision + rooftop landing)
+        {
+          let colOk = 0, roofOk = 0, failInfo = '';
+          for (const c of PHASE9_MASTER_SPEC.cargo) {
+            const aCol = { x: c.x - c.w * 0.5 - 1.3, y: c.y, z: c.z, vy: 0, grounded: true };
+            for (let i = 0; i < 60; i++) this.solver.step(aCol, 5.0 * dt, 0, dt);
+            if (aCol.x < c.x - c.w * 0.5 - 0.25) colOk++; else failInfo = `${c.id} pass-through`;
+
+            const topY = c.stacked ? c.y + c.h + c.topH : c.y + c.h;
+            const aRoof = { x: c.x, y: topY + 1.1, z: c.z, vy: 0, grounded: false };
+            for (let i = 0; i < 55; i++) this.solver.step(aRoof, 0, 0, dt);
+            if (aRoof.grounded && Math.abs(aRoof.y - topY) < 0.05) roofOk++; else failInfo = `${c.id} roof Y=${aRoof.y.toFixed(2)}`;
+          }
+          res.push({ id: 'N4', name: 'All 8 Cargo Containers (Solid + Rooftops)', pass: colOk === 8 && roofOk === 8, scope: scopeTag, detail: `Solid=${colOk}/8, Rooftops=${roofOk}/8 ${failInfo}` });
+        }
+
+        // N5: Ground, Bridge & Upper Gallery circulation
+        {
+          const gLoop = this._walkWaypoints(-34.5, 0.0, 21.5, [[34.5, 21.5], [34.5, -15.5], [-34.5, -15.5], [-34.5, 21.5]], 9.5);
+          const bSpan = this._walkWaypoints(-22, 4.8, -2.4, [[22, -2.4], [22, 2.7], [-22, 2.7]], 8.5);
+          const uSpan = this._walkWaypoints(-31, 9.6, -19.5, [[31, -19.5], [0, -19.5], [0, -16.2]], 8.5);
+          const pass = gLoop.ok && bSpan.ok && uSpan.ok;
+          res.push({ id: 'N5', name: 'Ground, Bridge & Upper Gallery Circulation', pass, scope: scopeTag, detail: pass ? 'All 3 elevation loops clear' : `G=${gLoop.ok} B=${bSpan.ok} U=${uSpan.ok}` });
+        }
+
+        // N6–N11: All 6 Complete Flag-to-Flag Return Journeys (exact flag coords + elevation checks)
+        const routes = [
+          {
+            id: 'N6', name: 'Flag Route: Red -> Blue (Main Bridge)',
+            start: [-31, 4.8, 0], wp: [[-22, -2.4], [22, -2.4], [31, 0]], reqY: 4.8
+          },
+          {
+            id: 'N7', name: 'Flag Route: Blue -> Red (Main Bridge)',
+            start: [31, 4.8, 0], wp: [[22, -2.4], [-22, -2.4], [-31, 0]], reqY: 4.8
+          },
+          {
+            id: 'N8', name: 'Flag Route: Red -> Blue (Upper Gallery)',
+            start: [-31, 4.8, 0], wp: [[-30, -8.5], [-30, -19.5], [30, -19.5], [30, -8.5], [31, 0]], reqY: 9.6
+          },
+          {
+            id: 'N9', name: 'Flag Route: Blue -> Red (Upper Gallery)',
+            start: [31, 4.8, 0], wp: [[30, -8.5], [30, -19.5], [-30, -19.5], [-30, -8.5], [-31, 0]], reqY: 9.6
+          },
+          {
+            id: 'N10', name: 'Flag Route: Red -> Blue (Lower Combat Floor)',
+            start: [-31, 4.8, 0], wp: [[-30, 7.5], [-30, 17.5], [-30, 21.5], [30, 21.5], [30, 17.5], [30, 7.5], [31, 0]], reqY: 0.0
+          },
+          {
+            id: 'N11', name: 'Flag Route: Blue -> Red (Lower Combat Floor)',
+            start: [31, 4.8, 0], wp: [[30, 7.5], [30, 17.5], [30, 21.5], [-30, 21.5], [-30, 17.5], [-30, 7.5], [-31, 0]], reqY: 0.0
+          }
+        ];
+
+        for (const rt of routes) {
+          const r = this._walkWaypoints(rt.start[0], rt.start[1], rt.start[2], rt.wp, 8.5);
+          const hitReqElev = r.visitedY.some((y) => Math.abs(y - rt.reqY) < 0.12);
+          const endedAtFlagY = r.ok && Math.abs(r.finalY - 4.8) < 0.08;
+          const pass = r.ok && hitReqElev && endedAtFlagY;
+          res.push({
+            id: rt.id, name: rt.name, pass, scope: scopeTag,
+            detail: pass ? `Reached target @ Y=${r.finalY.toFixed(2)}m (verified Y=${rt.reqY}m)` : `Fail @ ${r.failCoord} blk=${r.blocker}`
+          });
+        }
+
+        return res;
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.6 PHASE 8 GAMEPLAY HARDENING (`HardenedCTFValidator` & `Phase8SecurityPatch`)
+    // Fixes blocked-capture emission & all multiplayer/authority vulnerabilities.
+    // -------------------------------------------------------------------------
+    class HardenedCTFValidator {
+      constructor(spec = PHASE9_MASTER_SPEC) {
+        this.spec = spec;
+        this.validTeams = new Set(['red', 'blue']);
+        this.validPhases = new Set(['IDLE', 'PREP', 'COUNTDOWN', 'ACTIVE', 'OVERTIME', 'ENDED']);
+        this.validClasses = new Set(spec.classes);
+      }
+
+      /** Fixes Phase 8 Test #3: deterministically emits FLAG_CAPTURE_BLOCKED when own flag is away. */
+      validateCaptureRequest(state, playerId, emitFn) {
+        if (state.phase !== 'ACTIVE' && state.phase !== 'OVERTIME') {
+          return { allowed: false, reason: 'MATCH_NOT_ACTIVE' };
+        }
+        const p = state.players.get(playerId);
+        if (!p || !p.alive) return { allowed: false, reason: 'INVALID_CARRIER' };
+        const enemyTeam = p.team === 'red' ? 'blue' : 'red';
+        const enemyFlag = state.flags[enemyTeam];
+        const ownFlag = state.flags[p.team];
+
+        if (p.carryingFlag !== enemyTeam || enemyFlag.carrierId !== p.id) {
+          return { allowed: false, reason: 'NOT_AUTHORITATIVE_CARRIER' };
+        }
+        const home = this.spec.flags[p.team];
+        const distXZ = Math.hypot(p.x - home.x, p.z - home.z);
+        const distY = Math.abs(p.y - home.y);
+        if (distXZ > 2.4 || distY > 1.8) {
+          return { allowed: false, reason: 'OUT_OF_CAPTURE_RANGE' };
+        }
+        if (ownFlag.state !== 'HOME') {
+          const payload = {
+            event: 'FLAG_CAPTURE_BLOCKED',
+            reason: 'FRIENDLY_FLAG_NOT_HOME',
+            team: p.team,
+            carrierId: p.id,
+            ownFlagState: ownFlag.state
+          };
+          if (typeof emitFn === 'function') emitFn('FLAG_CAPTURE_BLOCKED', payload);
+          return { allowed: false, reason: 'FRIENDLY_FLAG_NOT_HOME', payload };
+        }
+        return { allowed: true, reason: 'VALID_CAPTURE' };
+      }
+
+      /** Prevents flag carriers from entering invulnerable staging/spawn rooms & blocks enemies. */
+      canEnterSpawnZone(player, targetZoneTeam) {
+        if (!player || !player.alive) return false;
+        if (player.team !== targetZoneTeam) return false;
+        if (player.carryingFlag !== null) return false;
+        return true;
+      }
+
+      /** Prevents class switching from restoring HP during active combat (preserves production stats). */
+      applySafeClassSwitch(player, newClassName, productionStatsMap, isCombatActive) {
+        if (!this.validClasses.has(newClassName)) return { ok: false, reason: 'INVALID_CLASS' };
+        const nextStats = productionStatsMap[newClassName];
+        if (!nextStats || !Number.isFinite(nextStats.maxHp)) return { ok: false, reason: 'MISSING_PROD_STATS' };
+        const prevHp = player.hp;
+        const prevMax = Math.max(1, player.maxHp);
+        player.className = newClassName;
+        player.maxHp = nextStats.maxHp;
+        if (isCombatActive) {
+          // Never heal above previous HP or previous HP ratio during active combat
+          const scaled = Math.floor((prevHp / prevMax) * nextStats.maxHp);
+          player.hp = Math.min(prevHp, scaled, nextStats.maxHp);
+        } else {
+          player.hp = nextStats.maxHp;
+        }
+        return { ok: true, hp: player.hp, maxHp: player.maxHp };
+      }
+
+      /** Rejects NaN, <=0, Infinity, or non-numeric damage values. */
+      validateDamage(amount) {
+        if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0 || amount > 10000) {
+          return { valid: false, reason: 'INVALID_DAMAGE_VALUE' };
+        }
+        return { valid: true, amount };
+      }
+
+      /** Prevents unauthorized respawning before death or before respawn timer expires. */
+      canAuthorizeRespawn(player) {
+        if (!player) return false;
+        return !player.alive && player.respawnTimer <= 0;
+      }
+
+      /** Prevents duplicate player registration from orphaning a carried flag. */
+      safeRegisterPlayer(state, playerObj) {
+        const existing = state.players.get(playerObj.id);
+        if (existing) {
+          // Preserve existing flag possession & live state instead of overwriting/orphaning
+          existing.name = playerObj.name || existing.name;
+          return { registered: false, reused: true, player: existing };
+        }
+        state.players.set(playerObj.id, playerObj);
+        return { registered: true, reused: false, player: playerObj };
+      }
+
+      /** Safely drops or returns carried flag when a carrier disconnects. */
+      handleCarrierDisconnect(state, playerId, recoverySystem, lastValidPos) {
+        const p = state.players.get(playerId);
+        if (!p) return { handled: false };
+        let flagOutcome = null;
+        if (p.carryingFlag) {
+          const flag = state.flags[p.carryingFlag];
+          const home = this.spec.flags[p.carryingFlag];
+          flagOutcome = recoverySystem.handleOutOfBoundsFlagCarrier(p, flag, lastValidPos, home);
+        }
+        p.disconnected = true;
+        return { handled: true, flagOutcome };
+      }
+
+      /** Reconnects a player cleanly without duplicating flag ownership. */
+      handlePlayerReconnect(state, playerId) {
+        const p = state.players.get(playerId);
+        if (!p) return { reconnected: false };
+        p.disconnected = false;
+        p.carryingFlag = null;
+        return { reconnected: true, player: p };
+      }
+
+      /** Validates incoming multiplayer snapshots (schema, finite coords, valid teams/phases). */
+      validateSnapshot(snap) {
+        if (!snap || typeof snap !== 'object') return { valid: false, reason: 'NULL_SNAPSHOT' };
+        if (!this.validPhases.has(snap.phase)) return { valid: false, reason: 'INVALID_PHASE' };
+        if (!snap.scores || !Number.isInteger(snap.scores.red) || !Number.isInteger(snap.scores.blue) || snap.scores.red < 0 || snap.scores.blue < 0) {
+          return { valid: false, reason: 'INVALID_SCORES' };
+        }
+        if (!snap.flags || !snap.flags.red || !snap.flags.blue) return { valid: false, reason: 'MISSING_FLAGS' };
+        for (const t of ['red', 'blue']) {
+          const pos = snap.flags[t].position;
+          if (!pos || !Number.isFinite(pos.x) || !Number.isFinite(pos.y) || !Number.isFinite(pos.z)) {
+            return { valid: false, reason: `NON_FINITE_FLAG_${t.toUpperCase()}` };
+          }
+        }
+        if (!Array.isArray(snap.players)) return { valid: false, reason: 'INVALID_PLAYERS_ARRAY' };
+        for (const p of snap.players) {
+          if (!this.validTeams.has(p.team) || !Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) {
+            return { valid: false, reason: `INVALID_PLAYER_${p.id}` };
+          }
+        }
+        return { valid: true };
+      }
+    }
+
+    const Phase8SecurityPatch = {
+      /** Wraps an existing Phase 8 CTFGameplayEngine instance with Phase 9 server-authoritative guards. */
+      apply(engine, recoverySystem) {
+        const validator = new HardenedCTFValidator();
+        engine._phase9Validator = validator;
+        return validator;
+      },
+
+      runAuditSuite(recoverySystem) {
+        const v = new HardenedCTFValidator();
+        const res = [];
+        const prodStats = {
+          'Warrior/Juggernaut': { maxHp: 250 },
+          'Duelist': { maxHp: 175 },
+          'Assassin': { maxHp: 130 },
+          'Healer': { maxHp: 160 }
+        };
+
+        // P8-1: Blocked-Capture Notification Fix
+        {
+          let emitted = null;
+          const state = {
+            phase: 'ACTIVE',
+            flags: {
+              red:  { state: 'CARRIED', carrierId: 'b1', position: { x: 0, y: 4.8, z: 0 } },
+              blue: { state: 'CARRIED', carrierId: 'r1', position: { x: -31, y: 4.8, z: 0 } }
+            },
+            players: new Map([['r1', { id: 'r1', team: 'red', alive: true, x: -31, y: 4.8, z: 0, carryingFlag: 'blue' }]])
+          };
+          const chk = v.validateCaptureRequest(state, 'r1', (ev, pl) => { emitted = { ev, pl }; });
+          const pass = !chk.allowed && emitted?.ev === 'FLAG_CAPTURE_BLOCKED' && emitted?.pl?.reason === 'FRIENDLY_FLAG_NOT_HOME';
+          res.push({ id: 'P8-1', name: 'Fix: FLAG_CAPTURE_BLOCKED Notification', pass, scope: 'UNIT', detail: `Event=${emitted?.ev} Reason=${emitted?.pl?.reason}` });
+        }
+
+        // P8-2: Flag Carrier Blocked from Own Spawn Room
+        {
+          const carrier = { id: 'r1', team: 'red', alive: true, carryingFlag: 'blue' };
+          const normal  = { id: 'r2', team: 'red', alive: true, carryingFlag: null };
+          const pass = !v.canEnterSpawnZone(carrier, 'red') && v.canEnterSpawnZone(normal, 'red') && !v.canEnterSpawnZone(normal, 'blue');
+          res.push({ id: 'P8-2', name: 'Block Flag Carriers from Invulnerable Spawn', pass, scope: 'UNIT', detail: `CarrierBlocked=${!v.canEnterSpawnZone(carrier,'red')} NormalAllowed=${v.canEnterSpawnZone(normal,'red')}` });
+        }
+
+        // P8-3: Class Switch Cannot Restore HP in Active Combat
+        {
+          const p = { id: 'r1', className: 'Duelist', hp: 50, maxHp: 175 };
+          const out = v.applySafeClassSwitch(p, 'Warrior/Juggernaut', prodStats, true);
+          const pass = out.ok && p.hp <= 50 && p.maxHp === 250;
+          res.push({ id: 'P8-3', name: 'No HP Restore on In-Combat Class Switch', pass, scope: 'UNIT', detail: `50/175 -> ${p.hp}/${p.maxHp} (No free heal)` });
+        }
+
+        // P8-4: Disconnect/Reconnect Carrier + Duplicate Registration Guard
+        {
+          const state = {
+            flags: { blue: { state: 'CARRIED', carrierId: 'r1', position: { x: 8, y: 4.8, z: 0 } } },
+            players: new Map([['r1', { id: 'r1', name: 'Red1', team: 'red', carryingFlag: 'blue', alive: true }]])
+          };
+          const dup = v.safeRegisterPlayer(state, { id: 'r1', name: 'Red1Dup', team: 'red', carryingFlag: null });
+          const keptFlag = dup.reused && state.players.get('r1').carryingFlag === 'blue';
+          const dc = v.handleCarrierDisconnect(state, 'r1', recoverySystem, { x: 8, y: 4.8, z: 0 });
+          const rc = v.handlePlayerReconnect(state, 'r1');
+          const pass = keptFlag && dc.handled && state.flags.blue.state === 'DROPPED' && rc.reconnected && state.players.get('r1').carryingFlag === null;
+          res.push({ id: 'P8-4', name: 'Carrier Disconnect/Reconnect & Duplicate Guard', pass, scope: 'UNIT', detail: `DupProtected=${keptFlag} DropOnDC=${state.flags.blue.state} ReconnectOK=${rc.reconnected}` });
+        }
+
+        // P8-5: Damage Validation, Unauthorized Respawn & Snapshot Validation
+        {
+          const dmgBad = !v.validateDamage(-10).valid && !v.validateDamage(NaN).valid && !v.validateDamage(Infinity).valid && !v.validateDamage('50').valid;
+          const dmgOk  = v.validateDamage(45).valid;
+          const respBad = !v.canAuthorizeRespawn({ alive: true, respawnTimer: 0 }) && !v.canAuthorizeRespawn({ alive: false, respawnTimer: 2.5 });
+          const respOk  = v.canAuthorizeRespawn({ alive: false, respawnTimer: 0 });
+          const snapBad = !v.validateSnapshot({ phase: 'HACKED', scores: { red: -1, blue: 0 }, flags: {}, players: [] }).valid;
+          const snapOk  = v.validateSnapshot({ phase: 'ACTIVE', scores: { red: 1, blue: 2 }, flags: { red: { position: { x: -31, y: 4.8, z: 0 } }, blue: { position: { x: 31, y: 4.8, z: 0 } } }, players: [{ id: 'p1', team: 'red', x: 0, y: 0, z: 0 }] }).valid;
+          const pass = dmgBad && dmgOk && respBad && respOk && snapBad && snapOk;
+          res.push({ id: 'P8-5', name: 'Damage, Respawn & Snapshot Authority Guards', pass, scope: 'UNIT', detail: `DmgGuard=${dmgBad&&dmgOk} RespGuard=${respBad&&respOk} SnapGuard=${snapBad&&snapOk}` });
+        }
+
+        return res;
+      }
+    };
+
+    // -------------------------------------------------------------------------
+    // 1.7 EXACT MATCH PREPARATION TIMING (`MatchTimingController`)
+    // 30.0s PREP + 5.0s COUNTDOWN (5,4,3,2,1) -> FIGHT! (ACTIVE) = exact 35.000s
+    // Preserves fractional carry-over time across phase boundaries.
+    // -------------------------------------------------------------------------
+    class MatchTimingController {
+      constructor(prepSec = 30.0, countdownSec = 5.0) {
+        this.prepDuration = prepSec;
+        this.countdownDuration = countdownSec;
+        this.reset();
+      }
+
+      reset() {
+        this.phase = 'IDLE';
+        this.elapsed = 0.0;
+        this.prepRemaining = this.prepDuration;
+        this.countdownRemaining = this.countdownDuration;
+        this.emittedDigits = [];
+        this.activeAtSec = null;
+        this.combatEnabled = false;
+      }
+
+      start() {
+        this.reset();
+        this.phase = 'PREP';
+      }
+
+      step(dt) {
+        if (this.phase === 'IDLE' || this.phase === 'ACTIVE' || dt <= 0) return;
+        this.elapsed += dt;
+        let remDt = dt;
+
+        if (this.phase === 'PREP') {
+          if (remDt < this.prepRemaining - 1e-12) {
+            this.prepRemaining -= remDt;
+            return;
+          }
+          // Preserve exact fractional carry-over into COUNTDOWN
+          remDt -= this.prepRemaining;
+          this.prepRemaining = 0;
+          this.phase = 'COUNTDOWN';
+        }
+
+        if (this.phase === 'COUNTDOWN') {
+          const prevDigit = Math.ceil(this.countdownRemaining);
+          if (remDt < this.countdownRemaining - 1e-12) {
+            this.countdownRemaining -= remDt;
+            const curDigit = Math.ceil(this.countdownRemaining);
+            for (let d = prevDigit; d >= curDigit; d--) {
+              if (d >= 1 && d <= 5 && !this.emittedDigits.includes(d)) this.emittedDigits.push(d);
+            }
+            return;
+          }
+          // Flush any remaining digits down to 1 before entering ACTIVE
+          for (let d = prevDigit; d >= 1; d--) {
+            if (d <= 5 && !this.emittedDigits.includes(d)) this.emittedDigits.push(d);
+          }
+          const overflow = remDt - this.countdownRemaining;
+          this.countdownRemaining = 0;
+          this.phase = 'ACTIVE';
+          this.combatEnabled = true;
+          this.activeAtSec = this.elapsed - overflow;
+        }
+      }
+
+      static runTimingAudit() {
+        const profiles = [
+          { label: '60fps',  dts: [1 / 60] },
+          { label: '144fps', dts: [1 / 144] },
+          { label: '24fps',  dts: [1 / 24] },
+          { label: 'Jitter', dts: [0.007, 0.033, 0.041, 0.011, 0.028, 0.019] }
+        ];
+        const summary = [];
+        let allPass = true;
+        for (const p of profiles) {
+          const ctrl = new MatchTimingController(30.0, 5.0);
+          ctrl.start();
+          let i = 0;
+          while (ctrl.phase !== 'ACTIVE' && i < 20000) {
+            ctrl.step(p.dts[i % p.dts.length]);
+            i++;
+          }
+          const digitsOk = ctrl.emittedDigits.join(',') === '5,4,3,2,1';
+          const exactOk = Math.abs(ctrl.activeAtSec - 35.0) < 1e-6 && ctrl.combatEnabled;
+          if (!digitsOk || !exactOk) allPass = false;
+          summary.push(`${p.label}:${ctrl.activeAtSec?.toFixed(3)}s`);
+        }
+        return {
+          id: 'P8-6',
+          name: 'Exact 30s Prep + 5s Countdown (Multi-FPS)',
+          pass: allPass,
+          scope: 'UNIT',
+          detail: summary.join(' | ')
+        };
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.8 MULTI-ELEVATION BOT NAVIGATION GRAPH & A* HELPER (`ArenaNavGraph` + `BotNavHelper`)
+    // -------------------------------------------------------------------------
+    class ArenaNavGraph {
+      constructor() {
+        this.nodes = new Map();
+        this.edges = new Map();
+        this._buildMasterGraph();
+      }
+
+      addNode(id, x, y, z, layer) {
+        this.nodes.set(id, { id, x, y, z, layer });
+        if (!this.edges.has(id)) this.edges.set(id, []);
+      }
+
+      connect(a, b) {
+        const na = this.nodes.get(a), nb = this.nodes.get(b);
+        if (!na || !nb) return;
+        const cost = Math.hypot(nb.x - na.x, (nb.y - na.y) * 1.4, nb.z - na.z);
+        this.edges.get(a).push({ to: b, cost });
+        this.edges.get(b).push({ to: a, cost });
+      }
+
+      _buildMasterGraph() {
+        // Spawn rooms (Upper Y=4.8 & Lower Y=0.0)
+        this.addNode('red_spawn_u',  -42.0, 4.8,   0.0, 'spawn');
+        this.addNode('red_spawn_lf', -42.0, 0.0,  14.0, 'spawn');
+        this.addNode('red_spawn_lb', -42.0, 0.0, -14.0, 'spawn');
+        this.addNode('blue_spawn_u',  42.0, 4.8,   0.0, 'spawn');
+        this.addNode('blue_spawn_lf', 42.0, 0.0,  14.0, 'spawn');
+        this.addNode('blue_spawn_lb', 42.0, 0.0, -14.0, 'spawn');
+
+        // Flag pedestals & bridge lanes (Y=4.8, routed around central cargo blocker)
+        this.addNode('red_flag',     -31.0, 4.8,   0.0, 'bridge');
+        this.addNode('blue_flag',     31.0, 4.8,   0.0, 'bridge');
+        this.addNode('red_br_n',     -21.0, 4.8,  -2.4, 'bridge');
+        this.addNode('red_br_s',     -21.0, 4.8,   2.6, 'bridge');
+        this.addNode('mid_br_n',       0.0, 4.8,  -2.4, 'bridge');
+        this.addNode('mid_br_s',       0.0, 4.8,   2.6, 'bridge');
+        this.addNode('blue_br_n',     21.0, 4.8,  -2.4, 'bridge');
+        this.addNode('blue_br_s',     21.0, 4.8,   2.6, 'bridge');
+
+        // Front & Rear Stair Landings
+        this.addNode('red_st_f_top',  -30.0, 4.8,   7.5, 'stair');
+        this.addNode('red_st_f_bot',  -30.0, 0.0,  17.5, 'stair');
+        this.addNode('blue_st_f_top',  30.0, 4.8,   7.5, 'stair');
+        this.addNode('blue_st_f_bot',  30.0, 0.0,  17.5, 'stair');
+        this.addNode('red_st_r_bot',  -30.0, 4.8,  -8.5, 'stair');
+        this.addNode('blue_st_r_bot',  30.0, 4.8,  -8.5, 'stair');
+        this.addNode('red_st_c_top',  -12.0, 4.8,  -3.5, 'stair');
+        this.addNode('red_st_c_bot',  -12.0, 0.0, -13.5, 'stair');
+        this.addNode('blue_st_c_top',  12.0, 4.8,  -3.5, 'stair');
+        this.addNode('blue_st_c_bot',  12.0, 0.0, -13.5, 'stair');
+
+        // Upper Observation Gallery (Y=9.6, Z=-19.5 clear of gallery cargo at Z=-21.5)
+        this.addNode('gal_red',      -30.0, 9.6, -19.5, 'gallery');
+        this.addNode('gal_mid',        0.0, 9.6, -19.5, 'gallery');
+        this.addNode('gal_balcony',    0.0, 9.6, -16.2, 'gallery');
+        this.addNode('gal_blue',      30.0, 9.6, -19.5, 'gallery');
+
+        // Ground Combat Floor (Y=0.0, 3m+ circulation around central stacked cargo)
+        this.addNode('gnd_red_f',    -30.0, 0.0,  21.5, 'ground');
+        this.addNode('gnd_mid_f',      0.0, 0.0,  21.5, 'ground');
+        this.addNode('gnd_blue_f',    30.0, 0.0,  21.5, 'ground');
+        this.addNode('gnd_red_u',    -20.0, 0.0,   0.0, 'ground');
+        this.addNode('gnd_mid_u',      0.0, 0.0,   0.0, 'ground');
+        this.addNode('gnd_blue_u',    20.0, 0.0,   0.0, 'ground');
+        this.addNode('gnd_red_b',    -30.0, 0.0, -15.0, 'ground');
+        this.addNode('gnd_blue_b',    30.0, 0.0, -15.0, 'ground');
+
+        // Connect Edges
+        const pairs = [
+          ['red_spawn_u', 'red_flag'], ['red_spawn_u', 'red_spawn_lf'], ['red_spawn_u', 'red_spawn_lb'],
+          ['blue_spawn_u', 'blue_flag'], ['blue_spawn_u', 'blue_spawn_lf'], ['blue_spawn_u', 'blue_spawn_lb'],
+          ['red_spawn_lf', 'gnd_red_f'], ['red_spawn_lb', 'gnd_red_b'],
+          ['blue_spawn_lf', 'gnd_blue_f'], ['blue_spawn_lb', 'gnd_blue_b'],
+          // Bridge lanes
+          ['red_flag', 'red_br_n'], ['red_flag', 'red_br_s'],
+          ['red_br_n', 'mid_br_n'], ['mid_br_n', 'blue_br_n'],
+          ['red_br_s', 'mid_br_s'], ['mid_br_s', 'blue_br_s'],
+          ['blue_br_n', 'blue_flag'], ['blue_br_s', 'blue_flag'],
+          ['red_br_n', 'red_st_c_top'], ['red_st_c_top', 'mid_br_n'],
+          ['blue_br_n', 'blue_st_c_top'], ['blue_st_c_top', 'mid_br_n'],
+          // Front & Rear Stairs
+          ['red_flag', 'red_st_f_top'], ['red_st_f_top', 'red_st_f_bot'], ['red_st_f_bot', 'gnd_red_f'],
+          ['blue_flag', 'blue_st_f_top'], ['blue_st_f_top', 'blue_st_f_bot'], ['blue_st_f_bot', 'gnd_blue_f'],
+          ['red_flag', 'red_st_r_bot'], ['red_st_r_bot', 'gal_red'],
+          ['blue_flag', 'blue_st_r_bot'], ['blue_st_r_bot', 'gal_blue'],
+          ['red_st_c_top', 'red_st_c_bot'], ['blue_st_c_top', 'blue_st_c_bot'],
+          // Upper Gallery
+          ['gal_red', 'gal_mid'], ['gal_mid', 'gal_blue'], ['gal_mid', 'gal_balcony'],
+          // Lower Ground Floor
+          ['gnd_red_f', 'gnd_mid_f'], ['gnd_mid_f', 'gnd_blue_f'],
+          ['gnd_red_f', 'gnd_red_u'], ['gnd_red_u', 'gnd_mid_u'], ['gnd_mid_u', 'gnd_blue_u'], ['gnd_blue_u', 'gnd_blue_f'],
+          ['gnd_red_u', 'gnd_red_b'], ['gnd_red_b', 'red_st_c_bot'], ['red_st_c_bot', 'blue_st_c_bot'], ['blue_st_c_bot', 'gnd_blue_b'], ['gnd_blue_b', 'gnd_blue_u']
+        ];
+        pairs.forEach(([a, b]) => this.connect(a, b));
+      }
+
+      findNearestNode(x, y, z) {
+        let best = null, bestD = Infinity;
+        for (const n of this.nodes.values()) {
+          // Heavily penalize elevation mismatch so overlapping floors never cross-snap
+          const d = Math.hypot(n.x - x, (n.y - y) * 3.2, n.z - z);
+          if (d < bestD) { bestD = d; best = n; }
+        }
+        return best;
+      }
+
+      findPath(startId, goalId, avoidNodeIds = null) {
+        if (!this.nodes.has(startId) || !this.nodes.has(goalId)) return [];
+        const open = new Set([startId]);
+        const cameFrom = new Map();
+        const gScore = new Map([[startId, 0]]);
+        const goal = this.nodes.get(goalId);
+        const h = (id) => {
+          const n = this.nodes.get(id);
+          return Math.hypot(goal.x - n.x, (goal.y - n.y) * 1.4, goal.z - n.z);
+        };
+        const fScore = new Map([[startId, h(startId)]]);
+
+        while (open.size > 0) {
+          let cur = null, bestF = Infinity;
+          for (const id of open) {
+            const f = fScore.get(id) ?? Infinity;
+            if (f < bestF) { bestF = f; cur = id; }
+          }
+          if (cur === goalId) {
+            const path = [];
+            let k = cur;
+            while (k) { path.unshift(this.nodes.get(k)); k = cameFrom.get(k); }
+            return path;
+          }
+          open.delete(cur);
+          for (const edge of this.edges.get(cur) || []) {
+            if (avoidNodeIds && avoidNodeIds.has(edge.to) && edge.to !== goalId) continue;
+            const tentG = (gScore.get(cur) ?? Infinity) + edge.cost;
+            if (tentG < (gScore.get(edge.to) ?? Infinity)) {
+              cameFrom.set(edge.to, cur);
+              gScore.set(edge.to, tentG);
+              fScore.set(edge.to, tentG + h(edge.to));
+              open.add(edge.to);
+            }
+          }
+        }
+        return [];
+      }
+    }
+
+    class BotNavHelper {
+      constructor(navGraph, spec = PHASE9_MASTER_SPEC) {
+        this.graph = navGraph;
+        this.spec = spec;
+      }
+
+      getSpawnExitPath(team, preferLower = false) {
+        const start = team === 'red' ? (preferLower ? 'red_spawn_lf' : 'red_spawn_u') : (preferLower ? 'blue_spawn_lf' : 'blue_spawn_u');
+        const goal = team === 'red' ? (preferLower ? 'gnd_red_f' : 'red_flag') : (preferLower ? 'gnd_blue_f' : 'blue_flag');
+        return this.graph.findPath(start, goal);
+      }
+
+      getStaircasePath(fromPos, targetElevation) {
+        const sNode = this.graph.findNearestNode(fromPos.x, fromPos.y, fromPos.z);
+        const goalId = targetElevation >= 9.0 ? 'gal_mid' : (targetElevation >= 4.0 ? 'mid_br_n' : 'gnd_mid_f');
+        return this.graph.findPath(sNode.id, goalId);
+      }
+
+      getAvoidCargoSteering(pos, desiredDirX, desiredDirZ) {
+        let steerX = desiredDirX, steerZ = desiredDirZ;
+        for (const c of this.spec.cargo) {
+          if (Math.abs(pos.y - c.y) > 1.8) continue;
+          const dx = pos.x - c.x, dz = pos.z - c.z;
+          const rx = c.w * 0.5 + 1.1, rz = c.d * 0.5 + 1.1;
+          if (Math.abs(dx) < rx && Math.abs(dz) < rz) {
+            steerX += Math.sign(dx || 1) * 1.4;
+            steerZ += Math.sign(dz || 1) * 1.4;
+          }
+        }
+        const len = Math.hypot(steerX, steerZ) || 1;
+        return { x: steerX / len, z: steerZ / len };
+      }
+
+      getPursueCarrierPath(botPos, carrierPos) {
+        const s = this.graph.findNearestNode(botPos.x, botPos.y, botPos.z);
+        const g = this.graph.findNearestNode(carrierPos.x, carrierPos.y, carrierPos.z);
+        return this.graph.findPath(s.id, g.id);
+      }
+
+      getDefendFlagPath(botPos, team) {
+        const s = this.graph.findNearestNode(botPos.x, botPos.y, botPos.z);
+        return this.graph.findPath(s.id, team === 'red' ? 'red_flag' : 'blue_flag');
+      }
+
+      getReturnDroppedFlagPath(botPos, droppedFlagPos) {
+        const s = this.graph.findNearestNode(botPos.x, botPos.y, botPos.z);
+        const g = this.graph.findNearestNode(droppedFlagPos.x, droppedFlagPos.y, droppedFlagPos.z);
+        return this.graph.findPath(s.id, g.id);
+      }
+
+      getAlternativeReturnRoutes(carryingTeam) {
+        const start = carryingTeam === 'red' ? 'blue_flag' : 'red_flag';
+        const goal  = carryingTeam === 'red' ? 'red_flag'  : 'blue_flag';
+        return {
+          bridge:  this.graph.findPath(start, goal, new Set(['gal_mid', 'gnd_mid_f', 'gnd_mid_u'])),
+          gallery: this.graph.findPath(start, goal, new Set(['mid_br_n', 'mid_br_s', 'gnd_mid_f', 'gnd_mid_u'])),
+          lower:   this.graph.findPath(start, goal, new Set(['mid_br_n', 'mid_br_s', 'gal_mid']))
+        };
+      }
+
+      getEscortCarrierPath(botPos, carrierPos, carrierTeam) {
+        const targetFlag = carrierTeam === 'red' ? 'red_flag' : 'blue_flag';
+        const s = this.graph.findNearestNode(botPos.x, botPos.y, botPos.z);
+        const mid = this.graph.findNearestNode(carrierPos.x, carrierPos.y, carrierPos.z);
+        return [...this.graph.findPath(s.id, mid.id), ...this.graph.findPath(mid.id, targetFlag).slice(1)];
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.9 NATIVE WEBGPU & FRESH-CANVAS WEBGL2 CERTIFIER (`RendererCertifier`)
+    // -------------------------------------------------------------------------
+    const RendererCertifier = {
+      async createCertifiedRenderer(viewportEl, canvasId = 'phase9-canvas') {
+        let canvas = document.getElementById(canvasId);
+        let renderer = null;
+        let backendLabel = 'WebGL2 Fallback';
+        const capabilities = { navigatorGpu: !!navigator.gpu, webgpuVerified: false, webgl2Verified: false };
+
+        if (navigator.gpu) {
+          try {
+            const adapter = await navigator.gpu.requestAdapter();
+            if (adapter) {
+              renderer = new THREE.WebGPURenderer({ antialias: true, powerPreference: 'high-performance', canvas });
+              await renderer.init();
+              if (renderer.backend && renderer.backend.isWebGPUBackend) {
+                backendLabel = 'WebGPU';
+                capabilities.webgpuVerified = true;
+              }
+            }
+          } catch (err) {
+            console.warn('[RendererCertifier] WebGPU init failed, switching to fresh-canvas WebGL2:', err);
+            renderer = null;
+          }
+        }
+
+        if (!renderer) {
+          const fresh = document.createElement('canvas');
+          fresh.id = canvasId;
+          viewportEl.innerHTML = '';
+          viewportEl.appendChild(fresh);
+          canvas = fresh;
+          renderer = new THREE.WebGPURenderer({ antialias: true, forceWebGL: true, powerPreference: 'high-performance', canvas: fresh });
+          await renderer.init();
+          backendLabel = 'WebGL2 Fallback';
+          capabilities.webgl2Verified = true;
+        }
+
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.1;
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        registerSingleton('renderer', renderer);
+        return { renderer, canvas, backendLabel, capabilities };
+      },
+
+      /** Verifies actual rendered-frame execution without errors + canvas backing buffer size. */
+      verifyRenderedFrame(renderer, scene, camera) {
+        try {
+          renderer.render(scene, camera);
+          const dom = renderer.domElement;
+          const validDims = dom && dom.width > 0 && dom.height > 0;
+          return { ok: !!validDims, width: dom?.width || 0, height: dom?.height || 0, error: null };
+        } catch (err) {
+          return { ok: false, width: 0, height: 0, error: err.message };
+        }
+      },
+
+      /** Separately certifies forced WebGL2 fallback on a fresh offscreen canvas, then disposes cleanly. */
+      async certifyForcedWebGL2Fallback() {
+        const offCanvas = document.createElement('canvas');
+        offCanvas.width = 64; offCanvas.height = 64;
+        let fbRenderer = null;
+        try {
+          fbRenderer = new THREE.WebGPURenderer({ canvas: offCanvas, forceWebGL: true, antialias: false });
+          await fbRenderer.init();
+          const testScene = new THREE.Scene();
+          testScene.background = new THREE.Color(0x20BFFF);
+          const testCam = new THREE.PerspectiveCamera(50, 1, 0.1, 20);
+          testCam.position.z = 3;
+          const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+          const boxMat = new THREE.MeshBasicMaterial({ color: 0xDF9B32 });
+          testScene.add(new THREE.Mesh(boxGeo, boxMat));
+          fbRenderer.render(testScene, testCam);
+          const isWebGL = !(fbRenderer.backend && fbRenderer.backend.isWebGPUBackend);
+          boxGeo.dispose(); boxMat.dispose();
+          fbRenderer.dispose();
+          return { pass: isWebGL && offCanvas.width === 64, detail: `Fresh-canvas forceWebGL rendered 64×64 cleanly (WebGPU=${!isWebGL})` };
+        } catch (err) {
+          if (fbRenderer) try { fbRenderer.dispose(); } catch (_) {}
+          return { pass: false, detail: `Fallback error: ${err.message}` };
+        }
+      },
+
+      disposeAll(scene, renderer) {
+        if (scene) {
+          scene.traverse((obj) => {
+            if (obj.geometry) obj.geometry.dispose();
+            if (obj.material) {
+              const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+              mats.forEach((m) => {
+                if (m.map) m.map.dispose();
+                m.dispose();
+              });
+            }
+          });
+        }
+        if (renderer) {
+          releaseSingleton('renderer', renderer);
+          renderer.dispose();
+        }
+      }
+    };
+
+    // -------------------------------------------------------------------------
+    // 1.10 PERFORMANCE MONITOR & QUALITY PROFILE MANAGER
+    // -------------------------------------------------------------------------
+    class PerformanceMonitor {
+      constructor() {
+        this.frameTimes = [];
+        this.maxSamples = 90;
+        this.fps = 60;
+        this.avgMs = 16.6;
+        this._frames = 0;
+        this._acc = 0;
+      }
+
+      recordFrame(dtSec) {
+        const ms = dtSec * 1000;
+        this.frameTimes.push(ms);
+        if (this.frameTimes.length > this.maxSamples) this.frameTimes.shift();
+        this._frames++;
+        this._acc += dtSec;
+        if (this._acc >= 0.3) {
+          this.fps = Math.round(this._frames / this._acc);
+          this.avgMs = this.frameTimes.reduce((a, b) => a + b, 0) / this.frameTimes.length;
+          this._frames = 0; this._acc = 0;
+          return true;
+        }
+        return false;
+      }
+
+      inspectScene(scene, renderer) {
+        const geos = new Set(), mats = new Set(), texs = new Set();
+        let meshCount = 0, instancedCount = 0, culledEnabled = 0;
+        const geoUseCounts = new Map();
+
+        scene.traverse((o) => {
+          if (!o.isMesh) return;
+          meshCount++;
+          if (o.isInstancedMesh) instancedCount++;
+          if (o.frustumCulled) culledEnabled++;
+          if (o.geometry) {
+            geos.add(o.geometry);
+            geoUseCounts.set(o.geometry.uuid, (geoUseCounts.get(o.geometry.uuid) || 0) + 1);
+          }
+          const mList = Array.isArray(o.material) ? o.material : [o.material];
+          mList.forEach((m) => {
+            if (!m) return;
+            mats.add(m);
+            if (m.map) texs.add(m.map);
+            if (m.bumpMap) texs.add(m.bumpMap);
+            if (m.roughnessMap) texs.add(m.roughnessMap);
+          });
+        });
+
+        let texBytes = 0;
+        texs.forEach((t) => {
+          const w = t.image?.width || 256, h = t.image?.height || 256;
+          texBytes += w * h * 4 * 1.33; // RGBA + mipmaps
+        });
+
+        let repeatedGeoCandidates = 0;
+        geoUseCounts.forEach((cnt) => { if (cnt >= 4) repeatedGeoCandidates++; });
+
+        const info = renderer?.info?.render || { calls: 0, triangles: 0 };
+        const recommendations = [];
+        if (repeatedGeoCandidates > 0) recommendations.push(`Convert ${repeatedGeoCandidates} repeated static geometries (≥4 uses) to InstancedMesh.`);
+        if (info.calls > 120) recommendations.push(`Draw calls (${info.calls}) > 120: batch static structural trim & decals.`);
+        if (culledEnabled < meshCount) recommendations.push(`Enable frustumCulled on ${meshCount - culledEnabled} meshes.`);
+        if (recommendations.length === 0) recommendations.push('Scene draw-call budget, shared materials, and frustum culling are optimal.');
+
+        return {
+          fps: this.fps,
+          avgMs: this.avgMs,
+          draws: info.calls,
+          triangles: info.triangles,
+          texMB: (texBytes / (1024 * 1024)).toFixed(2),
+          geometries: geos.size,
+          materials: mats.size,
+          instancedMeshes: instancedCount,
+          frustumCulledRatio: `${culledEnabled}/${meshCount}`,
+          recommendations
+        };
+      }
+    }
+
+    class QualityProfileManager {
+      constructor(renderer, lights, onProfileApplied = null) {
+        this.renderer = renderer;
+        this.lights = lights;
+        this.onProfileApplied = onProfileApplied;
+        this.current = 'medium';
+        this.dprCap = 1.5;
+        this.profiles = {
+          low:    { texRes: 1024, shadows: false, shadowMap: 512,  dpr: 1.0, optionalFX: false },
+          medium: { texRes: 2048, shadows: true,  shadowMap: 1024, dpr: 1.5, optionalFX: true  },
+          high:   { texRes: 2048, shadows: true,  shadowMap: 2048, dpr: 2.0, optionalFX: true  }
+        };
+      }
+
+      apply(name, customDpr = null) {
+        const cfg = this.profiles[name];
+        if (!cfg) return;
+        this.current = name;
+        if (customDpr !== null) this.dprCap = customDpr;
+        else this.dprCap = cfg.dpr;
+
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.dprCap));
+        this.renderer.shadowMap.enabled = cfg.shadows;
+        if (this.lights?.sun) {
+          this.lights.sun.castShadow = cfg.shadows;
+          if (cfg.shadows) {
+            this.lights.sun.shadow.mapSize.set(cfg.shadowMap, cfg.shadowMap);
+            if (this.lights.sun.shadow.map) { this.lights.sun.shadow.map.dispose(); this.lights.sun.shadow.map = null; }
+          }
+        }
+        if (this.onProfileApplied) this.onProfileApplied(name, cfg);
+      }
+
+      setDprCap(dpr) {
+        this.dprCap = dpr;
+        this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, this.dprCap));
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // 1.11 EXPLICIT INTEGRATION MANIFEST (`PHASE9_INTEGRATION_MANIFEST`)
+    // -------------------------------------------------------------------------
+    const PHASE9_INTEGRATION_MANIFEST = Object.freeze({
+      schemaVersion: '1.0.0',
+      arenaTitle: 'DUELIST ADVENTURE — Industrial Capture the Flag Arena',
+      threeVersion: '0.175.0',
+      singletonGuards: {
+        globalKey: 'window.__DUELIST_SINGLETONS__',
+        guardedResources: ['renderer', 'animationLoopId', 'collisionRegistry', 'matchController'],
+        rule: 'Never instantiate duplicate renderers, requestAnimationFrame loops, collision registries, or match controllers.'
+      },
+      initializationOrder: [
+        '1. RendererCertifier.createCertifiedRenderer() [WebGPU + fresh-canvas WebGL2 fallback]',
+        '2. Phase 6 Architectural Foundation -> populates unified collisionRegistry { floors, ramps, solids, ceilings, railings, windows, doorways, spawnZones }',
+        '3. Phase 7 Lighting & Atmosphere Module -> binds to scene + QualityProfileManager',
+        '4. Phase 8 CTFGameplayEngine + CTFVisualAdapter -> patched via Phase8SecurityPatch.apply()',
+        '5. Phase 9 CapsulePhysicsSolver, SafeRecoverySystem, ArenaNavGraph, BotNavHelper, PerformanceMonitor',
+        '6. Single Fixed-Timestep Simulation Accumulator (60Hz) + Single Render Loop'
+      ],
+      modules: [
+        {
+          name: 'PHASE9_MASTER_SPEC',
+          exports: ['building', 'elevations', 'platforms', 'flags', 'staircases', 'cargo', 'entrances', 'windows', 'spawnZones', 'spawns', 'capsule', 'classes'],
+          dependencies: []
+        },
+        {
+          name: 'CapsulePhysicsSolver & SafeRecoverySystem',
+          exports: ['step(state, dx, dz, dt, opts)', 'getSupportHeight(x, z, footY)', 'getOverlappingSolid(x, y, z)', 'recoverIfNeeded(state, opts)', 'handleOutOfBoundsFlagCarrier(...)'],
+          dependencies: ['collisionRegistry']
+        },
+        {
+          name: 'CollisionVerifier & NavigationCertifier',
+          exports: ['CollisionVerifier.runAll(scope)', 'NavigationCertifier.runAll(scope)'],
+          dependencies: ['CapsulePhysicsSolver', 'SafeRecoverySystem']
+        },
+        {
+          name: 'HardenedCTFValidator & Phase8SecurityPatch',
+          exports: ['validateCaptureRequest', 'canEnterSpawnZone', 'applySafeClassSwitch', 'validateDamage', 'canAuthorizeRespawn', 'safeRegisterPlayer', 'handleCarrierDisconnect', 'handlePlayerReconnect', 'validateSnapshot'],
+          dependencies: ['Phase 8 CTFGameplayEngine', 'SafeRecoverySystem']
+        },
+        {
+          name: 'MatchTimingController',
+          exports: ['start()', 'reset()', 'step(dt)', 'MatchTimingController.runTimingAudit()'],
+          dependencies: []
+        },
+        {
+          name: 'ArenaNavGraph & BotNavHelper',
+          exports: ['findPath', 'getSpawnExitPath', 'getStaircasePath', 'getAvoidCargoSteering', 'getPursueCarrierPath', 'getDefendFlagPath', 'getReturnDroppedFlagPath', 'getAlternativeReturnRoutes', 'getEscortCarrierPath'],
+          dependencies: ['PHASE9_MASTER_SPEC']
+        },
+        {
+          name: 'RendererCertifier, PerformanceMonitor & QualityProfileManager',
+          exports: ['createCertifiedRenderer', 'verifyRenderedFrame', 'certifyForcedWebGL2Fallback', 'disposeAll', 'recordFrame', 'inspectScene', 'apply(profile)'],
+          dependencies: ['three@0.175.0']
+        }
+      ],
+      updateLoopContract: {
+        fixedSimStepSec: 1 / 60,
+        maxFrameDeltaSec: 0.05,
+        sequence: ['accumulator += dt', 'while (accumulator >= 1/60): step Physics, MatchTimingController, CTFGameplayEngine, BotNavHelper', 'update VisualAdapter & Camera', 'renderer.render(scene, camera)', 'perfMonitor.recordFrame(dt)']
+      },
+      eventSubscriptions: ['FLAG_CAPTURE_BLOCKED', 'flagPickup', 'flagDrop', 'flagReturn', 'flagCapture', 'phaseChange', 'matchEnd', 'spawnBlocked'],
+      multiplayerAuthority: {
+        authoritativeOwner: 'server',
+        serverControlled: ['scores', 'flagPossession', 'damageResolution', 'respawnAuthorization', 'matchTimers'],
+        clientValidation: 'HardenedCTFValidator.validateSnapshot(snap)'
+      },
+      cleanupFunctions: ['RendererCertifier.disposeAll(scene, renderer)', 'ctfEngine.dispose()', 'visualAdapter.dispose()', 'cancelAnimationFrame(window.__DUELIST_SINGLETONS__.animationLoopId)']
+    });
+
+    // Export complete decoupled Phase 9 Engineering Namespace
+    window.PHASE9_ENGINEERING = {
+      PHASE9_MASTER_SPEC,
+      PHASE9_INTEGRATION_MANIFEST,
+      CapsulePhysicsSolver,
+      SafeRecoverySystem,
+      CollisionVerifier,
+      NavigationCertifier,
+      HardenedCTFValidator,
+      Phase8SecurityPatch,
+      MatchTimingController,
+      ArenaNavGraph,
+      BotNavHelper,
+      RendererCertifier,
+      PerformanceMonitor,
+      QualityProfileManager
+    };
+
+    // =========================================================================
+    // SECTION 2: INDEPENDENT SIMPLIFIED 3D TESTING VIEWER (`DemoArenaBuilder`)
+    // Clearly separated from the reusable Phase 9 module above.
+    // =========================================================================
+    function buildSimplifiedDemoArena(scene) {
+      const registry = {
+        floors: [], ramps: [], solids: [], ceilings: [], railings: [], windows: [], doorways: [],
+        spawnZones: PHASE9_MASTER_SPEC.spawnZones
+      };
+      registerSingleton('collisionRegistry', registry);
+
+      const arenaGroup = new THREE.Group();
+      arenaGroup.name = 'SimplifiedDemoArena';
+      scene.add(arenaGroup);
+
+      // Shared materials (kept intentionally clean & lightweight for demo verification)
+      const matFloor  = new THREE.MeshStandardMaterial({ color: 0x3a4150, roughness: 0.82, metalness: 0.18 });
+      const matBridge = new THREE.MeshStandardMaterial({ color: 0x4b5364, roughness: 0.72, metalness: 0.28 });
+      const matGal    = new THREE.MeshStandardMaterial({ color: 0x3e4556, roughness: 0.76, metalness: 0.24 });
+      const matRamp   = new THREE.MeshStandardMaterial({ color: 0x566074, roughness: 0.78, metalness: 0.25 });
+      const matCargo  = new THREE.MeshStandardMaterial({ color: 0x5a606e, roughness: 0.68, metalness: 0.42 });
+      const matPillar = new THREE.MeshStandardMaterial({ color: 0x2b313e, roughness: 0.62, metalness: 0.50 });
+      const matRail   = new THREE.MeshStandardMaterial({ color: 0xDF9B32, roughness: 0.45, metalness: 0.45 });
+      const matWin    = new THREE.MeshStandardMaterial({ color: 0xBDDCE9, transparent: true, opacity: 0.28, roughness: 0.15 });
+      const matRed    = new THREE.MeshStandardMaterial({ color: 0xFF394B, emissive: 0xFF394B, emissiveIntensity: 0.7 });
+      const matBlue   = new THREE.MeshStandardMaterial({ color: 0x20BFFF, emissive: 0x20BFFF, emissiveIntensity: 0.7 });
+
+      const addFloor = (id, minX, maxX, minZ, maxZ, topY, thick, mat, isElevated = false) => {
+        const w = maxX - minX, d = maxZ - minZ;
+        const m = new THREE.Mesh(new THREE.BoxGeometry(w, thick, d), mat);
+        m.position.set((minX + maxX) * 0.5, topY - thick * 0.5, (minZ + maxZ) * 0.5);
+        m.receiveShadow = true; m.castShadow = isElevated;
+        arenaGroup.add(m);
+        registry.floors.push({ id, minX, maxX, minZ, maxZ, topY, bottomY: topY - thick });
+        if (isElevated) {
+          registry.solids.push({ id: id + '_slab', minX, maxX, minY: topY - thick, maxY: topY, minZ, maxZ, category: 'slab', landable: false });
+        }
+      };
+
+      // Primary slabs + spawn decks + portal thresholds
+      const P = PHASE9_MASTER_SPEC.platforms;
+      addFloor(P.groundFloor.id, P.groundFloor.minX, P.groundFloor.maxX, P.groundFloor.minZ, P.groundFloor.maxZ, 0.0, 1.0, matFloor, false);
+      addFloor(P.centralBridge.id, P.centralBridge.minX, P.centralBridge.maxX, P.centralBridge.minZ, P.centralBridge.maxZ, 4.8, 0.6, matBridge, true);
+      addFloor(P.redPlatform.id, P.redPlatform.minX, P.redPlatform.maxX, P.redPlatform.minZ, P.redPlatform.maxZ, 4.8, 0.6, matBridge, true);
+      addFloor(P.bluePlatform.id, P.bluePlatform.minX, P.bluePlatform.maxX, P.bluePlatform.minZ, P.bluePlatform.maxZ, 4.8, 0.6, matBridge, true);
+      addFloor(P.upperGallery.id, P.upperGallery.minX, P.upperGallery.maxX, P.upperGallery.minZ, P.upperGallery.maxZ, 9.6, 0.45, matGal, true);
+      addFloor(P.centralBalcony.id, P.centralBalcony.minX, P.centralBalcony.maxX, P.centralBalcony.minZ, P.centralBalcony.maxZ, 9.6, 0.45, matGal, true);
+
+      // Spawn rooms (lower Y=0, upper Y=4.8) & upper neutral vestibule
+      addFloor('spawn_red_lower',  -50, -38, -18.5, 18.5, 0.0, 1.0, matFloor, false);
+      addFloor('spawn_blue_lower',  38,  50, -18.5, 18.5, 0.0, 1.0, matFloor, false);
+      addFloor('spawn_red_upper',  -50, -36,  -8.0,  8.0, 4.8, 0.6, matBridge, true);
+      addFloor('spawn_blue_upper',  36,  50,  -8.0,  8.0, 4.8, 0.6, matBridge, true);
+      addFloor('upper_neutral_alc', -4,   4, -31.0,-24.0, 9.6, 0.45, matGal, true);
+
+      // Warehouse ceiling plane (Y=21m)
+      registry.ceilings.push({ id: 'warehouse_ceiling', minX: -38, maxX: 38, minZ: -28, maxZ: 28, y: 21.0 });
+
+      // All 10 Staircases (6 Arena + 4 Internal Spawn)
+      PHASE9_MASTER_SPEC.staircases.forEach((st) => {
+        const minX = st.centerX - st.width * 0.5, maxX = st.centerX + st.width * 0.5;
+        if (st.connector) {
+          addFloor(st.id + '_conn', minX, maxX, st.connector.minZ, st.connector.maxZ, st.connector.topY, 0.6, matBridge, true);
+        }
+        const run = Math.abs(st.endZ - st.startZ), rise = st.endY - st.startY, len = Math.hypot(run, rise);
+        const dirZ = Math.sign(st.endZ - st.startZ);
+        const angle = Math.atan2(rise, run) * (dirZ < 0 ? 1 : -1);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(st.width, 0.24, len), matRamp);
+        mesh.position.set(st.centerX, (st.startY + st.endY) * 0.5 - 0.12, (st.startZ + st.endZ) * 0.5);
+        mesh.rotation.x = angle;
+        arenaGroup.add(mesh);
+        registry.ramps.push({ id: st.id, minX, maxX, startZ: st.startZ, endZ: st.endZ, startY: st.startY, endY: st.endY });
+
+        // Staircase underside blocking for ground stairs
+        if (st.startY === 0) {
+          for (let s = 1; s < 6; s++) {
+            const z0 = st.startZ + (st.endZ - st.startZ) * (s / 6);
+            const z1 = st.startZ + (st.endZ - st.startZ) * ((s + 1) / 6);
+            const uTop = rise * (s / 6) - 0.28;
+            if (uTop > 0.15) {
+              registry.solids.push({ id: `${st.id}_under_${s}`, minX: minX + 0.05, maxX: maxX - 0.05, minY: 0, maxY: uTop, minZ: Math.min(z0, z1), maxZ: Math.max(z0, z1), category: 'stair_under', landable: false });
+            }
+          }
+        }
+      });
+
+      // Bridge Support Pillars (instanced demo pillars + collision)
+      const pillarGeo = new THREE.BoxGeometry(1.05, 4.2, 1.05);
+      [-18, -6, 6, 18].forEach((px, i) => {
+        [-3.35, 3.35].forEach((pz, j) => {
+          const m = new THREE.Mesh(pillarGeo, matPillar);
+          m.position.set(px, 2.1, pz); m.castShadow = true; m.receiveShadow = true;
+          arenaGroup.add(m);
+          registry.solids.push({ id: `pier_bridge_${i}_${j}`, minX: px - 0.56, maxX: px + 0.56, minY: 0, maxY: 4.2, minZ: pz - 0.56, maxZ: pz + 0.56, category: 'column', landable: false });
+        });
+      });
+
+      // Bridge Front Railing (1.15m jumpable)
+      const railMesh = new THREE.Mesh(new THREE.BoxGeometry(46, 1.15, 0.12), matRail);
+      railMesh.position.set(0, 4.8 + 0.575, 3.92);
+      arenaGroup.add(railMesh);
+      registry.railings.push({ id: 'rail_bridge_front', minX: -23, maxX: 23, minY: 4.8, maxY: 5.95, minZ: 3.84, maxZ: 4.00, category: 'railing', landable: false });
+
+      // 3 Rear Window Barriers (Z = -28, Y = 17)
+      PHASE9_MASTER_SPEC.windows.forEach((w) => {
+        const wm = new THREE.Mesh(new THREE.BoxGeometry(w.w, w.h, 0.25), matWin);
+        wm.position.set(w.cx, w.cy, w.z);
+        arenaGroup.add(wm);
+        registry.windows.push({ id: w.id, minX: w.cx - w.w * 0.5, maxX: w.cx + w.w * 0.5, minY: w.cy - w.h * 0.5, maxY: w.cy + w.h * 0.5, minZ: w.z - 0.5, maxZ: w.z + 0.25, category: 'window', landable: false });
+      });
+
+      // All 8 Industrial Cargo Containers (solid + landable rooftops)
+      PHASE9_MASTER_SPEC.cargo.forEach((c) => {
+        const cm = new THREE.Mesh(new THREE.BoxGeometry(c.w, c.h, c.d), matCargo);
+        cm.position.set(c.x, c.y + c.h * 0.5, c.z); cm.castShadow = true; cm.receiveShadow = true;
+        arenaGroup.add(cm);
+        registry.solids.push({ id: c.id, minX: c.x - c.w * 0.5, maxX: c.x + c.w * 0.5, minY: c.y, maxY: c.y + c.h, minZ: c.z - c.d * 0.5, maxZ: c.z + c.d * 0.5, category: 'cargo', landable: true });
+        if (c.stacked) {
+          const tm = new THREE.Mesh(new THREE.BoxGeometry(c.topW, c.topH, c.topD), matCargo);
+          tm.position.set(c.x, c.y + c.h + c.topH * 0.5, c.z); tm.castShadow = true;
+          arenaGroup.add(tm);
+          registry.solids.push({ id: c.id + '_top', minX: c.x - c.topW * 0.5, maxX: c.x + c.topW * 0.5, minY: c.y + c.h, maxY: c.y + c.h + c.topH, minZ: c.z - c.topD * 0.5, maxZ: c.z + c.topD * 0.5, category: 'cargo', landable: true });
+        }
+      });
+
+      // Flag Pedestals & Translucent Protected Spawn Volumes
+      ['red', 'blue'].forEach((t) => {
+        const fp = PHASE9_MASTER_SPEC.flags[t];
+        const mat = t === 'red' ? matRed : matBlue;
+        const ring = new THREE.Mesh(new THREE.RingGeometry(1.3, 1.75, 28), mat);
+        ring.rotation.x = -Math.PI / 2; ring.position.set(fp.x, fp.y + 0.04, fp.z);
+        arenaGroup.add(ring);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.0, 10), mat);
+        pole.position.set(fp.x, fp.y + 1.5, fp.z);
+        arenaGroup.add(pole);
+
+        const z = PHASE9_MASTER_SPEC.spawnZones[t];
+        const wire = new THREE.LineSegments(
+          new THREE.EdgesGeometry(new THREE.BoxGeometry(z.maxX - z.minX, z.maxY - z.minY, z.maxZ - z.minZ)),
+          new THREE.LineBasicMaterial({ color: t === 'red' ? 0xFF394B : 0x20BFFF, transparent: true, opacity: 0.55 })
+        );
+        wire.position.set((z.minX + z.maxX) * 0.5, (z.minY + z.maxY) * 0.5, (z.minZ + z.maxZ) * 0.5);
+        arenaGroup.add(wire);
+      });
+
+      const grid = new THREE.GridHelper(100, 50, 0x364256, 0x1c2330);
+      grid.position.y = 0.02;
+      arenaGroup.add(grid);
+
+      return { registry, arenaGroup };
+    }
+
+    function buildEngineeringOverlays(scene, registry, navGraph) {
+      // 1. Collision Wireframe Overlay
+      const colGroup = new THREE.Group(); colGroup.visible = false; scene.add(colGroup);
+      const mSolid = new THREE.MeshBasicMaterial({ color: 0xff9b32, wireframe: true, transparent: true, opacity: 0.6 });
+      const mCargo = new THREE.MeshBasicMaterial({ color: 0x2ee58d, wireframe: true, transparent: true, opacity: 0.8 });
+      [...registry.solids, ...registry.railings, ...registry.windows].forEach((b) => {
+        const mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(b.maxX - b.minX, b.maxY - b.minY, b.maxZ - b.minZ),
+          b.category === 'cargo' ? mCargo : mSolid
+        );
+        mesh.position.set((b.minX + b.maxX) * 0.5, (b.minY + b.maxY) * 0.5, (b.minZ + b.maxZ) * 0.5);
+        colGroup.add(mesh);
+      });
+
+      // 2. Multi-Elevation NavGraph Overlay
+      const navGroup = new THREE.Group(); navGroup.visible = true; scene.add(navGroup);
+      const nodeColors = { ground: 0x2ee58d, bridge: 0x20BFFF, gallery: 0xDF9B32, stair: 0xb77cff, spawn: 0xFF394B };
+      const nodeGeo = new THREE.SphereGeometry(0.38, 10, 10);
+      for (const n of navGraph.nodes.values()) {
+        const sp = new THREE.Mesh(nodeGeo, new THREE.MeshBasicMaterial({ color: nodeColors[n.layer] || 0xffffff }));
+        sp.position.set(n.x, n.y + 0.45, n.z);
+        navGroup.add(sp);
+      }
+      const linePts = [];
+      for (const [id, list] of navGraph.edges.entries()) {
+        const a = navGraph.nodes.get(id);
+        for (const e of list) {
+          if (id < e.to) {
+            const b = navGraph.nodes.get(e.to);
+            linePts.push(a.x, a.y + 0.45, a.z, b.x, b.y + 0.45, b.z);
+          }
+        }
+      }
+      const lGeo = new THREE.BufferGeometry();
+      lGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePts, 3));
+      navGroup.add(new THREE.LineSegments(lGeo, new THREE.LineBasicMaterial({ color: 0x7BE5FF, transparent: true, opacity: 0.55 })));
+
+      // 3. 24 Spawn Position Markers
+      const spawnGroup = new THREE.Group(); spawnGroup.visible = false; scene.add(spawnGroup);
+      const spGeo = new THREE.CylinderGeometry(0.38, 0.38, 1.8, 10);
+      const mR = new THREE.MeshBasicMaterial({ color: 0xFF394B, wireframe: true });
+      const mB = new THREE.MeshBasicMaterial({ color: 0x20BFFF, wireframe: true });
+      PHASE9_MASTER_SPEC.spawns.forEach((s) => {
+        const m = new THREE.Mesh(spGeo, s.team === 'red' ? mR : mB);
+        m.position.set(s.x, s.y + 0.9, s.z);
+        spawnGroup.add(m);
+      });
+
+      return { colGroup, navGroup, spawnGroup };
+    }
+
+    // =========================================================================
+    // SECTION 3: MAIN VIEWER BOOTSTRAP & FIXED-TIMESTEP LOOP
+    // =========================================================================
+    async function main() {
+      const viewport = document.getElementById('viewport');
+      const { renderer, canvas, backendLabel } = await RendererCertifier.createCertifiedRenderer(viewport, 'phase9-canvas');
+
+      const rendererEl = document.getElementById('stat-renderer');
+      rendererEl.textContent = backendLabel;
+      rendererEl.classList.add(backendLabel === 'WebGPU' ? 'gpu' : 'gl');
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x0d121d);
+
+      const hemi = new THREE.HemisphereLight(0xdceeff, 0x353d4e, 1.45);
+      scene.add(hemi);
+      const sun = new THREE.DirectionalLight(0xffe0ab, 2.0);
+      sun.position.set(-14, 26, -24);
+      sun.castShadow = true;
+      sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.left = -48; sun.shadow.camera.right = 48;
+      sun.shadow.camera.top = 34; sun.shadow.camera.bottom = -34;
+      scene.add(sun);
+
+      const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.15, 260);
+      camera.position.set(0, 22, 34);
+
+      const orbit = new OrbitControls(camera, canvas);
+      orbit.enableDamping = true; orbit.dampingFactor = 0.07;
+      orbit.maxDistance = 105; orbit.minDistance = 2.5;
+      orbit.target.set(0, 4.8, -2);
+      orbit.update();
+
+      // Build Simplified Demo Arena + Instantiate Phase 9 Reusable Subsystems
+      const { registry } = buildSimplifiedDemoArena(scene);
+      const solver = new CapsulePhysicsSolver(registry);
+      const recovery = new SafeRecoverySystem(solver);
+      const colVerifier = new CollisionVerifier(solver, recovery);
+      const navCertifier = new NavigationCertifier(solver);
+      const navGraph = new ArenaNavGraph();
+      const botNav = new BotNavHelper(navGraph);
+      const perfMonitor = new PerformanceMonitor();
+      const qualityMgr = new QualityProfileManager(renderer, { hemi, sun });
+      const overlays = buildEngineeringOverlays(scene, registry, navGraph);
+
+      // Live Demo Bots following A* NavGraph routes
+      const demoBots = [
+        { team: 'red',  route: botNav.getAlternativeReturnRoutes('blue').bridge,  idx: 0, speed: 7.2, mesh: null },
+        { team: 'blue', route: botNav.getAlternativeReturnRoutes('red').gallery,  idx: 0, speed: 7.0, mesh: null },
+        { team: 'red',  route: botNav.getAlternativeReturnRoutes('blue').lower,   idx: 0, speed: 7.5, mesh: null }
+      ];
+      demoBots.forEach((b) => {
+        const m = new THREE.Mesh(
+          new THREE.CapsuleGeometry(0.36, 0.9, 6, 10),
+          new THREE.MeshStandardMaterial({ color: b.team === 'red' ? 0xFF394B : 0x20BFFF, roughness: 0.4, metalness: 0.3 })
+        );
+        const start = b.route[0] || { x: 0, y: 4.8, z: 0 };
+        m.position.set(start.x, start.y + 0.9, start.z);
+        scene.add(m);
+        b.mesh = m;
+      });
+      let botsActive = true;
+
+      // Third-Person Playtest Avatar & State
+      const avatar = new THREE.Group();
+      const avBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.36, 0.95, 6, 12), new THREE.MeshStandardMaterial({ color: 0xDF9B32, roughness: 0.45, metalness: 0.4 }));
+      avBody.position.y = 0.9; avatar.add(avBody);
+      const avVisor = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.14, 0.2), new THREE.MeshBasicMaterial({ color: 0x7BE5FF }));
+      avVisor.position.set(0, 1.38, -0.25); avatar.add(avVisor);
+      avatar.visible = false; scene.add(avatar);
+
+      const player = {
+        x: -31, y: 4.8, z: 0, vy: 0, yaw: -Math.PI / 2, pitch: 0.26,
+        grounded: true, jumpsRemaining: 2, isRolling: false,
+        rollTime: 0, rollCd: 0, rollDX: 1, rollDZ: 0,
+        dashTime: 0, dashCd: 0, dashDX: 1, dashDZ: 0,
+        hp: 175, maxHp: 175, cooldowns: { roll: 0 }, ultCharge: 50, respawnTimer: 0
+      };
+
+      let mode = 'orbit', cleanView = false;
+      const keys = Object.create(null), joy = { x: 0, y: 0 };
+      let isLook = false, lmx = 0, lmy = 0;
+
+      // Toast helper
+      const toastEl = document.getElementById('toast');
+      let toastTimer = null;
+      function showToast(msg) {
+        toastEl.textContent = msg; toastEl.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+      }
+
+      // Tabs
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-body').forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        });
+      });
+
+      // Populate Manifest JSON
+      const manifestText = JSON.stringify(PHASE9_INTEGRATION_MANIFEST, null, 2);
+      document.getElementById('manifest-json').textContent = manifestText;
+      document.getElementById('btn-copy-manifest').addEventListener('click', () => {
+        const ta = document.createElement('textarea');
+        ta.value = manifestText; document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+        showToast('Integration Manifest JSON copied to clipboard');
+      });
+      document.getElementById('btn-check-singletons').addEventListener('click', () => {
+        const s = window.__DUELIST_SINGLETONS__;
+        showToast(`Singletons — Renderer:${s.renderer?'OK':'NULL'} | Collision:${s.collisionRegistry?'OK':'NULL'} | Loop:${s.animationLoopId?'ACTIVE':'NULL'}`);
+      });
+
+      // Mode & Camera Controls
+      const camPresets = {
+        overview: { pos: [0, 22, 34], target: [0, 4.8, -2] },
+        bridge:   { pos: [-16, 8.2, 10.5], target: [4, 5.2, 0] },
+        gallery:  { pos: [0, 13.5, -7.5], target: [0, 9.6, -21] },
+        lower:    { pos: [0, 3.2, 23.5], target: [0, 2.2, 2] },
+        redBase:  { pos: [-19, 9.5, 11.5], target: [-33, 5.4, 0] },
+        blueBase: { pos: [19, 9.5, 11.5], target: [33, 5.4, 0] }
+      };
+
+      function setMode(newMode) {
+        mode = newMode;
+        const isPlay = mode === 'play';
+        orbit.enabled = !isPlay;
+        avatar.visible = isPlay;
+        document.getElementById('btn-mode-orbit').classList.toggle('active', !isPlay);
+        document.getElementById('btn-mode-play').classList.toggle('active', isPlay);
+        document.getElementById('hint-orbit').style.display = isPlay ? 'none' : 'inline';
+        document.getElementById('hint-play').style.display = isPlay ? 'inline' : 'none';
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth < 820;
+        document.getElementById('mobile-controls').classList.toggle('visible', isPlay && isTouch);
+        if (isPlay) showToast('3rd-Person Playtest Active — Test Stairs, Cargo, Roll & Double-Jump');
+      }
+
+      function toggleCleanView() {
+        cleanView = !cleanView;
+        document.getElementById('hud').classList.toggle('clean-hidden', cleanView);
+        document.getElementById('clean-restore').classList.toggle('visible', cleanView);
+      }
+
+      document.getElementById('btn-mode-orbit').addEventListener('click', () => setMode('orbit'));
+      document.getElementById('btn-mode-play').addEventListener('click', () => setMode('play'));
+      document.getElementById('btn-cam-playtest').addEventListener('click', () => setMode('play'));
+      document.getElementById('btn-toggle-inspector').addEventListener('click', () => document.getElementById('inspector').classList.toggle('collapsed'));
+      document.getElementById('btn-clean-view').addEventListener('click', toggleCleanView);
+      document.getElementById('btn-exit-clean').addEventListener('click', toggleCleanView);
+
+      document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => {
+        const p = camPresets[b.dataset.cam]; if (!p) return;
+        if (mode === 'play') setMode('orbit');
+        camera.position.set(...p.pos); orbit.target.set(...p.target); orbit.update();
+      }));
+
+      // Overlay Toggles
+      document.getElementById('btn-ov-collision').addEventListener('click', (e) => {
+        overlays.colGroup.visible = !overlays.colGroup.visible;
+        e.target.classList.toggle('active', overlays.colGroup.visible);
+      });
+      document.getElementById('btn-ov-navgraph').addEventListener('click', (e) => {
+        overlays.navGroup.visible = !overlays.navGroup.visible;
+        e.target.classList.toggle('active', overlays.navGroup.visible);
+      });
+      document.getElementById('btn-ov-spawns').addEventListener('click', (e) => {
+        overlays.spawnGroup.visible = !overlays.spawnGroup.visible;
+        e.target.classList.toggle('active', overlays.spawnGroup.visible);
+      });
+      document.getElementById('btn-ov-bots').addEventListener('click', (e) => {
+        botsActive = !botsActive;
+        demoBots.forEach(b => { b.mesh.visible = botsActive; });
+        e.target.textContent = botsActive ? 'Demo Bots: ON' : 'Demo Bots: OFF';
+        e.target.classList.toggle('active', botsActive);
+      });
+
+      // Quality Profile & DPR Controls
+      const profileLbl = document.getElementById('profile-label');
+      const dprSlider = document.getElementById('dpr-slider');
+      const dprVal = document.getElementById('dpr-val');
+      document.querySelectorAll('[data-profile]').forEach((b) => b.addEventListener('click', () => {
+        document.querySelectorAll('[data-profile]').forEach(x => x.classList.remove('active'));
+        b.classList.add('active');
+        qualityMgr.apply(b.dataset.profile);
+        profileLbl.textContent = b.dataset.profile.toUpperCase();
+        dprSlider.value = qualityMgr.dprCap;
+        dprVal.textContent = qualityMgr.dprCap.toFixed(2);
+        showToast(`Quality Profile: ${b.dataset.profile.toUpperCase()}`);
+      }));
+      dprSlider.addEventListener('input', () => {
+        const val = parseFloat(dprSlider.value);
+        dprVal.textContent = val.toFixed(2);
+        qualityMgr.setDprCap(val);
+      });
+
+      // Live Recovery Stress Tools
+      document.getElementById('btn-test-embed').addEventListener('click', () => {
+        setMode('play');
+        player.x = -6.0; player.y = 0.2; player.z = 3.35;
+        const r = recovery.recoverIfNeeded(player, { team: 'red' });
+        showToast(r.recovered ? `Recovered from ${r.obstacleId} to (${player.x.toFixed(1)}, ${player.y.toFixed(1)}, ${player.z.toFixed(1)})` : 'No recovery needed');
+      });
+      document.getElementById('btn-test-oob').addEventListener('click', () => {
+        setMode('play');
+        player.x = 60; player.y = -3; player.z = 42;
+        const r = recovery.recoverIfNeeded(player, { team: 'red' });
+        showToast(r.recovered ? `OOB Recovered safely to (${player.x.toFixed(1)}, ${player.y.toFixed(1)}, ${player.z.toFixed(1)})` : 'Failed');
+      });
+
+      // Audit UI Rendering
+      const auditResultsEl = document.getElementById('audit-results');
+      const auditScopeTxt = document.getElementById('audit-scope-txt');
+      const auditScoreTxt = document.getElementById('audit-score-txt');
+
+      function renderAuditItems(items, label) {
+        const passed = items.filter(i => i.pass).length;
+        auditScopeTxt.textContent = label;
+        auditScoreTxt.textContent = `${passed} / ${items.length} PASS`;
+        auditScoreTxt.style.color = passed === items.length ? 'var(--green)' : 'var(--red)';
+        auditResultsEl.innerHTML = items.map((r) => {
+          const scopeBadge = r.scope === 'DEMO GEOM'
+            ? `<span class="tag demo">DEMO GEOM</span><span class="tag prod">RE-RUN ON PROD</span>`
+            : `<span class="tag unit">${r.scope}</span>`;
+          return `
+            <div class="audit-item">
+              <div>
+                <div class="audit-name">${r.id}. ${r.name}</div>
+                <div class="audit-detail">${r.detail}</div>
+                <div class="audit-tags">${scopeBadge}</div>
+              </div>
+              <span class="${r.pass ? 'badge-pass' : 'badge-fail'}">${r.pass ? 'PASS' : 'FAIL'}</span>
+            </div>
+          `;
+        }).join('');
+        showToast(`${label}: ${passed}/${items.length} Passed`);
+      }
+
+      async function runRendererAudit() {
+        const frameChk = RendererCertifier.verifyRenderedFrame(renderer, scene, camera);
+        const fbChk = await RendererCertifier.certifyForcedWebGL2Fallback();
+        return [
+          { id: 'R1', name: `Active Renderer Frame Cert (${backendLabel})`, pass: frameChk.ok, scope: 'UNIT', detail: frameChk.ok ? `Rendered ${frameChk.width}×${frameChk.height} zero errors` : frameChk.error },
+          { id: 'R2', name: 'Forced WebGL2 Fresh-Canvas Fallback', pass: fbChk.pass, scope: 'UNIT', detail: fbChk.detail }
+        ];
+      }
+
+      document.getElementById('btn-audit-col').addEventListener('click', () => renderAuditItems(colVerifier.runAll('DEMO GEOM'), 'Collision & Recovery'));
+      document.getElementById('btn-audit-nav').addEventListener('click', () => renderAuditItems(navCertifier.runAll('DEMO GEOM'), 'Navigation & 6 Routes'));
+      document.getElementById('btn-audit-p8').addEventListener('click', () => {
+        const items = [...Phase8SecurityPatch.runAuditSuite(recovery), MatchTimingController.runTimingAudit()];
+        renderAuditItems(items, 'Phase 8 Hardening & Timing');
+      });
+      document.getElementById('btn-audit-gpu').addEventListener('click', async () => {
+        renderAuditItems(await runRendererAudit(), 'WebGPU / WebGL2 Certification');
+      });
+      document.getElementById('btn-audit-all').addEventListener('click', async () => {
+        const all = [
+          ...colVerifier.runAll('DEMO GEOM'),
+          ...navCertifier.runAll('DEMO GEOM'),
+          ...Phase8SecurityPatch.runAuditSuite(recovery),
+          MatchTimingController.runTimingAudit(),
+          ...(await runRendererAudit())
+        ];
+        renderAuditItems(all, 'All Phase 9 Audits');
+      });
+
+      // Playtest Input Handlers
+      const triggerJump = () => {
+        if (player.jumpsRemaining > 0) {
+          player.vy = 9.2;
+          player.grounded = false;
+          player.jumpsRemaining--;
+        }
+      };
+      const triggerRoll = () => {
+        if (player.rollCd > 0 || player.dashTime > 0) return;
+        player.isRolling = true; player.rollTime = 0.32; player.rollCd = 0.45;
+        player.rollDX = -Math.sin(player.yaw); player.rollDZ = -Math.cos(player.yaw);
+      };
+      const triggerDash = () => {
+        if (player.dashCd > 0) return;
+        player.dashTime = 0.22; player.dashCd = 1.6;
+        player.dashDX = -Math.sin(player.yaw); player.dashDZ = -Math.cos(player.yaw);
+        if (!player.grounded && player.vy < 1.5) player.vy = 2.4;
+      };
+
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'KeyH') toggleCleanView();
+        if (mode === 'play') {
+          if (e.code === 'Space') triggerJump();
+          if (e.code === 'KeyC') triggerRoll();
+          if (e.code === 'KeyE') triggerDash();
+          if (e.code === 'KeyR') { Object.assign(player, { x: -31, y: 4.8, z: 0, vy: 0, grounded: true, jumpsRemaining: 2 }); showToast('Reset to Red Flag Platform'); }
+        }
+      });
+      window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+      canvas.addEventListener('mousedown', (e) => { if (mode === 'play') { isLook = true; lmx = e.clientX; lmy = e.clientY; } });
+      window.addEventListener('mouseup', () => { isLook = false; });
+      window.addEventListener('mousemove', (e) => {
+        if (mode !== 'play' || !isLook) return;
+        player.yaw -= (e.clientX - lmx) * 0.0055;
+        player.pitch = THREE.MathUtils.clamp(player.pitch + (e.clientY - lmy) * 0.0045, -0.35, 1.1);
+        lmx = e.clientX; lmy = e.clientY;
+      });
+
+      // Mobile Virtual Joystick & Buttons
+      const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
+      let joyId = null;
+      const moveJoy = (cx, cy) => {
+        const r = joyZone.getBoundingClientRect(), mx = r.left + r.width / 2, my = r.top + r.height / 2, maxR = r.width * 0.36;
+        let dx = cx - mx, dy = cy - my, d = Math.hypot(dx, dy);
+        if (d > maxR) { dx = (dx / d) * maxR; dy = (dy / d) * maxR; }
+        joyKnob.style.transform = `translate(${dx}px, ${dy}px)`; joy.x = dx / maxR; joy.y = dy / maxR;
+      };
+      joyZone.addEventListener('touchstart', (e) => { e.preventDefault(); joyId = e.changedTouches[0].identifier; moveJoy(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+      joyZone.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === joyId) moveJoy(t.clientX, t.clientY); }, { passive: false });
+      const endJoy = (e) => { for (const t of e.changedTouches) if (t.identifier === joyId) { joyId = null; joy.x = 0; joy.y = 0; joyKnob.style.transform = 'translate(0,0)'; } };
+      joyZone.addEventListener('touchend', endJoy); joyZone.addEventListener('touchcancel', endJoy);
+      document.getElementById('touch-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (mode === 'play') triggerJump(); }, { passive: false });
+      document.getElementById('touch-roll').addEventListener('touchstart', (e) => { e.preventDefault(); if (mode === 'play') triggerRoll(); }, { passive: false });
+      document.getElementById('touch-dash').addEventListener('touchstart', (e) => { e.preventDefault(); if (mode === 'play') triggerDash(); }, { passive: false });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      document.getElementById('loader').classList.add('done');
+
+      // Telemetry & Sparkline DOM Refs
+      const statFps = document.getElementById('stat-fps'), statMs = document.getElementById('stat-ms');
+      const statDraws = document.getElementById('stat-draws'), statTris = document.getElementById('stat-tris');
+      const statPos = document.getElementById('stat-pos');
+      const sparkCanvas = document.getElementById('sparkline-canvas');
+      const sparkCtx = sparkCanvas.getContext('2d');
+
+      function drawSparkline(samples) {
+        const w = sparkCanvas.width, h = sparkCanvas.height;
+        sparkCtx.clearRect(0, 0, w, h);
+        // 16.6ms target line
+        const targetY = h - (16.6 / 40) * h;
+        sparkCtx.strokeStyle = 'rgba(46, 229, 141, 0.35)';
+        sparkCtx.setLineDash([4, 4]);
+        sparkCtx.beginPath(); sparkCtx.moveTo(0, targetY); sparkCtx.lineTo(w, targetY); sparkCtx.stroke();
+        sparkCtx.setLineDash([]);
+
+        if (samples.length < 2) return;
+        sparkCtx.strokeStyle = '#7BE5FF';
+        sparkCtx.lineWidth = 1.8;
+        sparkCtx.beginPath();
+        samples.forEach((ms, i) => {
+          const x = (i / (samples.length - 1)) * w;
+          const y = h - Math.min(1, ms / 40) * h;
+          if (i === 0) sparkCtx.moveTo(x, y); else sparkCtx.lineTo(x, y);
+        });
+        sparkCtx.stroke();
+      }
+
+      // Fixed-Timestep Simulation Accumulator (60Hz decoupled from render FPS)
+      const FIXED_DT = 1 / 60;
+      let accumulator = 0;
+      let lastTime = performance.now();
+
+      function stepFixedSimulation(dt) {
+        // 1. Update Demo Bots along A* paths
+        if (botsActive) {
+          for (const b of demoBots) {
+            if (!b.route.length) continue;
+            const target = b.route[b.idx];
+            const pos = b.mesh.position;
+            const dx = target.x - pos.x, dy = (target.y + 0.9) - pos.y, dz = target.z - pos.z;
+            const dist = Math.hypot(dx, dy, dz);
+            if (dist < 0.45) {
+              b.idx = (b.idx + 1) % b.route.length;
+            } else {
+              const s = Math.min(dist, b.speed * dt);
+              pos.x += (dx / dist) * s; pos.y += (dy / dist) * s; pos.z += (dz / dist) * s;
+            }
+          }
+        }
+
+        // 2. Step Third-Person Capsule Physics
+        if (mode === 'play') {
+          if (player.rollCd > 0) player.rollCd = Math.max(0, player.rollCd - dt);
+          if (player.dashCd > 0) player.dashCd = Math.max(0, player.dashCd - dt);
+
+          let mx = 0, mz = 0;
+          if (player.dashTime > 0) {
+            player.dashTime = Math.max(0, player.dashTime - dt);
+            mx = player.dashDX * 21.0 * dt; mz = player.dashDZ * 21.0 * dt;
+          } else if (player.rollTime > 0) {
+            player.rollTime = Math.max(0, player.rollTime - dt);
+            mx = player.rollDX * 13.5 * dt; mz = player.rollDZ * 13.5 * dt;
+            if (player.rollTime <= 0) player.isRolling = false;
+          } else {
+            let fwd = 0, str = 0;
+            if (keys['KeyW'] || keys['ArrowUp']) fwd += 1;
+            if (keys['KeyS'] || keys['ArrowDown']) fwd -= 1;
+            if (keys['KeyD'] || keys['ArrowRight']) str += 1;
+            if (keys['KeyA'] || keys['ArrowLeft']) str -= 1;
+            fwd -= joy.y; str += joy.x;
+            const mag = Math.hypot(fwd, str);
+            if (mag > 0.05) {
+              const spd = (keys['ShiftLeft'] || keys['ShiftRight']) ? 10.2 : 6.6;
+              const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+              mx = ((-sy * (fwd / mag) + cy * (str / mag)) * spd * Math.min(1, mag)) * dt;
+              mz = ((-cy * (fwd / mag) - sy * (str / mag)) * spd * Math.min(1, mag)) * dt;
+            }
+          }
+
+          solver.step(player, mx, mz, dt, { team: 'red' });
+          const rec = recovery.recoverIfNeeded(player, { team: 'red' });
+          if (rec.recovered) showToast(`Auto-Recovered from ${rec.obstacleId}`);
+        }
+      }
+
+      function animate(now) {
+        window.__DUELIST_SINGLETONS__.animationLoopId = requestAnimationFrame(animate);
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        lastTime = now;
+
+        accumulator += dt;
+        while (accumulator >= FIXED_DT) {
+          stepFixedSimulation(FIXED_DT);
+          accumulator -= FIXED_DT;
+        }
+
+        if (mode === 'orbit') {
+          orbit.update();
+        } else {
+          avatar.position.set(player.x, player.y, player.z);
+          avatar.rotation.y = player.yaw;
+          const dist = 5.6, py = player.y + 1.55;
+          camera.position.lerp(new THREE.Vector3(
+            player.x + Math.sin(player.yaw) * Math.cos(player.pitch) * dist,
+            Math.max(0.8, py + Math.sin(player.pitch) * dist),
+            player.z + Math.cos(player.yaw) * Math.cos(player.pitch) * dist
+          ), Math.min(1, dt * 12));
+          camera.lookAt(player.x, py, player.z);
+        }
+
+        renderer.render(scene, camera);
+
+        if (perfMonitor.recordFrame(dt)) {
+          const snap = perfMonitor.inspectScene(scene, renderer);
+          statFps.textContent = String(snap.fps);
+          statMs.textContent = `${snap.avgMs.toFixed(1)}ms`;
+          statDraws.textContent = String(snap.draws);
+          statTris.textContent = snap.triangles.toLocaleString();
+          const ref = mode === 'play' ? player : camera.position;
+          statPos.textContent = `${ref.x.toFixed(1)}, ${ref.y.toFixed(1)}, ${ref.z.toFixed(1)}`;
+
+          document.getElementById('perf-avg-ms').textContent = `${snap.avgMs.toFixed(2)} ms`;
+          document.getElementById('perf-draws').textContent = String(snap.draws);
+          document.getElementById('perf-tris').textContent = snap.triangles.toLocaleString();
+          document.getElementById('perf-texmb').textContent = `${snap.texMB} MB`;
+          document.getElementById('perf-geos').textContent = String(snap.geometries);
+          document.getElementById('perf-mats').textContent = String(snap.materials);
+          document.getElementById('perf-advisor').innerHTML =
+            `<strong>Frustum Culled:</strong> ${snap.frustumCulledRatio}<br>` +
+            snap.recommendations.map(r => `• ${r}`).join('<br>');
+          drawSparkline(perfMonitor.frameTimes);
+        }
+      }
+
+      window.__DUELIST_SINGLETONS__.animationLoopId = requestAnimationFrame(animate);
+    }
+
+    main().catch((err) => {
+      console.error('Phase 9 Fatal Init Error:', err);
+      document.getElementById('loader-status').textContent = 'Init Error: ' + err.message;
+    });
+  </script>
+</body>
+</html>
