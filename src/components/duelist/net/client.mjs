@@ -62,10 +62,10 @@ export async function fetchLobby(serverUrl = duelistServerUrl()) {
   if (!serverUrl) return null;
   const url = serverUrl.replace(/^ws(s?):\/\//i, 'http$1://').replace(/\/ws\/duelist$/i, '/lobby');
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store', signal: globalThis.AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     const body = await res.json();
-    return Array.isArray(body.matches) ? body.matches : null;
+    return body.protocol === PROTOCOL && Array.isArray(body.matches) ? body.matches : null;
   } catch {
     return null;
   }
