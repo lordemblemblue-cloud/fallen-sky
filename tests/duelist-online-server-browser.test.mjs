@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
-import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch } from '../src/components/duelist/menu/serverBrowser.mjs';
+import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch, persistentServerCards } from '../src/components/duelist/menu/serverBrowser.mjs';
 
 const source = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const room = (id, mode, players = 1, seats = 20, open = true) => ({
@@ -70,4 +70,15 @@ test('the main menu links to Online Play and no longer auto-joins/queues a selec
   assert.match(page, /lobby\.online && exactServer/);
   assert.match(routes, /'online-play': OnlinePlayPage/);
   assert.match(arena, /from === 'online-play'/);
+});
+
+ test('seven official rooms remain visible without a lobby response and extra rooms append', () => {
+  const defaults = persistentServerCards(null);
+  assert.equal(defaults.length, 7);
+  assert.ok(defaults.every(r => r.official && !r.confirmed && r.players === null));
+  assert.equal(defaults.find(r => r.mode === 'ffa').id, 'm7');
+  const cards = persistentServerCards([room('m7','ffa',1,6),room('m8','ffa',2,6)],'ffa');
+  assert.deepEqual(cards.map(r => [r.id,r.official,r.confirmed]), [['m7',true,true],['m8',false,true]]);
+  assert.equal(serverJoinSearch(cards[0]).matchId,'m7');
+  assert.equal(serverJoinSearch(cards[1]).matchId,'m8');
 });
