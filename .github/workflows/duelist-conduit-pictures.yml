@@ -1,7 +1,5 @@
 name: Duelist Conduit mode pictures
 on:
-  push:
-    branches: ['conduit/mode-thumbnail-refresh']
   pull_request:
     paths:
       - 'scripts/generate-duelist-map-pictures.mjs'
@@ -34,9 +32,8 @@ jobs:
         run: |
           node --test tests/duelist-static-map-pictures.test.mjs
           node --input-type=module -e "import sharp from 'sharp'; for(const mode of ['tdm','ffa']) {const m=await sharp('public/duelist/maps/'+mode+'.webp').metadata();if(m.width!==960||m.height!==540||m.format!=='webp')throw Error(mode);console.log(mode,m.width,m.height,m.size)}"
-      - name: Export generated public asset bytes for review
-        run: |
-          node --input-type=module -e "import {readFileSync} from 'node:fs'; for(const mode of ['tdm','ffa']) {const b=readFileSync('public/duelist/maps/'+mode+'.webp').toString('base64');for(let i=0;i<b.length;i+=2000)console.log('CONDUIT_IMAGE_'+mode+' '+i+' '+b.slice(i,i+2000));}"
+      - name: Verify checked-in images match the generated thumbnails
+        run: git diff --exit-code -- public/duelist/maps/tdm.webp public/duelist/maps/ffa.webp
       - uses: actions/upload-artifact@v4
         with:
           name: conduit-mode-pictures
