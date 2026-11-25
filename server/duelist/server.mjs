@@ -50,7 +50,8 @@ const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing 
 // missionAgainSeconds: how long after a mission is completed its crew goes on to the next
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
   clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000,
-  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null, progress = createProgressStore(), continuousPublicRooms = false } = {}) {
+  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null, progress = createProgressStore(), continuousPublicRooms = false,
+  maxConnections = Infinity, maxRooms = Infinity, publicArenaOnly = false } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -75,12 +76,13 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     const path = (req.url || '').split('?')[0];
     const origin = req.headers.origin || '';
     if (path !== WS_PATH || (allowedOrigins && !allowedOrigins.includes(origin))) { socket.destroy(); return; }
+    if (wss.clients.size >= maxConnections) { socket.end('HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n'); return; }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws, req));
   });
 
   const send = (client, message) => { if (client.ws.readyState === WebSocket.OPEN) client.ws.send(JSON.stringify(message)); };
   const newKey = () => randomBytes(18).toString('base64url');
-  const sameKey = (a, b) => typeof a === 'string' && typeof b === 'string' && a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  const sameKey = (a, b) => typeof a === 'string' && typeof b === 'string' && /^[A-Za-z0-9_-]{24}$/.test(a) && /^[A-Za-z0-9_-]{24}$/.test(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b));
   const worldOf = (room) => (room.mission || room.match).world;
   const awayIn = (room) => [...room.clients.values()].filter((c) => c.away).map((c) => c.id);
   const connected = (room) => [...room.clients.values()].some((c) => !c.away);
@@ -178,7 +180,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     // the Join button ('any') looks for a match; crews are joined from the story page
     const pool = [...rooms.values()].filter((r) => hasRoom(r) && (mode === 'any' ? !r.mission && humansIn(r) > 0 : r.mode === mode));
     pool.sort(byPlayers);
-    return pool[0] || openRoom(mode === 'any' ? 'duel' : mode);
+    return pool[0] || (rooms.size < maxRooms ? openRoom(mode === 'any' ? 'duel' : mode) : null);
   }
 
   function ensureSpareRoom(mode) {
@@ -186,7 +188,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     // Exactly one bot-filled open room is kept ready while this mode fills;
     // unused overflow rooms still expire after the normal idle timeout.
     const ready = [...rooms.values()].some(r => !r.mission && r.mode === mode && hasRoom(r));
-    if (!ready) openRoom(mode);
+    if (!ready && rooms.size < maxRooms) openRoom(mode);
   }
 
   // classId: the class the player fights as (a seat they already have keeps its own)
@@ -200,6 +202,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     }
     if (client.room) leave(client);
     const room = selected || pickRoom(mode);
+    if (!room) { send(client, { t: 'error', code: 'full', message: 'All rooms are busy. Refresh Online Play.' }); return; }
     if (classId) client.classId = classId; // remembered for rematches
     // the account's EXP per class: the match works out the level from it, never from the browser
     const result = joinMatch(room.match, { id: client.id, name: client.name, classId: client.classId || null, progress: progress.get(client.id) });
@@ -249,6 +252,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
     } else if (!create) {
       room = [...rooms.values()].filter((r) => r.mission && hasRoom(r) && r.mission.id === mission).sort(byPlayers)[0] || null;
     }
+    if (!room && rooms.size >= maxRooms) { send(client, { t: 'error', code: 'full', message: 'All rooms are busy.' }); return; }
     if (client.room) leave(client);
     if (room) joinMission(room.mission, { id: client.id, name: client.name });
     else room = openCrew(client, { open: open || !create, mission });
@@ -568,6 +572,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         send(client, { t: 'lobby', matches: lobby() });
       } else if (msg.t === 'join') {
         if (msg.mode === STORY_MODE) {
+          if (publicArenaOnly) { send(client, { t: 'error', code: 'mode', message: 'This guest host serves competitive arenas only.' }); return; }
           const coded = msg.code !== undefined && msg.code !== null;
           if (coded && (typeof msg.code !== 'string' || !ROOM_CODE.test(msg.code))) { send(client, { t: 'error', code: 'code', message: 'That is not a crew code.' }); return; }
           const matchId = msg.matchId === undefined ? null : typeof msg.matchId === 'string' && /^m[0-9]+$/.test(msg.matchId) ? msg.matchId : false;

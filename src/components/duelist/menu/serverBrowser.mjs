@@ -40,6 +40,10 @@ export function serverJoinSearch(room) {
   } : null;
 }
 
+export function localArenaSearch(room) {
+  return MODES.has(room?.mode) ? { mode: room.mode, online: 0, from: 'online-play' } : null;
+}
+
 // The official rooms are provisioned at server startup and are always represented
 // in the browser, even before the first successful lobby request. Unknown
 // occupancy is not zero, and a disconnected server is never called live.
