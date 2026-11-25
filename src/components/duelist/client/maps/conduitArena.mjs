@@ -753,9 +753,11 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 }
                 world.addRamp(Math.sin(a) * stairMidR, Math.cos(a) * stairMidR, stairWC, stairLenC, CFG.yT0, CFG.yT1Pit, a, `Courtyard Stair ${idx + 1}`, true);
 
+                // Widen the inner transition before the stair toe so a .8 m capsule
+                // can turn into the side bypass without squeezing between rail and wall.
                 // Enclosed Cross Tunnel Floors + Continuous Walls + Ceiling Beams
                 addBox(sg, 5.2, 0.5, 4.0, 0, CFG.yT0 - 0.25,  7.6, MAT.steelFloor, { walkable: true, label: `T0 Tun In ${idx}` });
-                addBox(sg, 8.8, 0.5, 10.0, 0, CFG.yT0 - 0.25, 13.8, MAT.steelFloor, { walkable: true, label: `T0 Bypass ${idx}` });
+                addBox(sg, 8.8, 0.5, 10.8, 0, CFG.yT0 - 0.25, 13.4, MAT.steelFloor, { walkable: true, label: `T0 Bypass ${idx}` });
                 addBox(sg, 5.2, 0.5, 9.2, 0, CFG.yT0 - 0.25, 23.0, MAT.steelFloor, { walkable: true, label: `T0 Tun Out ${idx}` });
                 addBox(sg, 5.6, 0.35, 9.4, 0, CFG.yT0Ceil, 23.0, MAT.gunmetal, { label: `T0 Tun Ceil Out ${idx}` });
                 addBox(sg, 5.6, 0.35, 4.0, 0, CFG.yT0Ceil,  7.6, MAT.gunmetal, { label: `T0 Tun Ceil In ${idx}` });
@@ -766,15 +768,15 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 // Reinforced tunnel entrance portal frame
                 addBox(sg, 5.4, 0.42, 0.55, 0, CFG.yT0 + 4.1, 18.6, MAT.brushedSteel);
                 [-2.6, 2.6].forEach(wx => {
-                    addBox(sg, 0.5, 4.4, 3.8, wx, CFG.yT0 + 2.2,  7.6, MAT.concrete, { label: `T0 Wall In ${idx}` });
+                    addBox(sg, 0.5, 4.4, 2.4, wx, CFG.yT0 + 2.2,  6.9, MAT.concrete, { label: `T0 Wall In ${idx}` });
                     addBox(sg, 0.5, 4.4, 8.6, wx, CFG.yT0 + 2.2, 22.8, MAT.concrete, { label: `T0 Wall Out ${idx}` });
                 });
                 [-4.4, 4.4].forEach(wx => {
-                    addBox(sg, 0.5, 4.4, 9.8, wx, CFG.yT0 + 2.2, 13.8, MAT.paintedPanel, { label: `T0 Hall Wall ${idx}` });
+                    addBox(sg, 0.5, 4.4, 10.6, wx, CFG.yT0 + 2.2, 13.4, MAT.paintedPanel, { label: `T0 Hall Wall ${idx}` });
                     addBox(sg, 0.1, 1.2, 1.8, wx > 0 ? wx - 0.26 : wx + 0.26, CFG.yT0 + 2.4, 13.8, MAT.ventGrille);
                 });
                 [-3.5, 3.5].forEach(wx => {
-                    addBox(sg, 1.9, 4.4, 0.5, wx, CFG.yT0 + 2.2,  9.1, MAT.gunmetal, { label: `T0 Shoulder In ${idx}` });
+                    addBox(sg, 1.9, 4.4, 0.5, wx, CFG.yT0 + 2.2,  8.1, MAT.gunmetal, { label: `T0 Shoulder In ${idx}` });
                     addBox(sg, 1.9, 4.4, 0.5, wx, CFG.yT0 + 2.2, 18.6, MAT.gunmetal, { label: `T0 Shoulder Out ${idx}` });
                 });
                 const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 8.5, 8), MAT.copperPipe);
