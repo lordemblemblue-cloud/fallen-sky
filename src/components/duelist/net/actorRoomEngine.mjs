@@ -63,7 +63,7 @@ export class DuelistRoomEngine {
       if(c.welcomed)return;
       if(msg.v!==PROTOCOL){conn.send({t:'error',code:'version',message:'Game updated. Reload the page.'});this.remove(conn.id);conn.reject(4426,'Version');return;}
       c.welcomed=true;c.body=BODY_IDS.includes(msg.body)?msg.body:BODY_IDS[0];
-      this.send(c,{t:'welcome',id:c.id,name:'Guest',protocol:PROTOCOL,resumed:false});return;
+      this.send(c,{t:'welcome',id:c.id,name:'Guest',protocol:PROTOCOL,shopBuild:true,resumed:false});return;
     }
     if(!c.welcomed)return;
     if(msg.t==='join'){
