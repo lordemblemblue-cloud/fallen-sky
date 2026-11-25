@@ -53,7 +53,7 @@ export default function OnlinePlayPage() {
           <p className="text-sm text-white/70">Enter alone, with bots off. No public server or matchmaking required.</p>
           <button type="button" aria-expanded={importPreview} onClick={()=>setImportPreview(v=>!v)} className="rounded border border-amber-300/40 px-3 py-2 text-amber-200">{importPreview ? "Close imported map preview" : "Preview new Control Point map"}</button>
           {importPreview && <Suspense fallback={<p>Loading imported arena…</p>}><ImportedControlPointPreview/></Suspense>}
-          <div className="flex flex-wrap gap-2">{ONLINE_SERVER_MODES.map(id => <button key={id} type="button" className="rounded border border-white/20 px-3 py-2 text-white" onClick={() => navigate({ to: '/duelist-next/play', search: { mode: id, online: 0, test: 1, from: 'online-play' } })}>{MENU_MODES[id]?.title || id}</button>)}</div>
+          <div className="flex flex-wrap gap-2">{ONLINE_SERVER_MODES.map(id => <button key={id} type="button" className="rounded border border-white/20 px-3 py-2 text-white" onClick={() => navigate({ to: '/duelist-next/play', search: { mode: id, online: 0, test: 1, from: 'online-play' } })}>{id === 'control' ? 'Control Point — New two-level map' : MENU_MODES[id]?.title || id}</button>)}</div>
         </section>}
         <p role="status" aria-live="polite" className="text-sm text-white/70">
           {lobby.online ? `${lobby.players} players online · Permanent public rooms`

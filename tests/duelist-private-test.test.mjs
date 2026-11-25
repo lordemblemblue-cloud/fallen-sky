@@ -11,10 +11,12 @@ test('all seven test modes start solo and can start with normal bot seats',()=>{
     assert.ok(filled.seats().some(s=>s.kind==='bot'),mode);
   }
 });
-test('A foundation is shared by public and private Control Point and has four center entrances',()=>{
-  const map=getModeArenaLayout('control',true);
-  assert.equal(map,getModeArenaLayout('control'));
-  assert.equal(createLocalSource({mode:'control',testMode:true}).world.arenaLayout,map);
+test('the existing public A foundation remains unchanged while the imported map is validated privately',()=>{
+  const map=getModeArenaLayout('control');
+  const imported=getModeArenaLayout('control',true);
+  assert.notEqual(imported,map);
+  assert.equal(imported.id,'control-point-import-v2');
+  assert.equal(createLocalSource({mode:'control',testMode:true}).world.arenaLayout,imported);
   assert.equal(createLocalSource({mode:'control'}).world.arenaLayout,map);
   assert.equal(map.parts.filter(p=>p.kind==='deck').length,3);
   assert.ok(map.parts.length<65);
@@ -36,7 +38,7 @@ test('A foundation is shared by public and private Control Point and has four ce
 test('decorative trim follows the A outer and inner edges and clips to the foundation',async()=>{
   const THREE=await import('three');
   const {controlFloorPatterns,clippedPatternGeometry}=await import('../src/components/duelist/client/controlFloorTrim.mjs');
-  const map=getModeArenaLayout('control',true);
+  const map=getModeArenaLayout('control');
   const trace=(shape,ring)=>{ring.forEach(([x,z],i)=>i?shape.lineTo(x,-z):shape.moveTo(x,-z));shape.closePath();};
   const outline=new THREE.Shape();trace(outline,map.footprint.outer);
   for(const ring of map.footprint.holes){const hole=new THREE.Path();trace(hole,ring);outline.holes.push(hole);}
