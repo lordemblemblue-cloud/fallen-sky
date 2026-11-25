@@ -1,4 +1,4 @@
-import { escortSpawn, escortEnemyZone } from './importedEscortLayout.mjs';
+import { escortSpawn, escortEnemyZone, escortEmbedded, escortSupport, escortBlockers, escortRecoverySpot } from './importedEscortLayout.mjs';
 // Matches: the five ways to play Duelist Adventure, on top of the arena world. Pure and seeded, so the match
 // server (phase 5) runs exactly the rules the browser practises with.
 //
@@ -41,6 +41,9 @@ export const MODES = Object.freeze({
 });
 export const CTF = Object.freeze({ pickup: 1.3, capture: 2.2, autoReturn: 20, baseInset: 4 });
 export const COUNTDOWN = 3;
+export const ESCORT_PREPARATION_SECONDS=30;
+export const ESCORT_START_COUNTDOWN=5;
+export function matchCountdownSeconds(mode){return mode==='escort'?ESCORT_PREPARATION_SECONDS+ESCORT_START_COUNTDOWN:COUNTDOWN;}
 export const ROUND_BREAK = 2.5;
 const BOT_NAMES = ['Kestrel', 'Vael', 'Oren', 'Sable', 'Tamsin', 'Corvin', 'Maren', 'Quill', 'Rhys', 'Ashby', 'Nyra', 'Talon'];
 
@@ -57,7 +60,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
   const match = {
     mode: def.id, def, world, testMode, seed, botLevel, random: createRandom(seed * 7919 + 13),
     capacity: Math.max(players.length, arenaLayout ? Math.min(seats ?? def.seats, arenaLayout.capacity) : seats ?? def.seats),
-    phase: 'countdown', phaseUntil: COUNTDOWN, clock: 0,
+    phase: 'countdown', phaseUntil: matchCountdownSeconds(def.id), clock: 0,
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
     seats: new Map(), order: [], scores: {}, teamScores: { red: 0, blue: 0 }, damageLog: new Map(),
     flags: def.flags ? makeFlags(def) : null,
@@ -373,17 +376,48 @@ function goalFor(match, s) {
  * world's effects (hits, knockbacks...) and the match's own events (defeat, flagTaken, captured, round,
  * over...).
  */
+function recoverEscortBodies(match,dt){
+  if(!match.escort)return;
+  const world=match.world,stage=match.escort.stage;
+  for(const seat of match.seats.values()){
+    const f=world.fighters.get(seat.id),b=bodyOf(world,seat.id);
+    if(!f||!b||f.vitals.dead||seat.respawnAt!==null){seat.embeddedFor=0;continue;}
+    if(escortEmbedded(b)){
+      seat.embeddedFor=(seat.embeddedFor||0)+dt;
+      if(seat.embeddedFor>=.15){
+        const spot=escortRecoverySpot(b,seat.team,stage,world.bodies,seat.id,seat.lastSafe);
+        Object.assign(b,spot,{vy:0,kx:0,kz:0,motion:null,jumped:false,airDashReady:false,airJumpAt:null,moving:false,speed:0});
+        f.action=null;f.guard=null;f.buffer=null;f.heldBy=null;f.seizedBy=null;
+        // Release anyone held by the displaced fighter. Preserve health,
+        // stamina, cooldowns, score, and the existing respawn penalty.
+        for(const other of world.fighters.values()){
+          if(other.heldBy===seat.id)other.heldBy=null;
+          if(other.seizedBy===seat.id)other.seizedBy=null;
+        }
+        seat.embeddedFor=0;seat.lastSafe={...spot};
+        seat.recoveryCount=(seat.recoveryCount||0)+1;
+        event(match,{type:'positionRecovered',id:seat.id,feed:false});
+      }
+    }else{
+      seat.embeddedFor=0;
+      if(Math.abs(escortSupport(b.x,b.z,b.y+.06,.03)-b.y)<.08&&!escortBlockers({...b,radius:.48}).length&&!escortEnemyZone(seat.team,stage,b))
+        seat.lastSafe={x:b.x,y:b.y,z:b.z,yaw:b.yaw};
+    }
+  }
+}
+
 export function stepMatch(match, dt, inputs = {}) {
   match.events = [];
   const { world } = match;
   if (match.phase !== 'live') {
     // nobody fights during a countdown or between rounds; bodies still settle and recover
     const effects = step(world, dt, {});
+    if(match.phase==='countdown')recoverEscortBodies(match,dt);
     if (match.phase !== 'over' && world.time >= match.phaseUntil) {
       if (match.phase === 'roundOver') nextRound(match);
       else {
         // On initial countdown, apply queued class selections before any attacks.
-        for (const seat of match.seats.values()) if (seat.pendingClass) spawnSeat(match, seat, match.def.protect);
+        for (const seat of match.seats.values()) {if (seat.pendingClass) spawnSeat(match, seat, match.def.protect);else if(match.escort)protect(match,seat.id);}
         match.phase = 'live';
         event(match, { type: 'fight', round: match.round, feed: false });
       }
@@ -452,6 +486,7 @@ export function stepMatch(match, dt, inputs = {}) {
     if (f) f.meter = s.classId ? s.specialMeter : 0;
   }
   const effects = step(world, dt, all);
+  recoverEscortBodies(match,dt);
   if(world.arenaLayout?.imported)for(const s of match.seats.values()){
     const b=bodyOf(world,s.id),f=world.fighters.get(s.id);
     if(!b||b.y>=-18||f?.vitals.dead)continue;
@@ -694,13 +729,14 @@ export function matchView(match, forId = null) {
   const people = [...match.seats.values()].map((s) => ({
     id: s.id, name: s.name, kind: s.kind, team: s.team, classId: s.classId, level: s.level,
     matchBoost: s.matchBoost, ...match.scores[s.id],
-    dead: !!world.fighters.get(s.id)?.vitals.dead, respawnIn: s.respawnAt === null ? 0 : Math.max(0, s.respawnAt - world.time),
+    recoveryCount: s.recoveryCount||0, dead: !!world.fighters.get(s.id)?.vitals.dead, respawnIn: s.respawnAt === null ? 0 : Math.max(0, s.respawnAt - world.time),
     roundWins: match.roundWins[s.id] || 0,
   }));
   people.sort((a, b) => (b.defeats - a.defeats) || (b.captures - a.captures) || (a.falls - b.falls));
   return {
     mode: def.id, name: def.name, phase: match.phase, winner: match.winner, matchBoost: match.boostTier,
     countdown: match.phase === 'countdown' || match.phase === 'roundOver' ? Math.max(0, match.phaseUntil - world.time) : 0,
+    ...(match.escort?{preparation:match.phase==='countdown'?Math.max(0,match.phaseUntil-world.time-ESCORT_START_COUNTDOWN):0,startCountdown:ESCORT_START_COUNTDOWN}:{}),
     clockLeft: match.escort ? Math.max(0,def.clock+match.escort.bonusTime-match.clock) : def.clock ? Math.max(0, def.clock - match.clock) : def.roundClock ? Math.max(0, def.roundClock - match.roundClock) : null,
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },

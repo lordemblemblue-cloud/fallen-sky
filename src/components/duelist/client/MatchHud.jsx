@@ -135,6 +135,11 @@ export function ScoreLine({ view }) {
 
 export function Countdown({ view, fightFlash }) {
   if (view.phase === 'countdown' && view.countdown > 0) {
+    if(view.mode==='escort'){
+      const prep=view.preparation??Math.max(0,view.countdown-5);
+      if(prep>.0001)return <div className="duelist-countdown duelist-escort-preparation" role="status"><small>Prepare for battle</small><strong>{Math.ceil(prep-1e-6)}</strong><span>Choose your class and equipment</span></div>;
+      return <div className="duelist-countdown" role="status"><small>Match begins in</small>{Math.min(5,Math.ceil(view.countdown-1e-6))}</div>;
+    }
     return <div className="duelist-countdown">{view.mode === 'duel' && view.round > 1 ? <small>Round {view.round}</small> : null}{Math.ceil(view.countdown)}</div>;
   }
   if (view.phase === 'roundOver') {

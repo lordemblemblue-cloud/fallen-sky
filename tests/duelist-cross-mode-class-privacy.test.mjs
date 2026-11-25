@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, matchView, queueMatchClass, stepMatch, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, matchView, queueMatchClass, stepMatch, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
 
 // Cross-mode regression: the selected class is public combat identity, but the
 // next-spawn choice and charge are private to the server-authenticated seat.
@@ -15,7 +15,7 @@ for (const mode of ['practice', 'duel', 'ffa', 'tdm', 'ctf', 'escort', 'football
     const waiting = matchView(match, 'bob');
     assert.equal(waiting.me.pendingClass, 'healer');
     assert.equal(waiting.people.some(person => 'pendingClass' in person || 'specialMeter' in person), false);
-    for (let i = 0; i < Math.ceil((COUNTDOWN + 0.1) * 60); i++) stepMatch(match, 1 / 60);
+    for (let i = 0; i < Math.ceil((matchCountdownSeconds(mode) + 0.1) * 60); i++) stepMatch(match, 1 / 60);
     assert.equal(match.seats.get('alice').classId, 'assassin');
     assert.equal(match.seats.get('bob').classId, 'healer');
     match.seats.get('alice').specialMeter = 83;

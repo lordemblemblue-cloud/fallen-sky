@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CLASS_IDS, CLASSES } from '../src/components/duelist/core/classes.mjs';
-import { COUNTDOWN, createMatch, matchView, queueMatchClass, stepMatch } from '../src/components/duelist/sim/match.mjs';
+import { matchCountdownSeconds, createMatch, matchView, queueMatchClass, stepMatch } from '../src/components/duelist/sim/match.mjs';
 
 // Escort was introduced after the original class-by-mode countdown matrix.
 // This checks the same authoritative spawn/privacy contract without touching its renderer.
@@ -21,7 +21,7 @@ test('escort countdown activates all four queued classes with private zeroed spe
     stepMatch(match, STEP, { alpha: { classId: 'healer', specialMeter: 100 } });
     assert.equal(seat.classId, null, 'untrusted movement input cannot apply class');
     assert.equal(seat.pendingClass, classId, 'untrusted movement input cannot replace queue');
-    advance(match, COUNTDOWN + 0.1);
+    advance(match, matchCountdownSeconds('escort') + 0.1);
     assert.equal(seat.classId, classId);
     assert.equal(seat.pendingClass, null);
     assert.equal(match.world.fighters.get('alpha').weapon, CLASSES[classId].weapon);
@@ -48,7 +48,7 @@ test('escort preserves independent opposing selections when movement packets spo
       });
       assert.equal(match.seats.get('alpha').pendingClass, alphaClass);
       assert.equal(match.seats.get('beta').pendingClass, betaClass);
-      advance(match, COUNTDOWN + 0.1);
+      advance(match, matchCountdownSeconds('escort') + 0.1);
       for (const [id, expected] of [['alpha', alphaClass], ['beta', betaClass]]) {
         const seat = match.seats.get(id);
         assert.equal(seat.classId, expected, id + '/' + expected);

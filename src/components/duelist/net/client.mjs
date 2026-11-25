@@ -263,7 +263,9 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       if (predictor) {
         const ownSeat=msg.fighters.find(f=>f.id===meId);if(ownSeat)predictor.fighter.team=ownSeat.tm??null;
         const was = predictor.active;
-        if (msg.own) predictor.reconcile(msg.own, msg.ack, others, was ? null : world.bodies.get(meId) || null);
+        const recovered=msg.events?.some(e=>e.type==='positionRecovered'&&e.id===meId);
+        if(recovered){predictor.reset();}
+        if (msg.own) predictor.reconcile(msg.own, msg.ack, others, recovered?null:was ? null : world.bodies.get(meId) || null);
         else predictor.drop();
         if (predictor.active) handover = -Infinity;
         else if (was) handover = msg.time;
