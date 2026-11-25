@@ -1011,7 +1011,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       }}>{keyLabel(bound.shop, { short: true })} · Shop · {Math.floor(match.me?.gold ?? 0)} gold</button>}
       {shopOpen && match && match.phase !== 'over' && <ShopPanel
         me={match.me} answer={sourceRef.current?.shopAnswer || null}
-        onBuy={(id) => sourceRef.current?.buyItem?.(id)}
+        onBuy={(id, tier, combine) => sourceRef.current?.buyItem?.(id, tier, combine)}
         onClose={() => setShopOpen(false)} />}
       {quest && quest.phase === 'live' && <button type="button" className="duelist-shop-toggle"
         onClick={() => { if (document.pointerLockElement) document.exitPointerLock?.(); setShopOpen(true); }}>

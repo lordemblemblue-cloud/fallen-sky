@@ -553,7 +553,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         const old = seatFor(user, msg.resume);
         if (old) {
           takeOver(client, old);
-          send(client, { t: 'welcome', id: client.id, name: client.name, protocol: PROTOCOL, resumed: true });
+          send(client, { t: 'welcome', id: client.id, name: client.name, protocol: PROTOCOL, shopBuild: true, resumed: true });
           send(client, rejoined(client));
           return;
         }
@@ -564,7 +564,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         client.guest = !!user.guest;
         client.name = String(user.name || msg.name || 'Duelist').replace(/[^\p{L}\p{N} _.-]/gu, '').slice(0, 20) || 'Duelist';
         client.body = BODY_IDS.includes(msg.body) ? msg.body : BODY_IDS[0];
-        send(client, { t: 'welcome', id: client.id, name: client.name, protocol: PROTOCOL, resumed: false });
+        send(client, { t: 'welcome', id: client.id, name: client.name, protocol: PROTOCOL, shopBuild: true, resumed: false });
         return;
       }
       if (!client.id) return;
@@ -601,13 +601,14 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
         const res = queueMatchClass(client.room.match, client.id, msg.id);
         if (res.accepted) client.classId = msg.id;
         send(client, { t: 'class', ok: res.accepted, pending: res.pendingClass ?? null, reason: res.reason ?? null });
-      } else if (msg.t === 'shop') {
-        // The client can only request an item ID. Match rules validate every coin,
+      } else if (msg.t === 'shop' || msg.t === 'shopBuild') {
+        // The client requests an item ID and optional explicit tier/recipe. Match rules validate every coin,
         // tier, loadout slot and eligibility; story missions have no item shop.
         if (!client.room?.match || typeof msg.id !== 'string' || msg.id.length > 48) {
           send(client, { t: 'shop', ok: false, reason: 'no-match' }); return;
         }
-        const result = purchaseMatchItem(client.room.match, client.id, msg.id);
+        if (msg.t === 'shopBuild' && (!Number.isInteger(msg.tier) || typeof msg.combine !== 'boolean')) { send(client, { t: 'shop', ok: false, reason: 'invalid-tier' }); return; }
+        const result = purchaseMatchItem(client.room.match, client.id, msg.id, msg.t === 'shopBuild' ? msg.tier : undefined, msg.t === 'shopBuild' ? msg.combine : false);
         send(client, { t: 'shop', ...result });
       } else if (msg.t === 'storySupply') {
         // Free supplies are story-only, once per authoritative human seat per operation.

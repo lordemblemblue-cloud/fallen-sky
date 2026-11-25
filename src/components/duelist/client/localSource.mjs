@@ -33,7 +33,7 @@ export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bot
     seats: () => seats,
     get classAnswer() { return classAnswer; },
     get shopAnswer() { return shopAnswer; },
-    buyItem(id) { shopAnswer = purchaseMatchItem(match, 'you', id); },
+    buyItem(id, tier, combine = false) { shopAnswer = purchaseMatchItem(match, 'you', id, tier, combine); },
     /** Change class: queued for the next spawn (before the fight, between rounds or while down). */
     chooseClass(id) {
       const res = queueMatchClass(match, 'you', id);

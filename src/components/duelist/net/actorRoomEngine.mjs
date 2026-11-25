@@ -63,7 +63,7 @@ export class DuelistRoomEngine {
       if(c.welcomed)return;
       if(msg.v!==PROTOCOL){conn.send({t:'error',code:'version',message:'Game updated. Reload the page.'});this.remove(conn.id);conn.reject(4426,'Version');return;}
       c.welcomed=true;c.body=BODY_IDS.includes(msg.body)?msg.body:BODY_IDS[0];
-      this.send(c,{t:'welcome',id:c.id,name:'Guest',protocol:PROTOCOL,resumed:false});return;
+      this.send(c,{t:'welcome',id:c.id,name:'Guest',protocol:PROTOCOL,shopBuild:true,resumed:false});return;
     }
     if(!c.welcomed)return;
     if(msg.t==='join'){
@@ -80,8 +80,8 @@ export class DuelistRoomEngine {
       if(r.accepted)c.classId=msg.id;
       this.send(c,{t:'class',ok:r.accepted,pending:r.pendingClass??null,reason:r.reason??null});return;
     }
-    if(msg.t==='shop'){
-      const r=typeof msg.id==='string'&&msg.id.length<=48?purchaseMatchItem(this.match,c.id,msg.id):{ok:false,reason:'invalid'};
+    if(msg.t==='shop'||msg.t==='shopBuild'){
+      const r=typeof msg.id==='string'&&msg.id.length<=48?(msg.t==='shopBuild' && (!Number.isInteger(msg.tier)||typeof msg.combine!=='boolean') ? {ok:false,reason:'invalid-tier'} : purchaseMatchItem(this.match,c.id,msg.id,msg.t==='shopBuild'?msg.tier:undefined,msg.t==='shopBuild'?msg.combine:false)):{ok:false,reason:'invalid'};
       this.send(c,{t:'shop',...r});return;
     }
     if(msg.t!=='input')return;

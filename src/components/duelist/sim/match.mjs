@@ -198,10 +198,10 @@ function grantGold(match, playerId, amount, reason) {
 }
 /**
  * An actual match-only purchase, authoritatively validated by the server/sim.
- * The client supplies only the item ID; price, inventory, team, tier and shop
+ * The client requests an item ID, target tier and optional recipe; price, inventory, team, tier and shop
  * eligibility are read from current match state.
  */
-export function purchaseMatchItem(match, playerId, itemId) {
+export function purchaseMatchItem(match, playerId, itemId, targetTier, combine = false) {
   const seat = match.seats.get(playerId);
   if (!seat || seat.kind !== 'player' || match.phase === 'over') return { ok: false, reason: 'not-available' };
   const fighter = match.world.fighters.get(playerId);
@@ -209,7 +209,7 @@ export function purchaseMatchItem(match, playerId, itemId) {
   const spawn = match.conduit?seat.conduitSpawn:spawnFor(match, playerId, seat.team);
   const atSpawn = body && spawn && Math.hypot(body.x - spawn.x, body.z - spawn.z,match.conduit?body.y-spawn.y:0) <= 3;
   const allowed = match.phase !== 'live' || !!fighter?.vitals.dead || atSpawn;
-  const result = purchaseRule({ gold: seat.gold, items: seat.items, id: itemId, allowed });
+  const result = purchaseRule({ gold: seat.gold, items: seat.items, id: itemId, allowed, targetTier, combine });
   if (!result.ok) return { ok: false, reason: result.reason, cost: result.cost || 0 };
   seat.gold -= result.cost;
   seat.items = result.items;

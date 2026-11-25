@@ -166,13 +166,36 @@ export function equipItems(fighter, ids) {
   }
   return next;
 }
-export function purchaseRule({ gold, items, id, allowed = true } = {}) {
+// Optional hybrid recipes use two existing Tier I items, never fictitious components.
+// Combining is explicit and atomic, and consumes only those exact lower-tier entries.
+export const SHOP_RECIPES = Object.freeze(Object.fromEntries(Object.entries({
+  vanguardfang:['ironfang','stoneguard'], stormcarver:['ironfang','runeweaver'],
+  huntersheart:['ironfang','heartseed'], riftslayer:['ironfang','resolvecord'],
+  spellguard:['stoneguard','runeweaver'], bastionseed:['stoneguard','heartseed'],
+  steadfastplate:['stoneguard','resolvecord'], sanctuaryglyph:['runeweaver','heartseed'],
+  runebinder:['runeweaver','resolvecord'], laststand:['heartseed','resolvecord'],
+}).map(([id, parts]) => [id, Object.freeze(parts)])));
+
+export function purchaseRule({ gold, items, id, allowed = true, targetTier, combine = false } = {}) {
   const found = shopItem(id);
   if (!found) return { ok: false, reason: 'unknown-item' };
   if (!allowed) return { ok: false, reason: 'shop-at-spawn' };
   if (!Array.isArray(items)) return { ok: false, reason: 'invalid-loadout' };
   const previous = items.map(ownedItem).find((x) => x?.id === id);
   if (previous?.tier === 3) return { ok: false, reason: 'fully-upgraded' };
+  if (typeof combine !== 'boolean') return { ok: false, reason: 'invalid-recipe' };
+  const tier = targetTier === undefined ? (previous?.tier || 0) + 1 : targetTier;
+  if (!Number.isInteger(tier) || tier < 1 || tier > 3 || tier <= (previous?.tier || 0)) return { ok: false, reason: 'invalid-tier' };
+  if (combine) {
+    const parts = SHOP_RECIPES[id];
+    if (!parts || tier !== 3 || previous) return { ok: false, reason: 'invalid-recipe' };
+    const loadout = items.map(ownedItem);
+    if (!loadout.every(Boolean) || new Set(loadout.map(x => x.id)).size !== loadout.length || loadout.length > SHOP_RULES.slots) return { ok: false, reason: 'invalid-loadout' };
+    if (!parts.every(part => loadout.some(x => x.id === part && x.tier === 1))) return { ok: false, reason: 'missing-components' };
+    const cost = tierPrice(found, 3) - parts.reduce((total, part) => total + tierPrice(shopItem(part), 1), 0);
+    if (cost < 0 || !Number.isFinite(gold) || gold < cost) return { ok: false, reason: 'not-enough-gold', cost };
+    return { ok: true, item: found, tier, cost, items: [...loadout.filter(x => !parts.includes(x.id)), { id, tier }] };
+  }
   // A player may own only one active relic. Everything else remains a free build choice.
   const isActive = id === 'thundermirror' || id === 'siphonmirror';
   if (isActive && !previous && items.some((raw) => {
@@ -180,7 +203,6 @@ export function purchaseRule({ gold, items, id, allowed = true } = {}) {
     return owned && owned.id !== id && (owned.id === 'thundermirror' || owned.id === 'siphonmirror');
   })) return { ok: false, reason: 'active-relic-slot-full' };
   if (!previous && items.length >= SHOP_RULES.slots) return { ok: false, reason: 'inventory-full' };
-  const tier = previous ? previous.tier + 1 : 1;
   const cost = tierPrice(found, tier) - (previous ? tierPrice(found, previous.tier) : 0);
   if (!Number.isFinite(gold) || gold < cost - 1e-7) return { ok: false, reason: 'not-enough-gold', cost };
   return { ok: true, item: found, tier, cost,
