@@ -13,14 +13,17 @@ function bounds(s,kind){
 }
 const key=(x,z)=>x+','+z;
 function makeGrid(list,kind){
-  const cells=new Map();
+  const cells=new Map();let memberships=0;
   for(const s of list){
+    if(kind!=='cylinders'&&Math.abs(s.cos*s.cos+s.sin*s.sin-1)>1e-8)return null;
     const b=bounds(s,kind);
     if(!b.every(Number.isFinite)||b[0]>b[2]||b[1]>b[3])return null;
     // Ramp support uses its center; OBB/cylinder queries support up to PAD.
     const x0=Math.floor((b[0]-PAD-1e-6)/CELL),z0=Math.floor((b[1]-PAD-1e-6)/CELL);
     const x1=Math.floor((b[2]+PAD+1e-6)/CELL),z1=Math.floor((b[3]+PAD+1e-6)/CELL);
     if(![x0,z0,x1,z1].every(Number.isSafeInteger)||(x1-x0+1)*(z1-z0+1)>MAX_CELLS)return null;
+    memberships+=(x1-x0+1)*(z1-z0+1);
+    if(memberships>100000)return null;
     for(let x=x0;x<=x1;x++)for(let z=z0;z<=z1;z++){
       const k=key(x,z);let bucket=cells.get(k);
       if(!bucket){bucket=[];cells.set(k,bucket);}
