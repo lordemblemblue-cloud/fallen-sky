@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import sharp from 'sharp';
 import {mkdir} from 'node:fs/promises';
 import {createArena} from '../src/components/duelist/client/arena.mjs';
+import {createConduitArena} from '../src/components/duelist/client/maps/conduitArena.mjs';
 import {createModeArchitecture} from '../src/components/duelist/client/modeArchitecture.mjs';
 import {createIndustrialCtfArena} from '../src/components/duelist/client/maps/industrialCtfArena.mjs';
 import {createDuelistControlPointArena} from '../src/components/duelist/client/maps/controlPointArena.mjs';
@@ -21,7 +22,10 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const sun=new THREE.Vector3(-.45,.8,.55).normalize();
 const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),edge=new THREE.Vector3();
 const im=new THREE.Matrix4(),wm=new THREE.Matrix4(),color=new THREE.Color();
-const modes=['duel','ctf','football','tdm','control','escort','ffa','practice'];
+const allModes=['duel','ctf','football','tdm','control','escort','ffa','practice'];
+const requested=process.argv.slice(2);
+if(requested.some(m=>!allModes.includes(m)))throw new Error('Unknown map picture mode');
+const modes=requested.length?[...new Set(requested)]:allModes;
 for(const mode of modes){
  const scene=new THREE.Scene(),layout=getModeArenaLayout(mode),radius=layout?.radius??MODES[mode].arena;
  let camera,look=[0,0,0],eye=[radius*.78,radius*1.15,radius*1.55],span=radius*2.45;
@@ -29,6 +33,22 @@ for(const mode of modes){
  if(mode==='ctf'){
   const map=createIndustrialCtfArena(scene,{textureResolution:256});disposals.push(()=>map.dispose());map.update(0);
   camera=new THREE.PerspectiveCamera(77,W/H,.1,200);eye=[0,14.4,25.7];look=[0,5,-6];
+ }else if(mode==='tdm'||mode==='ffa'){
+  // The Conduit is the intended shared TDM/FFA arena. Render its actual
+  // geometry, not the old Meridian or generic FFA map. Presentation only.
+  const map=createConduitArena(scene,{quality:'low',enableLights:false,enableAtmosphere:false});
+  disposals.push(()=>map.dispose());
+  // Editorial cutaway: remove the non-playable cavern shell and outer
+  // rock/rib silhouettes from this offline scene only. Keep all arena
+  // buildings, cover, bridges, stairs, machinery and the conduit ring.
+  map.root.traverse(o=>{
+   const g=o.geometry,p=g?.parameters;
+   if((g?.type==='SphereGeometry'&&p.radius===52)||
+      (o.isInstancedMesh&&g?.type==='DodecahedronGeometry'&&p.radius===4.8&&o.count===24)||
+      (o.isInstancedMesh&&g?.type==='BoxGeometry'&&p.width===1.4&&p.height===28&&p.depth===2.2&&o.count===12))o.visible=false;
+  });
+  span=94;look=[0,3,0];
+  eye=mode==='tdm'?[0,130,76]:[-65,100,116];
  }else if(mode==='control'){
   const map=createDuelistControlPointArena(THREE);map.setLayerVisibility('trusses',false);scene.add(map.root);disposals.push(()=>map.dispose());
   const env=createMountainLakeEnvironment();scene.add(env.environmentGroup??env.group??env.root);
@@ -89,7 +109,8 @@ for(const mode of modes){
      normal.subVectors(b,a).cross(edge.subVectors(c,a)).normalize();
      const f=mat.isMeshBasicMaterial||mat.isShaderMaterial?1:.55+.55*Math.max(0,normal.dot(sun));
      color.copy(base);if(mat.vertexColors&&vertexColors){color.r*=vertexColors.getX(ia);color.g*=vertexColors.getY(ia);color.b*=vertexColors.getZ(ia);}
-     color.multiplyScalar(f).convertLinearToSRGB();
+     // Lift the dark flat-shaded Conduit materials slightly for small cards.
+     color.multiplyScalar(f*(mode==='tdm'||mode==='ffa'?1.45:1)).convertLinearToSRGB();
      const rgb=[Math.round(clamp(color.r*255,0,255)),Math.round(clamp(color.g*255,0,255)),Math.round(clamp(color.b*255,0,255))];
      a.applyMatrix4(camera.matrixWorldInverse);b.applyMatrix4(camera.matrixWorldInverse);c.applyMatrix4(camera.matrixWorldInverse);
      clipTriangle([a,b,c],rgb);count++;
