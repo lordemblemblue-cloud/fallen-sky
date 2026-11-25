@@ -17,7 +17,7 @@ import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBo
 import { spendStamina } from '../core/vitals.mjs';
 import { stickDirection } from '../core/cuts.mjs';
 
-export function inCtfSpawn(world,fighter,body=world.bodies.get(fighter?.id)){return !!(world.arenaLayout?.ctfImported&&fighter&&body&&ctfZone(fighter.team,body));}
+export function inCtfSpawn(world,fighter,body=world.bodies.get(fighter?.id)){return !!(world.arenaLayout?.ctfImported&&fighter&&body&&(ctfZone('red',body)||ctfZone('blue',body)));}
 function ctfCombatAllowed(world,a,b){return !inCtfSpawn(world,a)&&!inCtfSpawn(world,b);}
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
 // Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
