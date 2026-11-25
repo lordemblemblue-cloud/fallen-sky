@@ -28,17 +28,19 @@ export function snapshotConduitCollision(world){
   const freeze=o=>{if(o&&typeof o==='object'){Object.values(o).forEach(freeze);Object.freeze(o);}return o;};
   return freeze(clone);
 }
-function surfaces(world,x,z){
+// Flat landing contact uses the capsule footprint; ramps keep the center plane.
+// A capsule can meet a deck edge before its center reaches the deck.
+function surfaces(world,x,z,contactRadius=0){
   const out=[];
-  for(const s of world.obbs)if(s.walkable&&boxOverlap(s,x,z))out.push(s.cy+s.hy);
-  for(const s of world.discs)if(s.walkable&&discOverlap(s,x,z))out.push(s.yMax);
-  for(const s of world.annuli)if(s.walkable&&annulusOverlap(s,x,z))out.push(s.yMax);
+  for(const s of world.obbs)if(s.walkable&&boxOverlap(s,x,z,contactRadius))out.push(s.cy+s.hy);
+  for(const s of world.discs)if(s.walkable&&discOverlap(s,x,z,contactRadius))out.push(s.yMax);
+  for(const s of world.annuli)if(s.walkable&&annulusOverlap(s,x,z,contactRadius))out.push(s.yMax);
   for(const s of world.ramps){const y=rampY(s,x,z);if(y!==null)out.push(y);}
   return out;
 }
-export function conduitSupport(world,x,z,upper,lower=-Infinity){
+export function conduitSupport(world,x,z,upper,lower=-Infinity,contactRadius=0){
   let best=-Infinity;
-  for(const y of surfaces(world,x,z))if(y<=upper+EPS&&y>=lower-EPS&&y>best)best=y;
+  for(const y of surfaces(world,x,z,contactRadius))if(y<=upper+EPS&&y>=lower-EPS&&y>best)best=y;
   return best;
 }
 export function conduitBlockers(world,body,radius=.4,height=1.8){
@@ -56,8 +58,8 @@ export function conduitBlockers(world,body,radius=.4,height=1.8){
   }
   return out;
 }
-export function conduitGrounded(world,body){
-  const y=conduitSupport(world,body.x,body.z,body.y+.035,body.y-.035);
+export function conduitGrounded(world,body,radius=.4){
+  const y=conduitSupport(world,body.x,body.z,body.y+.035,body.y-.035,radius);
   return Number.isFinite(y);
 }
 // Swept movement mutates only the supplied body, not the registry. A bounded
@@ -71,10 +73,10 @@ export function moveConduitBody(world,body,dx,dz,dy,{radius=.4,height=1.8,stepUp
   for(let i=0;i<n;i++){
     for(const [axis,d] of [['x',dx/n],['z',dz/n]]){
       if(!d)continue;
-      const grounded=dy<=0&&conduitGrounded(world,body);
+      const grounded=dy<=0&&conduitGrounded(world,body,radius);
       const trial={...body,[axis]:body[axis]+d};
       if(grounded){
-        const support=conduitSupport(world,trial.x,trial.z,body.y+stepUp,body.y-stepDown);
+        const support=conduitSupport(world,trial.x,trial.z,body.y+stepUp,body.y-stepDown,radius);
         if(Number.isFinite(support)){
           const stepped={...trial,y:support};
           if(free(stepped)){Object.assign(body,stepped);landed=true;continue;}
@@ -85,7 +87,7 @@ export function moveConduitBody(world,body,dx,dz,dy,{radius=.4,height=1.8,stepUp
     }
     const target=body.y+dy/n;
     if(dy<0){
-      const floor=conduitSupport(world,body.x,body.z,body.y,target);
+      const floor=conduitSupport(world,body.x,body.z,body.y,target,radius);
       if(Number.isFinite(floor)&&free({...body,y:floor})){body.y=floor;landed=true;continue;}
     }
     if(dy!==0){
