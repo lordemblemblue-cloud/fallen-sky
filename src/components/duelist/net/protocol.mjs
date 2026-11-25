@@ -70,7 +70,7 @@ export function compactWaitingInputs(waiting){
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
 // Append new modes to preserve the permanent room IDs (m1 through m7).
-export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort', 'ffa']);
+export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort', 'ffa', 'practice']);
 export const DEFAULT_PUBLIC_ROOMS = Object.freeze(ONLINE_MODES.map((mode, index) => Object.freeze({ id: `m${index + 1}`, mode })));
 // A map revision gets a fresh native Actor instance, without changing its public room ID.
 // Retired long-lived instances may retain old geometry even after publication.

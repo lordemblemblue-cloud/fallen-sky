@@ -356,6 +356,8 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       classAnswer = null;
       if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'class', id }));
     },
+    setPracticeOption(option, enabled) { if (ws?.readyState === 1) send({ t: 'practiceOption', option, enabled }); },
+    sellItem(id) { if (ws?.readyState === 1) send({ t: 'practiceSell', id }); },
     buyItem(id, tier, combine = false) {
       shopAnswer = null;
       if (story || typeof id !== 'string' || ws?.readyState !== 1) { shopAnswer = {ok:false,reason:'not-available'}; return; }
