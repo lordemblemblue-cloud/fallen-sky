@@ -122,7 +122,7 @@ export class DuelistRoomEngine {
   }
   snapshot(){
     const match=this.match,{world}=match;
-    const flags=match.flags?Object.fromEntries(Object.entries(match.flags).map(([t,f])=>[t,{state:f.state,carrier:f.carrier,x:f.x,z:f.z}])):null;
+    const flags=match.flags?Object.fromEntries(Object.entries(match.flags).map(([t,f])=>[t,{state:f.state,carrier:f.carrier,x:f.x,y:f.y,z:f.z}])):null;
     const ball=match.ball?{x:match.ball.x,z:match.ball.z}:null;
     const projectiles=world.projectiles.map(p=>({id:p.id,x:p.x,y:p.y,z:p.z,d:[p.dir.x,p.dir.z],move:p.move}));
     const effects=this.effects,events=this.events;this.effects=[];this.events=[];

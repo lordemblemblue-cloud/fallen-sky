@@ -1,3 +1,5 @@
+import {ctfBotPath} from './ctfBotNav.mjs';
+import {ctfZone} from './importedCtfLayout.mjs';
 import { escortBotPath } from './escortBotNav.mjs';
 // Practice and fill-in bots: they read the same world a player sees and send the same commands a player
 // sends (no shortcuts: the rules core and its cooldowns apply to them too). Difficulty sets reaction time,
@@ -43,13 +45,14 @@ function pickTarget(world, bot, prefer = null) {
   const mine = bodyOf(world, bot.id);
   if (prefer) {
     const f = world.fighters.get(prefer);
-    if (f && !f.vitals.dead) return prefer;
+    if (f && !f.vitals.dead&&!(world.arenaLayout?.ctfImported&&ctfZone(f.team,bodyOf(world,f.id)))) return prefer;
   }
   let best = null;
   for (const other of world.fighters.values()) {
     // someone who stood down is out of the fight
     if (other.id === bot.id || other.vitals.dead || other.yielded || (me.team !== null && other.team === me.team)) continue;
-    const d = dist(mine, bodyOf(world, other.id)) + (isDown(other, world.time) ? 6 : 0);
+    if(world.arenaLayout?.ctfImported&&ctfZone(other.team,bodyOf(world,other.id)))continue;
+    const d = dist(mine, bodyOf(world, other.id)) + (world.arenaLayout?.ctfImported?Math.abs(mine.y-bodyOf(world,other.id).y)*2:0) + (isDown(other, world.time) ? 6 : 0);
     if (!best || d < best.d) best = { id: other.id, d };
   }
   return best?.id || null;
@@ -112,11 +115,11 @@ input.target = foe?.id || null;
   const d = theirs ? dist(mine, theirs) : Infinity;
 
   if(world.arenaLayout?.imported){
-    const destination=goal && (d>ENGAGE || Math.abs(mine.y-(theirs?.y??mine.y))>2 || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
+    const destination=goal && ((world.arenaLayout?.ctfImported&&ctfZone(me.team,mine))||d>ENGAGE || Math.abs(mine.y-(theirs?.y??mine.y))>2 || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
     if(destination && (dist(mine,destination)>2.6 || Math.abs(mine.y-(destination.y??0))>1.2 || !arenaLineClear(world.arenaLayout,mine,destination))){
       const old=bot.importedPath;
-      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||(!old.path.length&&now>=old.until)){
-        bot.importedPath={target:{...destination},until:now+1,path:world.arenaLayout.escortImported?escortBotPath(mine,destination,me.team,world.escortStage??0):importedBotPath(world.arenaLayout,mine,destination)};
+      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||((world.arenaLayout.ctfImported||!old.path.length)&&now>=old.until)){
+        bot.importedPath={target:{...destination},until:now+1,path:world.arenaLayout.ctfImported?ctfBotPath(mine,destination,me.team,world.ctfCarriers?.has(bot.id)):world.arenaLayout.escortImported?escortBotPath(mine,destination,me.team,world.escortStage??0):importedBotPath(world.arenaLayout,mine,destination)};
       }
       const path=bot.importedPath.path;
       while(path.length&&Math.hypot(mine.x-path[0].x,mine.z-path[0].z,mine.y-path[0].y)<.45)path.shift();

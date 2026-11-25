@@ -1,3 +1,4 @@
+import {ctfZone,ctfRestricted} from './importedCtfLayout.mjs';
 import { escortEnemyZone } from './importedEscortLayout.mjs';
 // Duelist Adventure arena simulation: bodies in a circular arena, or in a mission's rooms (a level: walls,
 // doors and cover, sim/level.mjs), driven by the rules core.
@@ -16,6 +17,8 @@ import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBo
 import { spendStamina } from '../core/vitals.mjs';
 import { stickDirection } from '../core/cuts.mjs';
 
+export function inCtfSpawn(world,fighter,body=world.bodies.get(fighter?.id)){return !!(world.arenaLayout?.ctfImported&&fighter&&body&&ctfZone(fighter.team,body));}
+function ctfCombatAllowed(world,a,b){return !inCtfSpawn(world,a)&&!inCtfSpawn(world,b);}
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
 // Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
 // d * KNOCKBACK_DECAY m/s and it travels about d metres.
@@ -156,6 +159,7 @@ export function step(world, dt, inputs = {}) {
       } else body.yaw = input.face;
     }
     for (const command of input.presses || []) {
+      if(inCtfSpawn(world,fighter,body)&&!['roll','dash','jump','blockDown','blockUp','resist'].includes(command))continue;
       if (command === 'itemActive') {
         activateItemRelic(world, fighter, body, now, effects);
         continue;
@@ -234,30 +238,33 @@ export function step(world, dt, inputs = {}) {
     Object.assign(body,before);
     const result=moveArenaBody(world.arenaLayout,body,delta.x,delta.z,delta.y,BODY_RADIUS,!fighter.heldBy && !fighter.seizedBy && !body.jumped);
     if(world.arenaLayout?.escortImported && (fighter.team==='red'||fighter.team==='blue') && escortEnemyZone(fighter.team,world.escortStage??0,body) && !escortEnemyZone(fighter.team,world.escortStage??0,before)){Object.assign(body,before);body.vy=0;}
+    if(world.arenaLayout?.ctfImported&&ctfRestricted(fighter.team,body,world.ctfCarriers?.has(id))&&!ctfRestricted(fighter.team,before,world.ctfCarriers?.has(id))){Object.assign(body,before);body.vy=0;}
     if(result.ceiling || result.landed && body.vy<0)body.vy=0;
     if(arenaGrounded(world.arenaLayout,body,BODY_RADIUS) && body.vy<=0 && fighter.action?.id!=='jump'){
       body.jumped=false;body.airJumpAt=null;body.airDashReady=false;
     }
   }
-  const beforeSeparate=world.arenaLayout ? new Map([...world.bodies].map(([id,b])=>[id,{x:b.x,z:b.z}])) : null;
+  const beforeSeparate=world.arenaLayout ? new Map([...world.bodies].map(([id,b])=>[id,{x:b.x,y:b.y,z:b.z}])) : null;
   separate(world);
   for (const [id,body] of world.bodies) {
     if(beforeSeparate){
       const before=beforeSeparate.get(id),dx=body.x-before.x,dz=body.z-before.z;
       Object.assign(body,before);
       moveArenaBody(world.arenaLayout,body,dx,dz,0,BODY_RADIUS,false);
+      const f=world.fighters.get(id);if(world.arenaLayout?.ctfImported&&ctfRestricted(f?.team,body,world.ctfCarriers?.has(id))&&!ctfRestricted(f?.team,before,world.ctfCarriers?.has(id)))Object.assign(body,before);
     }
     keepInside(world,body);
   }
   // 4. landed moves reach whoever is in range and arc
   for (const { fighter, body, event } of pending) {
     if (event.type === 'hit') {
+      if(inCtfSpawn(world,fighter,body))continue;
       if (moveById(event.id)?.effect) applyEffectMove(world, fighter, body, event.id, effects, now);
       else if (isShot(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
       else resolveReach(world, fighter, body, event.id, effects, now, event.index || 0);
     } else if (event.type === 'tick') {
       const held = [...world.fighters.values()].find((f) => f.heldBy === fighter.id);
-      if (held) collect(effects, strike(fighter, held, 'grip', { now, dt: event.dt, defenderFacesAttacker: true }), fighter, held);
+      if (held&&ctfCombatAllowed(world,fighter,held)) collect(effects, strike(fighter, held, 'grip', { now, dt: event.dt, defenderFacesAttacker: true }), fighter, held);
     } else if (event.type === 'end' || event.type === 'dropped' || event.type === 'interrupt') {
       // the grip ends by throwing (gripThrow lands next and lets go) or by dropping its target
       if ((event.id === 'grip' || event.type === 'dropped') && fighter.action?.id !== 'gripThrow') releaseHeld(world, fighter);
@@ -300,7 +307,7 @@ function trySpecial(world, fighter, body, now, effects) {
   const seekArc = cloaked ? move.blink.arc : move.arc;
   if (special.target === 'enemy') {
     const near = [...world.fighters.values()]
-      .filter((o) => hostile(world, fighter, o) && !o.vitals.dead && targetable(o, world.bodies.get(o.id), fighter, body, now))
+      .filter((o) => hostile(world, fighter, o) && ctfCombatAllowed(world,fighter,o) && !o.vitals.dead && targetable(o, world.bodies.get(o.id), fighter, body, now))
       .map((o) => ({ o, b: world.bodies.get(o.id) }))
       .filter(({ o, b }) => distance(b, body) <= seekReach + BODY_RADIUS
         && (o.id === fighter.lock || insideArc(body, body.yaw + arcTurn(move), b, seekArc))
@@ -371,6 +378,7 @@ export function chosenTarget(world, fighter, body, move, side, now = world.time)
   const qualifies = (o) => {
     if (!o || o === fighter || o.vitals.dead) return false;
     if (side === 'enemy' ? !hostile(world, fighter, o) : hostile(world, fighter, o)) return false;
+    if(side==='enemy'&&!ctfCombatAllowed(world,fighter,o))return false;
     const ob = world.bodies.get(o.id);
     if (!ob || distance(body, ob) > reach) return false;
     if (!visible(world, body, ob) || (world.arenaLayout && Math.abs(body.y-ob.y)>1.8)) return false;
@@ -716,7 +724,7 @@ function separate(world) {
 export function targetsInReach(world, attacker, body, move, single) {
   const found = [];
   for (const other of world.fighters.values()) {
-    if (!hostile(world, attacker, other) || other.vitals.dead) continue;
+    if (!hostile(world, attacker, other) || other.vitals.dead || !ctfCombatAllowed(world,attacker,other)) continue;
     const ob = world.bodies.get(other.id);
     const d = distance(body, ob);
     if (d > move.range + BODY_RADIUS) continue;
@@ -733,7 +741,7 @@ function resolveReach(world, attacker, body, id, effects, now, index = 0) {
   // the throw reaches the one being held, wherever it hangs
   if (id === 'gripThrow') {
     const held = [...world.fighters.values()].find((f) => f.heldBy === attacker.id);
-    if (held) collect(effects, strike(attacker, held, id, { now }), attacker, held, world);
+    if (held&&ctfCombatAllowed(world,attacker,held)) collect(effects, strike(attacker, held, id, { now }), attacker, held, world);
     return;
   }
   if (move.execute) {
@@ -741,7 +749,7 @@ function resolveReach(world, attacker, body, id, effects, now, index = 0) {
     // the Execution's second hit: the blade is out, the body is pushed away
     if (index > 0) {
       attacker.specialTarget = null;
-      if (target && move.shove) {
+      if (target && move.shove&&ctfCombatAllowed(world,attacker,target)) {
         const tb = world.bodies.get(target.id);
         const f = forwardOf(body.yaw);
         tb.kx += f.x * move.shove * KNOCKBACK_DECAY;
@@ -752,7 +760,7 @@ function resolveReach(world, attacker, body, id, effects, now, index = 0) {
       return;
     }
     if (!move.shove) attacker.specialTarget = null;
-    if (target && !target.vitals.dead && distance(world.bodies.get(target.id), body) <= move.range + BODY_RADIUS + 0.8) {
+    if (target && !target.vitals.dead && ctfCombatAllowed(world,attacker,target) && distance(world.bodies.get(target.id), body) <= move.range + BODY_RADIUS + 0.8) {
       collect(effects, strike(attacker, target, id, { now }), attacker, target, world);
       target.seizedBy = null;
     }
@@ -830,7 +838,7 @@ function stepProjectiles(world, dt, now, effects) {
     let hit = null;
     let best = Infinity;
     for (const other of world.fighters.values()) {
-      if (!owner || !hostile(world, owner, other) || other.vitals.dead) continue;
+      if (!owner || !hostile(world, owner, other) || other.vitals.dead||!ctfCombatAllowed(world,owner,other)) continue;
       const b = world.bodies.get(other.id);
       if(world.arenaLayout && (p.y<b.y || p.y>b.y+ARENA_BODY_HEIGHT))continue;
       const rx = b.x - p.x;

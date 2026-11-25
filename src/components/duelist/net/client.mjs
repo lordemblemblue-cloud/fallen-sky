@@ -210,7 +210,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       matchMode = msg.mode;
       world.arenaLayout = getModeArenaLayout(msg.mode);
       world.arenaRadius = world.arenaLayout?.radius ?? (MODES[msg.mode]?.arena || world.arenaRadius);
-      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.world.escortStage=0; predictor.fighter.team=msg.team??msg.seats?.find(s=>s.id===meId)?.team??null; predictor.reset(); }
+      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.world.escortStage=0; predictor.world.ctfCarriers=new Set(); predictor.fighter.team=msg.team??msg.seats?.find(s=>s.id===meId)?.team??null; predictor.reset(); }
       // the crew plays another mission (a friend's crew; the story's next one): its rooms
       if (story && msg.mission && MISSIONS[msg.mission] && msg.mission !== def?.id) {
         def = MISSIONS[msg.mission];
@@ -256,7 +256,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
         if (level && view.doors) for (const d of view.doors) setDoor(level, d.id, d.open);
       }
       if (story) applyUses(msg.uses);
-      if (msg.flags) flags = msg.flags;
+      if (msg.flags) {flags = msg.flags;world.ctfCarriers=new Set(Object.values(flags).map(f=>f.carrier).filter(Boolean));if(predictor)predictor.world.ctfCarriers=world.ctfCarriers;}
       if (msg.ball) footballBall = { ...msg.ball };
       // the player's own fighter: back to the server's word, the inputs it has not used yet replayed on top
       others = msg.fighters.filter((f) => f.id !== meId && !(f.v[4] & DEAD) && !f.hb).map((f) => ({ x: f.p[0], y: f.p[1], z: f.p[2] }));

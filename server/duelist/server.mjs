@@ -424,7 +424,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       return;
     }
     const { match } = room;
-    const flags = match.flags ? Object.fromEntries(Object.entries(match.flags).map(([t, f]) => [t, { state: f.state, carrier: f.carrier, x: f.x, z: f.z }])) : null;
+    const flags = match.flags ? Object.fromEntries(Object.entries(match.flags).map(([t, f]) => [t, { state: f.state, carrier: f.carrier, x: f.x, y: f.y, z: f.z }])) : null;
     const ball = match.ball ? { x: match.ball.x, z: match.ball.z } : null;
     for (const client of room.clients.values()) {
       if (client.away) continue;
