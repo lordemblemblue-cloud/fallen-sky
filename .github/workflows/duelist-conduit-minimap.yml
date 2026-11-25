@@ -1,0 +1,27 @@
+name: Conduit three-level minimap
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/maps/conduitMinimap.*'
+      - 'src/components/duelist/client/maps/ConduitMinimap.jsx'
+      - 'src/components/duelist/client/maps/conduitArena.mjs'
+      - 'tests/duelist-conduit-minimap*.test.mjs'
+      - '.github/workflows/duelist-conduit-minimap.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  minimap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check src/components/duelist/client/maps/conduitMinimap.mjs
+      - run: node --test tests/duelist-conduit-minimap.test.mjs tests/duelist-conduit-minimap-integration.test.mjs
+      - name: Compile isolated minimap JSX
+        run: node --input-type=module -e "import {readFile} from 'node:fs/promises'; import {transformWithEsbuild} from 'vite'; const p='src/components/duelist/client/maps/ConduitMinimap.jsx'; await transformWithEsbuild(await readFile(p,'utf8'),p,{loader:'jsx',jsx:'automatic'});"
