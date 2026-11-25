@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import sharp from 'sharp';
 import {mkdir} from 'node:fs/promises';
 import {createArena} from '../src/components/duelist/client/arena.mjs';
+import {createConduitArena} from '../src/components/duelist/client/maps/conduitArena.mjs';
 import {createModeArchitecture} from '../src/components/duelist/client/modeArchitecture.mjs';
 import {createIndustrialCtfArena} from '../src/components/duelist/client/maps/industrialCtfArena.mjs';
 import {createDuelistControlPointArena} from '../src/components/duelist/client/maps/controlPointArena.mjs';
@@ -21,7 +22,10 @@ const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 const sun=new THREE.Vector3(-.45,.8,.55).normalize();
 const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),edge=new THREE.Vector3();
 const im=new THREE.Matrix4(),wm=new THREE.Matrix4(),color=new THREE.Color();
-const modes=['duel','ctf','football','tdm','control','escort','ffa','practice'];
+const allModes=['duel','ctf','football','tdm','control','escort','ffa','practice'];
+const requested=process.argv.slice(2);
+if(requested.some(m=>!allModes.includes(m)))throw new Error('Unknown map picture mode');
+const modes=requested.length?[...new Set(requested)]:allModes;
 for(const mode of modes){
  const scene=new THREE.Scene(),layout=getModeArenaLayout(mode),radius=layout?.radius??MODES[mode].arena;
  let camera,look=[0,0,0],eye=[radius*.78,radius*1.15,radius*1.55],span=radius*2.45;
@@ -29,6 +33,18 @@ for(const mode of modes){
  if(mode==='ctf'){
   const map=createIndustrialCtfArena(scene,{textureResolution:256});disposals.push(()=>map.dispose());map.update(0);
   camera=new THREE.PerspectiveCamera(77,W/H,.1,200);eye=[0,14.4,25.7];look=[0,5,-6];
+ }else if(mode==='tdm'||mode==='ffa'){
+  // The Conduit is the intended shared TDM/FFA arena. Render its actual
+  // geometry, not the old Meridian or generic FFA map. Presentation only.
+  const map=createConduitArena(scene,{quality:'low',enableLights:false,enableAtmosphere:false});
+  disposals.push(()=>map.dispose());
+  // Editorial cutaway: hide only the overhead cavern shell so the arena
+  // architecture can be seen from outside; do not alter gameplay geometry.
+  map.root.traverse(o=>{
+   if(o.geometry?.type==='SphereGeometry'&&o.geometry.parameters.radius===52)o.visible=false;
+  });
+  span=100;look=[0,2.5,0];
+  eye=mode==='tdm'?[0,112,92]:[-91,86,98];
  }else if(mode==='control'){
   const map=createDuelistControlPointArena(THREE);map.setLayerVisibility('trusses',false);scene.add(map.root);disposals.push(()=>map.dispose());
   const env=createMountainLakeEnvironment();scene.add(env.environmentGroup??env.group??env.root);
