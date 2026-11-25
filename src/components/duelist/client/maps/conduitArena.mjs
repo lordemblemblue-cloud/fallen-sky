@@ -1,6 +1,7 @@
 // The Conduit: Phase 4 Undercroft + Phase 7 restoration + combined Phase 8.
 // Draft import; not registered in live TDM until authoritative collision and traversal are validated.
 import * as THREE from 'three';
+import { createConduitLighting } from './conduitLighting.mjs';
         const CFG = Object.freeze({
             foundationR: 44.8,
             pitRadius: 24.0,
@@ -570,6 +571,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                     const t=k/3, y=y0+2.175*t,z=z0+dir*3.6*t;
                     detailBox(bg,MAT.gunmetal,x+side*1.18,y+.53,z,.06,1.06,.06);
                     detailBox(bg,MAT.brushedSteel,x+side*1.18,y+.025,z,.15,.05,.15);
+                    detailBox(bg,MAT.cyanGlow,x+side*1.18,y+.17,z,.075,.06,.075);
                 }
                 // Distinct Building Interiors
                 if (spec.id === 'armory') {
@@ -625,6 +627,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                         const t=k/3, z=z0+dir*4.5*t, y=y0-2.825*t;
                         addBox(bsmtG,.06,1.05,.06,x+dx,y+.525,z,MAT.gunmetal,{label:`${spec.name} Bsmt rail post ${x} ${dx} ${k}`});
                         addBox(bsmtG,.16,.04,.16,x+dx,y+.02,z,MAT.brushedSteel);
+                         detailBox(bsmtG,MAT.amberGlow,x+dx,y+.17,z,.075,.06,.075);
                     }
                 }
                 addBox(bsmtG, 5.4, 0.26, 2.0, -5.8, 2.825 - 0.13, 5.65, MAT.diamondTread, { walkable: true, label: `${spec.name} Bsmt Landing` });
@@ -661,9 +664,16 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                     addBox(bsmtG, 2.4, 1.2, 1.2, 3.6, 0.6, -1.8, MAT.crate, { walkable: true, label: 'Barracks Cargo' });
                 }
 
-                const bLight = new THREE.PointLight(spec.id === 'medbay' ? 0x86efac : spec.id === 'reactor' ? 0x9ef0ff : 0xffd7a8, 30, 22, 1.5);
-                bLight.position.copy(toB(1.0, 3.7, -0.5));
-                t0Group.add(bLight);
+                // Flush fixture housings use existing detail batches; no new collision.
+                for (const y of [3.65,7.95]) for (const x of [-4,4]) {
+                    detailBox(bg,MAT.darkSteel,x,y,5.18,2.2,.24,.09);
+                    detailBox(bg,MAT.cyanGlow,x,y,5.12,1.9,.09,.035);
+                    detailBox(bg,accentMat,x,y-.18,5.12,.36,.05,.035);
+                }
+                for (const x of [-4,4]) {
+                    detailBox(bsmtG,MAT.darkSteel,x,3.85,6.42,2.1,.24,.09);
+                    detailBox(bsmtG,MAT.amberGlow,x,3.85,6.36,1.8,.09,.035);
+                }
 
                 bldgWPs[spec.id] = {
                     entLOut: toW(-4.8, 0, -7.2), entLIn: toW(-4.8, 0, -3.4),
@@ -722,6 +732,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                         const t=k/5, z=stairStartR-t*stairLenC, y=-5*t;
                         addBox(sg,.06,1.08,.06,sx,y+.54,z,MAT.gunmetal,{label:`CStair post ${idx} ${sx} ${k}`});
                         addBox(sg,.18,.05,.18,sx,y+.025,z,MAT.brushedSteel);
+                         detailBox(sg,MAT.amberGlow,sx,y+.17,z,.075,.06,.075);
                     }
                     // Stepwise side collision follows the actual slope rather than a flat rail at ground level.
                     for(let k=0;k<15;k++) {
@@ -966,26 +977,10 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 dust = new THREE.Points(g, new THREE.PointsMaterial({ color: 0x9ef0ff, size: 0.16, transparent: true, opacity: 0.4 }));
                 scene.add(dust);
             };
-            buildDust('medium');
+            buildDust(quality);
 
-            // Switchable Lighting Profiles (ALL / T0 / T1 / T2 / CROWN)
-            const hemi = new THREE.HemisphereLight(0xdceeff, 0x26201b, 1.15); scene.add(hemi);
-            const lightGroups = { t0: new THREE.Group(), t1: new THREE.Group(), t2: new THREE.Group(), crown: new THREE.Group() };
-            Object.values(lightGroups).forEach(g => scene.add(g));
-
-            const t0Light = new THREE.PointLight(0x39cfff, 55, 30, 1.35); t0Light.position.set(0, -1.8, 0); lightGroups.t0.add(t0Light);
-            const t1Light = new THREE.PointLight(0xdceeff, 42, 42, 1.3); t1Light.position.set(0, 3.8, 0); lightGroups.t1.add(t1Light);
-            // Even ring lighting from revised Gemini viewer; distribute the light rather than lighting only one quadrant.
-            CFG.cardinals.forEach(a=>{const l=new THREE.PointLight(0xdceeff,34,34,1.35);l.position.set(Math.sin(a)*29.5,9.5,Math.cos(a)*29.5);lightGroups.t2.add(l);});
-            const crownSpot = new THREE.SpotLight(0x9ef0ff, 520, 66, Math.PI * 0.45, 0.45, 1.2);
-            crownSpot.position.set(0, 22, 0); crownSpot.castShadow = true; crownSpot.shadow.mapSize.set(1024, 1024); lightGroups.crown.add(crownSpot);
-
-            const lighting = {
-                setProfile(p) {
-                    Object.entries(lightGroups).forEach(([k, g]) => { g.visible = (p === 'all' || p === k); });
-                    hemi.intensity = p === 'all' ? 1.15 : 0.45;
-                }
-            };
+            // One bounded map-owned lighting rig. Host remains responsible for renderer/exposure.
+            const lighting = createConduitLighting(scene,CFG,{quality,enabled:enableLights});
             const pickups = [
                 { id: 'armory',   label: 'Ability Energy +35',  pos: [-27.2, 0.65, -26.2], respawn: 35, mat: MAT.cyanGlow,   avail: true, timer: 0, apply: s => { s.energy = Math.min(s.maxEnergy, s.energy + 35); } },
                 { id: 'reactor',  label: 'Energy Surge +40',    pos: [ 27.2, 0.65, -26.2], respawn: 45, mat: MAT.purpleGlow, avail: true, timer: 0, apply: s => { s.energy = Math.min(s.maxEnergy, s.energy + 40); } },
@@ -1112,8 +1107,6 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 }
                 return null;
             }
-    const ownedLights=[];scene.traverse(o=>{if(o.isLight)ownedLights.push(o);});
-    if(!enableLights)ownedLights.forEach(o=>{o.visible=false;});
     hostScene.add(scene);
     let disposed=false;
     return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting,
