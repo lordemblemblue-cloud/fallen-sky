@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
-import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch, persistentServerCards } from '../src/components/duelist/menu/serverBrowser.mjs';
+import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch, persistentServerCards, localArenaSearch } from '../src/components/duelist/menu/serverBrowser.mjs';
 
 const source = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const room = (id, mode, players = 1, seats = 20, open = true) => ({
@@ -81,4 +81,17 @@ test('the main menu links to Online Play and no longer auto-joins/queues a selec
   assert.deepEqual(cards.map(r => [r.id,r.official,r.confirmed]), [['m7',true,true],['m8',false,true]]);
   assert.equal(serverJoinSearch(cards[0]).matchId,'m7');
   assert.equal(serverJoinSearch(cards[1]).matchId,'m8');
+});
+
+
+test('every unconfirmed official arena offers a separate same-mode local match, not a fake online room', () => {
+  for (const card of persistentServerCards(null)) {
+    assert.equal(serverJoinSearch(card), null);
+    assert.deepEqual(localArenaSearch(card), { mode: card.mode, online: 0, from: 'online-play' });
+  }
+  assert.equal(localArenaSearch({ mode: 'story' }), null);
+  assert.equal(localArenaSearch(null), null);
+  const page = source('src/components/duelist/menu/OnlinePlayPage.jsx');
+  assert.match(page, /onClick=\{\(\) => playLocal\(room\)\}/);
+  assert.match(page, /locally \(bots only\)/);
 });
