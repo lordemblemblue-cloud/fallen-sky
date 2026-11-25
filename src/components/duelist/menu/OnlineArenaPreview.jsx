@@ -3,14 +3,23 @@ import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 
-// One lightweight orbiting map overview, not a spectator feed. The actual
+// A lightweight orbiting map overview, not a spectator feed. The actual
 // match runs on the authoritative server even when this browser leaves.
 export default function OnlineArenaPreview({ mode }) {
   const mountRef = useRef(null);
   const [failed, setFailed] = useState(false);
+  const [visible, setVisible] = useState(false);
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
+    if (typeof IntersectionObserver === 'undefined') { setVisible(true); return; }
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.01 });
+    observer.observe(mount);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount || !visible) return;
     setFailed(false);
     let active = true, frame = 0, renderer, observer;
     const scene = new THREE.Scene();
@@ -89,7 +98,7 @@ export default function OnlineArenaPreview({ mode }) {
       geometry.dispose();for(const m of materials.values())m.dispose();
       if(renderer){renderer.domElement.remove();destroySceneRenderer(renderer);}
     };
-  },[mode]);
+  },[mode, visible]);
   return <div className="relative overflow-hidden rounded border border-white/15 bg-slate-950" style={{height: 'clamp(130px, 28vh, 280px)'}}>
     <div ref={mountRef} className="absolute inset-0" />
     {failed && <div className="absolute inset-0 grid place-items-center text-sm text-white/65">3D preview unavailable. Server joining is unaffected.</div>}
