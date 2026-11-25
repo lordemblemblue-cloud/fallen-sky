@@ -25,7 +25,7 @@ function nextGain(level, abilities) {
 
 export default function ClassPicker({ current, pending = null, fighter = 'maskedWarrior', keys,
   live = false, onPick, onClose = null, progress = null, matchBoost = 0,
-  initialChoice = false, secondsLeft = 5, submitting = false, error = null }) {
+  initialChoice = false, secondsLeft = 5, submitting = false, error = null, joiningRoom = false }) {
   // Local class browsing cannot mutate match state, weapon, or authoritative meter.
   const [previewId, setPreviewId] = useState(null);
   const chosen = CLASS_IDS.includes(previewId) ? previewId
@@ -37,7 +37,7 @@ export default function ClassPicker({ current, pending = null, fighter = 'masked
   const mastery = masteryAt(at.level);
   const queued = pending === chosen && pending !== current;
   const active = current === chosen && !queued;
-  const note = queued ? `${cls.name} is queued for your next spawn.`
+  const note = joiningRoom ? 'Select your class to enter the room.' : queued ? `${cls.name} is queued for your next spawn.`
     : active ? `${cls.name} is your current class.`
       : live ? 'Press Select to queue this class for your next spawn.'
         : 'Press Select to use this class when the match begins.';

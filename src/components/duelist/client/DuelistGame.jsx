@@ -36,7 +36,7 @@ import { createEscortProps } from './escortProps.mjs';
 import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
-import { createOnlineSource } from '../net/client.mjs';
+import { createOnlineSource, hasResumableDuelistSeat } from '../net/client.mjs';
 import { Countdown, RespawnNote, Result } from './MatchHud.jsx';
 import DuelistHud from './DuelistHud.jsx';
 import { createHudFeed } from './hudFeed.mjs';
@@ -159,7 +159,41 @@ async function createActor(scene, seat, weaponColor, classId = null) {
  * botLevel: trainee | duelist | master. online + serverUrl: play on the match server instead of in the browser
  * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
-export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1, testMode = false, testBots = false,
+// A live room may already be fighting. Confirm the initial class before
+// opening a connection or spawning a vulnerable player. Subsequent in-match
+// class changes still use the server's normal next-spawn policy.
+export default function DuelistGame(props) {
+  if (props.online && props.mode !== 'story') {
+    return <OnlineClassEntry key={JSON.stringify([props.serverUrl, props.mode, props.matchId, props.room])} {...props} />;
+  }
+  return <DuelistMatch {...props} />;
+}
+
+function OnlineClassEntry(props) {
+  const [selected, setSelected] = useState(() =>
+    hasResumableDuelistSeat(props.mode, props.room, props.matchId) ? (classById(props.classId)?.id || 'duelist') : null);
+  const [seconds, setSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
+  useEffect(() => {
+    if (selected) return undefined;
+    const openedAt = Date.now();
+    const timer = window.setInterval(() => setSeconds(classChoiceSecondsLeft(openedAt, Date.now())), 200);
+    return () => window.clearInterval(timer);
+  }, [selected]);
+  if (selected) return <DuelistMatch {...props} classId={selected} entryClassConfirmed />;
+  const bound = keysFrom(props.keys || {});
+  const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map(a => keyLabel(bound[a], { short: true }));
+  return <div className="duelist-game" data-mobile-ui={typeof window !== 'undefined' && isMobileTouchDevice(window) ? 'true' : undefined}>
+    <ClassPicker current={props.classId} fighter={props.you} keys={classKeys}
+      progress={props.progress} initialChoice secondsLeft={seconds}
+      joiningRoom onPick={id => {
+        if (!classById(id)) return;
+        props.onClassChange?.(id); // save a preference only; the server validates the actual join class
+        setSelected(id);
+      }} />
+  </div>;
+}
+
+function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1, testMode = false, testBots = false,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
   onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, progress = null, onProgress = null }) {
   const bound = keysFrom(keys || {});
@@ -168,10 +202,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const sourceRef = useRef(null);
   const [picking, setPicking] = useState(false); // explicit reopen after initial confirmation
   // Do not let the automatic match/round countdown dismiss class selection.
-  const [entryClass, setEntryClass] = useState({ generation: 0, confirmed: false });
+  const [entryClass, setEntryClass] = useState({ generation: 0, confirmed: entryClassConfirmed });
   const [pendingClassPick, setPendingClassPick] = useState(null);
   const [choiceSeconds, setChoiceSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
-  const initialChosenRef = useRef(false);
+  const initialChosenRef = useRef(entryClassConfirmed);
   const [shopOpen, setShopOpen] = useState(false);
   const controlsRef = useRef(null);
   const mountRef = useRef(null);
@@ -204,8 +238,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     if (!mount) return undefined;
     let disposed = false;
     setStatus('loading');
-    initialChosenRef.current = false;
-    setEntryClass({ generation, confirmed: false });
+    initialChosenRef.current = entryClassConfirmed;
+    setEntryClass({ generation, confirmed: entryClassConfirmed });
     setPendingClassPick(null);
     setPicking(false);
     setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
@@ -839,7 +873,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, testMode, testBots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn]);
+  }, [mode, botLevel, youBody, foeBody, bots, testMode, testBots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn, entryClassConfirmed]);
 
   const view = hud?.view;
   const quest = view?.mission ? view : null; // a story mission's view; otherwise a match's

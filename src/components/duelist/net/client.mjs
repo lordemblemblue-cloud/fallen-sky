@@ -47,6 +47,11 @@ function keptSeat(storage, mode, room, matchId = null) {
   return null;
 }
 
+/** Reloading a seated tab should resume without asking for a different class. */
+export function hasResumableDuelistSeat(mode, room, matchId, storage = tabStorage()) {
+  return !!(storage && keptSeat(storage, mode, room, matchId));
+}
+
 /** Where the match server is: VITE_DUELIST_WS_URL, or the local test server when the page runs on localhost. */
 export function duelistServerUrl(mode = null) {
   const configured = import.meta.env?.VITE_DUELIST_WS_URL;
