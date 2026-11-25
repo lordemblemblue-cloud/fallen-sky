@@ -1409,7 +1409,7 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
           elevationY: 0.0,
           facingYawRad: -Math.PI * 0.25,
           primarySpawns: [
-            { id: 'Red_Spawn_1', x: -115.0, y: 0.0, z: 82.0 },
+            { id: 'Red_Spawn_1', x: -119.0, y: 0.0, z: 84.0 },
             { id: 'Red_Spawn_2', x: -112.0, y: 0.0, z: 79.0 },
             { id: 'Red_Spawn_3', x: -110.5, y: 0.0, z: 76.5 },
             { id: 'Red_Spawn_4', x: -114.5, y: 0.0, z: 83.2 }
@@ -1425,7 +1425,7 @@ export function createDuelistControlPointArena(THREE_LIB, customOptions = {}) {
           elevationY: 0.0,
           facingYawRad: Math.PI * 0.25,
           primarySpawns: [
-            { id: 'Blue_Spawn_1', x: 115.0, y: 0.0, z: 82.0 },
+            { id: 'Blue_Spawn_1', x: 119.0, y: 0.0, z: 84.0 },
             { id: 'Blue_Spawn_2', x: 112.0, y: 0.0, z: 79.0 },
             { id: 'Blue_Spawn_3', x: 110.5, y: 0.0, z: 76.5 },
             { id: 'Blue_Spawn_4', x: 114.5, y: 0.0, z: 83.2 }

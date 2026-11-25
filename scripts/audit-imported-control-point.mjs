@@ -382,9 +382,11 @@ const arenaMap = createDuelistControlPointArena(THREE);
             { x: -14, y: 4, z: -105 },
             { x: -24, y: 4, z: -103 },
             { x: -24, y: 8, z: -96 },
-            { x: -20, y: 8, z: -105 },
+            { x: -24, y: 8, z: -94 },
+            { x: -18, y: 8, z: -94 },
             { x: 0, y: 8, z: -105 },
-            { x: -20, y: 8, z: -105 },
+            { x: -18, y: 8, z: -94 },
+            { x: -24, y: 8, z: -94 },
             { x: -24, y: 8, z: -96 },
             { x: -24, y: 4, z: -103 },
             { x: -14, y: 4, z: -105 },
@@ -398,9 +400,11 @@ const arenaMap = createDuelistControlPointArena(THREE);
             { x: 14, y: 4, z: -105 },
             { x: 24, y: 4, z: -103 },
             { x: 24, y: 8, z: -96 },
-            { x: 20, y: 8, z: -105 },
+            { x: 24, y: 8, z: -94 },
+            { x: 18, y: 8, z: -94 },
             { x: 0, y: 8, z: -105 },
-            { x: 20, y: 8, z: -105 },
+            { x: 18, y: 8, z: -94 },
+            { x: 24, y: 8, z: -94 },
             { x: 24, y: 8, z: -96 },
             { x: 24, y: 4, z: -103 },
             { x: 14, y: 4, z: -105 },
@@ -462,6 +466,7 @@ const arenaMap = createDuelistControlPointArena(THREE);
           }
           const finalErr = Math.hypot(target.x - simPos.x, target.z - simPos.z) + Math.abs(target.y - simPos.y);
           if (finalErr > 0.85) {
+            console.log("Failed segment",rt.name,w,target,simPos.toArray());
             routeOk = false;
             break;
           }

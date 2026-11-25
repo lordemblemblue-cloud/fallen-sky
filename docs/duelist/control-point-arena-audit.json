@@ -1,35 +1,16 @@
 {
-  "validSpawns": 6,
+  "validSpawns": 12,
   "totalSpawns": 12,
-  "spawnAuditLog": [
-    "Red_Spawn_1(floor:true,obs:false,head:true)",
-    "Red_Spawn_2(floor:true,obs:false,head:true)",
-    "Red_Fallback_2(floor:true,obs:false,head:true)",
-    "Blue_Spawn_1(floor:true,obs:false,head:true)",
-    "Blue_Spawn_2(floor:true,obs:false,head:true)",
-    "Blue_Fallback_2(floor:true,obs:false,head:true)"
-  ],
+  "spawnAuditLog": [],
   "fallbackVerified": true,
   "headroomMeters": 7.2,
   "headroomOk": true,
-  "passedRoutes": 2,
+  "passedRoutes": 13,
   "totalRoutes": 13,
-  "failedRouteNames": [
-    "Level 1 Spine & Under L2 Hub",
-    "Level 1 Diagonal Pathways (L & R)",
-    "Bravo Staircase Ascent (Y=0 -> 4 -> 8)",
-    "Charlie Staircase Ascent (Y=0 -> 4 -> 8)",
-    "Bravo Staircase Descent (Y=8 -> 0)",
-    "Charlie Staircase Descent (Y=8 -> 0)",
-    "Elevated Bridges (Bravo <-> L2 <-> Charlie)",
-    "Alpha Left Staircase (Up & Down)",
-    "Alpha Right Staircase (Up & Down)",
-    "Bravo Building Interior & Rooftop",
-    "Charlie Building Interior & Rooftop"
-  ],
+  "failedRouteNames": [],
   "exportsValidated": true,
-  "triangles": 20852,
+  "triangles": 19616,
   "meshObjects": 120,
-  "colliders": 204,
+  "colliders": 191,
   "method": "Node + real Three.js math, stub 2D canvas; no GPU, no actual GLB export"
 }
