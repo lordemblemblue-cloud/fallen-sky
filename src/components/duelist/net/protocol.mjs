@@ -46,7 +46,7 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 20; // Industrial CTF map, elevated flags and protected spawn rooms.
+export const PROTOCOL = 21; // Industrial CTF map, elevated flags and protected spawn rooms.
 // // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
 // 11: the sword's directional cuts in three modes; 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';
@@ -74,7 +74,7 @@ export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'co
 export const DEFAULT_PUBLIC_ROOMS = Object.freeze(ONLINE_MODES.map((mode, index) => Object.freeze({ id: `m${index + 1}`, mode })));
 // A map revision gets a fresh native Actor instance, without changing its public room ID.
 // Retired long-lived instances may retain old geometry even after publication.
-export const actorInstanceId = roomId => roomId === 'm2' ? 'm2-ctf-industrial-p20-r1' : roomId === 'm6' ? 'm6-escort-canyon-p20-r1' : roomId + '-p20-r1';
+export const actorInstanceId = roomId => roomId === 'm2' ? 'm2-ctf-industrial-p21-r1' : roomId === 'm6' ? 'm6-escort-canyon-p21-r1' : (roomId === 'm4' || roomId === 'm7') ? roomId+'-conduit-p21-r1' : roomId + '-p21-r1';
 export const actorPublicRoomId = instanceId => DEFAULT_PUBLIC_ROOMS.find(room => actorInstanceId(room.id) === instanceId)?.id ?? null;
 // Online is a quick-match action, not a match ruleset or permanent server.
 export const QUICKPLAY_MODES = Object.freeze(['tdm', 'ctf', 'control']);
@@ -224,6 +224,8 @@ export function encodeOwn(f, body, time) {
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
     ad: [body.jumped ? 1 : 0, body.airDashReady ? 1 : 0, null, body.airJumpAt ?? null],
+    cb:when(f.conduitDamageUntil),
+    cp:body.conduitFlight?[body.conduitFlight.vx,body.conduitFlight.vy,body.conduitFlight.vz,body.conduitFlight.left]:null,
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
       f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until, f.activeAnchorAt.y ?? null] : null],
@@ -269,6 +271,8 @@ export function applyOwn(f, body, data) {
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz,
     airJumpAt: Number.isFinite(data.ad?.[3]) ? data.ad[3] : null, jumped: !!data.ad?.[0], airDashReady: !!data.ad?.[1] });
+  f.conduitDamageUntil=then(data.cb);
+  body.conduitFlight=Array.isArray(data.cp)&&data.cp.length===4&&data.cp.every(Number.isFinite)?{vx:data.cp[0],vy:data.cp[1],vz:data.cp[2],left:data.cp[3]}:null;
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
     : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7], baseY: m[8] ?? 0 };

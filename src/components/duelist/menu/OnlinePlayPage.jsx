@@ -13,7 +13,6 @@ export default function OnlinePlayPage() {
   const search = useSearch({ strict: false });
   const [mode, setMode] = useState(() =>
     ONLINE_SERVER_MODES.includes(search?.mode) ? search.mode : 'all');
-  const [testing, setTesting] = useState(false);
   const lobby = useLobby();
   const rooms = persistentServerCards(lobby.online ? lobby.matches : null, mode);
   const playLocal = room => {
@@ -45,11 +44,6 @@ export default function OnlinePlayPage() {
             <RefreshCw size={16} aria-hidden="true"/> Refresh
           </button>
         </div>
-        <button type="button" aria-expanded={testing} onClick={() => setTesting(v => !v)} className="rounded border border-cyan-300/50 px-4 py-2 font-bold text-cyan-200">Test</button>
-        {testing && <section className="space-y-2 rounded border border-white/20 p-3" aria-label="Private arena tests">
-          <p className="text-sm text-white/70">Enter alone, with bots off. No public server or matchmaking required.</p>
-          <div className="flex flex-wrap gap-2">{ONLINE_SERVER_MODES.map(id => <button key={id} type="button" className="rounded border border-white/20 px-3 py-2 text-white" onClick={() => navigate({ to: '/duelist-next/play', search: { mode: id, online: 0, test: 1, from: 'online-play' } })}>{id === 'control' ? 'Control Point — New two-level map' : MENU_MODES[id]?.title || id}</button>)}</div>
-        </section>}
         <p role="status" aria-live="polite" className="text-sm text-white/70">
           {lobby.online ? `${lobby.players} players online · Permanent public rooms`
             : !lobby.serverUrl ? 'Online host is not configured. Select a room to view connection status.' : 'Select a room to connect directly.'}

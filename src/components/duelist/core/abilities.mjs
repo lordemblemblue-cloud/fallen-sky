@@ -74,6 +74,7 @@ export function damageFor(attacker, move, base, { now, behind = false, sheltered
   if (effectOn(attacker, 'rage', now)) damage *= EFFECTS.rage.damage;
   if (strike && effectOn(attacker, 'empower', now)) damage *= EFFECTS.empower.damage;
   if (attacker.shopStats?.power) damage *= 1 + attacker.shopStats.power;
+  if (Number.isFinite(attacker.conduitDamageUntil)&&now<attacker.conduitDamageUntil)damage*=1.5;
   if (sheltered) {
     damage *= move.damageKind === 'telekinesis' || move.damageKind === 'breach'
       ? 1 - SPECIAL_BALANCE.sanctuaryPowerResistance

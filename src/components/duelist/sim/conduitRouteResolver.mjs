@@ -1,13 +1,16 @@
 // Opt-in CPU route refinement for Conduit. No renderer, frame loop, or mutation
 // of scene geometry. All returned walking segments pass the candidate sweep.
-import {conduitSupport,conduitBlockers,probeConduitWalk,probeConduitPad} from './conduitTraversal.mjs';
+import {snapshotConduitCollision,conduitSupport,conduitBlockers,probeConduitWalk,probeConduitPad} from './conduitTraversal.mjs';
 
 const horizontal=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const point=p=>({x:p.x,y:p.y,z:p.z});
 const STEP=.5, MAX_VISITS=4500;
 const directions=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,1],[1,-1],[-1,-1]];
 
-export function createConduitRouteResolver(world,nodes){
+export function createConduitRouteResolver(registry,nodes){
+  // Route caches already assume fixed architecture. Capture the finished
+  // registry once, so route probes use the same indexed immutable geometry.
+  const world=snapshotConduitCollision(registry);
   const routeCache=new Map(), clearCache=new Map();
   function clear(p){
     const key=p.x.toFixed(4)+'|'+p.y.toFixed(4)+'|'+p.z.toFixed(4);

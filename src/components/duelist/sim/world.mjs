@@ -13,6 +13,7 @@ import {
   stagger, controlImmune, hitDominated, targetable, classAbilityMove,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
+import {conduitPadAt,conduitLiveSupport} from './conduitLiveLayout.mjs';
 import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBodyBlockers, ARENA_BODY_HEIGHT, recoverArenaFootprint } from './modeArenaLayout.mjs';
 import { spendStamina } from '../core/vitals.mjs';
 import { stickDirection } from '../core/cuts.mjs';
@@ -232,6 +233,20 @@ export function step(world, dt, inputs = {}) {
   for (const [id, fighter] of world.fighters) {
     const body=world.bodies.get(id);
     if (!world.arenaLayout) { moveBody(world,fighter,body,dt,now); continue; }
+    if(world.arenaLayout?.conduitImported){
+      if(fighter.vitals.dead||fighter.heldBy||fighter.seizedBy){body.conduitFlight=null;}
+      else if(!body.conduitFlight&&arenaGrounded(world.arenaLayout,body,BODY_RADIUS)&&body.vy<=0){
+        const pad=conduitPadAt(body);
+        if(pad){const t=1.45;body.conduitFlight={vx:(pad.targetX-body.x)/t,vy:(pad.targetY-body.y+11*t*t)/t,vz:(pad.targetZ-body.z)/t,left:t};body.motion=null;body.jumped=false;body.airDashReady=false;}
+      }
+      if(body.conduitFlight){
+        const flight=body.conduitFlight,stepTime=Math.min(dt,flight.left);
+        const moved=moveArenaBody(world.arenaLayout,body,flight.vx*stepTime,flight.vz*stepTime,flight.vy*stepTime-11*stepTime*stepTime,BODY_RADIUS,false);
+        flight.vy-=22*stepTime;flight.left-=stepTime;body.vy=flight.vy;body.moving=true;
+        if(moved.hit||moved.landed&&flight.vy<0||flight.left<=1e-6){body.conduitFlight=null;if(moved.landed||moved.ceiling)body.vy=0;}
+        continue;
+      }
+    }
     const before={x:body.x,y:body.y,z:body.z};
     moveBody(world,fighter,body,dt,now);
     const delta={x:body.x-before.x,y:body.y-before.y,z:body.z-before.z};
@@ -669,17 +684,19 @@ function moveBody(world, fighter, body, dt, now) {
   body.moving = Math.hypot(vx, vz) > 0.1;
   const leaping = !!(a?.move.leap && !a.move.air && body.motion && !body.motion.clip && a.id === body.motion.id);
   if (effectOn(fighter, 'levitate', now)) {
-    body.y += ((world.arenaLayout ? Math.max(0, body.y - EFFECTS.levitate.height) : 0) + EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
+    const support=world.arenaLayout?.conduitImported?conduitLiveSupport(body.x,body.z,body.y+.05,-Infinity,.4):null;
+    const floor=world.arenaLayout?.conduitImported?(Number.isFinite(support)?support:body.y-EFFECTS.levitate.height):world.arenaLayout?Math.max(0,body.y-EFFECTS.levitate.height):0;
+    body.y += (floor + EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
     body.vy = 0;
   } else if (leaping) {
     // the arc is drawn by the root motion above
-  } else if (a?.id === 'airDash' && a.t <= a.move.active && body.y > 0) {
+  } else if (a?.id === 'airDash' && a.t <= a.move.active && (world.arenaLayout?.conduitImported?airborne(world,body):body.y>0)) {
     // Pause vertical movement during the short horizontal burst, then resume normal gravity.
     body.vy = 0;
   } else if (world.arenaLayout?.imported || body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
     body.vy -= GRAVITY * dt;
     body.y = world.arenaLayout?.imported ? body.y + body.vy * dt : Math.max(0, body.y + body.vy * dt);
-    if (body.y === 0) body.vy = 0;
+    if (body.y === 0 && !world.arenaLayout?.conduitImported) body.vy = 0;
   }
   if (world.level && body.y > ROOM_HEADROOM) { body.y = ROOM_HEADROOM; body.vy = Math.min(body.vy, 0); }
   if (!world.arenaLayout && body.jumped && body.y <= 0.001 && a?.id !== 'jump') {

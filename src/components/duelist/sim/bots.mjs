@@ -12,6 +12,7 @@ import { escortBotPath } from './escortBotNav.mjs';
 import { MOVES, BLOCK, CLASSES, FLOW, SNAP, isStunned, isDown, fighterVeil } from '../core/index.mjs';
 import { bodyOf, forwardOf } from './world.mjs';
 import { importedBotPath } from './importedControlBotNav.mjs';
+import {conduitBotPath} from './conduitLiveLayout.mjs';
 import { arenaLineClear, nextArenaGroundWaypoint } from './modeArenaLayout.mjs';
 
 export const BOT_LEVELS = Object.freeze({
@@ -118,8 +119,8 @@ input.target = foe?.id || null;
     const destination=goal && ((world.arenaLayout?.ctfImported&&ctfZone(me.team,mine))||d>ENGAGE || Math.abs(mine.y-(theirs?.y??mine.y))>2 || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
     if(destination && (dist(mine,destination)>2.6 || Math.abs(mine.y-(destination.y??0))>1.2 || !arenaLineClear(world.arenaLayout,mine,destination))){
       const old=bot.importedPath;
-      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||((world.arenaLayout.ctfImported||!old.path.length)&&now>=old.until)){
-        bot.importedPath={target:{...destination},until:now+1,path:world.arenaLayout.ctfImported?ctfBotPath(mine,destination,me.team,world.ctfCarriers?.has(bot.id)):world.arenaLayout.escortImported?escortBotPath(mine,destination,me.team,world.escortStage??0):importedBotPath(world.arenaLayout,mine,destination)};
+      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||((world.arenaLayout.ctfImported||world.arenaLayout.conduitImported||!old.path.length)&&now>=old.until)){
+        bot.importedPath={target:{...destination},until:now+1,path:world.arenaLayout.conduitImported?conduitBotPath(mine,destination):world.arenaLayout.ctfImported?ctfBotPath(mine,destination,me.team,world.ctfCarriers?.has(bot.id)):world.arenaLayout.escortImported?escortBotPath(mine,destination,me.team,world.escortStage??0):importedBotPath(world.arenaLayout,mine,destination)};
       }
       const path=bot.importedPath.path;
       while(path.length&&Math.hypot(mine.x-path[0].x,mine.z-path[0].z,mine.y-path[0].y)<.45)path.shift();
