@@ -211,7 +211,25 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
     setHud(null);
     setNet(null);
-    const selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
+    let selectedRenderer;
+    try {
+      selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
+    } catch (error) {
+      console.error('[duelist] renderer creation failed', error);
+      setStatus('error');
+      return undefined;
+    }
+    let rendererReady = false, rendererFailed = false;
+    const gpuDeadline = window.setTimeout(() => {
+      if (!disposed && !rendererReady) { rendererFailed = true; setStatus('error'); }
+    }, 20000);
+    Promise.resolve(selectedRenderer.ready).then(() => {
+      if (!disposed && !rendererFailed) rendererReady = true;
+      window.clearTimeout(gpuDeadline);
+    }).catch(error => {
+      window.clearTimeout(gpuDeadline);
+      if (!disposed) { rendererFailed = true; console.error('[duelist] renderer initialization failed', error); setStatus('error'); }
+    });
     const renderer = selectedRenderer.renderer;
     window.__duelistGameRenderer = renderer;
     window.__duelistGameRendererChoice = { kind: selectedRenderer.kind, reason: selectedRenderer.reason };
@@ -807,11 +825,20 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       frame = requestAnimationFrame(loop);
       const dt = Math.min(0.1, (now - last) / 1000) * timeScale;
       last = now;
-      if (!manual) tick(dt);
+      if (rendererFailed) { cancelAnimationFrame(frame); return; }
+      if (rendererReady && !manual) {
+        try { tick(dt); } catch (error) {
+          rendererFailed = true;
+          cancelAnimationFrame(frame);
+          console.error('[duelist] arena frame failed', error);
+          setStatus('error');
+        }
+      }
     };
     frame = requestAnimationFrame(loop);
     return () => {
       disposed = true;
+      window.clearTimeout(gpuDeadline);
       cancelAnimationFrame(frame);
       observer.disconnect();
       source.dispose();
