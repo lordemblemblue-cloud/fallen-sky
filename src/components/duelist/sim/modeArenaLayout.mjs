@@ -1,3 +1,4 @@
+import {CONDUIT_MATCH_LAYOUTS,conduitLiveSupport,conduitLiveBlockers,conduitLiveGrounded,conduitLiveMove,conduitLiveRay,conduitBotPath} from './conduitLiveLayout.mjs';
 import { IMPORTED_CTF, ctfSupport, ctfBlockers, ctfMove, ctfRay } from './importedCtfLayout.mjs';
 import { IMPORTED_ESCORT, escortSupport, escortBlockers, escortMove, escortRay } from './importedEscortLayout.mjs';
 import { IMPORTED_CONTROL, importedOverlaps, importedSupport, importedBlockers, importedMove, importedRay } from './importedControlLayout.mjs';
@@ -41,6 +42,7 @@ const MAPS=Object.freeze({
 });
 // Approved two-level arena is shared by public, offline and private matches.
 export function getModeArenaLayout(mode) {
+  if(Object.hasOwn(CONDUIT_MATCH_LAYOUTS,mode))return CONDUIT_MATCH_LAYOUTS[mode];
   return mode==='ctf' ? IMPORTED_CTF : mode==='escort' ? IMPORTED_ESCORT : mode==='control' ? IMPORTED_CONTROL : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
 }
 function inRing(ring,x,z) {
@@ -61,6 +63,7 @@ function edgeDistance(ring,x,z) {
   return best;
 }
 export function arenaFloorContains(map,x,z,radius=0) {
+  if(map.conduitImported)return Number.isFinite(conduitLiveSupport(x,z,Infinity,-Infinity,radius));
   if(map.ctfImported)return Number.isFinite(ctfSupport(x,z,Infinity,radius));
   if(map.escortImported)return Number.isFinite(escortSupport(x,z,Infinity,radius));
   if(map.imported)return Number.isFinite(importedSupport(map,x,z,.1,radius));
@@ -91,6 +94,7 @@ export function overlapsArenaFootprint(part,x,z,radius=0) {
   return radius===0 ? dx===0 && dz===0 : dx*dx+dz*dz<radius*radius;
 }
 export function arenaBodyBlockers(map,{x,y,z,radius,height}) {
+  if(map.conduitImported)return conduitLiveBlockers({x,y,z,radius,height});
   if(map.ctfImported)return ctfBlockers({x,y,z,radius,height});
   if(map.escortImported)return escortBlockers({x,y,z,radius,height});
   if(map.imported)return importedBlockers(map,{x,y,z,radius,height});
@@ -100,6 +104,7 @@ export function arenaBodyBlockers(map,{x,y,z,radius,height}) {
 // movement: callers must first resolve horizontal movement and head clearance.
 export function arenaLandingHeight(map,{x,z,previousY,nextY}) {
   if (nextY>previousY) return null;
+  if(map.conduitImported){const y=conduitLiveSupport(x,z,previousY,nextY);return Number.isFinite(y)?y:null;}
   let landing=nextY<=0 && previousY>=0 ? 0 : null;
   for (const p of map.parts) {
     if (p.y1<=previousY+1e-6 && p.y1>=nextY-1e-6 && overlapsArenaFootprint(p,x,z)) {
@@ -114,6 +119,7 @@ export function arenaLandingHeight(map,{x,z,previousY,nextY}) {
 export const ARENA_BODY_HEIGHT=1.8;
 const EPS=1e-5;
 export function arenaGrounded(map,body,radius=0.4) {
+  if(map.conduitImported)return conduitLiveGrounded(body,radius);
   if(map.ctfImported)return Math.abs(ctfSupport(body.x,body.z,body.y+.08)-body.y)<.1;
   if(map.escortImported)return Math.abs(escortSupport(body.x,body.z,body.y+.08,.06)-body.y)<.10;
   if(map.imported)return Math.abs(importedSupport(map,body.x,body.z,body.y+.06)-body.y)<.08;
@@ -126,6 +132,7 @@ function blocked(map,body,radius) {
 // Swept axis-separated motion, with a bounded automatic stair step. The
 // collision interval is height-aware; rooftops do not block the ground tunnel.
 export function moveArenaBody(map,body,dx,dz,dy,radius=0.4,allowStep=true) {
+  if(map.conduitImported)return conduitLiveMove(body,dx,dz,dy,radius,allowStep);
   if(map.ctfImported)return ctfMove(body,dx,dz,dy,radius,allowStep);
   if(map.escortImported)return escortMove(body,dx,dz,dy,radius,allowStep);
   if(map.imported)return importedMove(map,body,dx,dz,dy,radius,allowStep);
@@ -175,6 +182,7 @@ export function moveArenaBody(map,body,dx,dz,dy,radius=0.4,allowStep=true) {
 }
 // 3D segment vs box, used for camera, combat and projectile occlusion.
 export function arenaRayFraction(map,from,to,pad=0){
+  if(map.conduitImported)return conduitLiveRay(from,to,pad);
   if(map.ctfImported)return ctfRay(from,to,pad);
   if(map.escortImported)return escortRay(from,to,pad);
   if(map.imported)return importedRay(map,from,to,pad);
@@ -230,6 +238,7 @@ function groundGraph(map){
   const graph={nodes,edges};navCache.set(map,graph);return graph;
 }
 export function nextArenaGroundWaypoint(map,from,to){
+  if(map.conduitImported)return conduitBotPath(from,to).find(p=>Math.hypot(p.x-from.x,p.y-from.y,p.z-from.z)>.45)??null;
   if(routeClear(map,from,to))return to;
   const {nodes,edges}=groundGraph(map);
   const dist=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
