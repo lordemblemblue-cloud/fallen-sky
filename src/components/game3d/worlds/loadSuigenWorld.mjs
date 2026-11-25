@@ -4,7 +4,7 @@ import {SUIGEN_ASSET_PARTS,SUIGEN_WORLD_METADATA} from './WolfveilWorldVariants.
 import {createSuigenTownDistrict} from './SuigenTownDistrict.mjs';
 import {createSuigenMountainWayfinding} from './SuigenMountainWayfinding.mjs';
 
-const WALKABLE_NAME=/^(?:Map_Terrain_2400m|Canal_Bridge_Deck|Abyss_Stair_\d+|Abyss_Vault_Floor)$/;
+const WALKABLE_NAME=/^(?:Map_Terrain_2400m|Canal_Bridge_Deck)$/;
 const INTERIOR_FLOOR_MATERIAL=/^SUI_Woven_Tatami_Mat$/;
 export function isSuigenWalkableMesh(node){
   if(!node?.isMesh)return false;
@@ -49,6 +49,9 @@ export async function loadSuigenWorld({scene,signal}={}){
   for(const gltf of assets){
     const part=gltf.scene;
     part.updateMatrixWorld(true);
+    const retired=[];
+    part.traverse(obj=>{if(/^(?:Abyss_|.*(?:Vortex|Dungeon|CavePortal))/i.test(obj.name||''))retired.push(obj);});
+    for(const obj of retired)obj.parent?.remove(obj);
     part.traverse(obj=>{
       if(!obj.isMesh)return;
       obj.castShadow=!!obj.castShadow; // retain artist's authored material response

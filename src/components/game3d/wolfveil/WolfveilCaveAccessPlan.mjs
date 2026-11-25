@@ -1,7 +1,6 @@
 // Game 3D clone: real walkable access from EXISTING Wolfveil trail junctions
 // to the four existing cave mouths. The final threshold, underground ramp,
 // chambers and existing exit belong to WolfveilCaveLayout.mjs.
-import { WOLFVEIL_EXPLORABLE_CAVES } from './WolfveilCaveLayout.mjs';
 import { wolfveilHeight, setWolfveilCaveApproachTerrainGrade, WOLFVEIL_ROUTES } from './WolfveilLayout.js';
 
 export const WOLFVEIL_CAVE_ACCESS_TRAILS=Object.freeze({
@@ -77,7 +76,7 @@ function gradeLeg(from, to, endKind) {
 }
 
 export const WOLFVEIL_CAVE_APPROACHES=Object.freeze(
-  WOLFVEIL_EXPLORABLE_CAVES.map(cave=>{
+  [].map(cave=>{
     const spec=WOLFVEIL_CAVE_ACCESS_TRAILS[cave.id];
     if(!spec)throw new Error('Missing access trail for '+cave.id);
     const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
@@ -158,7 +157,7 @@ export function wolfveilCaveApproachTrailKeep(x,z){
 // natural slope. The mouth is left alone so the arch stays where it was.
 export function gradeWolfveilCaveApproachTerrain(x,z,y){
   if(!Number.isFinite(x)||!Number.isFinite(z)||!Number.isFinite(y))return y;
-  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+  for(const cave of []){
     if(Math.hypot(x-cave.mouth[0],z-cave.mouth[1])<6.5)return y;
   }
   let best=null;
@@ -176,7 +175,7 @@ export function gradeWolfveilCaveApproachTerrain(x,z,y){
   const w=best.d<=inner?1:1-smooth01((best.d-inner)/Math.max(0.001,best.feather-inner));
   return y+(best.py-y)*w*wolfveilCaveApproachTrailKeep(x,z);
 }
-setWolfveilCaveApproachTerrainGrade(gradeWolfveilCaveApproachTerrain);
+setWolfveilCaveApproachTerrainGrade(null);
 
 export function nearestWolfveilCaveApproach(x,z){
   if(!Number.isFinite(x)||!Number.isFinite(z))return null;
@@ -196,7 +195,7 @@ export function isWolfveilCaveApproachReserved(x,z,padding=0){
   if(near&&near.distance<=WOLFVEIL_CAVE_APPROACH_WIDTH/2+extra)return true;
   // The last 7m of the path expands to the wider cave floor. Preserve the
   // full side apron around the carved entrance and the seven-foot rim guard.
-  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+  for(const cave of []){
     const rx=x-cave.mouth[0],rz=z-cave.mouth[1];
     const f=rx*cave.dir[0]+rz*cave.dir[1],
       lateral=Math.abs(-rx*cave.dir[1]+rz*cave.dir[0]);
@@ -220,7 +219,7 @@ export function resolveWolfveilCaveEntranceRailCollision(now,previous,radius=.62
   if(!now||!previous||![now.x,now.z,previous.x,previous.z].every(Number.isFinite))
     return false;
   const capsule=Math.max(0,Math.min(1.4,Number(radius)||.62));
-  for(const cave of WOLFVEIL_EXPLORABLE_CAVES){
+  for(const cave of []){
     const [mx,mz]=cave.mouth,[dx,dz]=cave.dir;
     const along=p=>(p.x-mx)*dx+(p.z-mz)*dz;
     const lateral=p=>-(p.x-mx)*dz+(p.z-mz)*dx;

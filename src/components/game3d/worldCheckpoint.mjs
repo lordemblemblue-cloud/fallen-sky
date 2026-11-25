@@ -1,7 +1,7 @@
 // Character-scoped, portable last-world-location record. This is a browser
 // checkpoint, NOT movement authority. Live servers must still validate a spawn.
 export const WORLD_CHECKPOINT_REGIONS = Object.freeze([
-  'wolfveil', 'forest', 'lunar-cave', 'astral-dungeon',
+  'wolfveil', 'forest',
 ]);
 const REGION_SET = new Set(WORLD_CHECKPOINT_REGIONS);
 const MAX_XZ = 20000;

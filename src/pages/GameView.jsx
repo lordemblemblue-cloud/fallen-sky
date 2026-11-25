@@ -377,7 +377,7 @@ export default function GameView() {
         WOLFVEIL_AREA_IDS.includes(detail.area)&&detail.area!==worldArea&&
         landing&&[landing.x,landing.y,landing.z].every(Number.isFinite)&&
         wolfveilAreaAtWorld(landing)===detail.area;
-      if(!areaTravel&&(!['wolfveil','lunar-cave','astral-dungeon','wolfveil-caves'].includes(target)||
+      if(!areaTravel&&(target!=='wolfveil'||
         target===worldRegion))return;
       services.controller.close();
       setPauseMenuOpen(false);
@@ -804,7 +804,7 @@ export default function GameView() {
             onPlay={(region='wolfveil',target=null)=>{
               setCreatorOnLogin(false);
               setWorldEntryError('');
-              const requestedRegion=['forest','astral-dungeon','lunar-cave'].includes(region)?region:'wolfveil';
+              const requestedRegion=region==='forest'?region:'wolfveil';
                // Standard Play resumes this character's last stored world and coordinates.
                // An explicit preview/workflow target always takes precedence.
                const resume = requestedRegion==='wolfveil' && !target ? worldCheckpointStore.read() : null;

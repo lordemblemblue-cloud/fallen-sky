@@ -1,9 +1,6 @@
 import { createTileGrid, tileFromId } from '../../worldTileEditor/tileGrid.mjs';
 import { sectionFromId, SECTION_STORAGE_KEY } from '../wolfveil/preview/wolfveilSectionGrid.mjs';
 import { insideWolfveilClientGround } from '../wolfveil/WolfveilTravelSafety.mjs';
-import { LUNAR_CAVE_ENTRANCE } from '../dungeons/LunarCaveLayout.mjs';
-import {VORTEX_LAKE} from '../wolfveil/VortexLakeLayout.mjs';
-import { ASTRAL_DUNGEON_REGION,ASTRAL_DUNGEON_TITLE,ASTRAL_PADS } from '../dungeons/AstralDungeonLayout.mjs';
 
 // The current Play mesh uses world X/Z metres and the Wolfveil +70m Z offset.
 // Tile IDs are NOT geographic latitude/longitude.
@@ -58,32 +55,6 @@ export function resolveWorkflowDestination(value) {
   const text = value.trim();
   const tileId = text.toUpperCase().replace(/\s+/g, '');
   const landmarkName = text.toLowerCase().replace(/[\s_]+/g, '-');
-  if(['moonfall','moonfall-expanse','astral-dungeon','space-dungeon','moon-dungeon'].includes(landmarkName)){
-    // A self-contained Game 3D map instance, not a Wolfveil terrain square.
-    return {id:WORKFLOW_ASTRAL_DUNGEON_ID,kind:'region',region:ASTRAL_DUNGEON_REGION,
-      area:ASTRAL_DUNGEON_TITLE,status:'Preview · four moonlit circular platforms · Lv 45+',
-      x:ASTRAL_PADS[0].x,z:ASTRAL_PADS[0].z,minX:0,maxX:0,minZ:0,maxZ:0};
-  }
-  if(['vortex','vortex-lake','living-lake','world-beneath-world'].includes(landmarkName)){
-    // Spawn on the registered bridge; never spawn inside the deep whirlpool.
-    const {x,z}=VORTEX_LAKE.safeReturn;
-    if(!insideWolfveilClientGround(x,z,2))return null;
-    return {id:WORKFLOW_VORTEX_LAKE_ID,kind:'landmark',
-      area:'Living Perspectives Vortex Lake',
-      status:'Preview · 3D mountain water passage · exploration portal',
-      x,z,minX:x,maxX:x,minZ:z,maxZ:z};
-  }
-  if (['dungeon', 'dungeon-entrance', 'lunar-cave', 'lunar-mountain-gate'].includes(landmarkName)) {
-    // Spawn on the natural approach OUTSIDE the portal, never inside the rock.
-    // Keep this position coupled to the actual Lunar Cave entrance layout.
-    const x = LUNAR_CAVE_ENTRANCE.approachX, z = LUNAR_CAVE_ENTRANCE.approachZ;
-    if (!insideWolfveilClientGround(x, z, 2)) return null;
-    return {
-      id: WORKFLOW_DUNGEON_ENTRANCE_ID, kind: 'landmark',
-      area: 'Dungeon Entrance', status: 'Lunar Cave · outside mountain portal',
-      x, z, minX: x, maxX: x, minZ: z, maxZ: z,
-    };
-  }
   if (WORKFLOW_PRECISION_TILES[tileId])
     return fromCell({ id: tileId, ...WORKFLOW_PRECISION_TILES[tileId] }, 'tile-10m');
   if (/^X\d+-Z\d+$/.test(tileId))
