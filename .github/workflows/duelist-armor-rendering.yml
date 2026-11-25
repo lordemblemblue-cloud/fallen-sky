@@ -1,0 +1,25 @@
+name: Duelist armor rendering checks
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/**'
+      - 'tests/duelist-armor-*.test.mjs'
+      - '.github/workflows/duelist-armor-rendering.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  armor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/duelist-armor-*.test.mjs
+      - run: node scripts/verify-duelist-ui.mjs
+      - run: npm run lint
+      - run: npm run build
