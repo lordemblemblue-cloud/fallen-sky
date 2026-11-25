@@ -46,8 +46,23 @@ export const Route = createFileRoute('/api/game3d-face')({
         try{
           // Browsers can submit resized JPEG data URLs. Fail closed if more
           // than 8 MB, even when Content-Length was omitted.
-          const raw=await request.text();
-          if(raw.length>8_000_000)return deny('photos-too-large',413);
+          const reader=request.body?.getReader();
+          if(!reader)return deny('invalid-request');
+          const decoder=new TextDecoder();
+          let bytes=0, raw='';
+          try {
+            for (;;) {
+              const {done,value}=await reader.read();
+              if(done)break;
+              bytes+=value.byteLength;
+              if(bytes>8_000_000){
+                await reader.cancel().catch(()=>{});
+                return deny('photos-too-large',413);
+              }
+              raw+=decoder.decode(value,{stream:true});
+            }
+            raw+=decoder.decode();
+          } finally { reader.releaseLock(); }
           input=JSON.parse(raw);
         }catch{return deny('invalid-request')}
         return reply(await createFaceDraft({env:faceEnv(),user:context.user,input}));
