@@ -37,7 +37,8 @@ export async function loadFighterBody(bodyId = 'female', quality = readPrefs().a
   const id = Object.hasOwn(BODY_URLS, bodyId) ? bodyId : 'female';
   const variant = policy.simplified ? ARMOR_VARIANTS[id]?.[policy.quality] : null;
   const original = BODY_URLS[id];
-  const [gltf, pack] = await Promise.all([variant ? load(variant).catch(() => load(original)) : load(original), load(MOVEMENT_PACK_URL).catch(() => null)]);
+  const bodyAsset = variant ? load(variant).then(gltf => ({ gltf, rigKey: variant })).catch(() => load(original).then(gltf => ({ gltf, rigKey: original }))) : load(original).then(gltf => ({ gltf, rigKey: original }));
+  const [{ gltf, rigKey }, pack] = await Promise.all([bodyAsset, load(MOVEMENT_PACK_URL).catch(() => null)]);
   const model = cloneSkinned(gltf.scene);
   // SkeletonUtils shares cached geometry and textures, but each actor owns its skeleton.
   // Do not mutate or dispose the shared material/texture data. Fused armor cannot be
@@ -81,7 +82,7 @@ export async function loadFighterBody(bodyId = 'female', quality = readPrefs().a
   const clips = {};
   for (const [key, name] of Object.entries(LOCOMOTION_CLIPS)) clips[key] = byName(gltf.animations, name);
   for (const [key, name] of Object.entries(MOVEMENT_CLIPS)) clips[key] = byName(pack?.animations, name);
-  return { model, clips, bodyId };
+  return { model, clips, bodyId, rigKey };
 }
 
 // Release only clone-owned resources. Cached source geometry/textures and shared guard

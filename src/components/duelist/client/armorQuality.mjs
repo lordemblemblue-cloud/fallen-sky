@@ -16,3 +16,13 @@ export function armorPolicy(value) {
   const quality = normalizeArmorQuality(value);
   return { quality, simplified: quality !== 'full', attachedArmor: quality !== 'hidden', armorShadows: quality === 'full' };
 }
+
+// Distance hysteresis: don't toggle remote low-detail armor each time a fighter
+// crosses the threshold. Personal and full-quality appearances never auto-hide.
+export function showAttachedArmor(quality, personal, distanceSquared, wasVisible = true) {
+  const mode = normalizeArmorQuality(quality);
+  if (mode === 'hidden') return false;
+  if (mode === 'full' || personal || !Number.isFinite(distanceSquared)) return true;
+  const distance = wasVisible ? 30 : 24;
+  return distanceSquared <= distance * distance;
+}

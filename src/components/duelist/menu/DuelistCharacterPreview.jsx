@@ -50,9 +50,11 @@ export default function DuelistCharacterPreview({ fighter = 'maskedWarrior', cla
     rim.position.set(-3, 2, -2);
     scene.add(rim);
 
-    loadFighterBody(fighter).then(async ({ model: loaded, clips }) => {
+    loadFighterBody(fighter).then(async ({ model: loaded, clips, rigKey }) => {
       if (!active) { releaseFighterBody(loaded); return; }
-      const prepared = await prepareIdlePreview({ model: loaded, bodyId: fighter, classId, embeddedIdle: clips?.idle });
+      let prepared;
+      try { prepared = await prepareIdlePreview({ model: loaded, bodyId: rigKey, classId, embeddedIdle: clips?.idle }); }
+      catch (error) { releaseFighterBody(loaded); throw error; }
       if (!active) { prepared.dispose(); releaseFighterBody(loaded); return; }
       model = loaded;
       // loadFighterBody already centres each asset at x/z=0, feet at y=0.

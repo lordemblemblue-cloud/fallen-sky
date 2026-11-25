@@ -13,7 +13,7 @@ import { MODES, CTF } from '../sim/match.mjs';
 import { clearLine, rayDistance } from '../sim/level.mjs';
 import { loadFighterBody, releaseFighterBody, MOVEMENT_PACK_URL } from './assets.mjs';
 import { readPrefs, usePrefs } from './prefs.mjs';
-import { armorQualityFor } from './armorQuality.mjs';
+import { armorQualityFor, showAttachedArmor } from './armorQuality.mjs';
 import ArmorQualitySettings from './ArmorQualitySettings.jsx';
 import { clipsForBody } from './motionLibrary.mjs';
 import { bakeDuelMoves } from './duelMoves.mjs';
@@ -101,12 +101,14 @@ const BODY_REMAINS = 7; // seconds a fallen guard lies before it is cleared away
 // crystal form and colour), or null
 async function createActor(scene, seat, weaponColor, classId = null, quality) {
   const bodyId = seat.body;
-  const { model, clips } = await loadFighterBody(bodyId, quality);
+  const { model, clips, rigKey } = await loadFighterBody(bodyId, quality);
+  const armorPieces = [];
   if (seat.kit) dressGuard(model, seat.kit, quality); // fitted at rest, before anything poses the body
+  model.traverse(n => { if (n.userData.duelistArmorPiece) armorPieces.push(n); });
   // the clip packs are retargeted from the body's rest pose: before anything poses it
   const [pack, dodges] = await Promise.all([
-    clipsForBody(model, { rigKey: bodyId }),
-    clipsForBody(model, { rigKey: bodyId, url: MOVEMENT_PACK_URL, names: EVASIONS }),
+    clipsForBody(model, { rigKey }),
+    clipsForBody(model, { rigKey, url: MOVEMENT_PACK_URL, names: EVASIONS }),
   ]);
   const group = new THREE.Group();
   group.add(model);
@@ -143,6 +145,11 @@ async function createActor(scene, seat, weaponColor, classId = null, quality) {
     group, model, sword, animator, trails, aim, gun, classId: classDef ? classId : null, kind: seat.kind || 'player', yaw: 0, at: new THREE.Vector3(), fallen: 0,
     voice: /huntress|female/i.test(seat.body || '') ? 'f' : 'm', // which recorded voice it roars and taunts in
     root: group,
+    updateArmorVisibility(personal, distanceSquared) {
+      if (!armorPieces.length || quality !== 'low') return;
+      const visible = showAttachedArmor(quality, personal, distanceSquared, armorPieces[0].visible);
+      if (visible !== armorPieces[0].visible) for (const piece of armorPieces) piece.visible = visible;
+    },
     bladeNear(point) {
       let nearest = null;
       for (const { group: blade, base, tip } of blades) {
@@ -729,6 +736,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
           actor.at.set(body.x, body.y, body.z);
           actor.group.position.copy(actor.at);
           actor.group.rotation.set(0, actor.yaw, 0);
+          actor.updateArmorVisibility(id === mineId, camera.position.distanceToSquared(actor.at));
           if (drawing) actor.animator.update(dt, { fighter, body, now: world.time, arenaLayout: world.arenaLayout, working: working.get(id) || null, impact: actor.impactPose, clash: actor.clashAt ?? null });
           const will = fighter.vitals.max.will > 0 ? fighter.vitals.will / fighter.vitals.max.will : 0;
           actor.sword.setWill(will, fighterVeil(fighter));

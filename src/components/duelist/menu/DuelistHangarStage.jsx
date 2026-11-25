@@ -105,9 +105,11 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     rim.position.set(-3.3, 2.5, -0.5);
     scene.add(rim);
 
-    loadFighterBody(fighter).then(async ({ model: next, clips }) => {
+    loadFighterBody(fighter).then(async ({ model: next, clips, rigKey }) => {
       if (!active) { releaseFighterBody(next); return; }
-      const prepared = await prepareIdlePreview({ model: next, bodyId: fighter, classId, embeddedIdle: clips?.idle });
+      let prepared;
+      try { prepared = await prepareIdlePreview({ model: next, bodyId: rigKey, classId, embeddedIdle: clips?.idle }); }
+      catch (error) { releaseFighterBody(next); throw error; }
       if (!active) { prepared.dispose(); releaseFighterBody(next); return; }
       model = next;
       model.position.x -= 1.48;

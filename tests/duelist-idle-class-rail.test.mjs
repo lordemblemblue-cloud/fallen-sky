@@ -30,7 +30,7 @@ test('the home and character stages prepare a stance before showing each model',
   for (const file of ['menu/DuelistHangarStage.jsx', 'menu/DuelistCharacterPreview.jsx']) {
     const content = source(file);
     assert.match(content, /await prepareIdlePreview/);
-    assert.match(content, /if \(!active\) \{ prepared\.dispose\(\); return; \}/);
+    assert.match(content, /if \(!active\) \{ prepared\.dispose\(\); releaseFighterBody\(\w+\); return; \}/);
     assert.ok(content.indexOf('await prepareIdlePreview') < content.indexOf('scene.add(model)'));
     assert.match(content, /idlePose\?\.dispose\(\)/);
   }

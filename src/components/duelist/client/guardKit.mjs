@@ -85,6 +85,7 @@ export function dressGuard(model, kit = KITS.gunner, quality = 'full') {
     mesh.scale.copy(scale);
     if (quaternion) mesh.quaternion.copy(quaternion);
     mesh.castShadow = policy.armorShadows;
+    mesh.userData.duelistArmorPiece = true;
     mesh.updateMatrixWorld(true);
     parent.attach(mesh); // keeps where it is, now in the bone's space
     return mesh;
