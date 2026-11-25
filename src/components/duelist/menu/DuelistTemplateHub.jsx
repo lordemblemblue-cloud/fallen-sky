@@ -245,6 +245,14 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
   const lobby = useLobby();
   const [prefs, onPrefs] = usePrefs();
   const [panel, setPanel] = useState(initialPanel);
+  const [hqTestAllowed, setHqTestAllowed] = useState(false);
+  const [hqTest, setHqTest] = useState(false);
+  const [hqStatus, setHqStatus] = useState(null);
+  useEffect(() => {
+    const optedIn = new URLSearchParams(window.location.search).get('hqTest') === '1';
+    setHqTestAllowed(optedIn);
+    setHqTest(optedIn);
+  }, []);
   const [category, setCategory] = useState('normal');
   const [mode, setMode] = useState(firstTemplateMode('normal'));
   const fighter = BODIES[prefs.fighter]?.name || 'Duelist';
@@ -280,7 +288,7 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
   }, [panel, initialPanel, navigate]);
   return (
     <main className={'dxt-page' + (isReferencePanel ? ' dxt-page--reference' : '') + (panel === 'play' ? ' dxt-page--play-reference' : '')}>
-      {!isReferencePanel && <DuelistHangarStage fighter={prefs.fighter} classId={prefs.classId}/>}
+      {!isReferencePanel && <DuelistHangarStage fighter={prefs.fighter} classId={prefs.classId} headquarters={hqTest && !panel} onHqStatus={setHqStatus}/>}
       {panel && !isReferencePanel && <button type="button" className="dxt-stage-scrim" tabIndex={-1} onClick={close} aria-label="Close menu"/>}
       {!isReferencePanel && <header className="dxt-header">
         <div className="dxt-header-player"><span className="dxt-player-symbol"><UserRound size={20}/></span>
@@ -291,6 +299,12 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
       {!panel && <section className="dxt-home" aria-label="Duelist Adventure home">
         <div className="dxt-home-intro"><span>ENTER THE ARENA</span><h2>MASTER THE BLADE. SHAPE THE VEIL.</h2>
           <p>Choose a character and enter a match.</p>
+          {hqTestAllowed && <div role="region" aria-label="Experimental headquarters test" style={{marginBottom: 12, maxWidth: 310, background: '#12263acc', padding: 10, borderRadius: 8, fontSize: 12}}>
+            <strong>EXPERIMENTAL HQ V4 · TEST ONLY</strong>
+            <p aria-live="polite">{!hqTest ? 'Original hangar active' : hqStatus?.state === 'active' ? `${hqStatus.backend || 'GPU initializing'} · ${hqStatus.qualityProfile} · ${hqStatus.staticTriangles + hqStatus.dynamicTriangles} HQ triangles · ${hqStatus.npcCount} NPCs · ${Math.round(hqStatus.frameMs)} ms latest host frame` : hqStatus?.state === 'fallback' ? `Original hangar fallback${hqStatus.message ? ': ' + hqStatus.message : ''}` : 'Initializing shared renderer…'}</p>
+            <button type="button" className="dxt-action dxt-action--secondary" onClick={() => {setHqStatus(null);setHqTest(v=>!v);}}>{hqTest ? 'RESTORE ORIGINAL HANGAR' : 'ENABLE HQ TEST'}</button>
+            <a href="/duelist-hq-v4-test.html" style={{display:'block',marginTop:8}}>Standalone GPU checks / export report</a>
+          </div>}
           <button type="button" className="dxt-action dxt-action--primary" onClick={() => setPanel('play')}>
             <Play aria-hidden="true"/> CHOOSE GAME MODE
           </button>
