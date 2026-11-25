@@ -8,6 +8,7 @@ const point=p=>({x:p.x,y:p.y,z:p.z});
 const deepFreeze=o=>{if(o&&typeof o==='object'&&!Object.isFrozen(o)){Object.values(o).forEach(deepFreeze);Object.freeze(o);}return o;};
 export const CONDUIT_LAYOUT_ID='the-conduit';
 export const CONDUIT_LAYOUT_VERSION=1;
+export const CONDUIT_MODE_RULES=Object.freeze({tdm:Object.freeze({teams:true,capacity:8}),ffa:Object.freeze({teams:false,capacity:6})});
 export function buildConduitMatchManifest(arena){
   const cfg=arena.config;
   const world=snapshotConduitCollision(arena.world);
@@ -16,7 +17,9 @@ export function buildConduitMatchManifest(arena){
   const nodes=[...arena.navGraph.nodes.values()].map(n=>({id:n.id,pos:point(n.pos),tier:n.tier,edges:n.edges.map(e=>({...e}))}));
   return deepFreeze({id:CONDUIT_LAYOUT_ID,version:CONDUIT_LAYOUT_VERSION,radius:cfg.foundationR,gravity:cfg.gravity,padTime:cfg.jumpPadFlightTime,world,spawns,pickups,nodes});
 }
-export function createConduitMatchAdapter(manifest){
+export function createConduitMatchAdapter(manifest,{mode='tdm',random=null}={}){
+  if(!Object.hasOwn(CONDUIT_MODE_RULES,mode))throw new TypeError('Unsupported Conduit match mode');
+  if(mode==='ffa'&&typeof random!=='function')throw new TypeError('FFA requires a match-owned random generator');
   if(manifest?.id!==CONDUIT_LAYOUT_ID||manifest.version!==CONDUIT_LAYOUT_VERSION||manifest.radius!==44.8||
     manifest.gravity!==-22||manifest.padTime!==1.45||!Array.isArray(manifest.nodes)||
     !Array.isArray(manifest.spawns?.blue)||!Array.isArray(manifest.spawns?.red)||!Array.isArray(manifest.pickups))throw new TypeError('Invalid trusted Conduit manifest');
@@ -28,19 +31,44 @@ export function createConduitMatchAdapter(manifest){
   const route=createConduitRouteResolver(world,nodes),reserved=new Map();
   // Match-local reservation only. The future authoritative match loop owns
   // request identity, occupancy, expiration and commit/abort on each tick.
-  function reserveSpawn(playerId,team,{enemies=[],occupants=[],recentIds=[],canSee=null,requireUnexposed=false}={}){
-    if(typeof playerId!=='string'||!playerId||!Object.hasOwn(data.spawns,team))return null;
-    if(reserved.has(playerId))return reserved.get(playerId);
-    const result=chooseConduitSpawn(world,data.spawns[team],{enemies,occupants,reserved:[...reserved.values()],recentIds,canSee,requireUnexposed});
+  // North and south spawn banks are the same map's existing candidates.
+  // FFA uses the union, with no inherited team allegiance.
+  const teams=Object.freeze({
+    blue:Object.freeze(data.spawns.blue.filter(p=>p.z<0&&auditConduitPlacement(world,p).ok)),
+    red:Object.freeze(data.spawns.red.filter(p=>p.z>0&&auditConduitPlacement(world,p).ok))
+  });
+  const ffa=Object.freeze([...teams.blue,...teams.red].map(p=>Object.freeze({...p,team:null})));
+  function reserveSpawn(playerId,team=null,{enemies=[],occupants=[],recentIds=[],canSee=null,requireUnexposed=false}={}){
+    if(typeof playerId!=='string'||!playerId||(mode==='tdm'?!Object.hasOwn(teams,team):team!==null))return null;
+    if(reserved.has(playerId)){
+      const held=reserved.get(playerId);return held.team===team?held:null;
+    }
+    const policy={enemies,occupants,reserved:[...reserved.values()],recentIds,canSee,requireUnexposed};
+    let result;
+    if(mode==='tdm'){
+      result=chooseConduitSpawn(world,teams[team],policy);
+    }else{
+      // Randomize only among fully audited, currently safe candidates.
+      // Prefer unused recent positions, and never bypass the danger checks.
+      const safe=ffa.map(p=>chooseConduitSpawn(world,[p],policy)).filter(Boolean);
+      if(!safe.length)return null;
+      const recent=new Set(recentIds),fresh=safe.filter(p=>!recent.has(p.spawn.id));
+      const choices=fresh.length?fresh:safe;
+      const roll=random();
+      if(!Number.isFinite(roll)||roll<0||roll>=1)throw new RangeError('Invalid match random value');
+      result=choices[Math.floor(roll*choices.length)];
+    }
     if(!result)return null;
-    const spawn=Object.freeze({...result.spawn});reserved.set(playerId,spawn);return spawn;
+    const p=result.spawn;
+    const spawn=Object.freeze({...p,yaw:Math.atan2(-p.x,-p.z)});
+    reserved.set(playerId,spawn);return spawn;
   }
   function padAt(body,grounded){
     if(!valid(body)||!grounded)return null;
     return world.jumpPads.find(p=>Math.abs(p.y-body.y)<=.45&&Math.hypot(p.x-body.x,p.z-body.z)<=p.triggerRadius)??null;
   }
   return {
-    id:data.id,version:data.version,world,pickups:data.pickups,spawnCandidates:data.spawns,
+    id:data.id,version:data.version,mode,rules:CONDUIT_MODE_RULES[mode],world,pickups:data.pickups,spawnCandidates:data.spawns,modeSpawnCandidates:mode==='tdm'?teams:ffa,
     support(x,z,upper,lower=-Infinity,radius=0){return conduitSupport(world,x,z,upper,lower,radius);},
     blockers(body,radius=.4,height=1.8){return conduitBlockers(world,body,radius,height);},
     grounded(body,radius=.4){return conduitGrounded(world,body,radius);},
