@@ -22,7 +22,7 @@ export function createConduitInteriorPlan(id){
     parts.push({id:id+'-'+a.key+'-'+label,anchor:a.key,level:a.level,material,...p,depth,offset});
   }
   function display(a){
-    const put=(label,mat,u,v,w,h,foreground=false)=>piece(a,label,mat,u,v,w,h,.009,foreground?.026:.015);
+    const put=(label,mat,u,v,w,h,foreground=false)=>piece(a,label,mat,u,v,w,h,.009,foreground ? .026 : .015);
     piece(a,'housing',theme.cabinet,0,0,a.w,a.h,.014,.001);
     put('header','brushedSteel',0,a.h/2-.11,a.w-.14,.08);
     put('status',theme.accent,-a.w/2+.13,a.h/2-.11,.09,.06,true);
