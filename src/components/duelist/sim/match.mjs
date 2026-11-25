@@ -1,3 +1,4 @@
+import { escortSpawn, escortEnemyZone } from './importedEscortLayout.mjs';
 // Matches: the five ways to play Duelist Adventure, on top of the arena world. Pure and seeded, so the match
 // server (phase 5) runs exactly the rules the browser practises with.
 //
@@ -34,7 +35,7 @@ export const MODES = Object.freeze({
   ffa: Object.freeze({ id: 'ffa', name: 'Free for all', teams: false, seats: 6, arena: 22, respawn: 3, protect: 1.5, scoreToWin: 15, clock: 480 }),
   tdm: Object.freeze({ id: 'tdm', name: 'Team deathmatch', teams: true, seats: 8, arena: 22, respawn: 4, protect: 1.5, scoreToWin: 30, clock: 480 }),
   ctf: Object.freeze({ id: 'ctf', name: 'Capture the flag', teams: true, seats: 8, arena: 26, respawn: 5, protect: 2, scoreToWin: 3, clock: 600, flags: true }),
-  escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 10, arena: 28, respawn: 4, protect: 1.5, clock: 180 }),
+  escort: Object.freeze({ id: 'escort', name: 'Escort Transport', teams: true, seats: 10, arena: 215, respawn: 4, protect: 1.5, clock: 300 }),
   football: Object.freeze({ id: 'football', name: 'Football', teams: true, seats: 8, arena: 28, respawn: 3, protect: 1, scoreToWin: 5, clock: 480, football: true }),
   control: Object.freeze({ id: 'control', name: 'Control Point', teams: true, seats: 8, arena: 150, respawn: 4, protect: 1.5, scoreToWin: CONTROL.targetScore, clock: 0, control: true }),
 });
@@ -88,6 +89,7 @@ function lighterTeam(match) {
 function spawnFor(match, id, team) {
   const { def, world } = match;
   const R = def.arena;
+  if(world.arenaLayout?.escortImported && team)return escortSpawn(team,match.escort?.stage??0,world.bodies,id);
   if(world.arenaLayout?.imported && team)return importedSpawn(world.arenaLayout,team,world.bodies,id);
   if (world.arenaLayout?.footprint && team) {
     const side = team === 'red' ? -1 : 1;
@@ -336,7 +338,7 @@ function goHome(flag) { flag.state = 'home'; flag.carrier = null; flag.x = flag.
 function goalFor(match, s) {
   if (match.escort && s.team) {
     const cart = match.escort, body = bodyOf(match.world, s.id);
-    return { x: cart.x, z: cart.z, urgent: !body || dist(body, cart) > ESCORT_RADIUS - 0.8 };
+    const target=cart.pointACaptured?cart:{x:0,y:0,z:-148};return { x: target.x, y:target.y, z: target.z, urgent: !body || dist(body,target)>ESCORT_RADIUS-0.8 };
   }
   if (match.controlPoints && s.team) {
     // Send bots to the objectives which their team does not yet own.
@@ -469,6 +471,8 @@ export function stepMatch(match, dt, inputs = {}) {
     if (match.controlPoints) stepControlPoints(match, dt);
     if (match.escort) {
       const winner = stepEscort(match, dt);
+      world.escortStage=match.escort.stage;
+      for(const s of match.seats.values()){const b=bodyOf(world,s.id);if(b&&s.team&&escortEnemyZone(s.team,world.escortStage,b))spawnSeat(match,s,match.def.protect);}
       if (winner) {
         match.escort.moving = false;
         match.teamScores[winner] = 1;
@@ -672,7 +676,7 @@ export function matchView(match, forId = null) {
   return {
     mode: def.id, name: def.name, phase: match.phase, winner: match.winner, matchBoost: match.boostTier,
     countdown: match.phase === 'countdown' || match.phase === 'roundOver' ? Math.max(0, match.phaseUntil - world.time) : 0,
-    clockLeft: def.clock ? Math.max(0, def.clock - match.clock) : def.roundClock ? Math.max(0, def.roundClock - match.roundClock) : null,
+    clockLeft: match.escort ? Math.max(0,def.clock+match.escort.bonusTime-match.clock) : def.clock ? Math.max(0, def.clock - match.clock) : def.roundClock ? Math.max(0, def.roundClock - match.roundClock) : null,
     round: match.round, rounds: def.rounds || null, roundWinner: match.roundWinner,
     scoreToWin: def.scoreToWin || null, teamScores: { ...match.teamScores },
     flags: match.flags ? Object.fromEntries(TEAMS.map((t) => [t, { state: match.flags[t].state, carrier: match.flags[t].carrier }])) : null,

@@ -621,6 +621,7 @@ import * as THREE from "three";
         roof.receiveShadow = true;
         roof.castShadow = true;
         parent.add(roof);
+        this._registerBoxObstacle(cx-hw-.2,cx+hw+.2,roofY-.38,roofY,cz-hd-.2,cz+hd+.2,labelPrefix+'_RoofSlab',phase);
         this._registerWalkableQuad(
           new THREE.Vector3(cx - hw - 0.2, roofY, cz - hd - 0.2),
           new THREE.Vector3(cx + hw + 0.2, roofY, cz - hd - 0.2),
@@ -1381,7 +1382,7 @@ import * as THREE from "three";
         const trim6B = new THREE.Mesh(new THREE.BoxGeometry(10.2, 0.14, 8.2), this.mats.emeraldGlow);
         trim6B.position.set(24, 7.78, 92);
         g.add(trim6B);
-        this._buildRampStair(g, new THREE.Vector3(18.0, 4.2, 97.5), new THREE.Vector3(21.5, 7.8, 94.5), 3.2, 'P6_Overlook6B_Stair', true);
+        this._buildRampStair(g, new THREE.Vector3(13.0, 4.2, 99.0), new THREE.Vector3(21.5, 7.8, 94.5), 3.2, 'P6_Overlook6B_Stair', true);
 
         // 4. Secondary Rooftop Tactical Loop Walkways
         const cp1LoopDeck = new THREE.Mesh(new THREE.BoxGeometry(27.0, 0.36, 3.0), this.mats.elevatedDeck);
@@ -1586,6 +1587,7 @@ import * as THREE from "three";
         const atkRoof = new THREE.Mesh(new THREE.BoxGeometry(49.0, 0.55, 22.0), this.mats.darkWall);
         atkRoof.position.set(0, atkY + atkH + 0.28, -183.5);
         g.add(atkRoof);
+        {const b=new THREE.Box3().setFromObject(atkRoof);this._registerBoxObstacle(b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z,'P7_AtkBase_Canopy','Phase7');}
         this._registerBarrierSegment(-24.0, -173.0, -24.0, -148.0, atkY, atkY + 1.1, 'P7_AtkWestLinkRail', 'Phase7', g);
         this._registerBarrierSegment(24.0, -173.0, 24.0, -148.0, atkY, atkY + 1.1, 'P7_AtkEastLinkRail', 'Phase7', g);
 
@@ -1609,6 +1611,7 @@ import * as THREE from "three";
         const cp1BayRoof = new THREE.Mesh(new THREE.BoxGeometry(17.2, 0.5, 21.8), this.mats.darkWall);
         cp1BayRoof.position.set(86.75, cp1Y + bayH + 0.25, -56.0);
         g.add(cp1BayRoof);
+        {const b=new THREE.Box3().setFromObject(cp1BayRoof);this._registerBoxObstacle(b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z,'P7_AtkCP1_Canopy','Phase7');}
 
         let cp1AtkSlot = 1;
         for (const sx of [84.5, 90.0]) {
@@ -1627,6 +1630,7 @@ import * as THREE from "three";
         const cp2AtkRoof = new THREE.Mesh(new THREE.BoxGeometry(17.2, 0.5, 22.8), this.mats.darkWall);
         cp2AtkRoof.position.set(-88.75, cp2Y + bayH + 0.25, 55.5);
         g.add(cp2AtkRoof);
+        {const b=new THREE.Box3().setFromObject(cp2AtkRoof);this._registerBoxObstacle(b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z,'P7_AtkCP2_Canopy','Phase7');}
 
         let cp2AtkSlot = 1;
         for (const sx of [-92.0, -86.0]) {
@@ -1644,6 +1648,7 @@ import * as THREE from "three";
         const defFwdRoof = new THREE.Mesh(new THREE.BoxGeometry(17.2, 0.5, 22.8), this.mats.darkWall);
         defFwdRoof.position.set(-23.25, cp2Y + bayH + 0.25, 55.5);
         g.add(defFwdRoof);
+        {const b=new THREE.Box3().setFromObject(defFwdRoof);this._registerBoxObstacle(b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z,'P7_DefFwd_Canopy','Phase7');}
 
         let defFwdSlot = 1;
         for (const sx of [-26.0, -20.0]) {
@@ -1667,6 +1672,7 @@ import * as THREE from "three";
         const defRoof = new THREE.Mesh(new THREE.BoxGeometry(47.2, 0.55, 22.8), this.mats.darkWall);
         defRoof.position.set(44.0, defY + defH + 0.28, 190.0);
         g.add(defRoof);
+        {const b=new THREE.Box3().setFromObject(defRoof);this._registerBoxObstacle(b.min.x,b.max.x,b.min.y,b.max.y,b.min.z,b.max.z,'P7_DefBase_Canopy','Phase7');}
 
         const defBaseXs = [28.0, 34.4, 40.8, 47.2, 53.6, 60.0];
         const defBaseZs = [187.0, 194.5];
@@ -2029,7 +2035,7 @@ import * as THREE from "three";
           { label: 'UnderBridge Spur', res: this._testBidirectionalPath(-10.5, -1.0, -14.5, -3.5, 1.5, 4.2, 14) },
           { label: 'Flank6B North', res: this._testBidirectionalPath(-38.5, 69.0, 5.5, 94.0, 6.0, 4.2, 24) },
           { label: 'Flank6B South', res: this._testBidirectionalPath(17.5, 104.5, 36.0, 135.0, 4.2, 2.0, 22) },
-          { label: 'Overlook6B', res: this._testBidirectionalPath(18.0, 97.5, 21.5, 94.5, 4.2, 7.8, 14) },
+          { label: 'Overlook6B', res: this._testBidirectionalPath(13.0, 99.0, 21.5, 94.5, 4.2, 7.8, 32) },
           { label: 'CP1 Roof Loop', res: this._testBidirectionalPath(41.0, -59.8, 67.0, -59.8, 8.5, 8.5, 16) },
           { label: 'CP2 Roof Loop', res: this._testBidirectionalPath(-69.0, 60.2, -43.0, 60.2, 10.8, 10.8, 16) },
           { label: 'PointB Roof Loop', res: this._testBidirectionalPath(31.0, 158.0, 57.0, 158.0, 6.5, 6.5, 16) }

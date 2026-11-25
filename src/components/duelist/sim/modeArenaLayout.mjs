@@ -1,3 +1,4 @@
+import { IMPORTED_ESCORT, escortSupport, escortBlockers, escortMove, escortRay } from './importedEscortLayout.mjs';
 import { IMPORTED_CONTROL, importedOverlaps, importedSupport, importedBlockers, importedMove, importedRay } from './importedControlLayout.mjs';
 // Original, renderer-independent PvP arena blockouts. Coordinates are metres.
 // All solid geometry is explicit and shared: never mount the art without its authority collision.
@@ -29,12 +30,6 @@ function building(id, x, z, stairsSide = 1, approach = -1) {
 const cover=(id,x,z,w=2.4,d=1.1)=>box(id,'cover',x,0,z,w,0.85,d);
 const layout=(id,radius,capacity,parts)=>Object.freeze({id,radius,capacity,parts:Object.freeze(parts)});
 const MAPS=Object.freeze({
-  escort:layout('meridian-freight-district',28,10,[
-    ...building('loading-bay',7,-9,-1),
-    ...building('service-bay',-14,10),
-    cover('loading-screen',9,2), cover('defense-screen',13,12),
-    cover('west-screen',-11,-7,1.1,2.4), cover('arrival-screen',-7,16),
-  ]),
   tdm:layout('meridian-combat-district',22,8,[
     ...building('west-station',-7,2),
     ...building('east-station',7,-2,-1,1),
@@ -45,7 +40,7 @@ const MAPS=Object.freeze({
 });
 // Approved two-level arena is shared by public, offline and private matches.
 export function getModeArenaLayout(mode) {
-  return mode==='control' ? IMPORTED_CONTROL : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
+  return mode==='escort' ? IMPORTED_ESCORT : mode==='control' ? IMPORTED_CONTROL : Object.hasOwn(MAPS,mode) ? MAPS[mode] : null;
 }
 function inRing(ring,x,z) {
   let inside=false;
@@ -65,6 +60,7 @@ function edgeDistance(ring,x,z) {
   return best;
 }
 export function arenaFloorContains(map,x,z,radius=0) {
+  if(map.escortImported)return Number.isFinite(escortSupport(x,z,Infinity,radius));
   if(map.imported)return Number.isFinite(importedSupport(map,x,z,.1,radius));
   const f=map.footprint;
   if(!f)return Math.hypot(x,z)<=map.radius-radius;
@@ -93,6 +89,7 @@ export function overlapsArenaFootprint(part,x,z,radius=0) {
   return radius===0 ? dx===0 && dz===0 : dx*dx+dz*dz<radius*radius;
 }
 export function arenaBodyBlockers(map,{x,y,z,radius,height}) {
+  if(map.escortImported)return escortBlockers({x,y,z,radius,height});
   if(map.imported)return importedBlockers(map,{x,y,z,radius,height});
   return map.parts.filter(p=>y<p.y1-1e-6 && y+height>p.y0+1e-6 && overlapsArenaFootprint(p,x,z,radius));
 }
@@ -114,6 +111,7 @@ export function arenaLandingHeight(map,{x,z,previousY,nextY}) {
 export const ARENA_BODY_HEIGHT=1.8;
 const EPS=1e-5;
 export function arenaGrounded(map,body,radius=0.4) {
+  if(map.escortImported)return Math.abs(escortSupport(body.x,body.z,body.y+.08,.06)-body.y)<.10;
   if(map.imported)return Math.abs(importedSupport(map,body.x,body.z,body.y+.06)-body.y)<.08;
   return body.y<=EPS || map.parts.some(p=>Math.abs(p.y1-body.y)<EPS &&
     overlapsArenaFootprint(p,body.x,body.z,radius*0.85));
@@ -124,6 +122,7 @@ function blocked(map,body,radius) {
 // Swept axis-separated motion, with a bounded automatic stair step. The
 // collision interval is height-aware; rooftops do not block the ground tunnel.
 export function moveArenaBody(map,body,dx,dz,dy,radius=0.4,allowStep=true) {
+  if(map.escortImported)return escortMove(body,dx,dz,dy,radius,allowStep);
   if(map.imported)return importedMove(map,body,dx,dz,dy,radius,allowStep);
   const n=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dz),Math.abs(dy))/0.15));
   let hit=false, landed=false, ceiling=false;
@@ -171,6 +170,7 @@ export function moveArenaBody(map,body,dx,dz,dy,radius=0.4,allowStep=true) {
 }
 // 3D segment vs box, used for camera, combat and projectile occlusion.
 export function arenaRayFraction(map,from,to,pad=0){
+  if(map.escortImported)return escortRay(from,to,pad);
   if(map.imported)return importedRay(map,from,to,pad);
   let best=1;
   for(const p of map.parts){

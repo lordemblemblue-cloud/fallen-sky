@@ -1,3 +1,4 @@
+import { escortEnemyZone } from './importedEscortLayout.mjs';
 // Duelist Adventure arena simulation: bodies in a circular arena, or in a mission's rooms (a level: walls,
 // doors and cover, sim/level.mjs), driven by the rules core.
 // Headless and deterministic (the caller passes dt): the match server runs it as the authority, the
@@ -43,16 +44,16 @@ export function createWorld({ arenaRadius = 18, friendlyFire = false, level = nu
  * vitals: maximums that differ from a duelist's ({ hp, will, shield, stamina }). A fighter with no Will has
  * no Veil at all (an ordinary person: every blow reaches armor and body, and a grip holds them).
  */
-export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, y = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
   const fighter = createFighter({ id, team, weapon, vitals, classId, level, matchBoost });
   if (fighter.vitals.max.will <= 0) fighter.vitals.collapsed = true;
   world.fighters.set(id, fighter);
-  world.bodies.set(id, newBody(x, z, yaw));
+  world.bodies.set(id, newBody(x, z, yaw, y));
   return fighter;
 }
 
 /** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
-export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined, matchBoost = undefined } = {}) {
+export function respawnFighter(world, id, { x = 0, y = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined, matchBoost = undefined } = {}) {
   const old = world.fighters.get(id);
   if (!old) return null;
   const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId,
@@ -61,7 +62,7 @@ export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, 
   fighter.meter = old.meter;
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
-  world.bodies.set(id, newBody(x, z, yaw));
+  world.bodies.set(id, newBody(x, z, yaw, y));
   for (const f of world.fighters.values()) { if (f.heldBy === id) f.heldBy = null; if (f.seizedBy === id) f.seizedBy = null; }
   return fighter;
 }
@@ -74,9 +75,9 @@ export function removeFighter(world, id) {
   for (let i = world.projectiles.length - 1; i >= 0; i--) if (world.projectiles[i].owner === id) world.projectiles.splice(i, 1);
 }
 
-function newBody(x, z, yaw) {
+function newBody(x, z, yaw, y=0) {
   return {
-    x, z, y: 0, yaw, vy: 0,
+    x, z, y, yaw, vy: 0,
     // Client prediction and the match server share this transient state. It resets on landing.
     // jumped: in the air from a jump; airJumpAt: when the second jump was made; airDashReady: a dash is left for
     // this jump (each jump gives one)
@@ -229,6 +230,7 @@ export function step(world, dt, inputs = {}) {
     const delta={x:body.x-before.x,y:body.y-before.y,z:body.z-before.z};
     Object.assign(body,before);
     const result=moveArenaBody(world.arenaLayout,body,delta.x,delta.z,delta.y,BODY_RADIUS,!fighter.heldBy && !fighter.seizedBy && !body.jumped);
+    if(world.arenaLayout?.escortImported && fighter.team && escortEnemyZone(fighter.team,world.escortStage??0,body) && !escortEnemyZone(fighter.team,world.escortStage??0,before)){Object.assign(body,before);body.vy=0;}
     if(result.ceiling || result.landed && body.vy<0)body.vy=0;
     if(arenaGrounded(world.arenaLayout,body,BODY_RADIUS) && body.vy<=0 && fighter.action?.id!=='jump'){
       body.jumped=false;body.airJumpAt=null;body.airDashReady=false;
