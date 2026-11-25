@@ -1,4 +1,5 @@
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,existsSync} from 'node:fs';
+if(existsSync('src/components/duelist/client/maps/escortArena.mjs'))throw Error('Refusing to overwrite the repaired production arena; original extraction is archival only.');
 const src=readFileSync('docs/duelist/escort-phase9-source.html','utf8');
 const a=src.indexOf('    function createProceduralTexture('), b=src.indexOf('    class DuelistMapViewerApp');
 const vehicle=src.slice(src.indexOf('      _buildTransportMesh() {'),src.indexOf('      _buildPlayerAvatar() {'));

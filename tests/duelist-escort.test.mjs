@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createMatch, matchView, stepMatch } from '../src/components/duelist/sim/match.mjs';
-import { ESCORT_LENGTH, ESCORT_ROUTE, ESCORT_SPEED, payloadPose } from '../src/components/duelist/sim/escort.mjs';
+import { ESCORT_LENGTH, ESCORT_ROUTE, ESCORT_SPEED, ESCORT_RADIUS, payloadPose } from '../src/components/duelist/sim/escort.mjs';
 import { bodyOf } from '../src/components/duelist/sim/world.mjs';
 import { ONLINE_MODES } from '../src/components/duelist/net/protocol.mjs';
 import { templateLaunch } from '../src/components/duelist/menu/templateCatalog.mjs';
@@ -14,7 +14,7 @@ function start() {
   return m;
 }
 function stand(m,id,inside) {
-  Object.assign(bodyOf(m.world,id),{x:m.escort.x+(inside ? (id==='a' ? -1:1):9),z:m.escort.z,y:0});
+  const p=m.escort.pointACaptured?m.escort:{x:0,y:0,z:-148};Object.assign(bodyOf(m.world,id),{x:p.x+(inside ? (id==='a' ? -1:1):ESCORT_RADIUS+3),z:p.z,y:p.y});
 }
 
 test('both menu and authoritative online queue accept Escort',()=>{
@@ -25,7 +25,7 @@ test('both menu and authoritative online queue accept Escort',()=>{
   assert.equal(matchView(m,'a').me.team,'red');
 });
 test('red pushes, blue contests, defenders alone hold earned progress',()=>{
-  const m=start(); stand(m,'a',true); stand(m,'b',false); stepMatch(m,dt);
+  const m=start();m.escort.pointACaptured=true; stand(m,'a',true); stand(m,'b',false); stepMatch(m,dt);
   assert.equal(m.escort.distance,dt*ESCORT_SPEED); const advanced=m.escort.distance;
   stand(m,'b',true);stepMatch(m,dt);
   assert.equal(m.escort.distance,advanced);assert.equal(m.escort.contested,true);
@@ -43,7 +43,7 @@ test('overtime lasts through a contest and defenders win when the attackers leav
 });
 test('delivery on the last tick wins and the payload stops at the gate',()=>{
   const m=start();m.clock=m.def.clock-dt/2;
-  m.escort.distance=ESCORT_LENGTH-0.001;Object.assign(m.escort,payloadPose(m.escort.distance));
+  m.escort.pointACaptured=true;m.escort.stage=2;m.escort.distance=ESCORT_LENGTH-0.001;Object.assign(m.escort,payloadPose(m.escort.distance));
   stand(m,'a',true);stand(m,'b',false);stepMatch(m,dt);
   assert.equal(m.winner,'red');assert.equal(m.escort.progress,100);
   const {x,z}=m.escort;assert.ok(Math.hypot(x-ESCORT_ROUTE.at(-1).x,z-ESCORT_ROUTE.at(-1).z)<1e-8);
