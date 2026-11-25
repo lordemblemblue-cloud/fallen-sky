@@ -94,8 +94,8 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
     }
   };
   const coords=pos=>projectMapPosition(region,pos[0],pos[2]);
-  const regionText=isAstral?'Moonfall Expanse':isDungeon?'Lunar Cave Dungeon':region==='forest'?'First Territory':'Wolfveil Valley';
-  const chartInfo=isAstral?'Four central metal platforms with eight interconnected side rings and flowing energy boundaries. All bridges and live high-level monsters appear here; loot requires server verification.':
+  const regionText=region==='temporary-platform'?'Temporary Platform':isAstral?'Moonfall Expanse':isDungeon?'Lunar Cave Dungeon':region==='forest'?'First Territory':'Wolfveil Valley';
+  const chartInfo=region==='temporary-platform'?'A small empty staging platform. The overworld is temporarily unloaded.':isAstral?'Four central metal platforms with eight interconnected side rings and flowing energy boundaries. All bridges and live high-level monsters appear here; loot requires server verification.':
     isDungeon?'The stone corridors, five battle halls and monster dots reflect this dungeon instance. Red markers show living enemies from Game 3D.':
     region==='forest'?'Travel portals marked “charted” are mapped reserves, not active transport.':
     'Gold rings are open fighting grounds (level, no monsters). Red rings are mob areas. Smaller red dots are living enemies, and quest NPCs use their real positions. Mountains ring the valley.';

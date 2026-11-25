@@ -15,10 +15,12 @@ import { WOLFVEIL_MAP_WORLD_BOUNDS, wolfveilMapZoneAt } from '../wolfveil/Wolfve
 import { isPledge } from '../pledges/pledgeModel.mjs';
 import { getPledgeNavigationTarget } from '../threeroads/pledgeworld/pledgeNavigation.mjs';
 
+import {PLATFORM_REGION,PLATFORM_SIZE,isPlatformRegion} from '../worlds/temporaryPlatform.mjs';
 const FUTURE_WORLD = createAXEInitialWorldManifest();
 const normalize = value => String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 const isForest = region => region === 'forest';
 export const MAP_SCALE = Object.freeze({
+  [PLATFORM_REGION]:Object.freeze({name:'Temporary Platform',minX:-PLATFORM_SIZE/2,maxX:PLATFORM_SIZE/2,minZ:-PLATFORM_SIZE/2,maxZ:PLATFORM_SIZE/2}),
   forest: Object.freeze({ name: 'First Territory', minX: -1200, maxX: 1200, minZ: -1200, maxZ: 1200 }),
   // Preserve the complete Wolfveil map extent while exposing cave approaches.
   wolfveil: Object.freeze({ name: 'Wolfveil Valley', ...WOLFVEIL_MAP_WORLD_BOUNDS }),
@@ -37,6 +39,7 @@ export const mapBearing = (origin,target) =>
 
 // All quest NPCs are loaded in GameWorld3D in both regions.
 export function getMapMarkers(region) {
+  if(isPlatformRegion(region))return [];
   if(region==='astral-dungeon'||region==='lunar-cave'||region==='wolfveil-caves')return [];
   // Wolfveil's quest givers stand at their own places around the town.
   const townSpots = region === 'wolfveil' ? WOLFVEIL_TOWN_QUEST_NPC_SPOTS : {};
@@ -86,6 +89,7 @@ function questReady(quest,state) {
   });
 }
 export function getQuestNavigationTarget(region, questState, player={x:0,z:0}) {
+  if(isPlatformRegion(region))return null;
   if(region==='lunar-cave'||region==='astral-dungeon')return null; // Instance maps do not show outside-world quest objectives.
   const quest=getTrackedQuest(questState);
   if(!quest) return null;
