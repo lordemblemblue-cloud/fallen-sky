@@ -1,3 +1,4 @@
+import {createIndustrialCtfArena,applyIndustrialCtfLighting} from './maps/industrialCtfArena.mjs';
 // Duelist Adventure (new build): one match in the arena (practice, duel, free for all, team deathmatch or
 // capture the flag), played in the browser against bots (client/localSource.mjs) or online on the match
 // server (net/client.mjs); or the story mission in its depot (client/missionSource.mjs). All are "sources"
@@ -289,6 +290,11 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       arenaMode = key;
       architecture?.dispose(); architecture = null;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
+      if (!level && world.arenaLayout?.ctfImported) {
+        const imported=createIndustrialCtfArena(scene,{textureResolution:1024});
+        const lighting=applyIndustrialCtfLighting({scene,camera,renderer,lights});
+        arena={group:imported.root,dispose(){lighting.dispose();imported.dispose();},arc(){},update(dt){lighting.update(dt);imported.update(dt,source.flags?.(),id=>bodyOf(world,id));}};return;
+      }
       if (!level && world.arenaLayout?.escortImported) {
         const imported=createEscortArena(scene);
         const daylight=applyEscortDaylight({scene,camera,renderer,lights,environment:imported.environment});
@@ -631,7 +637,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id] || s.kind === 'enemy' || s.kind === 'ally');
       if (ready) {
         if (!level && source.mode) ensureArena(source.mode);
-        if (!ctf && source.mode === 'ctf') {
+        if (!ctf && source.mode === 'ctf'&&!world.arenaLayout?.ctfImported) {
           const z = MODES.ctf.arena - CTF.baseInset;
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }

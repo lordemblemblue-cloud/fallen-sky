@@ -81,6 +81,8 @@ export function createHudFeed() {
         else if (OTHERS_STREAKS.includes(n)) banner('event', ctx.myTeam && ctx.teamOf?.(e.by) === ctx.myTeam ? 'good' : 'bad', `${name(e.by)}: ${n} KILL STREAK`, now);
         break;
       }
+      case 'captureBlocked': if(e.id===ctx.me)banner('objective','bad','RETURN YOUR FLAG BEFORE SCORING',now);break;
+      case 'overtime': banner('event','gold','OVERTIME — NEXT CAPTURE WINS',now);break;
       case 'flagTaken': // team: whose flag
         if (e.by === ctx.me) banner('objective', 'gold', 'YOU HAVE THE FLAG: TAKE IT HOME', now);
         else if (e.team === ctx.myTeam) banner('objective', 'bad', 'YOUR FLAG HAS BEEN TAKEN', now);

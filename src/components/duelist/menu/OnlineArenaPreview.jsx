@@ -1,3 +1,4 @@
+import {createIndustrialCtfArena,applyIndustrialCtfLighting} from '../client/maps/industrialCtfArena.mjs';
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
@@ -41,7 +42,8 @@ export default function OnlineArenaPreview({ mode }) {
     const layout = getModeArenaLayout(mode);
     const radius = layout?.radius || (mode === 'duel' ? 12 : 18);
     scene.background = new THREE.Color(0x081422);
-    if(layout?.escortImported){imported=createEscortArena(scene);escort=createEscortProps(scene);escort.update(0);}
+    if(layout?.ctfImported){imported=createIndustrialCtfArena(scene,{preview:true,textureResolution:512});}
+    else if(layout?.escortImported){imported=createEscortArena(scene);escort=createEscortProps(scene);escort.update(0);}
     else if(layout?.imported){imported=createDuelistControlPointArena(THREE);imported.setLayerVisibility('trusses',false);scene.add(imported.root);}
     const authoredFloor = layout?.footprint ? createArena({ radius, footprint: layout.footprint }) : null;
     if (!imported) {
@@ -86,7 +88,7 @@ export default function OnlineArenaPreview({ mode }) {
     try {
       const created=createSceneRenderer('duelist-adventure',{antialias:false,powerPreference:'low-power'});
       renderer=created.renderer;
-      if(imported){const lights=createSceneLighting(scene);scene.add(lights.sun.target);renderer.toneMapping=THREE.ACESFilmicToneMapping;daylight=layout.escortImported?applyEscortDaylight({scene,camera,renderer,lights,environment:imported.environment}):applyControlPointDaylight({scene,camera,renderer,lights,materials:imported.materials});}
+      if(imported){const lights=createSceneLighting(scene);scene.add(lights.sun.target);renderer.toneMapping=THREE.ACESFilmicToneMapping;daylight=layout.ctfImported?applyIndustrialCtfLighting({scene,camera,renderer,lights,preview:true}):layout.escortImported?applyEscortDaylight({scene,camera,renderer,lights,environment:imported.environment}):applyControlPointDaylight({scene,camera,renderer,lights,materials:imported.materials});}
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));
       renderer.domElement.style.cssText='display:block;width:100%;height:100%';
       renderer.domElement.setAttribute('aria-hidden','true');
@@ -102,8 +104,7 @@ export default function OnlineArenaPreview({ mode }) {
           if(document.hidden || t-last<66)return;
           daylight?.update(Math.min(.1,(t-last)/1000));last=t;
           const angle=window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.7 : t*0.00012;
-          camera.position.set(Math.sin(angle)*radius*2.5,radius*2.4,Math.cos(angle)*radius*2.5);
-          camera.lookAt(0,0,0);
+          if(layout?.ctfImported){imported.update(.066);camera.fov=68;camera.updateProjectionMatrix();camera.position.set(Math.sin(angle)*5,14.6,25.8);camera.lookAt(0,5,-4);}else{camera.position.set(Math.sin(angle)*radius*2.5,radius*2.4,Math.cos(angle)*radius*2.5);camera.lookAt(0,0,0);}
           try{renderer.render(scene,camera);}catch{setFailed(true);cancelAnimationFrame(frame);}
         };
         frame=requestAnimationFrame(draw);

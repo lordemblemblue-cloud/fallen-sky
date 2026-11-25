@@ -207,7 +207,7 @@ function CtfBoard({ view, myTeam, flagStates }) {
   const need = view.scoreToWin || 3;
   return (
     <div className="dh-part dh-board dh-ctf" data-testid="duelist-board-ctf">
-      <span className="dh-timer">{clock(view.clockLeft)}</span>
+      <span className="dh-timer">{view.overtime?"OVERTIME":clock(view.clockLeft)}</span>
       {['blue', 'red'].map((t) => (
         <Side key={t} team={t} mine={myTeam === t}><span className="dh-score">{view.teamScores?.[t] ?? 0}<small>/ {need}</small></span></Side>
       ))}

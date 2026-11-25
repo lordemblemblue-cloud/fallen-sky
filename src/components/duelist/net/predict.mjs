@@ -1,3 +1,4 @@
+import {ctfRestricted} from '../sim/importedCtfLayout.mjs';
 // The player's own fighter, played a step ahead of the server.
 //
 // Online, everyone is drawn from the server's snapshots a tenth of a second late. Your own fighter would be
@@ -64,9 +65,10 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
   }
   function stepOnce(input, others) {
     step(world, STEP, { [id]: input });
-    const before={x:body.x,z:body.z};
+    const before={x:body.x,y:body.y,z:body.z};
     if (!fighter.vitals.dead) keepApart(others);
     if(world.arenaLayout){const dx=body.x-before.x,dz=body.z-before.z;Object.assign(body,before);moveArenaBody(world.arenaLayout,body,dx,dz,0,BODY_RADIUS,false);}
+    if(world.arenaLayout?.ctfImported&&ctfRestricted(fighter.team,body,world.ctfCarriers?.has(id))&&!ctfRestricted(fighter.team,before,world.ctfCarriers?.has(id)))Object.assign(body,before);
     keepInside();
   }
 

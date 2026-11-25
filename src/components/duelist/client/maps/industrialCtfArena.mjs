@@ -136,7 +136,7 @@ import * as THREE from 'three';
       const c = document.createElement('canvas'); c.width = 512; c.height = 256;
       const ctx = c.getContext('2d');
       const grad = ctx.createLinearGradient(0, 0, 0, 256);
-      grad.addColorStop(0.00, '#4d5d73'); grad.addColorStop(0.32, '#8fb4cf');
+      grad.addColorStop(0.00, '#8fb4cf'); grad.addColorStop(0.32, '#D5E7F2');
       grad.addColorStop(0.50, '#5a6270'); grad.addColorStop(1.00, '#2a2e38');
       ctx.fillStyle = grad; ctx.fillRect(0, 0, 512, 256);
       ctx.fillStyle = 'rgba(255, 228, 180, 0.58)';
@@ -1146,7 +1146,7 @@ import * as THREE from 'three';
 
       // Ceiling & Roof Trusses
       const ceilMesh = new THREE.Mesh(new THREE.BoxGeometry(B.width + wt * 2, 0.8, B.depth + wt * 2), mats.ceiling);
-      ceilMesh.position.set(0, B.height + 0.4, 0); root.add(ceilMesh);
+      ceilMesh.position.set(0, B.height + 0.4, 0); ceilMesh.castShadow=true;ceilMesh.receiveShadow=true;root.add(ceilMesh);
       collision.addCeilingPlane('warehouse_ceiling', 'Warehouse Roof Ceiling', -B.halfW, B.halfW, -B.halfD, B.halfD, B.height);
 
       const webM = [], diagM = [];
@@ -1353,6 +1353,8 @@ export function createIndustrialCtfArena(scene,{preview=false,textureResolution=
    const carrier=f?.carrier?bodyFor(f.carrier):null;
    const pos=carrier||f||origin;
    rig.position.set((pos.x??origin.x)-origin.x,(pos.y??origin.y)-origin.y+(carrier?.y!==undefined?.55:0),(pos.z??origin.z)-origin.z);
+   rig.scale.setScalar(carrier?.y!==undefined?.55:1);
+   if(carrier){rig.position.x-=Math.sin(carrier.yaw??0)*.28;rig.position.z-=Math.cos(carrier.yaw??0)*.28;}
    rig.rotation.y=carrier?.yaw??0;
    rig.visible=!f?.carrier||!!carrier;
   }
@@ -1363,4 +1365,25 @@ export function createIndustrialCtfArena(scene,{preview=false,textureResolution=
   root.removeFromParent();gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());
  }
  return {...built,collision,materials,update,dispose};
+}
+
+// Phase 7 lighting, adapted to the existing single game renderer. The actual
+// window mullions cast shadows rather than painting disconnected light patches.
+export function applyIndustrialCtfLighting({scene,camera,renderer,lights,preview=false}){
+ const all=[lights.hemi,lights.sun,lights.rimLight,...lights.fills].filter(Boolean);
+ const saved=all.map(l=>({l,color:l.color.clone(),ground:l.groundColor?.clone(),position:l.position.clone(),intensity:l.intensity,castShadow:l.castShadow}));
+ const sun=lights.sun,shadow=sun.shadow,sc=shadow.camera;
+ const before={environment:scene.environment,fog:scene.fog,background:scene.background,far:camera.far,exposure:renderer.toneMappingExposure,shadows:renderer.shadowMap.enabled,target:sun.target.position.clone(),bounds:{left:sc.left,right:sc.right,top:sc.top,bottom:sc.bottom,near:sc.near,far:sc.far},size:shadow.mapSize.clone()};
+ const group=new THREE.Group();group.name='CTF Phase 7 lighting';scene.add(group);
+ const env=createProceduralWarehouseEnvMap();scene.environment=env;scene.fog=null;scene.background=new THREE.Color(0x141923);camera.far=160;camera.updateProjectionMatrix();
+ const mobile=typeof navigator!=='undefined'&&(/Android|iPhone|iPad/i.test(navigator.userAgent)||navigator.maxTouchPoints>1&&globalThis.innerWidth<1000);
+ lights.hemi.color.setHex(0xDCEEFF);lights.hemi.groundColor.setHex(0x727985);lights.hemi.intensity=1.65;
+ sun.color.setHex(0xFFE0AB);sun.position.set(-10,26.5,-42);sun.target.position.set(4,0,6);
+ sun.intensity=preview||mobile?0.7:2.45;sun.castShadow=!preview&&!mobile;renderer.shadowMap.enabled=sun.castShadow;
+ Object.assign(sc,{left:-46,right:46,top:34,bottom:-34,near:4,far:96});sc.updateProjectionMatrix();shadow.mapSize.set(1024,1024);shadow.map?.dispose();shadow.map=null;shadow.needsUpdate=true;
+ lights.rimLight.intensity=.45;for(const f of lights.fills)f.intensity=.55;
+ const fills=[[-14,3.5,0,0x7BE5FF,28,22],[14,3.5,0,0x7BE5FF,28,22],[0,15.8,6,0xFFF0D4,36,52],[-44,7.6,0,0xFF8592,24,24],[44,7.6,0,0x7BE5FF,24,24],[-44,3.6,12,0xDCEEFF,20,24],[44,3.6,12,0xDCEEFF,20,24],[-31,7,0,0xFF394B,24,16],[31,7,0,0x20BFFF,24,16]];
+ for(const [x,y,z,col,intensity,distance] of fills){const l=new THREE.PointLight(col,intensity,distance,1.5);l.position.set(x,y,z);group.add(l);}
+ renderer.toneMappingExposure=1.1;
+ return {update(){},dispose(){group.removeFromParent();env.dispose();scene.environment=before.environment;scene.fog=before.fog;scene.background=before.background;camera.far=before.far;camera.updateProjectionMatrix();renderer.toneMappingExposure=before.exposure;renderer.shadowMap.enabled=before.shadows;sun.target.position.copy(before.target);Object.assign(sc,before.bounds);sc.updateProjectionMatrix();shadow.map?.dispose();shadow.map=null;shadow.mapSize.copy(before.size);for(const v of saved){v.l.color.copy(v.color);if(v.ground)v.l.groundColor.copy(v.ground);v.l.position.copy(v.position);v.l.intensity=v.intensity;v.l.castShadow=v.castShadow;}}};
 }
