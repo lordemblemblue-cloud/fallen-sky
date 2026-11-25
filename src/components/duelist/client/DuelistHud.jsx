@@ -328,6 +328,19 @@ function Banner({ banner, slot }) {
   );
 }
 
+// Same text-free sapphire PNG for every kill and milestone. The text remains live,
+// readable and independent of the texture, and never intercepts gameplay input.
+function KillAnnouncement({ banner }) {
+  if (!banner) return null;
+  return <div key={banner.id} className="dh-kill-announcement" role="status" aria-live="polite"
+    style={{ '--dh-life': `${banner.until - banner.at}s` }}>
+    <div className="dh-kill-announcement-copy">
+      <strong>{banner.text}</strong>
+      {banner.subtitle && <small>{banner.subtitle}</small>}
+    </div>
+  </div>;
+}
+
 /**
  * hud: the game view's 10 Hz state (client/DuelistGame.jsx): you, view, myTeam, classId, abilities, specialMeter,
  * specialKey, dead, lockOn, powers, plus kills, banners, flagStates, level and meId. portrait: a picture of the
@@ -372,6 +385,7 @@ export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = 
           <Scoreboard view={view} me={hud.meId} myTeam={hud.myTeam} flagStates={hud.flagStates} />
           <Banner banner={hud.banners?.objective} slot="objective" />
           <Banner banner={hud.banners?.event} slot="event" />
+          {!pickerOpen && <KillAnnouncement banner={hud.banners?.kill} />}
         </section>
       )}
       {help && !captured && <div className="dh-help">{help}</div>}

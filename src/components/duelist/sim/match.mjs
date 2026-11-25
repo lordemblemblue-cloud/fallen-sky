@@ -19,6 +19,7 @@ import { escortSpawn, escortEnemyZone, escortEmbedded, escortSupport, escortBloc
 import { createWorld, addFighter, respawnFighter, removeFighter, step, bodyOf, hostile } from './world.mjs';
 import { createBot, think, createRandom } from './bots.mjs';
 import { isDown, MOVES, SHOP_RULES, purchaseRule, equipItems } from '../core/index.mjs';
+import { recordKill, resetKillChain } from '../core/killAnnouncements.mjs';
 import { awardSpecialCharge, classAtSpawn, requestClassSelection, CLASS_IDS, classById } from '../core/classes.mjs';
 import { settleSpecialSpend } from './specialMeterSettlement.mjs';
 import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt, XP } from '../core/progression.mjs';
@@ -148,6 +149,7 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
     progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0,
     matchBoost: boostAt(match.clock), gold: SHOP_RULES.startingGold,
     goldFraction: 0, classXpFraction: 0, items: [] };
+  resetKillChain(entry);
   entry.level = levelOf(match, entry);
   addFighter(match.world, { id: seatId, team: seatTeam, weapon: cls ? classById(cls).weapon : 'sword', classId: cls, level: entry.level, matchBoost: entry.matchBoost, ...spot });
   match.seats.set(seatId, entry);
@@ -600,7 +602,9 @@ function onDefeat(match, e) {
   if (!who) return;
   const by = match.seats.get(e.by);
   match.scores[who.id].falls += 1;
+  resetKillChain(who);
   const counted = by && by.id !== who.id && hostile(world, world.fighters.get(by.id) || {}, world.fighters.get(who.id) || {});
+  const killChain = counted ? recordKill(by, world.time) : null;
   if (counted) {
     match.scores[by.id].defeats += 1;
     grantGold(match, by.id, SHOP_RULES.eliminationGold, 'elimination');
@@ -623,7 +627,7 @@ function onDefeat(match, e) {
     event(match, { type: 'assist', by: id, who: who.id, feed: false });
   }
   dropFlagOf(match, who.id, bodyOf(world, who.id));
-  event(match, { type: 'defeat', by: counted ? by.id : null, who: who.id });
+  event(match, { type: 'defeat', by: counted ? by.id : null, who: who.id, ...(killChain || {}) });
   if (def.id === 'duel') {
     const winner = counted ? by.id : match.order.find((id) => id !== who.id);
     endRound(match, winner);
@@ -722,7 +726,10 @@ function nextRound(match) {
   match.roundClock = 0;
   match.roundWinner = null;
   world.projectiles.length = 0;
-  for (const s of match.seats.values()) spawnSeat(match, s);
+  for (const s of match.seats.values()) {
+    s.multiKill = 0; s.lastKillAt = null; // a new duel round is not a rapid-kill chain
+    spawnSeat(match, s);
+  }
   match.phase = 'countdown';
   match.phaseUntil = world.time + 2;
   event(match, { type: 'round', round: match.round, feed: false });
