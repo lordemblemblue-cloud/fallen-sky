@@ -147,7 +147,7 @@ export function Countdown({ view, fightFlash }) {
 
 export function RespawnNote({ view }) {
   if (!view.me?.dead || view.mode === 'duel' || view.phase !== 'live') return null;
-  return <div className="duelist-respawn">Back in {Math.max(0, view.me.respawnIn).toFixed(1)}</div>;
+  return <div className="duelist-respawn">Back in {Math.max(0, view.me.respawnIn).toFixed(1)}{view.mode==='escort'&&view.me.team==='blue'&&view.escort?.defenderRespawnSeconds>4&&<small style={{display:'block',fontSize:'.7em'}}>Defense reinforcement delay increased</small>}</div>;
 }
 
 function feedLine(view, e) {

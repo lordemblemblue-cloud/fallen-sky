@@ -24,7 +24,7 @@ import { levelFromXp, xpForEvent, cleanProgress, XP_CAP, boostAt, XP } from '../
 import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
-import { makeEscort, stepEscort, ESCORT_RADIUS } from './escort.mjs';
+import { makeEscort, stepEscort, ESCORT_RADIUS, defenderRespawnDelay } from './escort.mjs';
 import { importedSpawn } from './importedControlLayout.mjs';
 import { getModeArenaLayout } from './modeArenaLayout.mjs';
 
@@ -139,7 +139,7 @@ function seat(match, { id = null, name = null, kind, team = null, classId = null
   const bot = kind === 'bot' ? createBot(seatId, { level: match.botLevel, seed: match.seed * 131 + n * 17 }) : null;
   const spot = spawnFor(match, seatId, seatTeam);
   const cls = kind === 'bot' ? CLASS_IDS[(n - 1 + match.seed) % CLASS_IDS.length] : classById(classId) ? classId : null;
-  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, classId: cls, pendingClass: null, specialMeter: 0,
+  const entry = { id: seatId, name: name || (kind === 'bot' ? BOT_NAMES[(n - 1) % BOT_NAMES.length] : seatId), kind, team: seatTeam, bot, respawnAt: null, respawnStartedAt: null, classId: cls, pendingClass: null, specialMeter: 0,
     progress: kind === 'player' ? cleanProgress(progress, CLASS_IDS) : null, level: 1, xpGained: 0,
     matchBoost: boostAt(match.clock), gold: SHOP_RULES.startingGold,
     goldFraction: 0, classXpFraction: 0, items: [] };
@@ -452,7 +452,15 @@ export function stepMatch(match, dt, inputs = {}) {
     if (f) f.meter = s.classId ? s.specialMeter : 0;
   }
   const effects = step(world, dt, all);
-  if(world.arenaLayout?.imported)for(const s of match.seats.values()){const b=bodyOf(world,s.id);if(b && b.y < -18)spawnSeat(match,s,match.def.protect);}
+  if(world.arenaLayout?.imported)for(const s of match.seats.values()){
+    const b=bodyOf(world,s.id),f=world.fighters.get(s.id);
+    if(!b||b.y>=-18||f?.vitals.dead)continue;
+    if(match.escort){
+      // Falling off the canyon must not bypass a defender's respawn penalty.
+      f.vitals.hp=0;f.vitals.dead=true;f.action=null;f.guard=null;f.buffer=null;
+      b.vy=0;b.motion=null;effects.push({type:'defeat',defender:s.id,by:null});
+    }else spawnSeat(match,s,match.def.protect);
+  }
   // Assists are awarded only for server-verified impacts from the last eight seconds.
   for (const e of effects) {
     if (e.type !== 'impact' || !(e.hp > 0 || e.shield > 0 || e.will > 0) || !e.attacker || !e.defender) continue;
@@ -466,13 +474,25 @@ export function stepMatch(match, dt, inputs = {}) {
   if (match.ball) stepFootball(match, dt, all);
   for (const e of effects) if (e.type === 'defeat') onDefeat(match, e);
   if (match.phase === 'live') {
-    respawns(match);
+    if(!match.escort)respawns(match);
     if (match.flags) flagsStep(match);
     if (match.controlPoints) stepControlPoints(match, dt);
     if (match.escort) {
       const winner = stepEscort(match, dt);
       world.escortStage=match.escort.stage;
-      for(const s of match.seats.values()){const b=bodyOf(world,s.id);if(b&&s.team&&escortEnemyZone(s.team,world.escortStage,b))spawnSeat(match,s,match.def.protect);}
+      // Re-evaluate waiting defenders before any respawn, including on the tick a threshold is reached.
+      for(const s of match.seats.values()){
+        if(s.team==='blue'&&s.respawnAt!==null&&s.respawnStartedAt!==null)
+          s.respawnAt=Math.max(s.respawnAt,s.respawnStartedAt+match.escort.defenderRespawnSeconds);
+        const b=bodyOf(world,s.id),f=world.fighters.get(s.id);
+        if(b&&f&&!f.vitals.dead&&s.team&&escortEnemyZone(s.team,world.escortStage,b)){
+          // A newly active shield may displace a living intruder, but it must
+          // never resurrect a corpse or restore vitals/clear the death timer.
+          Object.assign(b,spawnFor(match,s.id,s.team),{vy:0,kx:0,kz:0,motion:null,jumped:false,airDashReady:false,airJumpAt:null});
+          f.action=null;f.buffer=null;
+        }
+      }
+      if(!winner)respawns(match);
       if (winner) {
         match.escort.moving = false;
         match.teamScores[winner] = 1;
@@ -537,7 +557,11 @@ function onDefeat(match, e) {
   if (def.id === 'duel') {
     const winner = counted ? by.id : match.order.find((id) => id !== who.id);
     endRound(match, winner);
-  } else if (def.respawn) who.respawnAt = world.time + def.respawn;
+  } else if (def.respawn) {
+    who.respawnStartedAt=world.time;
+    const delay=match.escort&&who.team==='blue'?defenderRespawnDelay(match.escort):def.respawn;
+    who.respawnAt=world.time+delay;
+  }
 }
 
 function respawns(match) {
@@ -545,6 +569,7 @@ function respawns(match) {
   for (const s of match.seats.values()) {
     if (s.respawnAt === null || world.time < s.respawnAt) continue;
     s.respawnAt = null;
+    s.respawnStartedAt = null;
     spawnSeat(match, s, def.protect);
     if (s.bot) s.bot.combo = 0;
     event(match, { type: 'respawn', id: s.id, feed: false });
