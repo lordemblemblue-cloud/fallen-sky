@@ -237,3 +237,23 @@
 .dh-mode[data-mode='swift'] { color: #7fd8ff; }
 .dh-mode[data-mode='balanced'] { color: #f1cf6b; }
 .dh-mode[data-mode='heavy'] { color: #ff8a73; }
+
+/* Compact upper-centre kill announcement, using the owner's exact transparent sapphire asset.
+   Reference width is 340px (18% of a 1920px viewport), scaled by the existing HUD layout. */
+.dh-kill-announcement {
+  position: relative; flex: none; width: 340px; height: 110px;
+  display: grid; place-items: center; pointer-events: none;
+  background: url('https://media.base44.com/images/public/6af625cd654fa5b8954442ce/725314b3f1151578667a8f2ca2b41e33_a_clean_high_resolution_png_ui_overlay_graphic_on.png') center / contain no-repeat;
+  animation: dh-banner var(--dh-life, 2.4s) linear both;
+}
+.dh-kill-announcement-copy {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px; max-width: 76%; transform: translateY(3px);
+  text-align: center; color: #f2f9ff; text-shadow: 0 1px 3px #06152d, 0 0 8px #08234e;
+}
+.dh-kill-announcement-copy strong {
+  font-size: 21px; line-height: 1.05; font-weight: 800; letter-spacing: .065em; white-space: nowrap;
+}
+.dh-kill-announcement-copy small {
+  font-size: 11px; line-height: 1; font-weight: 700; letter-spacing: .12em; color: #c9e8ff; white-space: nowrap;
+}
