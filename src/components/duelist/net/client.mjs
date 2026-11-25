@@ -354,9 +354,9 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       classAnswer = null;
       if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'class', id }));
     },
-    buyItem(id) {
+    buyItem(id, tier, combine = false) {
       shopAnswer = null;
-      if (!story && typeof id === 'string' && ws?.readyState === 1) send({ t: 'shop', id });
+      if (!story && typeof id === 'string' && ws?.readyState === 1) send(tier === undefined && !combine ? { t: 'shop', id } : { t: 'shopBuild', id, tier, combine });
     },
     seats: () => seats,
     view: () => view,
