@@ -34,13 +34,18 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     let gpuFailed = false;
     let hqFramed = headquarters;
     let modelOrigin = null;
+    let modelRotation = null;
     const clock = new THREE.Clock();
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x071426, 0.026);
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 90);
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 250);
     camera.position.set(0, 1.65, 5.8);
     camera.lookAt(-0.6, 1.18, 0);
-    if (headquarters) { camera.position.set(0, 1.25, 5.76); camera.fov = 62; camera.lookAt(0, 1.4, -2.88); camera.updateProjectionMatrix(); }
+    if (headquarters) frameHQCamera();
+    // The fighter and HQ use the same metre-scale scene and depth buffer.
+    const fighterAnchor = new THREE.Group();
+    fighterAnchor.name = 'HQ_SelectedFighterAnchor';
+    scene.add(fighterAnchor);
 
     renderer.setClearColor(0x020711, 0);
     renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
@@ -119,11 +124,11 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       const prepared = await prepareIdlePreview({ model: next, bodyId: fighter, classId, embeddedIdle: clips?.idle });
       if (!active) { prepared.dispose(); return; }
       model = next;
-      model.position.x -= 1.48;
       modelOrigin = model.position.clone();
+      modelRotation = model.rotation.clone();
       placeFighter();
       idlePose = prepared;
-      scene.add(model); // reveal only after an authored idle or relaxed fallback was applied
+      fighterAnchor.add(model); // actual 3D scene, not a foreground viewer or HTML overlay
     }).catch(() => {
       // A missing or damaged character GLB must not take the home menu down.
     });
@@ -145,14 +150,20 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
 
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const originalCamera = new THREE.Vector3(0, 1.65, 5.8);
+    function frameHQCamera() {
+      // A standing eye-level camera, inside the actual hall, looking slightly
+      // left so the selected fighter is clear of the menu copy on the left.
+      camera.position.set(0, 1.7, 8.4);
+      camera.fov = 50;
+      camera.lookAt(-0.75, 1.0, 4);
+      camera.updateProjectionMatrix();
+    }
     function placeFighter() {
       if (!model || !modelOrigin) return;
       model.position.copy(modelOrigin);
-      if (hqFramed) {
-        model.position.x += 1.48;
-        model.position.z += 1.44; // HQ floor emblem at (0, 0, 4) scaled by .36.
-      }
-      model.rotation.y = Math.atan2(camera.position.x - model.position.x, camera.position.z - model.position.z);
+      model.rotation.copy(modelRotation);
+      fighterAnchor.position.set(hqFramed ? 0 : -1.48, hqFramed ? 0.014 : 0, hqFramed ? 4 : 0);
+      fighterAnchor.rotation.y = Math.atan2(camera.position.x - fighterAnchor.position.x, camera.position.z - fighterAnchor.position.z);
     }
     function showOriginal() {
       hqFramed = headquarters;
@@ -160,9 +171,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       world.visible = !headquarters;
       portal.visible = true;
       if (headquarters) {
-        camera.position.set(0, 1.25, 5.76);
-        camera.fov = 62;
-        camera.lookAt(0, 1.4, -2.88);
+        frameHQCamera();
       } else {
         camera.position.copy(originalCamera);
         camera.fov = 42;
@@ -197,15 +206,12 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
           quality: window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'performance',
           onFallback: (still) => { if (still && active) { showOriginal(); onHqStatus?.({ state: 'fallback', message: 'Sustained slow frames: stationary HQ retained behind fighter.' }); } },
         });
-        // Fit the 36m scene into the existing avatar camera's coordinate space.
-        hq.root.scale.setScalar(0.36);
+        // Keep the 36m headquarters at its actual authored scale. The fighter
+        // stands on its real floor and shares the camera, lights and depth.
         world.visible = false;
         hqFramed = true;
         scene.background = new THREE.Color(0xb5d5eb);
-        camera.position.set(0, 1.25, 5.76);
-        camera.fov = 62;
-        camera.lookAt(0, 1.4, -2.88);
-        camera.updateProjectionMatrix();
+        frameHQCamera();
         placeFighter();
         if (reducedMotion) hq.setAmbientSystemsEnabled(false);
       }).catch(error => { if (active) failHQ(error); });
@@ -255,7 +261,8 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       if (!observer) window.removeEventListener('resize', resize);
       hq?.disposeGuildHeadquarters();
       idlePose?.dispose();
-      if (model) scene.remove(model);
+      if (model) fighterAnchor.remove(model);
+      scene.remove(fighterAnchor);
       // GLB geometry/materials are shared by the character loader's cache:
       // do not dispose them here. Only dispose geometry owned by this stage.
       world.traverse((object) => { if (object.isMesh) object.geometry.dispose(); });
@@ -265,5 +272,5 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     };
   }, [fighter, classId, headquarters, onHqStatus]);
 
-  return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" style={headquarters ? { background: 'url(/duelist-hq-v4-poster.svg) center / cover no-repeat', pointerEvents: 'none' } : undefined} />;
+  return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" style={headquarters ? { background: 'url(https://media.base44.com/images/public/6af625cd654fa5b8954442ce/6d80d4d1d58c183223eebfce3d778043_scene.png) center / cover no-repeat #151e2a', pointerEvents: 'none' } : undefined} />;
 }
