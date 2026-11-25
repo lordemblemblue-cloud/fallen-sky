@@ -93,3 +93,9 @@ The server determines capture, ownership, percentages, and winner; clients only 
 placeholder markers. Future map layouts may pass `controlLayout: [{x,z},{x,z},{x,z}]` to
 `createDuelistServer()` or `createMatch()`, with rematch persistence already supported. See
 `docs/duelist/THREE_POINT_CONTROL_QUICKPLAY.md` for the full contract. Multiplayer protocol version is 3.
+
+## Persistent public arenas
+
+The hosted entry point enables continuous simulation for the permanent public room in each of the seven competitive modes. Empty overflow rooms still sleep and expire under the existing rules. Permanent rooms restart after the existing 12-second intermission, preserving their room ID. Set `DUELIST_CONTINUOUS_PUBLIC_ROOMS=0` to restore the prior idle behavior if host profiling shows an unacceptable CPU cost.
+
+The online browser always displays one fixed 3D join card per official room, plus extra rooms confirmed by /lobby. Each card joins its exact room ID. Unknown counts are not fabricated while disconnected. These previews are schematic map views, not a live spectator feed. Visible room cards render at a capped frame rate; offscreen cards release their renderer and hidden tabs pause drawing. The authoritative service is independent of dashboard or browser lifetime. Production guest access, service hosting and the published VITE_DUELIST_WS_URL still require a secure deployment configuration; do not enable the local-only guest bypass on an unrestricted production host. The current server uses existing mode-specific capacities; 100-player rooms require separate load testing and capacity changes.

@@ -1,3 +1,4 @@
+import { DEFAULT_PUBLIC_ROOMS } from '../net/protocol.mjs';
 // Public Duelist server browser contract. A room is selected by its exact
 // server-issued ID; never convert a row click into a matchmaking/quick-join request.
 export const ONLINE_SERVER_MODES = Object.freeze([
@@ -37,4 +38,21 @@ export function serverJoinSearch(room) {
   return verified?.open ? {
     mode: verified.mode, online: 1, matchId: verified.id, from: 'online-play',
   } : null;
+}
+
+// The official rooms are provisioned at server startup and are always represented
+// in the browser, even before the first successful lobby request. Unknown
+// occupancy is not zero, and a disconnected server is never called live.
+export function persistentServerCards(matches, mode = 'all') {
+  const live = visibleDuelistServers(matches, mode);
+  const official = DEFAULT_PUBLIC_ROOMS.filter(room => mode === 'all' || room.mode === mode);
+  const ids = new Set(official.map(room => room.id));
+  return ONLINE_SERVER_MODES.flatMap(id => [
+    ...official.filter(room => room.mode === id).map(room => {
+      const confirmed = live.find(candidate => candidate.id === room.id && candidate.mode === id);
+      return confirmed ? { ...confirmed, official: true, confirmed: true }
+        : { ...room, official: true, confirmed: false, players: null, seats: null, bots: null, open: false };
+    }),
+    ...live.filter(room => room.mode === id && !ids.has(room.id)).map(room => ({ ...room, official: false, confirmed: true })),
+  ]);
 }

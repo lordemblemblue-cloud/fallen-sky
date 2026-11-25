@@ -33,7 +33,7 @@ import { createProgressStore } from './progress.mjs';
 import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS, claimStorySupply } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
-import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
+import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, DEFAULT_PUBLIC_ROOMS, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
   ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
@@ -50,7 +50,7 @@ const WRONG_CODES = Object.freeze({ allowed: 5, coolSeconds: 30 }); // guessing 
 // missionAgainSeconds: how long after a mission is completed its crew goes on to the next
 export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, allowedOrigins = null, botLevel = 'duelist',
   clock = () => performance.now() / 1000, log = () => {}, reconnectSeconds = RECONNECT_SECONDS, heartbeatMs = 5000,
-  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null, progress = createProgressStore() } = {}) {
+  missionAgainSeconds = MISSION_AGAIN_AFTER, controlLayout = null, progress = createProgressStore(), continuousPublicRooms = false } = {}) {
   if (typeof authenticate !== 'function') throw new TypeError('the Duelist server needs a token verifier');
   const rooms = new Map(); // room id -> room (a match, or a crew's mission)
   const clients = new Set();
@@ -169,7 +169,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
   }
 
   // One always-open, bot-filled public server per competitive mode. Extra rooms open only when needed.
-  for (const mode of ONLINE_MODES) openRoom(mode, { permanent: true });
+  for (const { id, mode } of DEFAULT_PUBLIC_ROOMS) {
+    const room = openRoom(mode, { permanent: true });
+    if (room.id !== id) throw new Error('Permanent public room identity mismatch');
+  }
 
   function pickRoom(mode) {
     // the Join button ('any') looks for a match; crews are joined from the story page
@@ -439,7 +442,7 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
       carry -= STEP;
       for (const room of rooms.values()) {
         if (room.mission && !connected(room)) continue; // nobody here (or everyone dropped): the mission waits
-        if (!room.mission && !room.clients.size) continue; // advertised bot-filled rooms sleep until the first human joins
+        if (!room.mission && !room.clients.size && !(continuousPublicRooms && room.publicRoom)) continue; // only permanent arenas run without humans
         const inputs = {};
         for (const client of room.clients.values()) {
           let input;
@@ -481,7 +484,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
           if (room.overAt !== null && now - room.overAt > missionAgainSeconds && room.clients.size) restartMission(room);
           continue;
         }
-        if (room.ticks % SNAPSHOT_EVERY === 0) snapshot(room);
+        if (room.ticks % SNAPSHOT_EVERY === 0) {
+          if (room.clients.size) snapshot(room);
+          else { room.effects = []; room.events = []; } // no audience: discard transient effects, not the world
+        }
         if (room.match.phase === 'over' && room.overAt === null) room.overAt = now;
         if (room.overAt !== null && now - room.overAt > REMATCH_AFTER && (room.clients.size || room.publicRoom)) rematch(room);
       }
