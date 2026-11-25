@@ -1,4 +1,4 @@
-import { SHOP_ITEMS, SHOP_RECIPES, SHOP_RULES, shopItem, ownedItem, tierPrice, purchaseRule } from './shop.mjs';
+import { SHOP_ITEMS, SHOP_RECIPES, shopItem, ownedItem, tierPrice, purchaseRule, tierItemStats, tierItemPassive } from './shop.mjs';
 
 export const SHOP_CATEGORIES = Object.freeze(['power','defense','ability','health','tenacity','hybrid','support','counter','relic']);
 export const STAT_FILTERS = Object.freeze([
@@ -33,7 +33,7 @@ export function filterShopItems(me, {stats=[],statuses=[],search='',matchAll=tru
   const owned=Array.isArray(me?.items)?me.items:[];
   const q=search.trim().toLowerCase();
   return SHOP_ITEMS.filter(item=>{
-    if(q && ![item.name,item.category,item.passive.text].some(s=>s.toLowerCase().includes(q)))return false;
+    if(q && ![item.name,item.category,item.passive.text,tierItemPassive(item,1)?.text || ''].some(s=>s.toLowerCase().includes(q)))return false;
     if(stats.length && !(matchAll?stats.every(s=>supportsStat(item,s)):stats.some(s=>supportsStat(item,s))))return false;
     const tier=itemTier(owned,item.id);
     return statuses.every(s=>{
@@ -47,4 +47,4 @@ export function filterShopItems(me, {stats=[],statuses=[],search='',matchAll=tru
   });
 }
 export const nextPrice = (item,tier) => tier>=3?0:tierPrice(item,tier+1)-tierPrice(item,tier);
-export const tierStats = (item,tier) => Object.entries(item.stats).map(([key,value])=>[key,value*SHOP_RULES.tierShares[tier]]);
+export const tierStats = (item,tier) => Object.entries(tierItemStats(item,tier));
