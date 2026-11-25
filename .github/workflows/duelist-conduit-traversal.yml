@@ -1,0 +1,36 @@
+name: Conduit traversal candidate
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/sim/conduitTraversal.mjs'
+      - 'src/components/duelist/client/maps/conduitArena.mjs'
+      - 'tests/duelist-conduit*'
+      - '.github/workflows/duelist-conduit-traversal.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check src/components/duelist/sim/conduitTraversal.mjs
+      - run: node --test tests/duelist-conduit-traversal.test.mjs
+  assembled-arena:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/duelist-conduit-import.test.mjs
+      - run: node --test tests/duelist-conduit-assembled-traversal.test.mjs
+      - run: npm run lint
+      - run: npm run build
