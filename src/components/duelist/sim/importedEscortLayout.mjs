@@ -18,7 +18,7 @@ function nearby(m,x,z,r=0){if(!r)return m.get(key(x,z))||[];const set=new Set();
 function seg(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz||1),0,1);return Math.hypot(x-a.x-dx*t,z-a.z-dz*t);}
 function overlap(p,x,z,r=0){if(x<p.x0-r||x>p.x1+r||z<p.z0-r||z>p.z1+r)return false;if(!p.polygon)return Math.hypot(x-clamp(x,p.x0,p.x1),z-clamp(z,p.z0,p.z1))<=r+1e-7;let inside=false;for(let i=0,j=p.polygon.length-1;i<p.polygon.length;j=i++){const a=p.polygon[i],b=p.polygon[j];if((a.z>z)!==(b.z>z)&&x<(b.x-a.x)*(z-a.z)/(b.z-a.z)+a.x)inside=!inside;}return inside||p.polygon.some((a,i)=>seg(x,z,a,p.polygon[(i+1)%p.polygon.length])<=r+1e-7);}
 function h(p,x,z){const {a,b,c,den}=p,u=((b.z-c.z)*(x-c.x)+(c.x-b.x)*(z-c.z))/den,v=((c.z-a.z)*(x-c.x)+(a.x-c.x)*(z-c.z))/den;return clamp(u*a.y+v*b.y+(1-u-v)*c.y,p.y0+.38,p.y1);}
-export const IMPORTED_ESCORT=Object.freeze({id:'escort-mountain-canyon-v1',radius:215,capacity:10,imported:true,escortImported:true,parts:[...floors,...solids],floors,solids,spawnZones:data.spawnZones,route:data.route});
+export const IMPORTED_ESCORT=Object.freeze({id:'escort-mountain-canyon-v1',radius:215,capacity:10,imported:true,escortImported:true,parts:[...floors,...solids],floors,solids,spawnZones:data.spawnZones,buildings:data.buildings||[],route:data.route});
 export function escortHeights(x,z,r=0){const ys=[];for(const p of nearby(fi,x,z,r))if(overlap(p,x,z,r)){const y=h(p,x,z);if(!ys.some(v=>Math.abs(v-y)<.05))ys.push(y);}// Building walls, columns and garage/canopy roofs also have solid upper
  // faces. A downward jump must land on them instead of entering the mesh.
  for(const p of nearby(si,x,z,r))if(!p.polygon&&overlap(p,x,z,r)&&!ys.some(v=>Math.abs(v-p.y1)<.05))ys.push(p.y1);
@@ -55,7 +55,9 @@ export function escortEmbedded(body,radius=.4){
 }
 export function escortRecoverySpot(body,team,stage,bodies,id,lastSafe){
  const occupied=[...bodies].filter(([k])=>k!==id).map(([,b])=>b);
- const safe=p=>!escortEnemyZone(team,stage,p)&&!escortBlockers({...p,radius:.48}).length&&
+ const buildings=(data.buildings||[]).filter(b=>body.x>=b.minX-.5&&body.x<=b.maxX+.5&&body.z>=b.minZ-.5&&body.z<=b.maxZ+.5&&body.y<b.maxY+.15&&body.y+1.8>b.minY);
+ const outside=p=>buildings.every(b=>p.x<b.minX-.5||p.x>b.maxX+.5||p.z<b.minZ-.5||p.z>b.maxZ+.5);
+ const safe=p=>outside(p)&&!escortEnemyZone(team,stage,p)&&!escortBlockers({...p,radius:.48}).length&&
   !escortEmbedded(p)&&Math.abs(escortSupport(p.x,p.z,p.y+.06,.03)-p.y)<.08&&
   !occupied.some(b=>Math.abs(b.y-p.y)<1.7&&Math.hypot(b.x-p.x,b.z-p.z)<.85);
  // Never move up through a roof to gain an advantage. Prefer a nearby floor
@@ -65,7 +67,7 @@ export function escortRecoverySpot(body,team,stage,bodies,id,lastSafe){
   for(let i=0;i<24;i++){
    const a=i*Math.PI/12,x=body.x+Math.cos(a)*r,z=body.z+Math.sin(a)*r;
    for(const y of escortHeights(x,z,.02)){
-    if(y>body.y+.45||y<body.y-8)continue;
+    if(y>body.y+(buildings.length?Math.max(0,...buildings.map(b=>(b.baseY??body.y)-body.y))+.45:.45)||y<body.y-8)continue;
     const p={x,y,z,yaw:body.yaw};if(!safe(p))continue;
     const cost=Math.abs(body.y-y)*2+Math.hypot(body.x-x,body.z-z);
     if(cost<score){score=cost;best=p;}

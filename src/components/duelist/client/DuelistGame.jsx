@@ -567,7 +567,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       else if (e.type === 'door') audio.play('door', arena.doorAt?.(e.id) || null);
       else if (e.type === 'failed') audio.play('loss');
       else if (e.type === 'complete') audio.play('victory');
-      else if (e.type === 'retry' || e.type === 'respawn') { if (e.type === 'retry') director.reset(); if (e.type === 'retry' || e.id === me()) follow.snap(); }
+      else if (e.type === 'retry' || e.type === 'respawn' || e.type === 'positionRecovered') { if (e.type === 'retry') director.reset(); if (e.type === 'retry' || e.id === me()) follow.snap(); }
     };
 
     // In rooms, only people the camera or your fighter could see are drawn and animated: a line to the body
@@ -967,7 +967,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} pickerOpen={!!showPicker} onPower={(id) => pressRef.current?.(id)}
         onClass={match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
         help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
-      {match && initialConfirmed && <Countdown view={match} fightFlash={fightFlash} />}
+      {match && (initialConfirmed || (online && match.mode==='escort' && match.phase==='countdown')) && <Countdown view={match} fightFlash={fightFlash} />}
       {match && <RespawnNote view={match} />}
       {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
       {quest && <Objective view={quest} />}

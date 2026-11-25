@@ -120,6 +120,7 @@ export function createRoadwayShell(positions, thickness=.38){
         // Collision & telemetry registries
         this.walkableTriangles = [];
         this.obstacleBoxes = [];
+        this.buildingBounds=[];
         this.barrierSegments = [];
         this.pathSamples = [];
         this.chevrons = [];
@@ -619,10 +620,12 @@ export function createRoadwayShell(positions, thickness=.38){
         const hw = w * 0.5;
         const hd = d * 0.5;
 
+        this.buildingBounds.push({label:labelPrefix,baseY,minX:cx-hw-.4,maxX:cx+hw+.4,minZ:cz-hd-.4,maxZ:cz+hd+.4,minY:baseY-Math.max(1.2,baseY+1.2),maxY:baseY+h});
         const fndH = Math.max(1.2, baseY + 1.2);
         const fnd = new THREE.Mesh(new THREE.BoxGeometry(w + 0.8, fndH, d + 0.8), this.mats.darkWall);
         fnd.position.set(cx, baseY - fndH * 0.5, cz);
         parent.add(fnd);
+        this._registerBoxObstacle(cx-hw-.4,cx+hw+.4,baseY-fndH,baseY,cz-hd-.4,cz+hd+.4,labelPrefix+'_Foundation',phase);
 
         const floor = new THREE.Mesh(new THREE.BoxGeometry(w, 0.25, d), this.mats.slateDeck);
         floor.position.set(cx, baseY - 0.125, cz);
