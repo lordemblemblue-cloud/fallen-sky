@@ -61,7 +61,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
   const arenaLayout = getModeArenaLayout(def.id,testMode);
   const world = createWorld({ arenaRadius: arenaLayout?.radius ?? def.arena, arenaLayout });
   const match = {
-    mode: def.id, def, world, testMode, training: def.id === 'practice' || practiceMode === true || testMode === true, seed, botLevel, random: createRandom(seed * 7919 + 13),
+    mode: def.id, def, world, testMode, training: practiceMode === true || testMode === true, seed, botLevel, random: createRandom(seed * 7919 + 13),
     capacity: Math.max(players.length, arenaLayout ? Math.min(seats ?? def.seats, arenaLayout.capacity) : seats ?? def.seats),
     phase: 'countdown', phaseUntil: matchCountdownSeconds(def.id), clock: 0,
     round: 1, roundWins: {}, roundClock: 0, roundWinner: null, boostTier: 0,
