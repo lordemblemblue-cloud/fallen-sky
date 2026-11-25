@@ -2,6 +2,7 @@
 // Draft import; not registered in live TDM until authoritative collision and traversal are validated.
 import * as THREE from 'three';
 import { createConduitLighting } from './conduitLighting.mjs';
+import { createConduitBoxCache, conduitTextureResolution, batchConduitStaticBoxes, conduitSceneInventory } from './conduitRenderOptimization.mjs';
         const CFG = Object.freeze({
             foundationR: 44.8,
             pitRadius: 24.0,
@@ -38,10 +39,10 @@ import { createConduitLighting } from './conduitLighting.mjs';
         // =========================================================================
         // 2. PROCEDURAL PBR MATERIAL LIBRARY (DEDICATED DIAMOND-PLATE TREAD BUMP)
         // =========================================================================
-        function createMaterialLibrary(quality = 'medium') {
-            const s = quality === 'low' ? 256 : quality === 'high' ? 1024 : 512;
+        function createMaterialLibrary(quality = 'medium', optimize = true) {
             const textures = [];
             const makeTex = (drawFn, repeat = [1, 1], isColor = true) => {
+                const s = conduitTextureResolution(quality,optimize?isColor:true);
                 const c = document.createElement('canvas'); c.width = c.height = s;
                 drawFn(c.getContext('2d'), s);
                 const t = new THREE.CanvasTexture(c);
@@ -342,16 +343,18 @@ export { CFG as CONDUIT_CONFIG };
             }
         }
 export { UnifiedCollisionWorld as ConduitCollisionWorld };
-export function createConduitArena(hostScene, { quality = 'medium', enableLights = true } = {}) {
+export function createConduitArena(hostScene, { quality = 'medium', enableLights = true, optimizeRendering = true } = {}) {
     if (!hostScene?.isObject3D) throw new TypeError('Conduit needs an existing Three.js scene or group');
     const scene = new THREE.Group(); scene.name = 'The Conduit';
-    const MAT = createMaterialLibrary(quality);
+    const MAT = createMaterialLibrary(quality,optimizeRendering);
+    const boxCache=createConduitBoxCache(THREE),staticBoxes=[];
     const world = new UnifiedCollisionWorld();
     const upperGroup = new THREE.Group(), t0Group = new THREE.Group();
     upperGroup.name='Conduit Upper'; t0Group.name='Conduit Undercroft';
     scene.add(upperGroup,t0Group);
             function addBox(parent, sx, sy, sz, x, y, z, mat, col = null, rotY = 0) {
-                const m = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, sz), mat);
+                const m = new THREE.Mesh(optimizeRendering?boxCache.get(sx,sy,sz):new THREE.BoxGeometry(sx,sy,sz), mat);
+                staticBoxes.push(m);
                 m.position.set(x, y, z); m.rotation.y = rotY;
                 m.castShadow = true; m.receiveShadow = true;
                 parent.add(m);
@@ -375,7 +378,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             const detailCounts={instances:0,batches:0};
             function flushDetails(){
                 for(const [parent,mats] of detailBatches)for(const [mat,transforms] of mats){
-                    const mesh=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),mat,transforms.length);
+                    const mesh=new THREE.InstancedMesh(optimizeRendering?boxCache.get(1,1,1):new THREE.BoxGeometry(1,1,1),mat,transforms.length);
                     transforms.forEach((m,i)=>mesh.setMatrixAt(i,m));mesh.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();
                     mesh.name='CON_ReferenceDetailBatch';parent.add(mesh);detailCounts.instances+=transforms.length;detailCounts.batches++;
                 }
@@ -1107,13 +1110,19 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
                 }
                 return null;
             }
+    const beforeBatch=conduitSceneInventory(scene);
+    const batchResult=optimizeRendering?batchConduitStaticBoxes(THREE,staticBoxes,{exclude:buildingRoofs}):{eligible:0,batched:0,batchCount:0,removedMeshSubmissions:0};
+    const {eligible,batched,batchCount,removedMeshSubmissions}=batchResult;
+    const batchStats={eligible,batched,batchCount,removedMeshSubmissions};
+    const renderOptimization={enabled:optimizeRendering,beforeBatch,afterBatch:conduitSceneInventory(scene),...batchStats};
+    staticBoxes.length=0;
     hostScene.add(scene);
     let disposed=false;
-    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting,
+    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting, renderOptimization,
         spawnCandidates:tdmSpawns, selectTDMSpawn, navGraph:{nodes:navNodes,findPath:findAStarPath},
         pickups:pickups.map(p=>({id:p.id,label:p.label,position:p.pos.slice(),respawn:p.respawn})),
         setPickupAvailable(id,available){const p=pickups.find(p=>p.id===id);if(p)p.sym.visible=!!available;},
         updateVisuals(elapsed){if(disposed)return;rRing1.rotation.z=elapsed*.65;rRing2.rotation.z=-elapsed*.35;padRings.forEach((r,i)=>{r.rotation.z=elapsed*2+i;});pickups.forEach((p,i)=>{p.sym.rotation.y=elapsed*1.4+i;p.sym.position.y=1.15+Math.sin(elapsed*2.5+i)*.12;});},
-        dispose(){if(disposed)return;disposed=true;scene.removeFromParent();const gs=new Set(),ms=new Set(),ts=new Set(MAT._textures);scene.traverse(o=>{if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}if(o.isLight)o.shadow?.dispose?.();});for(const m of Object.values(MAT))if(m?.isMaterial)ms.add(m);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}
+        dispose(){if(disposed)return;disposed=true;scene.removeFromParent();const gs=new Set(),ms=new Set(),ts=new Set(MAT._textures);scene.traverse(o=>{if(o.isInstancedMesh)o.dispose?.();if(o.geometry)gs.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])if(m){ms.add(m);for(const v of Object.values(m))if(v?.isTexture)ts.add(v);}if(o.isLight)o.shadow?.dispose?.();});for(const m of Object.values(MAT))if(m?.isMaterial)ms.add(m);gs.forEach(g=>g.dispose());ms.forEach(m=>m.dispose());ts.forEach(t=>t.dispose());}
     };
 }
