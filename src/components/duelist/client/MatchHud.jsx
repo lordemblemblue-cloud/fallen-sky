@@ -80,7 +80,7 @@ export function ScoreLine({ view }) {
             <span style={{ width: `${percent}%` }} />
           </div>
           <span className="duelist-escort-percent">{Math.round(percent)}%</span>
-          <span className="duelist-escort-subtitle">{view.escort.contested ? 'CONTESTED · CLEAR THE TRANSPORT' :
+          <span className="duelist-escort-subtitle">{!view.escort.pointACaptured ? 'CAPTURE POINT A · '+Math.floor(view.escort.captureProgress||0)+'%' : view.escort.contested ? 'CONTESTED · CLEAR THE TRANSPORT' :
             view.escort.moving ? 'TRANSPORT ADVANCING' : 'WAITING FOR ESCORT'}</span>
         </div>
       </div>

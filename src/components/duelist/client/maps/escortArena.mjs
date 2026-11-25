@@ -1160,6 +1160,13 @@ import * as THREE from "three";
           );
         });
 
+        // Ground-level bypasses around the processing hall's stair and silo; connect defender exits to the plaza.
+        for(const z of [41.5,71.5]){
+          const deck=new THREE.Mesh(new THREE.BoxGeometry(19,1.2,6),this.mats.slateDeck);
+          deck.position.set(-40.5,cy-.6,z);g.add(deck);
+          this._registerWalkableQuad(new THREE.Vector3(-50,cy,z-3),new THREE.Vector3(-31,cy,z-3),new THREE.Vector3(-50,cy,z+3),new THREE.Vector3(-31,cy,z+3),'CP2_EastHallBypass');
+        }
+
         const hWx = cx - 17.5, hWz = cz;
         const hEx = cx + 17.5, hEz = cz;
         const deckY = cy + 4.8; // Y = 10.8m
@@ -2516,3 +2523,14 @@ class VehicleBuilder {
 
 }
 export function buildEscortVehicle(scene){const v=new VehicleBuilder();v.scene=scene;v._buildTransportMesh();v.transportEnvelopeWire.visible=false;return v;}
+
+// Mount into the game's existing renderer; never create another canvas or simulation.
+export function applyEscortDaylight({scene,camera,renderer,lights,environment}){
+ const saved={background:scene.background,fog:scene.fog,far:camera.far,exposure:renderer.toneMappingExposure,hemiColor:lights.hemi.color.clone(),ground:lights.hemi.groundColor.clone(),hemiIntensity:lights.hemi.intensity,sunColor:lights.sun.color.clone(),sunIntensity:lights.sun.intensity,sunPos:lights.sun.position.clone(),sunShadow:lights.sun.castShadow,rim:lights.rimLight.intensity,fills:lights.fills.map(l=>l.intensity)};
+ scene.background=new THREE.Color(0x86b7d7);scene.fog=new THREE.Fog(0xb6cfdd,420,1600);camera.far=2400;camera.updateProjectionMatrix();
+ lights.hemi.color.setHex(0xd4e9ff);lights.hemi.groundColor.setHex(0xb6c6bb);lights.hemi.intensity=1.95;
+ lights.sun.color.setHex(0xffe5bc);lights.sun.intensity=2.35;lights.sun.position.set(-140,175,-148);lights.sun.castShadow=false;
+ lights.rimLight.intensity=.25;lights.fills.forEach(l=>l.intensity=.18);renderer.toneMappingExposure=1.15;
+ environment.setQuality(typeof window!=='undefined'&&window.matchMedia?.('(pointer: coarse)').matches?'mobile':'high');
+ return {update(dt){environment.update(dt);},dispose(){scene.background=saved.background;scene.fog=saved.fog;camera.far=saved.far;camera.updateProjectionMatrix();renderer.toneMappingExposure=saved.exposure;lights.hemi.color.copy(saved.hemiColor);lights.hemi.groundColor.copy(saved.ground);lights.hemi.intensity=saved.hemiIntensity;lights.sun.color.copy(saved.sunColor);lights.sun.intensity=saved.sunIntensity;lights.sun.position.copy(saved.sunPos);lights.sun.castShadow=saved.sunShadow;lights.rimLight.intensity=saved.rim;lights.fills.forEach((l,i)=>l.intensity=saved.fills[i]);}};
+}

@@ -306,7 +306,7 @@ function Scoreboard({ view, me, myTeam, flagStates }) {
       <progress aria-label="Delivery progress" value={view.escort.progress} max={100}/>
       <span>{Math.floor(view.escort.progress)}%</span>
       <small>{view.phase === 'over' ? view.winner === 'red' ? 'Delivered' : 'Defense held' :
-        view.escort.contested ? 'Contested' : view.escort.moving ? 'Advancing' : 'Carrier stopped'}</small>
+        !view.escort.pointACaptured ? (view.escort.contested?'Point A contested':'Capture Point A '+Math.floor(view.escort.captureProgress||0)+'%') : (view.escort.contested ? 'Contested' : view.escort.moving ? 'Advancing' : 'Carrier stopped')+' · CP '+(view.escort.stage||0)+'/2'}</small>
     </div>;
     case 'ctf': return <CtfBoard view={view} myTeam={myTeam} flagStates={flagStates} />;
     case 'control': return <ControlBoard view={view} myTeam={myTeam} />;

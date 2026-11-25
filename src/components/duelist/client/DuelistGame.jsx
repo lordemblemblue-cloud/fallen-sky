@@ -35,6 +35,7 @@ import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
 import { createFootballProps } from './footballProps.mjs';
 import { createEscortProps } from './escortProps.mjs';
+import {createEscortArena,applyEscortDaylight} from './maps/escortArena.mjs';
 import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
@@ -288,6 +289,11 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       arenaMode = key;
       architecture?.dispose(); architecture = null;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
+      if (!level && world.arenaLayout?.escortImported) {
+        const imported=createEscortArena(scene);
+        const daylight=applyEscortDaylight({scene,camera,renderer,lights,environment:imported.environment});
+        arena={group:imported.root,dispose(){daylight.dispose();imported.dispose();},arc(){},update(dt){daylight.update(dt);const stage=source.view()?.escort?.stage??0;if(stage!==imported.map.currentMatchStage)imported.map.setMatchStage(stage);}};return;
+      }
       if (!level && world.arenaLayout?.imported) {
         const imported = createDuelistControlPointArena(THREE);
         imported.setLayerVisibility('trusses',false);
@@ -650,7 +656,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         const { effects, events } = !online && !source.mission && !initialChosenRef.current
           ? { effects: [], events: [] }
           : source.step(dt, readInput);
-        escort?.update(source.escortDistance?.() ?? 0);
+        escort?.update(source.escortDistance?.() ?? 0,dt,source.view()?.escort);
         football?.update(source.ball?.(), dt);
         for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)

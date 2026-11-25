@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
 import { createDuelistControlPointArena } from '../client/maps/controlPointArena.mjs';
+import {createEscortArena,applyEscortDaylight} from '../client/maps/escortArena.mjs';
+import {createEscortProps} from '../client/escortProps.mjs';
 import { applyControlPointDaylight } from '../client/maps/controlPointDaylight.mjs';
 import { createArena, createSceneLighting } from '../client/arena.mjs';
 import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
@@ -24,7 +26,7 @@ export default function OnlineArenaPreview({ mode }) {
     const mount = mountRef.current;
     if (!mount || !visible) return;
     setFailed(false);
-    let active = true, frame = 0, renderer, observer, imported, daylight;
+    let active = true, frame = 0, renderer, observer, imported, daylight, escort;
     const scene = new THREE.Scene();
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     const materials = new Map();
@@ -39,7 +41,8 @@ export default function OnlineArenaPreview({ mode }) {
     const layout = getModeArenaLayout(mode);
     const radius = layout?.radius || (mode === 'duel' ? 12 : 18);
     scene.background = new THREE.Color(0x081422);
-    if(layout?.imported){imported=createDuelistControlPointArena(THREE);imported.setLayerVisibility('trusses',false);scene.add(imported.root);}
+    if(layout?.escortImported){imported=createEscortArena(scene);escort=createEscortProps(scene);escort.update(0);}
+    else if(layout?.imported){imported=createDuelistControlPointArena(THREE);imported.setLayerVisibility('trusses',false);scene.add(imported.root);}
     const authoredFloor = layout?.footprint ? createArena({ radius, footprint: layout.footprint }) : null;
     if (!imported) {
     if (authoredFloor) {
@@ -83,7 +86,7 @@ export default function OnlineArenaPreview({ mode }) {
     try {
       const created=createSceneRenderer('duelist-adventure',{antialias:false,powerPreference:'low-power'});
       renderer=created.renderer;
-      if(imported){const lights=createSceneLighting(scene);scene.add(lights.sun.target);renderer.toneMapping=THREE.ACESFilmicToneMapping;daylight=applyControlPointDaylight({scene,camera,renderer,lights,materials:imported.materials});}
+      if(imported){const lights=createSceneLighting(scene);scene.add(lights.sun.target);renderer.toneMapping=THREE.ACESFilmicToneMapping;daylight=layout.escortImported?applyEscortDaylight({scene,camera,renderer,lights,environment:imported.environment}):applyControlPointDaylight({scene,camera,renderer,lights,materials:imported.materials});}
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.25));
       renderer.domElement.style.cssText='display:block;width:100%;height:100%';
       renderer.domElement.setAttribute('aria-hidden','true');
@@ -108,7 +111,7 @@ export default function OnlineArenaPreview({ mode }) {
     } catch {setFailed(true);}
     return ()=>{
       active=false;cancelAnimationFrame(frame);observer?.disconnect();
-      daylight?.dispose();imported?.dispose();authoredFloor?.dispose();
+      daylight?.dispose();escort?.dispose();imported?.dispose();authoredFloor?.dispose();
       geometry.dispose();for(const m of materials.values())m.dispose();
       if(renderer){renderer.domElement.remove();destroySceneRenderer(renderer);}
     };
