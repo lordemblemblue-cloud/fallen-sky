@@ -59,7 +59,9 @@ export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
-export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort']);
+// Append new modes to preserve the permanent room IDs (m1 through m7).
+export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort', 'ffa']);
+export const DEFAULT_PUBLIC_ROOMS = Object.freeze(ONLINE_MODES.map((mode, index) => Object.freeze({ id: `m${index + 1}`, mode })));
 // Online is a quick-match action, not a match ruleset or permanent server.
 export const QUICKPLAY_MODES = Object.freeze(['tdm', 'ctf', 'control']);
 export const STORY_MODE = 'story';
