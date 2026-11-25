@@ -33,7 +33,7 @@ import { createProgressStore } from './progress.mjs';
 import { createMission, stepMission, joinMission, leaveMission, missionView, nextMission, MISSIONS, claimStorySupply } from '../../src/components/duelist/sim/mission.mjs';
 import { createAutopilot, thinkAutopilot } from '../../src/components/duelist/sim/autopilot.mjs';
 import { createInputRateLimiter, classById } from '../../src/components/duelist/core/index.mjs';
-import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
+import { PROTOCOL, WS_PATH, TICK_HZ, SNAPSHOT_EVERY, VIEW_EVERY, ONLINE_MODES, DEFAULT_PUBLIC_ROOMS, STORY_MODE, CREW_SIZE, ROOM_CODE, MAX_MESSAGE_BYTES, MAX_MESSAGES_PER_SECOND,
   ABUSE_MESSAGES_PER_SECOND, MAX_WAITING_INPUTS, KEPT_WAITING_INPUTS, RECONNECT_SECONDS, BODY_IDS, QUICKPLAY_MODES, sanitizeInput, encodeFighter, encodeOwn } from '../../src/components/duelist/net/protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
@@ -169,7 +169,10 @@ export function createDuelistServer({ authenticate, host = '0.0.0.0', port = 0, 
   }
 
   // One always-open, bot-filled public server per competitive mode. Extra rooms open only when needed.
-  for (const mode of ONLINE_MODES) openRoom(mode, { permanent: true });
+  for (const { id, mode } of DEFAULT_PUBLIC_ROOMS) {
+    const room = openRoom(mode, { permanent: true });
+    if (room.id !== id) throw new Error('Permanent public room identity mismatch');
+  }
 
   function pickRoom(mode) {
     // the Join button ('any') looks for a match; crews are joined from the story page
