@@ -1,0 +1,20 @@
+/* Quiet HUD styling; host owns position and stacking. */
+.conduit-minimap {
+  box-sizing: border-box; width: clamp(142px, 19vw, 212px);
+  padding: 5px; border: 1px solid rgba(179,190,201,.26); border-radius: 7px;
+  background: rgba(17,23,29,.84); color: #e8edf2; font: 600 10px/1.2 system-ui,sans-serif;
+  user-select: none; pointer-events: none;
+}
+.conduit-minimap-head,.conduit-minimap-key {display:flex;justify-content:space-between;gap:4px;padding:3px 2px;}
+.conduit-minimap-head span:first-child {letter-spacing:.07em;color:#d7b579;}
+.conduit-minimap-map {display:block;width:100%;height:auto;aspect-ratio:1;overflow:hidden;}
+.conduit-minimap-controls {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:3px;pointer-events:auto;}
+.conduit-minimap-controls button {min-width:0;min-height:28px;padding:3px 0;border:1px solid #56606c;border-radius:3px;background:#242b34;color:#e5e9ed;font:inherit;touch-action:manipulation;}
+.conduit-minimap-controls button[aria-pressed="true"] {border-color:#d7b579;background:#4a4031;color:#fff1d7;}
+.conduit-minimap-controls button:focus-visible {outline:2px solid #fff1d7;outline-offset:1px;}
+.conduit-minimap-key {font-size:9px;color:#bec7d0;}
+@media (max-height:500px) and (orientation:landscape) {
+  .conduit-minimap {width:clamp(120px, 17vw, 158px);padding:3px;font-size:9px;}
+  .conduit-minimap-controls button {min-height:28px;}
+  .conduit-minimap-key {display:none;}
+}
