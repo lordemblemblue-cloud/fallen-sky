@@ -4,7 +4,7 @@ import { RefreshCw, Server, Users, ArrowRight, Shield } from 'lucide-react';
 import { MenuShell } from './MenuPages.jsx';
 import { MENU_MODES } from './modes.js';
 import { useLobby } from './useLobby.js';
-import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch } from './serverBrowser.mjs';
+import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch, modeServerDirectory } from './serverBrowser.mjs';
 
 /** Real public servers, not a queue or simulated list of rooms. */
 export default function OnlinePlayPage() {
@@ -14,6 +14,7 @@ export default function OnlinePlayPage() {
     ONLINE_SERVER_MODES.includes(search?.mode) ? search.mode : 'all');
   const lobby = useLobby();
   const rooms = visibleDuelistServers(lobby.matches, mode);
+  const directory = modeServerDirectory(lobby.matches, lobby.online, mode);
 
   const join = (room) => {
     const exactServer = serverJoinSearch(room);
@@ -36,7 +37,7 @@ export default function OnlinePlayPage() {
           <div className="space-y-1">
             <p className="text-xs font-bold uppercase tracking-widest text-amber-200/90">Public servers</p>
             <h2 className="text-xl font-bold text-white">Choose your arena</h2>
-            <p className="text-sm text-white/60">Large battles: up to 20 players per server. Duel remains 1v1.</p>
+            <p className="text-sm text-white/60">Each mode has a planned 100-player server pool with smaller playable arenas. Duel remains 1v1.</p>
           </div>
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-xs uppercase tracking-wide text-white/65">
@@ -59,6 +60,21 @@ export default function OnlinePlayPage() {
           <Server size={17} aria-hidden="true"/> {status}
         </p>
 
+        <div className="grid gap-3" aria-label="Permanent mode servers">
+          {directory.map(entry => (
+            <article key={entry.mode} className="duelist-menu-panel flex flex-wrap items-center justify-between gap-3 p-4">
+              <div>
+                <div className="font-bold text-white">{MENU_MODES[entry.mode]?.title || entry.mode} server</div>
+                <p className="text-xs text-white/60">{entry.mode === 'duel' ? 'One-on-one arenas' : 'Direct-join battle arenas'} · {lobby.online && entry.rooms.length ? entry.rooms.length + ' rooms' : 'Unavailable'}</p>
+              </div>
+              <div className="text-sm text-white/70">{entry.capacity ? (entry.players ?? '—') + ' / ' + entry.capacity : (entry.players ?? '—') + ' online · 100 target'}</div>
+              <button type="button" onClick={() => join(entry.joinable)} disabled={!entry.joinable || !lobby.online}
+                className="rounded border border-amber-300/50 bg-amber-600/80 px-4 py-2 text-sm font-bold text-white disabled:opacity-40">
+                {entry.joinable && lobby.online ? 'Join now' : 'Unavailable'}
+              </button>
+            </article>
+          ))}
+        </div>
         {lobby.online && rooms.length > 0 ? (
           <div className="grid gap-3" role="list" aria-label="Live public servers">
             {rooms.map(room => (

@@ -93,3 +93,13 @@ The server determines capture, ownership, percentages, and winner; clients only 
 placeholder markers. Future map layouts may pass `controlLayout: [{x,z},{x,z},{x,z}]` to
 `createDuelistServer()` or `createMatch()`, with rematch persistence already supported. See
 `docs/duelist/THREE_POINT_CONTROL_QUICKPLAY.md` for the full contract. Multiplayer protocol version is 3.
+
+## Persistent server directory and 100-player mode pools
+
+The Online Play page keeps seven mode entries visible even if the service is unavailable. Counts are only shown when the HTTP lobby responds. A mode pool admits up to **100 reserved human seats across its rooms**, not 100 characters in one arena. Duel remains 2 per room; other modes retain their simulation defaults (including the low-poly district maps). Empty public rooms persist; overflow rooms open when existing rooms fill. Join now selects an exact advertised available room, with no queue. Additional room rows remain individually selectable. Reserved reconnect seats count toward the pool limit. At capacity, joins fail explicitly and no new overflow room is opened.
+
+### Deployment blocker and verification
+
+The Base44 AtomxEveGames sandbox checked on 2026-11-23 had no VITE_DUELIST_WS_URL environment setting or corresponding .env file. The accessible Railway project contains an older Game 2 relay and diagnostic service, not a verified Duelist Adventure match service. Do not point the client at that unrelated host.
+
+Deploy the matching GitHub revision to a dedicated Node service using the repository root, `npm ci` and `node server/duelist/index.mjs`. Use one replica, a secure public domain, PORT supplied by the host, exact Base44 preview/live allowed origins, and the proper account/guest authentication policy. Do not enable the local-test-only guest setting publicly; a production guest-only deployment needs a separately reviewed admission and abuse-protection policy consistent with AGENTS.md. Confirm `GET /status` and `GET /lobby` from the browser origin and verify matching protocol and all seven permanent rooms, then configure `VITE_DUELIST_WS_URL=wss://<verified-host>/ws/duelist` in the Base44 build environment and rebuild. Verify two separate browsers can join the same exact room. Do not claim live availability until those checks pass. No hosting service created or configured by this draft.

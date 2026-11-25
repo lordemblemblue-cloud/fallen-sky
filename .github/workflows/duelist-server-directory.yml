@@ -1,0 +1,26 @@
+name: Duelist server directory
+on:
+  pull_request:
+    paths:
+      - 'server/duelist/**'
+      - 'src/components/duelist/menu/**'
+      - 'src/components/duelist/net/**'
+      - 'tests/duelist-server.test.mjs'
+      - 'tests/duelist-online-server-browser.test.mjs'
+      - '.github/workflows/duelist-server-directory.yml'
+permissions:
+  contents: read
+jobs:
+  directory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/duelist-online-server-browser.test.mjs tests/duelist-server.test.mjs
+      - run: npx eslint src/components/duelist/menu/serverBrowser.mjs src/components/duelist/menu/useLobby.js src/components/duelist/menu/OnlinePlayPage.jsx
+      - run: npm run build

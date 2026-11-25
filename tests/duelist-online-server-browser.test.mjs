@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { URL } from 'node:url';
-import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch } from '../src/components/duelist/menu/serverBrowser.mjs';
+import { ONLINE_SERVER_MODES, visibleDuelistServers, serverJoinSearch, modeServerDirectory } from '../src/components/duelist/menu/serverBrowser.mjs';
 
 const source = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const room = (id, mode, players = 1, seats = 20, open = true) => ({
@@ -46,15 +46,16 @@ test('malformed counts, forged IDs, and stale server entries cannot create a joi
   assert.equal(visibleDuelistServers('not an array').length, 0);
 });
 
-test('browser caps displayed seats and never offers a full or finished room', () => {
+test('browser supports 100-player advertised rooms but keeps individual duels at two', () => {
   const servers = visibleDuelistServers([
     room('m6', 'tdm', 33, 50),
     { ...room('m7', 'duel', 2, 2), open: true },
     { ...room('m8', 'control', 3), phase: 'over' },
   ]);
   assert.equal(servers[0].seats, 2);
-  assert.equal(servers.find(x => x.id === 'm6').seats, 20);
-  assert.equal(servers.every(x => !x.open), true);
+  assert.equal(servers.find(x => x.id === 'm6').seats, 50);
+  assert.equal(servers.find(x => x.id === 'm6').open, true);
+  assert.equal(servers.filter(x => x.id !== 'm6').every(x => !x.open), true);
 });
 
 test('the main menu links to Online Play and no longer auto-joins/queues a selected mode', () => {
@@ -71,3 +72,15 @@ test('the main menu links to Online Play and no longer auto-joins/queues a selec
   assert.match(routes, /'online-play': OnlinePlayPage/);
   assert.match(arena, /from === 'online-play'/);
 });
+
+ test('mode directory persists offline without fabricated occupancy or joinable ids',()=>{
+  const entries=modeServerDirectory(null,false);
+  assert.equal(entries.length,7);
+  assert.ok(entries.every(e=>e.players===null && e.capacity===null && !e.joinable && e.plannedCapacity===100));
+ });
+ test('mode pools aggregate only real rooms with an advertised 100-player limit',()=>{
+  const entries=modeServerDirectory([{...room('m1','tdm',8,8,false),modeCapacity:100},{...room('m2','tdm',3,8),modeCapacity:100}],true,'tdm');
+  assert.equal(entries[0].players,11);
+  assert.equal(entries[0].capacity,100);
+  assert.equal(serverJoinSearch(entries[0].joinable).matchId,'m2');
+ });

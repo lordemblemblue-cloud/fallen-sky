@@ -10,7 +10,7 @@
 // A dropped connection is not the end: the page reconnects by itself and sits back down in its seat with the
 // key the server gave it (a bot or the autopilot plays it meanwhile, for RECONNECT_SECONDS). The key is kept
 // in the tab's session storage too, so a reload sits back down as well; leaving for the menu gives it up.
-/* global window, WebSocket, performance, fetch, setTimeout */
+/* global window, WebSocket, performance, fetch, setTimeout, clearTimeout, AbortController */
 import { createWorld } from '../sim/world.mjs';
 import { createFighter } from '../core/index.mjs';
 import { MODES } from '../sim/match.mjs';
@@ -61,14 +61,16 @@ export function duelistServerUrl() {
 export async function fetchLobby(serverUrl = duelistServerUrl()) {
   if (!serverUrl) return null;
   const url = serverUrl.replace(/^ws(s?):\/\//i, 'http$1://').replace(/\/ws\/duelist$/i, '/lobby');
+  const abort = new AbortController();
+  const timeout = setTimeout(() => abort.abort(), 5000);
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store', signal: abort.signal });
     if (!res.ok) return null;
     const body = await res.json();
     return Array.isArray(body.matches) ? body.matches : null;
   } catch {
     return null;
-  }
+  } finally { clearTimeout(timeout); }
 }
 
 // Development only: a slow connection to try prediction against. In the browser's console:
