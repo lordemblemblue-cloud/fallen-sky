@@ -637,3 +637,29 @@ test('online, a class level is what the server keeps for the account, whatever t
     assert.ok(!a.inbox.some((m) => m.t === 'snap' && (m.events || []).some((e) => e.type === 'xp')), 'what others earn is not broadcast');
   } finally { clearInterval(inputs); }
 });
+
+
+test('continuous permanent arenas advance without players and reset under the same room ID', async () => {
+  const { server } = await start({ speed: 1, continuousPublicRooms: true });
+  try {
+    const rooms = [...server.rooms.values()].filter(room => room.publicRoom);
+    assert.ok(rooms.length >= 7);
+    const initial = rooms.map(room => room.match.world.time);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    rooms.forEach((room, i) => assert.ok(room.match.world.time > initial[i], room.mode));
+    const room = rooms.find(room => room.mode === 'duel');
+    const original = room.match;
+    const id = room.id;
+    // Simulate completion and an elapsed intermission without a real-time 12s wait.
+    original.phase = 'over';
+    room.overAt = performance.now() / 1000 - 13;
+    await new Promise(resolve => setTimeout(resolve, 150));
+    assert.equal(server.rooms.get(id), room);
+    assert.notEqual(room.match, original);
+    assert.equal(room.clients.size, 0);
+    assert.equal(room.match.phase, 'countdown');
+    assert.equal(room.effects.length, 0);
+  } finally {
+    await server.close();
+  }
+});
