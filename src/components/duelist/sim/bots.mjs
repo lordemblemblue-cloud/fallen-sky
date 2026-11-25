@@ -53,7 +53,7 @@ function pickTarget(world, bot, prefer = null) {
     // someone who stood down is out of the fight
     if (other.id === bot.id || other.vitals.dead || other.yielded || (me.team !== null && other.team === me.team)) continue;
     if(world.arenaLayout?.ctfImported&&ctfZone(other.team,bodyOf(world,other.id)))continue;
-    const d = dist(mine, bodyOf(world, other.id)) + (world.arenaLayout?.ctfImported?Math.abs(mine.y-bodyOf(world,other.id).y)*2:0) + (isDown(other, world.time) ? 6 : 0);
+    const d = dist(mine, bodyOf(world, other.id)) + ((world.arenaLayout?.ctfImported||world.arenaLayout?.conduitImported)?Math.abs(mine.y-bodyOf(world,other.id).y)*2:0) + (isDown(other, world.time) ? 6 : 0);
     if (!best || d < best.d) best = { id: other.id, d };
   }
   return best?.id || null;
@@ -119,11 +119,11 @@ input.target = foe?.id || null;
     const destination=goal && ((world.arenaLayout?.ctfImported&&ctfZone(me.team,mine))||d>ENGAGE || Math.abs(mine.y-(theirs?.y??mine.y))>2 || (goal.urgent && !goal.hunt && d>2.6)) ? goal : theirs;
     if(destination && (dist(mine,destination)>2.6 || Math.abs(mine.y-(destination.y??0))>1.2 || !arenaLineClear(world.arenaLayout,mine,destination))){
       const old=bot.importedPath;
-      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||((world.arenaLayout.ctfImported||world.arenaLayout.conduitImported||!old.path.length)&&now>=old.until)){
+      if(!old||Math.hypot(old.target.x-destination.x,old.target.z-destination.z,(old.target.y??0)-(destination.y??0))>3||((world.arenaLayout.ctfImported||!old.path.length)&&now>=old.until)){
         bot.importedPath={target:{...destination},until:now+1,path:world.arenaLayout.conduitImported?conduitBotPath(mine,destination):world.arenaLayout.ctfImported?ctfBotPath(mine,destination,me.team,world.ctfCarriers?.has(bot.id)):world.arenaLayout.escortImported?escortBotPath(mine,destination,me.team,world.escortStage??0):importedBotPath(world.arenaLayout,mine,destination)};
       }
       const path=bot.importedPath.path;
-      while(path.length&&Math.hypot(mine.x-path[0].x,mine.z-path[0].z,mine.y-path[0].y)<.45)path.shift();
+      while(path.length&&Math.hypot(mine.x-path[0].x,mine.z-path[0].z,mine.y-path[0].y)<(world.arenaLayout.conduitImported?.14:.45))path.shift();
       const p=path[0];if(p){const a=angleTo(mine,p);input.move={x:Math.sin(a),z:Math.cos(a)};input.face=a;input.strafe=false;}
       if(me.guard)presses.push('blockUp');return input;
     }
