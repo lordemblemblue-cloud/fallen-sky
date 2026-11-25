@@ -18,7 +18,7 @@ const names={
   'not-available':'Shop is closed','no-match':'Join a match to buy items',
   'active-relic-slot-full':'Only one active relic can be equipped at a time',
   'invalid-tier':'Select a higher valid tier','invalid-recipe':'This recipe cannot be combined',
-  'missing-components':'Own both Tier I components first',
+  'missing-components':'Own both Tier I components first','shop-build-unavailable':'This room needs the updated shop host. No gold was spent.',
 };
 const toggle=(set,id)=>set(old=>old.includes(id)?old.filter(x=>x!==id):[...old,id]);
 function Coin({value}) { return <span className="bs-coin"><span aria-hidden="true">◉</span> {value}</span>; }
@@ -58,7 +58,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
   const destinations=buildsInto(item.id);
   const items=useMemo(()=>filterShopItems(me,{stats,statuses,search,matchAll}),[me,stats,statuses,search,matchAll]);
   const select=(id,t=null)=>{setSelectedId(id);setSelectedTier(t);setMobilePane('build');};
-  const buy=(combine=false)=>{const wanted=combine?3:tier;const q=shopQuote(me,item.id,wanted,combine);if(q.ok)onBuy(item.id,wanted===current+1&&!combine?undefined:wanted,combine);};
+  const buy=(combine=false)=>{const wanted=combine?3:tier;const q=shopQuote(me,item.id,wanted,combine);if(q.ok)onBuy(item.id,wanted,combine);};
   return <section className="duelist-shop bs-shop" role="dialog" aria-modal="true" aria-label="In-match item shop" data-mobile-pane={mobilePane}>
     <header className="duelist-shop-head bs-head">
       <div className="bs-title"><span aria-hidden="true">◇</span><strong>Battle Shop</strong><small>Match equipment · Tier III unlocks passive</small></div>
@@ -79,7 +79,7 @@ export default function ShopPanel({ me, answer, onBuy, onClose }) {
           const group=items.filter(it=>it.category===cat);
           return group.length>0&&<section className="bs-category-row" key={cat}><h3><span aria-hidden="true">{CATEGORY_ICONS[cat]}</span> {cat}</h3>
             <div className="bs-item-grid">{group.map(it=>{const level=itemTier(owned,it.id);return <button type="button" key={it.id} className="bs-item" aria-pressed={item.id===it.id} onClick={()=>select(it.id)}>
-              <ItemIcon item={it} tier={level||1}/><span>{it.name}</span><small>{level===3?'Complete':<Coin value={nextPrice(it,level)}/>}</small>
+              <ItemIcon item={it} tier={level||3}/><span>{it.name}</span><small>{level===3?'Complete':<Coin value={nextPrice(it,level)}/>}</small>
             </button>;})}</div></section>;
         })}
       </div>
