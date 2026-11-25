@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady, sceneRendererApi } from '../../../lib/webgpuSceneRenderer.js';
+import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady, sceneRendererApi, onSceneDeviceLost } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
 import { prepareIdlePreview } from './idlePreview.mjs';
 
@@ -15,9 +15,9 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount || typeof window === 'undefined') return undefined;
-    let renderer;
+    let renderer, ready;
     try {
-      renderer = createSceneRenderer('duelist-adventure', { alpha: true, antialias: true, powerPreference: 'low-power' }).renderer;
+      ({ renderer, ready } = createSceneRenderer('duelist-adventure', { alpha: true, antialias: true, powerPreference: 'low-power' }));
     } catch (error) {
       if (headquarters) onHqStatus?.({ state: 'fallback', message: String(error?.message || error).slice(0, 200) });
       return undefined;
@@ -31,12 +31,16 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     let hq = null;
     let reportElapsed = 0;
     let hqFailed = false;
+    let gpuFailed = false;
+    let hqFramed = headquarters;
+    let modelOrigin = null;
     const clock = new THREE.Clock();
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x071426, 0.026);
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 90);
     camera.position.set(0, 1.65, 5.8);
     camera.lookAt(-0.6, 1.18, 0);
+    if (headquarters) { camera.position.set(0, 1.25, 5.76); camera.fov = 62; camera.lookAt(0, 1.4, -2.88); camera.updateProjectionMatrix(); }
 
     renderer.setClearColor(0x020711, 0);
     renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
@@ -50,6 +54,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
 
     const world = new THREE.Group();
     scene.add(world);
+    world.visible = !headquarters;
     const steel = new THREE.MeshStandardMaterial({ color: 0x17283a, metalness: 0.78, roughness: 0.35 });
     const darker = new THREE.MeshStandardMaterial({ color: 0x091323, metalness: 0.7, roughness: 0.48 });
     const cyan = new THREE.MeshBasicMaterial({ color: 0x29b5ef });
@@ -115,7 +120,8 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       if (!active) { prepared.dispose(); return; }
       model = next;
       model.position.x -= 1.48;
-      model.rotation.y = 0; // Assets are authored facing +Z, toward the camera.
+      modelOrigin = model.position.clone();
+      placeFighter();
       idlePose = prepared;
       scene.add(model); // reveal only after an authored idle or relaxed fallback was applied
     }).catch(() => {
@@ -138,13 +144,32 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     }
 
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const originalCamera = camera.position.clone();
+    const originalCamera = new THREE.Vector3(0, 1.65, 5.8);
+    function placeFighter() {
+      if (!model || !modelOrigin) return;
+      model.position.copy(modelOrigin);
+      if (hqFramed) {
+        model.position.x += 1.48;
+        model.position.z += 1.44; // HQ floor emblem at (0, 0, 4) scaled by .36.
+      }
+      model.rotation.y = Math.atan2(camera.position.x - model.position.x, camera.position.z - model.position.z);
+    }
     function showOriginal() {
-      world.visible = true;
-      camera.position.copy(originalCamera);
-      camera.fov = 42;
-      camera.lookAt(-0.6, 1.18, 0);
+      hqFramed = headquarters;
+      scene.background = null;
+      world.visible = !headquarters;
+      portal.visible = true;
+      if (headquarters) {
+        camera.position.set(0, 1.25, 5.76);
+        camera.fov = 62;
+        camera.lookAt(0, 1.4, -2.88);
+      } else {
+        camera.position.copy(originalCamera);
+        camera.fov = 42;
+        camera.lookAt(-0.6, 1.18, 0);
+      }
       camera.updateProjectionMatrix();
+      placeFighter();
     }
     function failHQ(error) {
       hqFailed = true;
@@ -153,32 +178,45 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       showOriginal();
       onHqStatus?.({ state: 'fallback', message: String(error?.message || error).slice(0, 200) });
     }
-    // Load the opt-in environment only in the browser, only on HOME. The existing
+    function failGPU(error) {
+      if (!active || gpuFailed) return;
+      gpuFailed = true;
+      failHQ(error);
+      renderer.domElement.style.visibility = 'hidden';
+      if (frameId != null) window.cancelAnimationFrame(frameId);
+    }
+    const removeLossListener = onSceneDeviceLost(renderer, failGPU);
+    ready?.catch(failGPU);
+    // Load the default Home environment only in the browser, only on HOME. The existing
     // character, scene, renderer, and single RAF remain the owners of rendering.
     if (headquarters) {
       onHqStatus?.({ state: 'loading' });
       import('./experimentalGuildHQ.js').then(({ createGuildHeadquarters }) => {
-        if (!active) return;
+        if (!active || gpuFailed) return;
         hq = createGuildHeadquarters(THREE, scene, {
           quality: window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'performance',
-          onFallback: (still) => { if (still && active) { showOriginal(); onHqStatus?.({ state: 'fallback', message: 'Sustained slow frames: original hangar restored.' }); } },
+          onFallback: (still) => { if (still && active) { showOriginal(); onHqStatus?.({ state: 'fallback', message: 'Sustained slow frames: stationary HQ retained behind fighter.' }); } },
         });
         // Fit the 36m scene into the existing avatar camera's coordinate space.
         hq.root.scale.setScalar(0.36);
         world.visible = false;
-        camera.fov = 52;
-        camera.lookAt(-0.6, 1.25, -0.5);
+        hqFramed = true;
+        scene.background = new THREE.Color(0xb5d5eb);
+        camera.position.set(0, 1.25, 5.76);
+        camera.fov = 62;
+        camera.lookAt(0, 1.4, -2.88);
         camera.updateProjectionMatrix();
+        placeFighter();
         if (reducedMotion) hq.setAmbientSystemsEnabled(false);
       }).catch(error => { if (active) failHQ(error); });
     }
     const tick = () => {
-      if (!active) return;
+      if (!active || gpuFailed) return;
       const elapsed = clock.getDelta();
       const dt = Math.min(0.05, elapsed);
       if (!document.hidden) {
         idlePose?.update(dt);
-        if (!reducedMotion) {
+        if (!reducedMotion && world.visible) {
           portal.rotation.z += dt * 0.08;
           ticks.rotation.z -= dt * 0.18;
           platformRing.rotation.z += dt * 0.1;
@@ -201,7 +239,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
           } catch (error) {
             if (hq) failHQ(error);
             else if (headquarters && !hqFailed) failHQ(error);
-            else { active = false; return; }
+            else { failGPU(error); return; }
           }
         }
       }
@@ -212,6 +250,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     return () => {
       active = false;
       if (frameId != null) window.cancelAnimationFrame(frameId);
+      removeLossListener();
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
       hq?.disposeGuildHeadquarters();
@@ -226,5 +265,5 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     };
   }, [fighter, classId, headquarters, onHqStatus]);
 
-  return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" />;
+  return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" style={headquarters ? { background: 'url(/duelist-hq-v4-poster.svg) center / cover no-repeat', pointerEvents: 'none' } : undefined} />;
 }
