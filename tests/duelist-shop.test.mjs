@@ -76,7 +76,7 @@ test('item bonuses are implemented in authoritative fighter state and replicated
   assert.equal(f.items.length,2);
   equipItems(f,[{id:'windblossom',tier:1},{id:'heartseed',tier:1}]);
   assert.equal(f.shopStats.passive.onAllyHealHaste,0);
-  assert.equal(PROTOCOL,13);
+  assert.equal(PROTOCOL,14);
   const own = encodeOwn(f,{x:0,y:0,z:0,yaw:0,vy:0,kx:0,kz:0,motion:null},0);
   const copy = createFighter({id:'copy',classId:'healer'});
   applyOwn(copy,{x:0,y:0,z:0,yaw:0,vy:0,kx:0,kz:0},JSON.parse(JSON.stringify(own)));
