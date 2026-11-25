@@ -16,6 +16,7 @@ import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
 import { createSidearm, createAimLine } from './sidearm.mjs';
 import { dressGuard } from './guardKit.mjs';
 import { createFighterAnimator } from './animator.mjs';
+import { createDuelistControlPointArena } from './maps/controlPointArena.mjs';
 import { createArena, createSceneLighting } from './arena.mjs';
 import { createModeArchitecture } from './modeArchitecture.mjs';
 import { arenaRayFraction, arenaLineClear } from '../sim/modeArenaLayout.mjs';
@@ -286,6 +287,17 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       arenaMode = key;
       architecture?.dispose(); architecture = null;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
+      if (!level && world.arenaLayout?.imported) {
+        const imported = createDuelistControlPointArena(THREE);
+        imported.setLayerVisibility('trusses',false);
+        scene.background.setHex(0x080b10);scene.fog=null;
+        lights.hemi.color.setHex(0xdbeafe);lights.hemi.groundColor.setHex(0x1e293b);lights.hemi.intensity=1.35;
+        lights.sun.color.setHex(0xfffbeb);lights.sun.intensity=1.45;lights.sun.position.set(95,185,110);lights.sun.castShadow=false;
+        lights.rimLight.intensity=0;for(const fill of lights.fills)fill.intensity=0;
+        renderer.shadowMap.enabled=false;
+        const updatePoints=points=>{for(const cp of imported.capturePoints){const point=points?.find(p=>p.id===cp.letter);if(!point)continue;const color=point.contested?0xfbbf24:point.owner==='red'?0xef4444:point.owner==='blue'?0x3b82f6:0xdbeafe;cp.outerRingMesh.material=point.contested?imported.materials.contestedCaptureEmissive:point.owner==='red'?imported.materials.redTeamEmissive:point.owner==='blue'?imported.materials.blueTeamEmissive:imported.materials.neutralCaptureEmissive;const progressColor=new THREE.Color(point.capturing==='red'?0xef4444:point.capturing==='blue'?0x3b82f6:color);for(let i=0;i<24;i++)cp.segmentInstancedMesh.setColorAt(i,i<Math.round(point.progress*24)?progressColor:new THREE.Color(0x101724));cp.segmentInstancedMesh.instanceColor.needsUpdate=true;}};
+        arena={group:imported.root,dispose:imported.dispose,arc(){},update(){},updatePoints};scene.add(arena.group);return;
+      }
       arena = level ? createDepot({ level, def: source.def, scene, lights }) : createArena({ radius: MODES[m]?.arena || 18, footprint: world.arenaLayout?.footprint });
       scene.add(arena.group);
       if(!level && world.arenaLayout){architecture=createModeArchitecture(m, world.arenaLayout);if(architecture?.layout.id===world.arenaLayout.id)arena.group.add(architecture.group);else {architecture?.dispose();architecture=null;}}
@@ -622,7 +634,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         }
         if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
         if (!escort && source.mode === 'escort') escort = createEscortProps(scene);
-        if (!control && source.mode === 'control') control = createControlProps(scene, MODES.control.arena);
+        if (!control && source.mode === 'control' && !world.arenaLayout?.imported) control = createControlProps(scene, MODES.control.arena);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
           const at = bodyOf(world, mineId);
@@ -774,7 +786,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
           const view = source.view();
           const inMatch = !!view && !view.mission;
           if (inMatch) feed.view(view, clock, hudContext());
-          control?.update(view?.controlPoints);
+          control?.update(view?.controlPoints);arena.updatePoints?.(view?.controlPoints);
           if (level) lastView = view;
           const line = view?.comms || null;
           const said = line ? `${line.speaker}\n${line.text}` : null;

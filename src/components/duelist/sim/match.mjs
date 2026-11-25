@@ -24,6 +24,7 @@ import { makeBall, stepFootball } from './football.mjs';
 import { CONTROL, makeControlPoints, stepControlPoints, controlPointView } from './control.mjs';
 
 import { makeEscort, stepEscort, ESCORT_RADIUS } from './escort.mjs';
+import { importedSpawn } from './importedControlLayout.mjs';
 import { getModeArenaLayout } from './modeArenaLayout.mjs';
 
 export const TEAMS = Object.freeze(['red', 'blue']);
@@ -50,8 +51,8 @@ const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
  */
 export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist', players = [], seats = null, controlLayout = null, testMode = false } = {}) {
   const def = MODES[mode] || MODES.practice;
-  const arenaLayout = getModeArenaLayout(def.id);
-  const world = createWorld({ arenaRadius: def.arena, arenaLayout });
+  const arenaLayout = getModeArenaLayout(def.id,testMode);
+  const world = createWorld({ arenaRadius: arenaLayout?.radius ?? def.arena, arenaLayout });
   const match = {
     mode: def.id, def, world, testMode, seed, botLevel, random: createRandom(seed * 7919 + 13),
     capacity: Math.max(players.length, arenaLayout ? Math.min(seats ?? def.seats, arenaLayout.capacity) : seats ?? def.seats),
@@ -61,7 +62,7 @@ export function createMatch({ mode = 'practice', seed = 1, botLevel = 'duelist',
     flags: def.flags ? makeFlags(def) : null,
     escort: def.id === 'escort' ? makeEscort() : null,
     ball: def.football ? makeBall() : null,
-    controlPoints: def.control ? makeControlPoints(def.arena, controlLayout ?? arenaLayout?.controlPoints) : null,
+    controlPoints: def.control ? makeControlPoints(arenaLayout?.radius ?? def.arena, controlLayout ?? arenaLayout?.controlPoints) : null,
     feed: [], events: [], winner: null, nextBot: 1,
   };
   for (const p of players) seat(match, { ...p, kind: 'player' });
@@ -87,6 +88,7 @@ function lighterTeam(match) {
 function spawnFor(match, id, team) {
   const { def, world } = match;
   const R = def.arena;
+  if(world.arenaLayout?.imported && team)return importedSpawn(world.arenaLayout,team,world.bodies,id);
   if (world.arenaLayout?.footprint && team) {
     const side = team === 'red' ? -1 : 1;
     return { x: side * 13.5 + (match.random() - 0.5) * 1.6, z: 18.5, yaw: Math.PI };
@@ -448,6 +450,7 @@ export function stepMatch(match, dt, inputs = {}) {
     if (f) f.meter = s.classId ? s.specialMeter : 0;
   }
   const effects = step(world, dt, all);
+  if(world.arenaLayout?.imported)for(const s of match.seats.values()){const b=bodyOf(world,s.id);if(b && b.y < -18)spawnSeat(match,s,match.def.protect);}
   // Assists are awarded only for server-verified impacts from the last eight seconds.
   for (const e of effects) {
     if (e.type !== 'impact' || !(e.hp > 0 || e.shield > 0 || e.will > 0) || !e.attacker || !e.defender) continue;

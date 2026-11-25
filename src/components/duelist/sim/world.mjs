@@ -662,9 +662,9 @@ function moveBody(world, fighter, body, dt, now) {
   } else if (a?.id === 'airDash' && a.t <= a.move.active && body.y > 0) {
     // Pause vertical movement during the short horizontal burst, then resume normal gravity.
     body.vy = 0;
-  } else if (body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
+  } else if (world.arenaLayout?.imported || body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
     body.vy -= GRAVITY * dt;
-    body.y = Math.max(0, body.y + body.vy * dt);
+    body.y = world.arenaLayout?.imported ? body.y + body.vy * dt : Math.max(0, body.y + body.vy * dt);
     if (body.y === 0) body.vy = 0;
   }
   if (world.level && body.y > ROOM_HEADROOM) { body.y = ROOM_HEADROOM; body.vy = Math.min(body.vy, 0); }
@@ -679,6 +679,7 @@ function moveBody(world, fighter, body, dt, now) {
 // the arena's edge, or the rooms' walls
 function keepInside(world, body) {
   if (world.level) { resolveCircle(world.level, body, BODY_RADIUS); return; }
+  if(world.arenaLayout?.imported)return;
   if(world.arenaLayout?.footprint){recoverArenaFootprint(world.arenaLayout,body,BODY_RADIUS);return;}
   const r = Math.hypot(body.x, body.z);
   const limit = world.arenaRadius - BODY_RADIUS;
