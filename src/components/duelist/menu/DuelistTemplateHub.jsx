@@ -118,12 +118,13 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
               {startSolo ? <button type="button" className={'dxt-action ' + (category === 'practice' ? 'dxt-action--primary' : 'dxt-action--secondary')}
                 onClick={() => launch(mode.id)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PLAY OFFLINE'}</button>
                 : <button type="button" className="dxt-action dxt-action--secondary" disabled><LockKeyhole aria-hidden="true"/> UNAVAILABLE</button>}
+              {category === 'practice' && supported && <button type="button" className="dxt-action dxt-action--secondary" onClick={()=>openServers('practice')}><Users aria-hidden="true"/> SHARED PRACTICE</button>}
               {category === 'normal' && <button type="button" className="dxt-action dxt-action--primary" onClick={() => openServers(mode.route)}
                 disabled={!canOnline} title={!canOnline ? 'Choose a supported casual mode' : 'Browse live servers for this mode'}>
                 <Users aria-hidden="true"/> BROWSE SERVERS
               </button>}
             </div>
-            {supported && <p className="dxt-play-hint">{category === 'practice' ? 'Offline training · No matchmaking' : 'Join a room directly. No queue.'}</p>}
+            {supported && <p className="dxt-play-hint">{category === 'practice' ? 'Solo training or join a shared practice room' : 'Join a room directly. No queue.'}</p>}
             {supported && category === 'normal' &&
               <Link className="dxt-mode-help" to="/duelist-next/$page" params={{ page: mode.route }}>
                 Rules &amp; game mode details <ArrowRight size={15} aria-hidden="true"/>
@@ -250,13 +251,13 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
   const launch = (id) => {
     const search = templateLaunch(category, id);
     if (!search) return;
-    navigate({ to: '/duelist-next/play', search: { ...search, from: 'duelist' } });
+    navigate({ to: '/duelist-next/play', search: { ...search, ...(category === 'practice' ? { training: 1 } : {}), from: 'duelist' } });
   };
   // Selecting a mode only changes its details. Online play always goes through
   // the real server browser, where a player chooses an exact room ID.
   const chooseMode = id => setMode(id);
   const openServers = modeId => {
-    if (!MENU_MODES[modeId]?.online) return;
+    if (modeId !== 'practice' && !MENU_MODES[modeId]?.online) return;
     navigate({ to: '/duelist-next/$page', params: { page: 'online-play' }, search: { mode: modeId } });
   };
   useEffect(() => {
