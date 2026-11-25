@@ -1,3 +1,4 @@
+import {createConduitArena} from './maps/conduitArena.mjs';
 import {createIndustrialCtfArena,applyIndustrialCtfLighting} from './maps/industrialCtfArena.mjs';
 // Duelist Adventure (new build): one match in the arena (practice, duel, free for all, team deathmatch or
 // capture the flag), played in the browser against bots (client/localSource.mjs) or online on the match
@@ -290,6 +291,10 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       arenaMode = key;
       architecture?.dispose(); architecture = null;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
+      if (!level && world.arenaLayout?.conduitImported) {
+        const imported=createConduitArena(scene,{quality:'low',enableLights:true});
+        arena={group:imported.root,dispose(){imported.dispose();},arc(){},update(dt,{view}={}){imported.updateVisuals(world.time);const states=view?.conduitPickups;for(const p of states??[])imported.setPickupAvailable(p.id,p.available);}};return;
+      }
       if (!level && world.arenaLayout?.ctfImported) {
         const imported=createIndustrialCtfArena(scene,{textureResolution:1024});
         const lighting=applyIndustrialCtfLighting({scene,camera,renderer,lights});
@@ -796,7 +801,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
           const inMatch = !!view && !view.mission;
           if (inMatch) feed.view(view, clock, hudContext());
           control?.update(view?.controlPoints);arena.updatePoints?.(view?.controlPoints);
-          if (level) lastView = view;
+          if (level || world.arenaLayout?.conduitImported) lastView = view;
           const line = view?.comms || null;
           const said = line ? `${line.speaker}\n${line.text}` : null;
           if (said !== lineShown) {
