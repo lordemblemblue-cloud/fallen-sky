@@ -1,4 +1,5 @@
 import { Actor } from 'base44:runtime/actors';
+import { PROTOCOL } from '../src/components/duelist/net/protocol.mjs';
 import { DuelistRoomEngine } from '../src/components/duelist/net/actorRoomEngine.mjs';
 export default class DuelistArena extends Actor {
   static callable=['status'];
@@ -14,6 +15,6 @@ export default class DuelistArena extends Actor {
   handleClose(conn){this.engine.remove(conn.id);}
   shouldTick(){return !!this.engine?.shouldTick();}
   handleTick(){this.engine.tick();}
-  status(){return {protocol:14,room:this.engine.status()};}
+  status(){return {protocol:PROTOCOL,room:this.engine.status()};}
 }
 

@@ -67,7 +67,7 @@ test('the main menu links to Online Play and no longer auto-joins/queues a selec
   assert.match(hub, /const chooseMode = id => setMode\(id\)/);
   assert.doesNotMatch(hub, /'QUEUE'/);
   assert.match(page, /serverJoinSearch\(room\)/);
-  assert.match(page, /lobby\.online && exactServer/);
+  assert.match(page, /if \(exactServer\)/);
   assert.match(routes, /'online-play': OnlinePlayPage/);
   assert.match(arena, /from === 'online-play'/);
 });
@@ -84,9 +84,9 @@ test('the main menu links to Online Play and no longer auto-joins/queues a selec
 });
 
 
-test('every unconfirmed official arena offers a separate same-mode local match, not a fake online room', () => {
+test('unconfirmed official arenas support exact direct connection attempts and separate local matches', () => {
   for (const card of persistentServerCards(null)) {
-    assert.equal(serverJoinSearch(card), null);
+    assert.deepEqual(serverJoinSearch(card), {mode:card.mode,online:1,matchId:card.id,from:'online-play'});
     assert.deepEqual(localArenaSearch(card), { mode: card.mode, online: 0, from: 'online-play' });
   }
   assert.equal(localArenaSearch({ mode: 'story' }), null);
