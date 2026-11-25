@@ -8,6 +8,7 @@ import { duelistServerUrl } from '@/components/duelist/net/client.mjs';
 import { MENU_MODES } from '@/components/duelist/menu/modes';
 import { missionTitle } from '@/components/duelist/menu/missions';
 import '@/components/duelist/menu/duelistUnifiedVisual.css';
+import '@/components/duelist/menu/duelistSapphire.css';
 
 // Duelist Adventure's arena (the new build): the match the menus chose, with your saved fighter and settings.
 // mode: practice | duel | ffa | tdm | ctf | football | control | online | any (Join) | story (mission: which);

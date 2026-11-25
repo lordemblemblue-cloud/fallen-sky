@@ -27,6 +27,7 @@ import './duelistTemplateUI.css';
 import './duelistDarkBlueTheme.css';
 import './duelistMobileUI.css';
 import './duelistPlayReference.css';
+import './duelistSapphire.css';
 
 const MODE_ICONS = { swords: Swords, flag: Flag, truck: Truck, users: Users, target: Target,
   zap: Zap, circle: CircleDot, shield: Shield, trophy: Trophy, search: Search, eye: Eye, settings: Settings };
