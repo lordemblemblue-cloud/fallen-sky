@@ -1149,8 +1149,9 @@ export function createRoadwayShell(positions, thickness=.38){
           lamp.position.set(lx, gwH - 1.2, 0);
           gwGroup.add(lamp);
 
-          const wp = gwPt.clone().addScaledVector(gwRight, lx);
-          this._registerBoxObstacle(wp.x - 1.2, wp.x + 1.2, gwPt.y, gwPt.y + gwH, wp.z - 1.2, wp.z + 1.2, `CP1_BridgeGatePillar_${idx}`, 'Phase3');
+          gwGroup.updateMatrixWorld(true);
+          const bounds=new THREE.Box3().setFromObject(p);
+          this._registerBoxObstacle(bounds.min.x,bounds.max.x,bounds.min.y,bounds.max.y,bounds.min.z,bounds.max.z,`CP1_BridgeGatePillar_${idx}`,'Phase3');
         });
         const gwHeader = new THREE.Mesh(new THREE.BoxGeometry(gwHalfSpan * 2 + 2.4, 1.2, 2.6), this.mats.darkWall);
         gwHeader.position.set(0, gwH + 0.4, 0);
@@ -1293,8 +1294,9 @@ export function createRoadwayShell(positions, thickness=.38){
           const pillar = new THREE.Mesh(new THREE.BoxGeometry(2.0, bayH, 2.4), this.mats.darkWall);
           pillar.position.set(lx, bayH * 0.5, 0);
           bayGroup.add(pillar);
-          const wp = bayPt.clone().addScaledVector(bayRight, lx);
-          this._registerBoxObstacle(wp.x - 1.2, wp.x + 1.2, bayPt.y, bayPt.y + bayH, wp.z - 1.2, wp.z + 1.2, `PointB_BayPillar_${idx}`, 'Phase5');
+          bayGroup.updateMatrixWorld(true);
+          const bounds=new THREE.Box3().setFromObject(pillar);
+          this._registerBoxObstacle(bounds.min.x,bounds.max.x,bounds.min.y,bounds.max.y,bounds.min.z,bounds.max.z,`PointB_BayPillar_${idx}`,'Phase5');
         });
         const bayHeader = new THREE.Mesh(new THREE.BoxGeometry(bayHalfW * 2 + 2.4, 1.2, 2.6), this.mats.darkWall);
         bayHeader.position.set(0, bayH + 0.3, 0);
