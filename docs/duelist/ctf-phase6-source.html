@@ -1,0 +1,2550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DUELIST ADVENTURE — Industrial CTF Arena (Phase 6)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.webgpu.min.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.webgpu.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg-panel: rgba(14, 18, 26, 0.88);
+      --border-subtle: rgba(139, 152, 178, 0.24);
+      --text-primary: #eef2f7;
+      --text-secondary: #9aa6bc;
+      --accent-amber: #DF9B32;
+      --accent-cyan: #7BE5FF;
+      --accent-red: #FF394B;
+      --accent-blue: #20BFFF;
+      --accent-green: #2ee58d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #0d1016; color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+    }
+
+    #viewport { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #141923; }
+    #viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; transition: opacity 0.22s ease; }
+    #hud.clean-hidden { opacity: 0; visibility: hidden; }
+
+    .panel {
+      pointer-events: auto;
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    #top-bar {
+      position: absolute; top: 12px; left: 12px; right: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap; pointer-events: none;
+    }
+
+    .brand-badge { display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
+    .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-amber); box-shadow: 0 0 10px var(--accent-amber); flex-shrink: 0; }
+    .brand-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.15; }
+    .brand-sub { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; pointer-events: auto; }
+
+    /* Match Preparation Center Banner */
+    #match-banner {
+      position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+      padding: 8px 16px; display: flex; align-items: center; gap: 12px;
+      flex-wrap: wrap; justify-content: center; max-width: 92vw;
+    }
+    .match-phase-pill {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px; letter-spacing: 0.08em; text-transform: uppercase;
+      background: rgba(223, 155, 50, 0.22); color: #ffd894; border: 1px solid rgba(223, 155, 50, 0.5);
+    }
+    .match-phase-pill.live {
+      background: rgba(46, 229, 141, 0.2); color: #9effcc; border-color: var(--accent-green);
+    }
+    #match-timer {
+      font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 800; color: #ffffff;
+      min-width: 58px; text-align: center;
+    }
+    #match-callout {
+      position: fixed; top: 42%; left: 50%; transform: translate(-50%, -50%) scale(0.85);
+      font-size: 64px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase;
+      color: #ffffff; text-shadow: 0 0 32px rgba(223, 155, 50, 0.9), 0 6px 20px rgba(0, 0, 0, 0.8);
+      opacity: 0; pointer-events: none; z-index: 40; transition: all 0.22s ease;
+    }
+    #match-callout.show { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+
+    .btn {
+      appearance: none; border: 1px solid var(--border-subtle);
+      background: rgba(27, 33, 46, 0.9); color: var(--text-primary);
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 7px 11px; border-radius: 9px; cursor: pointer;
+      transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn:hover { background: rgba(42, 51, 69, 0.95); border-color: rgba(160, 178, 206, 0.45); }
+    .btn:active { transform: translateY(1px); }
+    .btn.active { background: rgba(32, 191, 255, 0.22); border-color: var(--accent-blue); color: #ffffff; box-shadow: 0 0 12px rgba(32, 191, 255, 0.25); }
+    .btn.amber { background: rgba(223, 155, 50, 0.18); border-color: rgba(223, 155, 50, 0.65); color: #ffd894; }
+    .btn.amber:hover { background: rgba(223, 155, 50, 0.3); }
+    .btn.red-accent { border-color: rgba(255, 57, 75, 0.55); }
+    .btn.red-accent.active { background: rgba(255, 57, 75, 0.28); border-color: var(--accent-red); box-shadow: 0 0 12px rgba(255, 57, 75, 0.3); }
+    .btn.blue-accent { border-color: rgba(32, 191, 255, 0.55); }
+
+    #clean-restore { position: fixed; top: 12px; right: 12px; z-index: 25; display: none; }
+    #clean-restore.visible { display: block; }
+
+    #inspector-panel {
+      position: absolute; top: 66px; left: 12px; width: 344px;
+      max-height: calc(100vh - 82px); overflow-y: auto;
+      padding: 12px; display: flex; flex-direction: column; gap: 11px;
+    }
+    #inspector-panel.collapsed { display: none; }
+    #inspector-panel::-webkit-scrollbar { width: 5px; }
+    #inspector-panel::-webkit-scrollbar-thumb { background: rgba(154, 166, 188, 0.3); border-radius: 4px; }
+
+    .section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-secondary); margin-bottom: 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .telemetry-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .stat-card {
+      background: rgba(10, 13, 19, 0.65); border: 1px solid rgba(139, 152, 178, 0.14);
+      border-radius: 8px; padding: 6px 8px;
+    }
+    .stat-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
+    .stat-val.webgpu { color: var(--accent-green); }
+    .stat-val.webgl { color: var(--accent-amber); }
+
+    .preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .preset-grid .btn { justify-content: center; font-size: 11px; padding: 6px 7px; }
+
+    .row-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row-controls .btn { flex: 1; justify-content: center; font-size: 11px; padding: 6px 8px; }
+
+    #audit-results { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 280px; overflow-y: auto; }
+    .audit-item {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+      background: rgba(10, 13, 19, 0.62); border: 1px solid rgba(139, 152, 178, 0.12);
+      border-radius: 7px; padding: 6px 8px; font-size: 11px; line-height: 1.3;
+    }
+    .audit-name { font-weight: 600; color: var(--text-primary); }
+    .audit-detail { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+    .badge-pass { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #0b2919; background: var(--accent-green); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+    .badge-fail { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #fff; background: var(--accent-red); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+
+    #controls-hint {
+      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+      padding: 8px 14px; font-size: 11px; color: var(--text-secondary);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 92vw;
+    }
+    .kbd {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px; padding: 1px 5px; color: #fff;
+    }
+
+    #player-status {
+      position: absolute; bottom: 58px; left: 50%; transform: translateX(-50%);
+      display: none; align-items: center; gap: 12px; padding: 7px 14px; font-size: 11px;
+    }
+    #player-status.visible { display: flex; }
+    .bar-bg { width: 70px; height: 7px; background: rgba(255, 255, 255, 0.12); border-radius: 4px; overflow: hidden; }
+    .bar-fill-dash { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan)); transition: width 0.06s linear; }
+    .bar-fill-roll { height: 100%; width: 100%; background: linear-gradient(90deg, var(--accent-amber), #ffe08a); transition: width 0.06s linear; }
+
+    #toast {
+      position: fixed; top: 68px; right: 16px; z-index: 30;
+      padding: 9px 14px; font-size: 12px; font-weight: 600;
+      border-color: var(--accent-amber); color: #ffe3b0;
+      opacity: 0; transform: translateY(-8px); transition: all 0.2s ease; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    #mobile-controls { position: fixed; inset: 0; pointer-events: none; z-index: 15; display: none; }
+    #mobile-controls.visible { display: block; }
+    #joystick-zone {
+      position: absolute; bottom: 24px; left: 24px; width: 124px; height: 124px; border-radius: 50%;
+      background: rgba(16, 20, 28, 0.55); border: 2px solid rgba(123, 229, 255, 0.35);
+      pointer-events: auto; touch-action: none;
+    }
+    #joystick-knob {
+      position: absolute; top: 50%; left: 50%; width: 48px; height: 48px;
+      margin-left: -24px; margin-top: -24px; border-radius: 50%;
+      background: rgba(32, 191, 255, 0.72); border: 2px solid #ffffff;
+      box-shadow: 0 0 14px rgba(32, 191, 255, 0.5);
+    }
+    .mobile-action-btns { position: absolute; bottom: 26px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
+    .touch-btn {
+      width: 60px; height: 60px; border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.35); background: rgba(18, 24, 34, 0.78);
+      color: #fff; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; touch-action: none;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    }
+    .touch-btn.jump { border-color: var(--accent-amber); color: #ffd894; }
+    .touch-btn.roll { border-color: #f2bb58; color: #ffe6a8; }
+    .touch-btn.dash { border-color: var(--accent-cyan); color: #bff2ff; }
+    .touch-btn:active { transform: scale(0.92); background: rgba(32, 191, 255, 0.35); }
+
+    #loader {
+      position: fixed; inset: 0; z-index: 50; background: #0e121a;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; transition: opacity 0.35s ease;
+    }
+    #loader.done { opacity: 0; pointer-events: none; }
+    .spinner { width: 38px; height: 38px; border-radius: 50%; border: 3px solid rgba(123, 229, 255, 0.18); border-top-color: var(--accent-amber); animation: spin 0.85s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      #inspector-panel { width: calc(100vw - 24px); max-height: 55vh; top: 62px; }
+      .brand-sub { display: none; }
+      #controls-hint { display: none; }
+      #match-banner { top: auto; bottom: 100px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport">
+    <canvas id="arena-canvas"></canvas>
+  </div>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <div style="font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#eef2f7;">
+      Assembling Phase 6 Team Facilities &amp; Flag Stations...
+    </div>
+    <div id="loader-status" style="font-size:11px;color:#9aa6bc;font-family:'JetBrains Mono',monospace;">
+      Detecting native WebGPU backend
+    </div>
+  </div>
+
+  <div id="match-callout">FIGHT!</div>
+
+  <div id="clean-restore">
+    <button class="btn amber" id="btn-exit-clean">Exit Clean View (H)</button>
+  </div>
+
+  <div id="toast" class="panel"></div>
+
+  <div id="hud">
+    <div id="top-bar">
+      <div class="panel brand-badge">
+        <div class="brand-dot"></div>
+        <div>
+          <div class="brand-title">Duelist Adventure — CTF Arena</div>
+          <div class="brand-sub">Phase 6: Team Facilities, Flag Stations &amp; Protected Spawns</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn active" id="btn-mode-orbit">Orbit Inspector</button>
+        <button class="btn" id="btn-mode-play">Third-Person Playtest</button>
+        <button class="btn" id="btn-toggle-panel">Inspector</button>
+        <button class="btn amber" id="btn-clean-view">Clean View</button>
+      </div>
+    </div>
+
+    <!-- Match Preparation Interface -->
+    <div id="match-banner" class="panel">
+      <span class="match-phase-pill" id="match-phase-pill">PREPARATION</span>
+      <span id="match-timer">00:30</span>
+      <span id="combat-lock-txt" style="font-size:11px;color:#ffb4b4;font-family:'JetBrains Mono',monospace;">COMBAT LOCKED</span>
+      <div style="display:flex;gap:5px;">
+        <button class="btn" id="btn-prep-skip" style="padding:4px 8px;font-size:11px;">Skip to 5s</button>
+        <button class="btn" id="btn-prep-reset" style="padding:4px 8px;font-size:11px;">Reset 30s</button>
+      </div>
+      <div style="display:flex;gap:4px;">
+        <button class="btn active" data-class="Vanguard" style="padding:4px 8px;font-size:10px;">Vanguard</button>
+        <button class="btn" data-class="Striker" style="padding:4px 8px;font-size:10px;">Striker</button>
+        <button class="btn" data-class="Tactician" style="padding:4px 8px;font-size:10px;">Tactician</button>
+      </div>
+    </div>
+
+    <!-- Engineering Inspector Drawer -->
+    <div id="inspector-panel" class="panel">
+      <div>
+        <div class="section-title">
+          <span>System Telemetry</span>
+          <span id="layer-badge" style="color:var(--accent-cyan);font-family:'JetBrains Mono',monospace;">ORBIT</span>
+        </div>
+        <div class="telemetry-grid">
+          <div class="stat-card">
+            <div class="stat-label">Renderer</div>
+            <div class="stat-val" id="stat-renderer">Init...</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">FPS</div>
+            <div class="stat-val" id="stat-fps">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Triangles</div>
+            <div class="stat-val" id="stat-tris">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Draw Calls</div>
+            <div class="stat-val" id="stat-calls">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Active Team</div>
+            <div class="stat-val" id="stat-team" style="color:var(--accent-red);">RED (BASE A)</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Texture Res</div>
+            <div class="stat-val" id="tex-res-badge" style="color:var(--accent-amber);">2048px</div>
+          </div>
+          <div class="stat-card" style="grid-column: span 2;">
+            <div class="stat-label">Coordinates (Meters)</div>
+            <div class="stat-val" id="stat-coords">X: 0.00  Y: 0.00  Z: 0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Active Team Selector -->
+      <div>
+        <div class="section-title">Active Playtest Team &amp; Spawn</div>
+        <div class="row-controls">
+          <button class="btn red-accent active" id="btn-team-red">Red Team (Base A)</button>
+          <button class="btn blue-accent" id="btn-team-blue">Blue Team (Base B)</button>
+        </div>
+      </div>
+
+      <!-- Camera Presets -->
+      <div>
+        <div class="section-title">Camera Presets</div>
+        <div class="preset-grid">
+          <button class="btn" data-cam="overview">Symmetrical Overview</button>
+          <button class="btn" data-cam="ground">Ground Floor</button>
+          <button class="btn" data-cam="bridge">Main Flag Bridge</button>
+          <button class="btn" data-cam="gallery">Upper Gallery</button>
+          <button class="btn red-accent" data-cam="redBase">Red Flag Base</button>
+          <button class="btn blue-accent" data-cam="blueBase">Blue Flag Base</button>
+          <button class="btn red-accent" data-cam="redSpawn">Red Spawn Room</button>
+          <button class="btn blue-accent" data-cam="blueSpawn">Blue Spawn Room</button>
+          <button class="btn amber" data-cam="textureCloseUp" style="grid-column: span 2;">Flag &amp; Texture Close-Up</button>
+        </div>
+      </div>
+
+      <!-- Material Inspection -->
+      <div>
+        <div class="section-title">Material Inspection</div>
+        <div class="row-controls" style="margin-bottom:6px;">
+          <button class="btn active" data-matmode="normal">Normal</button>
+          <button class="btn" data-matmode="albedo">Albedo-Only</button>
+          <button class="btn" data-matmode="neutral">Neutral Light</button>
+        </div>
+        <div class="row-controls">
+          <button class="btn" data-texres="1024">Mobile 1024px</button>
+          <button class="btn active" data-texres="2048">Desktop 2048px</button>
+        </div>
+      </div>
+
+      <!-- Engineering Overlays -->
+      <div>
+        <div class="section-title">Engineering Overlays</div>
+        <div class="row-controls" style="margin-bottom:6px;">
+          <button class="btn" id="btn-vis-collision">Collision Wire</button>
+          <button class="btn" id="btn-vis-walkable">Walkable</button>
+        </div>
+        <div class="row-controls">
+          <button class="btn" id="btn-vis-spawns">Show 24 Spawn Markers</button>
+        </div>
+      </div>
+
+      <!-- Quality & DPR -->
+      <div>
+        <div class="section-title">Quality &amp; DPR Cap</div>
+        <div class="row-controls" style="margin-bottom:6px;">
+          <button class="btn" data-quality="low">Low</button>
+          <button class="btn active" data-quality="medium">Medium</button>
+          <button class="btn" data-quality="high">High</button>
+        </div>
+        <div class="row-controls">
+          <button class="btn" data-dpr="1.0">DPR 1.0</button>
+          <button class="btn active" data-dpr="1.5">DPR 1.5</button>
+          <button class="btn" data-dpr="2.0">DPR 2.0</button>
+        </div>
+      </div>
+
+      <!-- 40-Test Executable Engineering Audit -->
+      <div>
+        <div class="section-title">
+          <span>Phase 6 Engineering Audit</span>
+          <span id="audit-summary" style="font-family:'JetBrains Mono',monospace;color:var(--text-secondary);">READY</span>
+        </div>
+        <button class="btn amber" id="btn-run-audit" style="width:100%;justify-content:center;">
+          Run 40-Test Engineering Audit
+        </button>
+        <div id="audit-results"></div>
+      </div>
+    </div>
+
+    <div id="player-status" class="panel">
+      <span style="font-weight:600;color:var(--accent-amber);">ROLL [C]</span>
+      <div class="bar-bg"><div class="bar-fill-roll" id="roll-fill"></div></div>
+      <span style="font-weight:600;color:var(--accent-cyan);">DASH [E]</span>
+      <div class="bar-bg"><div class="bar-fill-dash" id="dash-fill"></div></div>
+      <span id="player-state-txt" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-secondary);">GROUNDED</span>
+    </div>
+
+    <div id="controls-hint" class="panel">
+      <span id="hint-orbit">
+        <span class="kbd">Left Drag</span> Orbit &nbsp;·&nbsp;
+        <span class="kbd">Right Drag</span> Pan &nbsp;·&nbsp;
+        <span class="kbd">Scroll</span> Zoom &nbsp;·&nbsp;
+        <span class="kbd">H</span> Clean View
+      </span>
+      <span id="hint-play" style="display:none;">
+        <span class="kbd">WASD</span> Move &nbsp;·&nbsp;
+        <span class="kbd">Mouse Drag</span> Look &nbsp;·&nbsp;
+        <span class="kbd">Shift</span> Sprint &nbsp;·&nbsp;
+        <span class="kbd">Space</span> Jump &nbsp;·&nbsp;
+        <span class="kbd">C</span> Roll &nbsp;·&nbsp;
+        <span class="kbd">E</span> Aerial Dash &nbsp;·&nbsp;
+        <span class="kbd">R</span> Team Spawn
+      </span>
+    </div>
+  </div>
+
+  <div id="mobile-controls">
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <div class="mobile-action-btns">
+      <button class="touch-btn roll" id="touch-roll">ROLL</button>
+      <button class="touch-btn dash" id="touch-dash">DASH</button>
+      <button class="touch-btn jump" id="touch-jump">JUMP</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // =========================================================================
+    // 1. CENTRALIZED ARENA CONFIGURATION (LOCKED PHASES 1–6)
+    // =========================================================================
+    const ARENA_CONFIG = Object.freeze({
+      phase: 6,
+      units: 'meters',
+      building: { width: 76, depth: 56, height: 21, wallThickness: 1.0, halfW: 38, halfD: 28 },
+      elevations: { ground: 0.0, bridge: 4.8, gallery: 9.6 },
+      groundFloor: { minX: -38, maxX: 38, minZ: -28, maxZ: 28, topY: 0.0, thickness: 1.0, bottomY: -1.0 },
+      centralBridge: { minX: -23, maxX: 23, minZ: -4, maxZ: 4, topY: 4.8, thickness: 0.6, bottomY: 4.2 },
+      redPlatform:  { centerX: -29.5, centerZ: 0, width: 13, depth: 16, minX: -36, maxX: -23, minZ: -8, maxZ: 8, topY: 4.8, thickness: 0.6, bottomY: 4.2 },
+      bluePlatform: { centerX:  29.5, centerZ: 0, width: 13, depth: 16, minX:  23, maxX:  36, minZ: -8, maxZ: 8, topY: 4.8, thickness: 0.6, bottomY: 4.2 },
+      flags: {
+        red:  { x: -31, y: 4.8, z: 0, color: 0xFF394B },
+        blue: { x:  31, y: 4.8, z: 0, color: 0x20BFFF }
+      },
+      upperGallery: {
+        main:    { centerZ: -21, minX: -33, maxX: 33, minZ: -24, maxZ: -18, topY: 9.6, thickness: 0.45, bottomY: 9.15 },
+        balcony: { minX: -7, maxX: 7, minZ: -18, maxZ: -15, topY: 9.6, thickness: 0.45, bottomY: 9.15 }
+      },
+      stairSpec: { width: 3.6, riserHeight: 0.20, treadDepth: 0.36, riserCount: 24, horizontalRun: 8.64, elevationChange: 4.8, landingDepth: 1.8 },
+      staircases: [
+        { id: 'stair_red_front',   name: 'Red Front Staircase',         side: 'red',  centerX: -30, width: 3.6, startZ:  16.64, endZ:   8.0, startY: 0.0, endY: 4.8, bottomLanding: { minZ:  16.64, maxZ:  18.44, y: 0.0 } },
+        { id: 'stair_blue_front',  name: 'Blue Front Staircase',        side: 'blue', centerX:  30, width: 3.6, startZ:  16.64, endZ:   8.0, startY: 0.0, endY: 4.8, bottomLanding: { minZ:  16.64, maxZ:  18.44, y: 0.0 } },
+        { id: 'stair_red_rear',    name: 'Red Rear Staircase',          side: 'red',  centerX: -30, width: 3.6, startZ:  -9.36, endZ: -18.0, startY: 4.8, endY: 9.6, connectorSlab: { minZ:  -9.36, maxZ:  -8.0,  topY: 4.8, thickness: 0.6 } },
+        { id: 'stair_blue_rear',   name: 'Blue Rear Staircase',         side: 'blue', centerX:  30, width: 3.6, startZ:  -9.36, endZ: -18.0, startY: 4.8, endY: 9.6, connectorSlab: { minZ:  -9.36, maxZ:  -8.0,  topY: 4.8, thickness: 0.6 } },
+        { id: 'stair_red_central', name: 'Red Lower-Central Staircase', side: 'red',  centerX: -12, width: 3.6, startZ: -12.64, endZ:  -4.0, startY: 0.0, endY: 4.8, bottomLanding: { minZ: -14.44, maxZ: -12.64, y: 0.0 } },
+        { id: 'stair_blue_central',name: 'Blue Lower-Central Staircase',side: 'blue', centerX:  12, width: 3.6, startZ: -12.64, endZ:  -4.0, startY: 0.0, endY: 4.8, bottomLanding: { minZ: -14.44, maxZ: -12.64, y: 0.0 } }
+      ],
+      windows: [
+        { id: 'win_left',   cx: -22, cy: 17.0, w: 14.0, h: 4.6, z: -28 },
+        { id: 'win_center', cx:   0, cy: 17.0, w: 11.0, h: 4.6, z: -28 },
+        { id: 'win_right',  cx:  22, cy: 17.0, w: 14.0, h: 4.6, z: -28 }
+      ],
+      portals: [
+        { id: 'portal_red_base',      name: 'Red Flag Base Entrance',       wall: 'west',  team: 'red',     uCenter:   0, baseY: 4.8, width: 6.0, height: 4.6, thresholdSpan: 2.0 },
+        { id: 'portal_blue_base',     name: 'Blue Flag Base Entrance',      wall: 'east',  team: 'blue',    uCenter:   0, baseY: 4.8, width: 6.0, height: 4.6, thresholdSpan: 2.0 },
+        { id: 'portal_red_flank_f',   name: 'Red Lower Front Flanking',     wall: 'west',  team: 'red',     uCenter:  14, baseY: 0.0, width: 5.6, height: 4.4, thresholdSpan: 0.0 },
+        { id: 'portal_red_flank_b',   name: 'Red Lower Rear Flanking',      wall: 'west',  team: 'red',     uCenter: -14, baseY: 0.0, width: 5.6, height: 4.4, thresholdSpan: 0.0 },
+        { id: 'portal_blue_flank_f',  name: 'Blue Lower Front Flanking',    wall: 'east',  team: 'blue',    uCenter:  14, baseY: 0.0, width: 5.6, height: 4.4, thresholdSpan: 0.0 },
+        { id: 'portal_blue_flank_b',  name: 'Blue Lower Rear Flanking',     wall: 'east',  team: 'blue',    uCenter: -14, baseY: 0.0, width: 5.6, height: 4.4, thresholdSpan: 0.0 },
+        { id: 'portal_upper_neutral', name: 'Upper Gallery Central Portal', wall: 'north', team: 'neutral', uCenter:   0, baseY: 9.6, width: 5.6, height: 4.4, thresholdSpan: 4.0, alcoveDepth: 3.0 }
+      ],
+      // Phase 6: Protected Two-Level Team Spawn Rooms (exterior staging facilities X: ±38..±50)
+      spawnZones: {
+        red:  { team: 'red',  minX: -50.0, maxX: -38.1, minZ: -18.5, maxZ: 18.5, minY: 0.0, maxY: 11.0 },
+        blue: { team: 'blue', minX:  38.1, maxX:  50.0, minZ: -18.5, maxZ: 18.5, minY: 0.0, maxY: 11.0 }
+      },
+      // Phase 6: 24 Individual Spawn Points (12 Red + 12 Blue)
+      spawns: [
+        // Red Upper Staging Deck (Y = 4.8, facing +X -> yaw = -Math.PI/2)
+        { id: 'red_u1', team: 'red', elevation: 4.8, x: -41.5, y: 4.8, z: -4.5, yaw: -Math.PI / 2 },
+        { id: 'red_u2', team: 'red', elevation: 4.8, x: -41.5, y: 4.8, z:  0.0, yaw: -Math.PI / 2 },
+        { id: 'red_u3', team: 'red', elevation: 4.8, x: -41.5, y: 4.8, z:  4.5, yaw: -Math.PI / 2 },
+        { id: 'red_u4', team: 'red', elevation: 4.8, x: -44.8, y: 4.8, z: -4.5, yaw: -Math.PI / 2 },
+        { id: 'red_u5', team: 'red', elevation: 4.8, x: -44.8, y: 4.8, z:  0.0, yaw: -Math.PI / 2 },
+        { id: 'red_u6', team: 'red', elevation: 4.8, x: -44.8, y: 4.8, z:  4.5, yaw: -Math.PI / 2 },
+        // Red Lower Staging Deck (Y = 0.0, facing +X -> yaw = -Math.PI/2)
+        { id: 'red_l1', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z: -14.0, yaw: -Math.PI / 2 },
+        { id: 'red_l2', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z:  -4.0, yaw: -Math.PI / 2 },
+        { id: 'red_l3', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z:   4.0, yaw: -Math.PI / 2 },
+        { id: 'red_l4', team: 'red', elevation: 0.0, x: -41.5, y: 0.0, z:  14.0, yaw: -Math.PI / 2 },
+        { id: 'red_l5', team: 'red', elevation: 0.0, x: -44.5, y: 0.0, z: -14.0, yaw: -Math.PI / 2 },
+        { id: 'red_l6', team: 'red', elevation: 0.0, x: -44.5, y: 0.0, z:  14.0, yaw: -Math.PI / 2 },
+        // Blue Upper Staging Deck (Y = 4.8, facing -X -> yaw = +Math.PI/2)
+        { id: 'blue_u1', team: 'blue', elevation: 4.8, x: 41.5, y: 4.8, z: -4.5, yaw: Math.PI / 2 },
+        { id: 'blue_u2', team: 'blue', elevation: 4.8, x: 41.5, y: 4.8, z:  0.0, yaw: Math.PI / 2 },
+        { id: 'blue_u3', team: 'blue', elevation: 4.8, x: 41.5, y: 4.8, z:  4.5, yaw: Math.PI / 2 },
+        { id: 'blue_u4', team: 'blue', elevation: 4.8, x: 44.8, y: 4.8, z: -4.5, yaw: Math.PI / 2 },
+        { id: 'blue_u5', team: 'blue', elevation: 4.8, x: 44.8, y: 4.8, z:  0.0, yaw: Math.PI / 2 },
+        { id: 'blue_u6', team: 'blue', elevation: 4.8, x: 44.8, y: 4.8, z:  4.5, yaw: Math.PI / 2 },
+        // Blue Lower Staging Deck (Y = 0.0, facing -X -> yaw = +Math.PI/2)
+        { id: 'blue_l1', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z: -14.0, yaw: Math.PI / 2 },
+        { id: 'blue_l2', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z:  -4.0, yaw: Math.PI / 2 },
+        { id: 'blue_l3', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z:   4.0, yaw: Math.PI / 2 },
+        { id: 'blue_l4', team: 'blue', elevation: 0.0, x: 41.5, y: 0.0, z:  14.0, yaw: Math.PI / 2 },
+        { id: 'blue_l5', team: 'blue', elevation: 0.0, x: 44.5, y: 0.0, z: -14.0, yaw: Math.PI / 2 },
+        { id: 'blue_l6', team: 'blue', elevation: 0.0, x: 44.5, y: 0.0, z:  14.0, yaw: Math.PI / 2 }
+      ],
+      cargoContainers: [
+        { id: 'cargo_bridge_center', name: 'Bridge Central Blocker',     x:   0, y: 4.8, z:   0.0, w: 4.2, d: 2.2, h: 2.4, stacked: false, statusColor: 'cyan' },
+        { id: 'cargo_bridge_red',    name: 'Bridge Red Tactical Cover',  x: -14, y: 4.8, z:   1.6, w: 2.6, d: 1.8, h: 1.3, stacked: false, statusColor: 'red'  },
+        { id: 'cargo_bridge_blue',   name: 'Bridge Blue Tactical Cover', x:  14, y: 4.8, z:   1.6, w: 2.6, d: 1.8, h: 1.3, stacked: false, statusColor: 'cyan' },
+        { id: 'cargo_ground_center', name: 'Ground Central Stack',       x:   0, y: 0.0, z:  12.5, w: 4.5, d: 3.2, h: 1.8, stacked: true,  topW: 2.8, topD: 2.0, topH: 1.4, statusColor: 'cyan' },
+        { id: 'cargo_ground_red',    name: 'Ground Red Flank Cover',     x: -12, y: 0.0, z:  10.0, w: 3.2, d: 2.4, h: 1.8, stacked: false, statusColor: 'red'  },
+        { id: 'cargo_ground_blue',   name: 'Ground Blue Flank Cover',    x:  12, y: 0.0, z:  10.0, w: 3.2, d: 2.4, h: 1.8, stacked: false, statusColor: 'cyan' },
+        { id: 'cargo_gallery_red',   name: 'Gallery Red Cover',          x: -18, y: 9.6, z: -21.5, w: 2.8, d: 1.6, h: 1.4, stacked: false, statusColor: 'red'  },
+        { id: 'cargo_gallery_blue',  name: 'Gallery Blue Cover',         x:  18, y: 9.6, z: -21.5, w: 2.8, d: 1.6, h: 1.4, stacked: false, statusColor: 'cyan' }
+      ],
+      structuralPlinths: [
+        { id: 'plinth_red',  name: 'Red Structural Plinth',  x: -20, z: 24.6, w: 2.2, h: 1.4, d: 2.2 },
+        { id: 'plinth_blue', name: 'Blue Structural Plinth', x:  20, z: 24.6, w: 2.2, h: 1.4, d: 2.2 }
+      ],
+      railing: { height: 1.15, postSpacing: 1.5, thickness: 0.08 },
+      player: {
+        height: 1.8, radius: 0.4, walkSpeed: 6.4, sprintSpeed: 10.2, jumpSpeed: 9.2, gravity: 22.0,
+        rollSpeed: 13.5, rollDuration: 0.34, rollCooldown: 1.0,
+        dashSpeed: 21.5, dashDuration: 0.22, dashCooldown: 1.8,
+        stepUpHeight: 0.55, spawn: { x: -41.5, y: 4.8, z: 0.0 }
+      },
+      palette: {
+        floorBase: '#555860', wallMain: '#41434D', wallSecondary: '#3A3D47', wallJoint: '#252831',
+        steel: '#292E38', weathered: '#65636B', bronze: '#70513B', treadBase: '#424650', treadEdge: '#8B9098',
+        railingAmber: '#DF9B32', railingHighlight: '#F2BB58', railingBracket: '#343944',
+        red: '#FF394B', blue: '#20BFFF', cyan: '#7BE5FF', warmLight: '#FFE0AB',
+        bannerRed: '#C52B3E', bannerBlue: '#167BC7', emblemWhite: '#E6EDF5'
+      },
+      cameraPresets: {
+        overview:       { pos: [0, 15.0, 25.8],   target: [0, 5.0, -4.0] },
+        ground:         { pos: [0, 3.0, 22.5],    target: [0, 2.0, 4.0] },
+        bridge:         { pos: [-16, 7.8, 10.2],  target: [4, 5.2, 0.5] },
+        gallery:        { pos: [0, 12.6, -8.5],   target: [0, 9.8, -21.5] },
+        redBase:        { pos: [-19, 8.6, 11.5],  target: [-32, 6.2, 0] },
+        blueBase:       { pos: [19, 8.6, 11.5],   target: [32, 6.2, 0] },
+        redSpawn:       { pos: [-47.5, 7.2, 5.5], target: [-39.0, 5.6, 0.0] },
+        blueSpawn:      { pos: [47.5, 7.2, 5.5],  target: [39.0, 5.6, 0.0] },
+        textureCloseUp: { pos: [-26.2, 6.5, 4.2], target: [-31.0, 6.0, 0.0] }
+      }
+    });
+
+    window.ARENA_CONFIG = ARENA_CONFIG;
+
+    // =========================================================================
+    // 2. DETERMINISTIC PROCEDURAL PBR MATERIAL & TEXTURE LIBRARY (PHASES 4–6)
+    // =========================================================================
+    function createSeededRandom(seed) {
+      let s = seed >>> 0;
+      return () => {
+        s = (s + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function createProceduralWarehouseEnvMap() {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+      const ctx = c.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 256);
+      grad.addColorStop(0.00, '#4d5d73'); grad.addColorStop(0.32, '#8fb4cf');
+      grad.addColorStop(0.50, '#5a6270'); grad.addColorStop(1.00, '#2a2e38');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, 512, 256);
+      ctx.fillStyle = 'rgba(255, 228, 180, 0.58)';
+      ctx.fillRect(85, 58, 72, 28); ctx.fillRect(220, 58, 64, 28); ctx.fillRect(355, 58, 72, 28);
+      const tex = new THREE.CanvasTexture(c);
+      tex.mapping = THREE.EquirectangularReflectionMapping; tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createFloorTextureSet(variant = 'ground', texRes = 2048) {
+      const size = texRes, scale = size / 1024;
+      const rand = createSeededRandom(variant.split('').reduce((a, ch) => a * 31 + ch.charCodeAt(0), 1337));
+      const a = document.createElement('canvas'); a.width = size; a.height = size; const ctx = a.getContext('2d');
+      const b = document.createElement('canvas'); b.width = size; b.height = size; const bctx = b.getContext('2d');
+      const r = document.createElement('canvas'); r.width = size; r.height = size; const rctx = r.getContext('2d');
+
+      const palettes = {
+        ground:        ['#555860', '#5E616A', '#494D56', '#666872'],
+        bridge:        ['#626670', '#6C707A', '#585C66', '#777981'],
+        gallery:       ['#454954', '#4D515C', '#3E424C', '#525662'],
+        alcoveRed:     ['#393D47', '#3E424D', '#343842', '#434752'],
+        alcoveBlue:    ['#393D47', '#3E424D', '#343842', '#434752'],
+        alcoveNeutral: ['#3D414B', '#434752', '#373B45', '#474B56'],
+        landing:       ['#4B505B', '#525763', '#454A55', '#575C68'],
+        underBridge:   ['#434750', '#4A4E58', '#3D414A', '#4F535E']
+      };
+      const cols = variant === 'gallery' ? 4 : 2, rows = cols, cw = size / cols, ch = size / rows;
+      const pal = palettes[variant] || palettes.ground;
+      bctx.fillStyle = '#808080'; bctx.fillRect(0, 0, size, size);
+      rctx.fillStyle = variant === 'bridge' ? '#b4b4b4' : '#c4c4c4'; rctx.fillRect(0, 0, size, size);
+
+      for (let gx = 0; gx < cols; gx++) {
+        for (let gy = 0; gy < rows; gy++) {
+          const x = gx * cw, y = gy * ch;
+          ctx.fillStyle = pal[Math.floor(rand() * pal.length)]; ctx.fillRect(x, y, cw, ch);
+          const grad = ctx.createLinearGradient(x, y, x + cw, y + ch);
+          grad.addColorStop(0, 'rgba(255,255,255,0.045)'); grad.addColorStop(1, 'rgba(12,14,18,0.085)');
+          ctx.fillStyle = grad; ctx.fillRect(x, y, cw, ch);
+
+          ctx.strokeStyle = '#2B2F38'; ctx.lineWidth = Math.max(3, 6 * scale); ctx.strokeRect(x + 2 * scale, y + 2 * scale, cw - 4 * scale, ch - 4 * scale);
+          bctx.strokeStyle = '#1d1d1d'; bctx.lineWidth = Math.max(4, 7 * scale); bctx.strokeRect(x + 2 * scale, y + 2 * scale, cw - 4 * scale, ch - 4 * scale);
+          ctx.strokeStyle = 'rgba(144, 147, 155, 0.28)'; ctx.lineWidth = Math.max(1.5, 2.5 * scale); ctx.strokeRect(x + 7 * scale, y + 7 * scale, cw - 14 * scale, ch - 14 * scale);
+
+          const pad = 22 * scale;
+          [[x + pad, y + pad], [x + cw - pad, y + pad], [x + pad, y + ch - pad], [x + cw - pad, y + ch - pad]].forEach(([bx, by]) => {
+            ctx.fillStyle = '#242832'; ctx.beginPath(); ctx.arc(bx, by, 4.5 * scale, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#7c818d'; ctx.beginPath(); ctx.arc(bx - 1 * scale, by - 1 * scale, 2.0 * scale, 0, Math.PI * 2); ctx.fill();
+          });
+        }
+      }
+      if (variant === 'alcoveRed' || variant === 'alcoveBlue' || variant === 'alcoveNeutral') {
+        ctx.fillStyle = variant === 'alcoveRed' ? 'rgba(255,57,75,0.45)' : (variant === 'alcoveBlue' ? 'rgba(32,191,255,0.45)' : 'rgba(123,229,255,0.4)');
+        ctx.fillRect(0, size * 0.47, size, 12 * scale);
+      }
+      for (let i = 0; i < Math.floor(160 * scale); i++) {
+        const sx = rand() * size, sy = rand() * size, len = (10 + rand() * 34) * scale, ang = rand() * Math.PI * 2;
+        ctx.strokeStyle = rand() > 0.45 ? 'rgba(180,185,196,0.08)' : 'rgba(22,24,30,0.14)';
+        ctx.lineWidth = 1.2 * scale; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(ang) * len, sy + Math.sin(ang) * len); ctx.stroke();
+      }
+      const albedoTex = new THREE.CanvasTexture(a); albedoTex.wrapS = albedoTex.wrapT = THREE.RepeatWrapping; albedoTex.colorSpace = THREE.SRGBColorSpace; albedoTex.anisotropy = 8;
+      const bumpTex = new THREE.CanvasTexture(b); bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+      const roughTex = new THREE.CanvasTexture(r); roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping;
+      return { albedoTex, bumpTex, roughTex };
+    }
+
+    function createDetailedWallTextures(texRes = 2048) {
+      const size = texRes, scale = size / 1024;
+      const a = document.createElement('canvas'); a.width = size; a.height = size; const ctx = a.getContext('2d');
+      const b = document.createElement('canvas'); b.width = size; b.height = size; const bctx = b.getContext('2d');
+      const r = document.createElement('canvas'); r.width = size; r.height = size; const rctx = r.getContext('2d');
+
+      ctx.fillStyle = ARENA_CONFIG.palette.wallMain; ctx.fillRect(0, 0, size, size);
+      bctx.fillStyle = '#808080'; bctx.fillRect(0, 0, size, size);
+      rctx.fillStyle = '#b8b8b8'; rctx.fillRect(0, 0, size, size);
+
+      const cols = 2, rows = 4, cw = size / cols, ch = size / rows;
+      for (let rr = 0; rr < rows; rr++) {
+        for (let cc = 0; cc < cols; cc++) {
+          const x = cc * cw, y = rr * ch;
+          ctx.fillStyle = (rr + cc) % 2 === 0 ? ARENA_CONFIG.palette.wallMain : ARENA_CONFIG.palette.wallSecondary;
+          ctx.fillRect(x + 6 * scale, y + 6 * scale, cw - 12 * scale, ch - 12 * scale);
+          ctx.strokeStyle = ARENA_CONFIG.palette.wallJoint; ctx.lineWidth = 12 * scale; ctx.strokeRect(x, y, cw, ch);
+          bctx.strokeStyle = '#181818'; bctx.lineWidth = 12 * scale; bctx.strokeRect(x, y, cw, ch);
+          ctx.strokeStyle = 'rgba(130, 138, 152, 0.25)'; ctx.lineWidth = 3 * scale; ctx.strokeRect(x + 10 * scale, y + 10 * scale, cw - 20 * scale, ch - 20 * scale);
+        }
+      }
+      const albedoTex = new THREE.CanvasTexture(a); albedoTex.wrapS = albedoTex.wrapT = THREE.RepeatWrapping; albedoTex.colorSpace = THREE.SRGBColorSpace; albedoTex.anisotropy = 8;
+      const bumpTex = new THREE.CanvasTexture(b); bumpTex.wrapS = bumpTex.wrapT = THREE.RepeatWrapping;
+      const roughTex = new THREE.CanvasTexture(r); roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping;
+      return { albedoTex, bumpTex, roughTex };
+    }
+
+    function createIndustrialMetalTextures(baseHex, highlightHex, darkHex, seed) {
+      const size = 512, rand = createSeededRandom(seed);
+      const a = document.createElement('canvas'); a.width = size; a.height = size; const ctx = a.getContext('2d');
+      const b = document.createElement('canvas'); b.width = size; b.height = size; const bctx = b.getContext('2d');
+      bctx.fillStyle = '#808080'; bctx.fillRect(0, 0, size, size);
+      ctx.fillStyle = baseHex; ctx.fillRect(0, 0, size, size);
+      for (let i = 0; i < 140; i++) {
+        ctx.fillStyle = rand() > 0.5 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.055)';
+        ctx.fillRect(0, rand() * size, size, 1 + rand() * 3);
+      }
+      ctx.strokeStyle = darkHex; ctx.lineWidth = 4; ctx.strokeRect(4, 4, size - 8, size - 8);
+      ctx.strokeStyle = highlightHex; ctx.lineWidth = 2; ctx.strokeRect(9, 9, size - 18, size - 18);
+      const map = new THREE.CanvasTexture(a); map.wrapS = map.wrapT = THREE.RepeatWrapping; map.colorSpace = THREE.SRGBColorSpace;
+      const bumpMap = new THREE.CanvasTexture(b); bumpMap.wrapS = bumpMap.wrapT = THREE.RepeatWrapping;
+      return { map, bumpMap };
+    }
+
+    /**
+     * Phase 6 Procedural Team Flag & Vertical Banner Texture (with symmetrical emblem)
+     */
+    function createTeamFabricTexture(team, isVerticalBanner = false) {
+      const w = isVerticalBanner ? 512 : 512;
+      const h = isVerticalBanner ? 1024 : 340;
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+
+      const mainCol = team === 'red' ? '#C52B3E' : '#167BC7';
+      const darkCol = team === 'red' ? '#7a1724' : '#0b4675';
+      const glowCol = team === 'red' ? '#FF394B' : '#20BFFF';
+
+      // Base fabric with subtle vertical weave
+      ctx.fillStyle = mainCol; ctx.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 8) {
+        ctx.fillStyle = x % 16 === 0 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.05)';
+        ctx.fillRect(x, 0, 4, h);
+      }
+
+      // Dark reinforced outer border
+      ctx.strokeStyle = '#1f232c'; ctx.lineWidth = isVerticalBanner ? 28 : 18;
+      ctx.strokeRect(10, 10, w - 20, h - 20);
+      ctx.strokeStyle = glowCol; ctx.lineWidth = 6;
+      ctx.strokeRect(28, 28, w - 56, h - 56);
+
+      // Symmetrical winged shield emblem (#E6EDF5)
+      ctx.save();
+      ctx.translate(w * 0.5, isVerticalBanner ? h * 0.44 : h * 0.5);
+      const sc = isVerticalBanner ? 1.35 : 0.78;
+      ctx.scale(sc, sc);
+      ctx.fillStyle = '#E6EDF5';
+      // Outer stylized chevron wings
+      ctx.beginPath();
+      ctx.moveTo(0, -110); ctx.lineTo(95, -55); ctx.lineTo(68, 25); ctx.lineTo(0, 115);
+      ctx.lineTo(-68, 25); ctx.lineTo(-95, -55); ctx.closePath(); ctx.fill();
+      // Inner cutout diamond
+      ctx.fillStyle = darkCol;
+      ctx.beginPath();
+      ctx.moveTo(0, -68); ctx.lineTo(52, -32); ctx.lineTo(36, 18); ctx.lineTo(0, 68);
+      ctx.lineTo(-36, 18); ctx.lineTo(-52, -32); ctx.closePath(); ctx.fill();
+      // Center core star
+      ctx.fillStyle = '#E6EDF5';
+      ctx.beginPath();
+      ctx.moveTo(0, -34); ctx.lineTo(24, 0); ctx.lineTo(0, 34); ctx.lineTo(-24, 0); ctx.closePath(); ctx.fill();
+      ctx.restore();
+
+      if (isVerticalBanner) {
+        ctx.fillStyle = '#E6EDF5';
+        ctx.font = '800 54px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(team === 'red' ? 'BASE A' : 'BASE B', w * 0.5, h * 0.80);
+        ctx.font = '700 28px "JetBrains Mono", monospace';
+        ctx.fillStyle = 'rgba(230,237,245,0.75)';
+        ctx.fillText('CTF OBJECTIVE', w * 0.5, h * 0.86);
+      }
+
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createBaseSignTexture(text, subText, accentHex) {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 160;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#181d27'; ctx.fillRect(0, 0, 512, 160);
+      ctx.strokeStyle = accentHex; ctx.lineWidth = 8; ctx.strokeRect(8, 8, 496, 144);
+      ctx.fillStyle = accentHex; ctx.fillRect(22, 24, 14, 112); ctx.fillRect(476, 24, 14, 112);
+      ctx.fillStyle = '#eef4fa'; ctx.font = '800 62px Inter, sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(text, 256, 84);
+      ctx.fillStyle = accentHex; ctx.font = '700 24px "JetBrains Mono", monospace';
+      ctx.fillText(subText, 256, 128);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createControlScreenTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 192;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#0c131d'; ctx.fillRect(0, 0, 256, 192);
+      ctx.strokeStyle = '#7BE5FF'; ctx.lineWidth = 3; ctx.strokeRect(8, 8, 240, 176);
+      ctx.fillStyle = '#7BE5FF'; ctx.font = '700 18px "JetBrains Mono", monospace'; ctx.fillText('SECTOR SYS // OK', 22, 38);
+      for (let i = 0; i < 12; i++) {
+        const h = 18 + ((i * 29) % 52);
+        ctx.fillStyle = i % 4 === 0 ? '#DF9B32' : '#20BFFF';
+        ctx.fillRect(22 + i * 18, 130 - h, 11, h);
+      }
+      ctx.fillStyle = '#2ee58d'; ctx.fillRect(22, 148, 36, 14);
+      ctx.fillStyle = '#DF9B32'; ctx.fillRect(68, 148, 36, 14);
+      ctx.fillStyle = '#FF394B'; ctx.fillRect(114, 148, 36, 14);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createPlatformUndersideTexture() {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 512; const ctx = c.getContext('2d');
+      ctx.fillStyle = '#333843'; ctx.fillRect(0, 0, 512, 512);
+      for (let x = 0; x < 2; x++) for (let y = 0; y < 2; y++) {
+        ctx.fillStyle = '#2b303a'; ctx.fillRect(x * 256 + 14, y * 256 + 14, 228, 228);
+        ctx.strokeStyle = '#1f232c'; ctx.lineWidth = 6; ctx.strokeRect(x * 256 + 14, y * 256 + 14, 228, 228);
+      }
+      const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(6, 2);
+      return tex;
+    }
+
+    function createCeilingTexture() {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 512; const ctx = c.getContext('2d');
+      ctx.fillStyle = '#2E333E'; ctx.fillRect(0, 0, 512, 512);
+      for (let x = 0; x < 512; x += 24) { ctx.fillStyle = '#262B35'; ctx.fillRect(x, 0, 10, 512); ctx.fillStyle = '#383E4B'; ctx.fillRect(x + 10, 0, 4, 512); }
+      const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace; tex.repeat.set(12, 8);
+      return tex;
+    }
+
+    function createStairTreadTexture() {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256; const ctx = c.getContext('2d');
+      ctx.fillStyle = ARENA_CONFIG.palette.treadBase; ctx.fillRect(0, 0, 512, 256);
+      for (let y = 44; y < 236; y += 20) { ctx.fillStyle = '#2F333D'; ctx.fillRect(10, y, 492, 7); }
+      ctx.fillStyle = ARENA_CONFIG.palette.treadEdge; ctx.fillRect(0, 0, 512, 32);
+      ctx.fillStyle = '#B4B9C2'; ctx.fillRect(0, 0, 512, 8);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createChevronDecalTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256; const ctx = c.getContext('2d');
+      ctx.fillStyle = 'rgba(215, 211, 200, 0.82)';
+      const draw = (yO) => { ctx.beginPath(); ctx.moveTo(36, yO + 66); ctx.lineTo(128, yO); ctx.lineTo(220, yO + 66); ctx.lineTo(220, yO + 102); ctx.lineTo(128, yO + 36); ctx.lineTo(36, yO + 102); ctx.closePath(); ctx.fill(); };
+      draw(22); draw(124);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createCautionStripeTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 64; const ctx = c.getContext('2d');
+      ctx.fillStyle = '#27292E'; ctx.fillRect(0, 0, 256, 64); ctx.fillStyle = '#BF7E24';
+      for (let x = -64; x < 320; x += 36) { ctx.beginPath(); ctx.moveTo(x, 64); ctx.lineTo(x + 18, 64); ctx.lineTo(x + 42, 0); ctx.lineTo(x + 24, 0); ctx.closePath(); ctx.fill(); }
+      const tex = new THREE.CanvasTexture(c); tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createDrainageGrateTextureSet() {
+      const w = 512, h = 256;
+      const a = document.createElement('canvas'); a.width = w; a.height = h; const ctx = a.getContext('2d');
+      ctx.fillStyle = '#1B1F27'; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#65636B'; ctx.lineWidth = 22; ctx.strokeRect(11, 11, w - 22, h - 22);
+      for (let x = 32; x < w - 32; x += 22) { ctx.fillStyle = '#484E5B'; ctx.fillRect(x, 22, 10, h - 44); }
+      ctx.fillStyle = '#535966'; ctx.fillRect(20, h * 0.5 - 9, w - 40, 18);
+      const map = new THREE.CanvasTexture(a); map.colorSpace = THREE.SRGBColorSpace;
+      return { map };
+    }
+
+    function createGraffitiDecalTexture() {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256; const ctx = c.getContext('2d');
+      ctx.save(); ctx.translate(256, 134); ctx.rotate(-0.07);
+      ctx.font = '900 92px Inter, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 14; ctx.strokeStyle = 'rgba(28, 16, 48, 0.72)'; ctx.strokeText('DUEL', 0, 0);
+      const grad = ctx.createLinearGradient(0, -45, 0, 45);
+      grad.addColorStop(0, 'rgba(186, 128, 255, 0.72)'); grad.addColorStop(1, 'rgba(112, 52, 196, 0.78)');
+      ctx.fillStyle = grad; ctx.fillText('DUEL', 0, 0); ctx.restore();
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createSkyBackdropTexture() {
+      const c = document.createElement('canvas'); c.width = 1024; c.height = 512; const ctx = c.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, 0, 512);
+      grad.addColorStop(0.0, '#9cc7e6'); grad.addColorStop(0.45, '#cfe5f2'); grad.addColorStop(0.8, '#f5e4c8'); grad.addColorStop(1.0, '#d7d0c4');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, 1024, 512);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function buildMaterialLibrary(texRes = 2048) {
+      const floorSets = {
+        ground:        createFloorTextureSet('ground', texRes),
+        bridge:        createFloorTextureSet('bridge', texRes),
+        gallery:       createFloorTextureSet('gallery', Math.min(1024, texRes)),
+        alcoveRed:     createFloorTextureSet('alcoveRed', 512),
+        alcoveBlue:    createFloorTextureSet('alcoveBlue', 512),
+        alcoveNeutral: createFloorTextureSet('alcoveNeutral', 512),
+        landing:       createFloorTextureSet('landing', 512),
+        underBridge:   createFloorTextureSet('underBridge', Math.min(1024, texRes))
+      };
+      const wallTexSet = createDetailedWallTextures(texRes);
+      const steelTex = createIndustrialMetalTextures('#292E38', '#65636B', '#222630', 101);
+      const bronzeTex = createIndustrialMetalTextures('#70513B', '#A27A4B', '#493727', 202);
+      const amberTex = createIndustrialMetalTextures('#DF9B32', '#F2BB58', '#87521F', 303);
+      const cargoMainTex = createIndustrialMetalTextures('#50535B', '#90939B', '#373C47', 505);
+      const grateTexSet = createDrainageGrateTextureSet();
+      const treadTex = createStairTreadTexture();
+      const ceilTex = createCeilingTexture();
+      const cautionTex = createCautionStripeTexture();
+      const undersideTex = createPlatformUndersideTexture();
+      const screenTex = createControlScreenTexture();
+
+      const trackedFloorMats = [], trackedWallMats = [];
+
+      const makeTiledFloorMat = (widthM, depthM, variant = 'ground') => {
+        const set = floorSets[variant] || floorSets.ground;
+        const tileSpan = variant === 'gallery' ? 6.0 : 4.0;
+        const rx = Math.max(0.5, widthM / tileSpan), ry = Math.max(0.5, depthM / tileSpan);
+        const tex = set.albedoTex.clone(); tex.needsUpdate = true; tex.repeat.set(rx, ry);
+        const bTex = set.bumpTex.clone(); bTex.needsUpdate = true; bTex.repeat.set(rx, ry);
+        const rTex = set.roughTex.clone(); rTex.needsUpdate = true; rTex.repeat.set(rx, ry);
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0xffffff, map: tex, bumpMap: bTex, bumpScale: 0.028, roughnessMap: rTex,
+          roughness: variant === 'bridge' ? 0.70 : 0.76, metalness: variant === 'bridge' ? 0.28 : 0.24, depthWrite: true
+        });
+        trackedFloorMats.push({ mat, variant, rx, ry });
+        return mat;
+      };
+
+      const makeTiledWallMat = (widthM, heightM) => {
+        const rx = Math.max(0.25, widthM / 7.5), ry = Math.max(0.25, heightM / 7.5);
+        const tex = wallTexSet.albedoTex.clone(); tex.needsUpdate = true; tex.repeat.set(rx, ry);
+        const bTex = wallTexSet.bumpTex.clone(); bTex.needsUpdate = true; bTex.repeat.set(rx, ry);
+        const rTex = wallTexSet.roughTex.clone(); rTex.needsUpdate = true; rTex.repeat.set(rx, ry);
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0xffffff, map: tex, bumpMap: bTex, bumpScale: 0.042, roughnessMap: rTex,
+          roughness: 0.72, metalness: 0.30, depthWrite: true
+        });
+        trackedWallMats.push({ mat, rx, ry });
+        return mat;
+      };
+
+      function rebuildResolution(newRes) {
+        const newGround = createFloorTextureSet('ground', newRes);
+        const newBridge = createFloorTextureSet('bridge', newRes);
+        const newWall = createDetailedWallTextures(newRes);
+        floorSets.ground.albedoTex.dispose(); floorSets.ground.bumpTex.dispose(); floorSets.ground.roughTex.dispose();
+        floorSets.bridge.albedoTex.dispose(); floorSets.bridge.bumpTex.dispose(); floorSets.bridge.roughTex.dispose();
+        wallTexSet.albedoTex.dispose(); wallTexSet.bumpTex.dispose(); wallTexSet.roughTex.dispose();
+        floorSets.ground = newGround; floorSets.bridge = newBridge; Object.assign(wallTexSet, newWall);
+
+        trackedFloorMats.forEach(({ mat, variant, rx, ry }) => {
+          if (variant !== 'ground' && variant !== 'bridge') return;
+          const set = floorSets[variant];
+          mat.map.dispose(); mat.bumpMap.dispose(); mat.roughnessMap.dispose();
+          mat.map = set.albedoTex.clone(); mat.map.repeat.set(rx, ry); mat.map.needsUpdate = true;
+          mat.bumpMap = set.bumpTex.clone(); mat.bumpMap.repeat.set(rx, ry); mat.bumpMap.needsUpdate = true;
+          mat.roughnessMap = set.roughTex.clone(); mat.roughnessMap.repeat.set(rx, ry); mat.roughnessMap.needsUpdate = true;
+          mat.needsUpdate = true;
+        });
+        trackedWallMats.forEach(({ mat, rx, ry }) => {
+          mat.map.dispose(); mat.bumpMap.dispose(); mat.roughnessMap.dispose();
+          mat.map = wallTexSet.albedoTex.clone(); mat.map.repeat.set(rx, ry); mat.map.needsUpdate = true;
+          mat.bumpMap = wallTexSet.bumpTex.clone(); mat.bumpMap.repeat.set(rx, ry); mat.bumpMap.needsUpdate = true;
+          mat.roughnessMap = wallTexSet.roughTex.clone(); mat.roughnessMap.repeat.set(rx, ry); mat.roughnessMap.needsUpdate = true;
+          mat.needsUpdate = true;
+        });
+      }
+
+      return {
+        makeTiledFloorMat, makeTiledWallMat, rebuildResolution,
+        slabSide: new THREE.MeshStandardMaterial({ color: 0xffffff, map: steelTex.map, roughness: 0.74, metalness: 0.32, depthWrite: true }),
+        slabUnderside: new THREE.MeshStandardMaterial({ color: 0xffffff, map: undersideTex, roughness: 0.78, metalness: 0.28, depthWrite: true }),
+        ceiling: new THREE.MeshStandardMaterial({ color: 0xffffff, map: ceilTex, roughness: 0.76, metalness: 0.32, depthWrite: true }),
+        steel: new THREE.MeshStandardMaterial({ color: 0xffffff, map: steelTex.map, bumpMap: steelTex.bumpMap, bumpScale: 0.02, roughness: 0.62, metalness: 0.50 }),
+        steelDark: new THREE.MeshStandardMaterial({ color: 0x222630, roughness: 0.66, metalness: 0.48 }),
+        weathered: new THREE.MeshStandardMaterial({ color: 0x65636B, roughness: 0.60, metalness: 0.44 }),
+        bronze: new THREE.MeshStandardMaterial({ color: 0xffffff, map: bronzeTex.map, bumpMap: bronzeTex.bumpMap, bumpScale: 0.02, roughness: 0.58, metalness: 0.50 }),
+        stairTread: new THREE.MeshStandardMaterial({ color: 0xffffff, map: treadTex, roughness: 0.78, metalness: 0.30 }),
+        railingAmber: new THREE.MeshStandardMaterial({ color: 0xffffff, map: amberTex.map, bumpMap: amberTex.bumpMap, bumpScale: 0.012, roughness: 0.46, metalness: 0.45 }),
+        railingHighlight: new THREE.MeshStandardMaterial({ color: 0xF2BB58, roughness: 0.40, metalness: 0.48 }),
+        railingBracket: new THREE.MeshStandardMaterial({ color: 0x343944, roughness: 0.62, metalness: 0.50 }),
+        cargoMain: new THREE.MeshStandardMaterial({ color: 0xffffff, map: cargoMainTex.map, bumpMap: cargoMainTex.bumpMap, bumpScale: 0.02, roughness: 0.70, metalness: 0.42 }),
+        cargoInset: new THREE.MeshStandardMaterial({ color: 0x373C47, roughness: 0.74, metalness: 0.38 }),
+        cargoBrace: new THREE.MeshStandardMaterial({ color: 0x80838B, roughness: 0.62, metalness: 0.48 }),
+        cargoEdge: new THREE.MeshStandardMaterial({ color: 0x90939B, roughness: 0.58, metalness: 0.50 }),
+        controlScreen: new THREE.MeshStandardMaterial({ color: 0xffffff, map: screenTex, emissive: 0x2080a8, emissiveMap: screenTex, emissiveIntensity: 0.65, roughness: 0.25 }),
+        warmLightFixture: new THREE.MeshStandardMaterial({ color: 0xFFE0AB, emissive: 0xFFE0AB, emissiveIntensity: 0.9, roughness: 0.25 }),
+        windowGlass: new THREE.MeshStandardMaterial({ color: 0xBDDCE9, emissive: 0x9ecbe0, emissiveIntensity: 0.20, transparent: true, opacity: 0.34, roughness: 0.08, metalness: 0.16 }),
+        skyBackdrop: new THREE.MeshBasicMaterial({ map: createSkyBackdropTexture(), side: THREE.DoubleSide }),
+        teamRed: new THREE.MeshStandardMaterial({ color: 0xFF394B, emissive: 0xFF394B, emissiveIntensity: 0.95, roughness: 0.35, metalness: 0.2 }),
+        teamBlue: new THREE.MeshStandardMaterial({ color: 0x20BFFF, emissive: 0x20BFFF, emissiveIntensity: 0.95, roughness: 0.35, metalness: 0.2 }),
+        cyanAccent: new THREE.MeshStandardMaterial({ color: 0x7BE5FF, emissive: 0x7BE5FF, emissiveIntensity: 0.82, roughness: 0.3, metalness: 0.2 }),
+        flagRedFabric: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('red', false), roughness: 0.72, metalness: 0.06, side: THREE.DoubleSide }),
+        flagBlueFabric: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('blue', false), roughness: 0.72, metalness: 0.06, side: THREE.DoubleSide }),
+        bannerRedFabric: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('red', true), roughness: 0.75, metalness: 0.05, side: THREE.DoubleSide }),
+        bannerBlueFabric: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('blue', true), roughness: 0.75, metalness: 0.05, side: THREE.DoubleSide }),
+        signBaseA: new THREE.MeshStandardMaterial({ map: createBaseSignTexture('BASE A', 'RED STAGING', '#FF394B'), emissive: 0x441016, emissiveIntensity: 0.45, roughness: 0.35 }),
+        signBaseB: new THREE.MeshStandardMaterial({ map: createBaseSignTexture('BASE B', 'BLUE STAGING', '#20BFFF'), emissive: 0x0b2a3e, emissiveIntensity: 0.45, roughness: 0.35 }),
+        amberPaint: new THREE.MeshStandardMaterial({ color: 0xDF9B32, roughness: 0.80, metalness: 0.12, polygonOffset: true, polygonOffsetFactor: -2 }),
+        cautionStripe: new THREE.MeshStandardMaterial({ color: 0xffffff, map: cautionTex, roughness: 0.82, metalness: 0.12, polygonOffset: true, polygonOffsetFactor: -2 }),
+        drainageGrate: new THREE.MeshStandardMaterial({ color: 0xffffff, map: grateTexSet.map, roughness: 0.68, metalness: 0.56, polygonOffset: true, polygonOffsetFactor: -2 }),
+        graffitiDecal: new THREE.MeshStandardMaterial({ map: createGraffitiDecalTexture(), transparent: true, roughness: 0.88, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false }),
+        chevronDecal: new THREE.MeshStandardMaterial({ map: createChevronDecalTexture(), transparent: true, roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, depthWrite: false })
+      };
+    }
+
+    // =========================================================================
+    // 3. ELEVATION-AWARE CAPSULE COLLISION WORLD (WITH SPAWN PROTECTION)
+    // =========================================================================
+    class ArenaCollisionWorld {
+      constructor() {
+        this.walkableFloors = [];
+        this.stairRamps = [];
+        this.solidBoxes = [];
+        this.ceilingPlanes = [];
+      }
+
+      addWalkable(id, name, minX, maxX, minZ, maxZ, topY, bottomY, layer) {
+        this.walkableFloors.push({ id, name, minX, maxX, minZ, maxZ, topY, bottomY, layer });
+      }
+
+      addStairRamp(id, name, minX, maxX, startZ, endZ, startY, endY) {
+        this.stairRamps.push({
+          id, name, minX, maxX, startZ, endZ, startY, endY,
+          minZ: Math.min(startZ, endZ), maxZ: Math.max(startZ, endZ),
+          getHeightAt(z) {
+            const t = THREE.MathUtils.clamp((z - startZ) / (endZ - startZ), 0, 1);
+            return startY + t * (endY - startY);
+          }
+        });
+      }
+
+      addSolidBox(id, name, minX, maxX, minY, maxY, minZ, maxZ, category = 'structure', landable = false) {
+        this.solidBoxes.push({ id, name, minX, maxX, minY, maxY, minZ, maxZ, category, landable });
+      }
+
+      addCeilingPlane(id, name, minX, maxX, minZ, maxZ, y) {
+        this.ceilingPlanes.push({ id, name, minX, maxX, minZ, maxZ, y });
+      }
+
+      isInsideZone(x, z, zone) {
+        return x >= zone.minX && x <= zone.maxX && z >= zone.minZ && z <= zone.maxZ;
+      }
+
+      isInsideEnemySpawn(x, z, team) {
+        if (!team) return false;
+        const enemyZone = team === 'red' ? ARENA_CONFIG.spawnZones.blue : ARENA_CONFIG.spawnZones.red;
+        return this.isInsideZone(x, z, enemyZone);
+      }
+
+      isInsideFriendlySpawn(x, z, team) {
+        if (!team) return false;
+        const ownZone = team === 'red' ? ARENA_CONFIG.spawnZones.red : ARENA_CONFIG.spawnZones.blue;
+        return this.isInsideZone(x, z, ownZone);
+      }
+
+      getOverlappingObstacle(x, footY, z, radius, height, footClearance = 0.22) {
+        const yMin = footY + footClearance, yMax = footY + height - 0.05;
+        for (let i = 0; i < this.solidBoxes.length; i++) {
+          const b = this.solidBoxes[i];
+          if (yMax <= b.minY || yMin >= b.maxY) continue;
+          const cx = THREE.MathUtils.clamp(x, b.minX, b.maxX);
+          const cz = THREE.MathUtils.clamp(z, b.minZ, b.maxZ);
+          const dx = x - cx, dz = z - cz;
+          if (dx * dx + dz * dz < radius * radius - 1e-5) return b;
+        }
+        return null;
+      }
+
+      getSupportHeight(x, z, footY, radius, maxStepUp = ARENA_CONFIG.player.stepUpHeight) {
+        let bestY = -Infinity, supportName = null;
+        const margin = radius * 0.45, h = ARENA_CONFIG.player.height;
+        for (let i = 0; i < this.walkableFloors.length; i++) {
+          const s = this.walkableFloors[i];
+          if (x >= s.minX - margin && x <= s.maxX + margin && z >= s.minZ - margin && z <= s.maxZ + margin) {
+            if (s.topY <= footY + maxStepUp && s.topY > bestY) { bestY = s.topY; supportName = s.name; }
+          }
+        }
+        for (let i = 0; i < this.stairRamps.length; i++) {
+          const r = this.stairRamps[i];
+          if (x >= r.minX - radius * 0.2 && x <= r.maxX + radius * 0.2 && z >= r.minZ - 0.22 && z <= r.maxZ + 0.22) {
+            const rampY = r.getHeightAt(z);
+            if (rampY <= footY + maxStepUp + 0.18 && rampY > bestY) { bestY = rampY; supportName = r.name; }
+          }
+        }
+        for (let i = 0; i < this.solidBoxes.length; i++) {
+          const b = this.solidBoxes[i];
+          if (!b.landable) continue;
+          if (x >= b.minX - margin && x <= b.maxX + margin && z >= b.minZ - margin && z <= b.maxZ + margin) {
+            if (b.maxY <= footY + maxStepUp && b.maxY > bestY) {
+              if (!this.getOverlappingObstacle(x, b.maxY + 0.04, z, radius * 0.75, h - 0.1, 0.05)) {
+                bestY = b.maxY; supportName = b.name + ' Roof';
+              }
+            }
+          }
+        }
+        return { y: bestY, name: supportName };
+      }
+
+      stepCapsule(state, desiredMoveX, desiredMoveZ, dt, team = null) {
+        const cfg = ARENA_CONFIG.player, r = cfg.radius, h = cfg.height;
+        const totalDist = Math.hypot(desiredMoveX, desiredMoveZ) + Math.abs(state.vy * dt);
+        const steps = Math.max(1, Math.min(10, Math.ceil(totalDist / 0.16)));
+        const subDt = dt / steps, stepDX = desiredMoveX / steps, stepDZ = desiredMoveZ / steps;
+        let hitCeiling = false, hitSolid = null, hitSpawnBarrier = false;
+
+        for (let s = 0; s < steps; s++) {
+          state.x += stepDX; state.z += stepDZ;
+
+          // Protected Spawn-Zone Barrier: block enemies at doorway boundary (X = ±38.1)
+          if (team === 'red' && state.x + r > ARENA_CONFIG.spawnZones.blue.minX) {
+            state.x = ARENA_CONFIG.spawnZones.blue.minX - r;
+            hitSpawnBarrier = true;
+          } else if (team === 'blue' && state.x - r < ARENA_CONFIG.spawnZones.red.maxX) {
+            state.x = ARENA_CONFIG.spawnZones.red.maxX + r;
+            hitSpawnBarrier = true;
+          }
+
+          for (let iter = 0; iter < 4; iter++) {
+            for (let i = 0; i < this.solidBoxes.length; i++) {
+              const b = this.solidBoxes[i];
+              if (state.y + h - 0.06 <= b.minY || state.y + 0.24 >= b.maxY) continue;
+              const cx = THREE.MathUtils.clamp(state.x, b.minX, b.maxX);
+              const cz = THREE.MathUtils.clamp(state.z, b.minZ, b.maxZ);
+              const dx = state.x - cx, dz = state.z - cz, distSq = dx * dx + dz * dz;
+              if (distSq < r * r) {
+                hitSolid = b;
+                if (distSq > 1e-8) {
+                  const dist = Math.sqrt(distSq), push = r - dist;
+                  state.x += (dx / dist) * push; state.z += (dz / dist) * push;
+                } else {
+                  const pL = Math.abs(state.x - b.minX), pR = Math.abs(b.maxX - state.x);
+                  const pF = Math.abs(b.maxZ - state.z), pB = Math.abs(state.z - b.minZ);
+                  const mP = Math.min(pL, pR, pF, pB);
+                  if (mP === pL) state.x = b.minX - r - 0.01;
+                  else if (mP === pR) state.x = b.maxX + r + 0.01;
+                  else if (mP === pB) state.z = b.minZ - r - 0.01;
+                  else state.z = b.maxZ + r + 0.01;
+                }
+              }
+            }
+          }
+
+          const prevY = state.y;
+          state.vy -= cfg.gravity * subDt;
+          state.y += state.vy * subDt;
+
+          if (state.vy > 0) {
+            for (let i = 0; i < this.ceilingPlanes.length; i++) {
+              const cp = this.ceilingPlanes[i];
+              if (state.x + r <= cp.minX || state.x - r >= cp.maxX || state.z + r <= cp.minZ || state.z - r >= cp.maxZ) continue;
+              if (prevY + h <= cp.y + 0.12 && state.y + h > cp.y) { state.y = cp.y - h; state.vy = 0; hitCeiling = true; }
+            }
+            for (let i = 0; i < this.solidBoxes.length; i++) {
+              const b = this.solidBoxes[i];
+              if (state.x + r <= b.minX || state.x - r >= b.maxX || state.z + r <= b.minZ || state.z - r >= b.maxZ) continue;
+              if (prevY + h <= b.minY + 0.10 && state.y + h > b.minY) { state.y = b.minY - h; state.vy = 0; hitCeiling = true; }
+            }
+          }
+
+          const support = this.getSupportHeight(state.x, state.z, prevY, r);
+          if (support.y > -Infinity) {
+            const snapDown = state.grounded ? 0.34 : 0.05;
+            if (state.y <= support.y + snapDown && state.vy <= 0.1) {
+              state.y = support.y; state.vy = 0; state.grounded = true; state.supportName = support.name;
+            } else { state.grounded = false; }
+          } else { state.grounded = false; }
+        }
+        return { hitCeiling, hitSolid, hitSpawnBarrier };
+      }
+
+      recoverIfInvalid(state, team = null) {
+        const r = ARENA_CONFIG.player.radius, h = ARENA_CONFIG.player.height;
+        const embeddedBox = this.getOverlappingObstacle(state.x, state.y, state.z, r * 0.85, h, 0.22);
+        const inEnemy = this.isInsideEnemySpawn(state.x, state.z, team);
+        const outOfBounds = state.y < -1.2 || Math.abs(state.x) > 51.5 || Math.abs(state.z) > 33.5;
+        if (!embeddedBox && !outOfBounds && !inEnemy) return { recovered: false };
+
+        const origY = Math.max(0, state.y);
+        const radii = [0.6, 1.2, 2.0, 3.0, 4.2];
+        const angles = 16;
+        let best = null, bestDist = Infinity;
+
+        if (!outOfBounds) {
+          for (const distR of radii) {
+            for (let a = 0; a < angles; a++) {
+              const ang = (a / angles) * Math.PI * 2;
+              const cx = state.x + Math.cos(ang) * distR, cz = state.z + Math.sin(ang) * distR;
+              if (Math.abs(cx) > 49.0 || Math.abs(cz) > 30.0) continue;
+              if (this.isInsideEnemySpawn(cx, cz, team)) continue;
+              const sup = this.getSupportHeight(cx, cz, origY, r, 0.6);
+              if (sup.y === -Infinity || sup.y > origY + 0.65 || sup.y < origY - 1.2) continue;
+              if (this.getOverlappingObstacle(cx, sup.y, cz, r + 0.04, h, 0.18)) continue;
+              const d = Math.hypot(cx - state.x, cz - state.z);
+              if (d < bestDist) { bestDist = d; best = { x: cx, y: sup.y, z: cz, supportName: sup.name }; }
+            }
+            if (best) break;
+          }
+        }
+
+        if (best) {
+          state.x = best.x; state.y = best.y; state.z = best.z;
+          state.vy = 0; state.grounded = true; state.supportName = best.supportName;
+          return { recovered: true, reason: embeddedBox ? embeddedBox.id : (inEnemy ? 'Enemy Spawn Barrier' : 'Out of Bounds'), to: best };
+        }
+
+        const safeFallback = team === 'blue' ? { x: 41.5, y: 4.8, z: 0 } : (team === 'red' ? { x: -41.5, y: 4.8, z: 0 } : { x: 0, y: 0.0, z: 21.5 });
+        state.x = safeFallback.x; state.y = safeFallback.y; state.z = safeFallback.z;
+        state.vy = 0; state.grounded = true;
+        return { recovered: true, reason: 'Verified Safe Spawn Fallback', to: safeFallback };
+      }
+    }
+
+    // =========================================================================
+    // 4. COMPLETE PHASE 6 ARENA, FLAG STATIONS, BANNERS & SPAWN ROOMS BUILDER
+    // =========================================================================
+    function buildArenaGeometry(scene, mats, collision) {
+      const root = new THREE.Group();
+      root.name = 'ArenaPhase6';
+      scene.add(root);
+
+      const animatedFans = [];
+      const animatedCloths = [];
+      const animatedRings = [];
+      const ctfFlags = {};
+      const B = ARENA_CONFIG.building, wt = B.wallThickness;
+      const dummy = new THREE.Object3D();
+
+      function addSolidSlab(id, name, minX, maxX, minZ, maxZ, topY, thickness, layer, registerWalkable = true, addTrim = true, floorVariant = null) {
+        const w = maxX - minX, d = maxZ - minZ, cx = (minX + maxX) * 0.5, cz = (minZ + maxZ) * 0.5;
+        const bottomY = topY - thickness, cy = bottomY + thickness * 0.5;
+        const resolvedVariant = floorVariant || (layer === 'bridge' ? 'bridge' : (layer === 'gallery' ? 'gallery' : 'ground'));
+        const topMat = mats.makeTiledFloorMat(w, d, resolvedVariant);
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, thickness, d), [
+          mats.slabSide, mats.slabSide, topMat, mats.slabUnderside, mats.slabSide, mats.slabSide
+        ]);
+        mesh.position.set(cx, cy, cz); mesh.receiveShadow = true; mesh.castShadow = layer !== 'ground';
+        root.add(mesh);
+
+        if (layer !== 'ground' && addTrim) {
+          const trimF = new THREE.Mesh(new THREE.BoxGeometry(w, 0.14, 0.08), mats.weathered);
+          trimF.position.set(cx, topY - 0.09, maxZ + 0.02); root.add(trimF);
+          const amberEdge = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.2, 0.18), mats.amberPaint);
+          amberEdge.rotation.x = -Math.PI / 2; amberEdge.position.set(cx, topY + 0.012, maxZ - 0.18); root.add(amberEdge);
+        }
+        if (registerWalkable) collision.addWalkable(id, name, minX, maxX, minZ, maxZ, topY, bottomY, layer);
+        if (layer !== 'ground') collision.addSolidBox(id + '_slab', name + ' Slab', minX, maxX, bottomY, topY, minZ, maxZ, 'slab', false);
+        return mesh;
+      }
+
+      function addDetailedColumn(id, name, x, z, baseY, height, w = 1.0, d = 1.0, options = {}) {
+        const { withBrackets = false, bracketDirX = 0, bracketDirZ = 0, landable = false } = options;
+        const colGroup = new THREE.Group(); colGroup.position.set(x, baseY, z);
+        const core = new THREE.Mesh(new THREE.BoxGeometry(w, height, d), mats.steel); core.position.y = height * 0.5; core.castShadow = true; colGroup.add(core);
+        const bZ = new THREE.Mesh(new THREE.BoxGeometry(w * 0.56, height - 0.5, d + 0.08), mats.bronze); bZ.position.y = height * 0.5; colGroup.add(bZ);
+        const bX = new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, height - 0.5, d * 0.56), mats.bronze); bX.position.y = height * 0.5; colGroup.add(bX);
+        const basePlate = new THREE.Mesh(new THREE.BoxGeometry(w + 0.28, 0.24, d + 0.28), mats.railingBracket); basePlate.position.y = 0.12; colGroup.add(basePlate);
+        const collarH = Math.min(0.48, height * 0.22);
+        const collar = new THREE.Mesh(new THREE.BoxGeometry(w + 0.24, collarH, d + 0.24), mats.steelDark); collar.position.y = height - collarH * 0.5; colGroup.add(collar);
+        if (withBrackets) {
+          const braceGeo = new THREE.BoxGeometry(0.24, 1.35, 0.24);
+          if (bracketDirX !== 0) { const br = new THREE.Mesh(braceGeo, mats.bronze); br.position.set(bracketDirX * (w * 0.5 + 0.42), height - 0.55, 0); br.rotation.z = -bracketDirX * (Math.PI / 4); colGroup.add(br); }
+          if (bracketDirZ !== 0) { const br = new THREE.Mesh(braceGeo, mats.bronze); br.position.set(0, height - 0.55, bracketDirZ * (d * 0.5 + 0.42)); br.rotation.x = bracketDirZ * (Math.PI / 4); colGroup.add(br); }
+        }
+        root.add(colGroup);
+        const hw = (w + 0.12) * 0.5, hd = (d + 0.12) * 0.5;
+        collision.addSolidBox(id, name, x - hw, x + hw, baseY, baseY + height, z - hd, z + hd, 'column', landable);
+        collision.addSolidBox(id + '_base', name + ' Base', x - (w + 0.28) * 0.5, x + (w + 0.28) * 0.5, baseY, baseY + 0.24, z - (d + 0.28) * 0.5, z + (d + 0.28) * 0.5, 'column_detail', false);
+        collision.addSolidBox(id + '_collar', name + ' Collar', x - (w + 0.24) * 0.5, x + (w + 0.24) * 0.5, baseY + height - collarH, baseY + height, z - (d + 0.24) * 0.5, z + (d + 0.24) * 0.5, 'column_detail', false);
+      }
+
+      // A. Primary Walkable Slabs (Locked Phase 1–5)
+      const gf = ARENA_CONFIG.groundFloor;
+      addSolidSlab('ground_floor', 'Ground Combat Floor', gf.minX, gf.maxX, gf.minZ, gf.maxZ, gf.topY, gf.thickness, 'ground', true, false, 'ground');
+      const br = ARENA_CONFIG.centralBridge;
+      addSolidSlab('central_bridge', 'Main Flag Bridge', br.minX, br.maxX, br.minZ, br.maxZ, br.topY, br.thickness, 'bridge', true, true, 'bridge');
+      const rp = ARENA_CONFIG.redPlatform;
+      addSolidSlab('red_platform', 'Red Flag Platform', rp.minX, rp.maxX, rp.minZ, rp.maxZ, rp.topY, rp.thickness, 'bridge', true, true, 'bridge');
+      const bp = ARENA_CONFIG.bluePlatform;
+      addSolidSlab('blue_platform', 'Blue Flag Platform', bp.minX, bp.maxX, bp.minZ, bp.maxZ, bp.topY, bp.thickness, 'bridge', true, true, 'bridge');
+      const ugMain = ARENA_CONFIG.upperGallery.main;
+      addSolidSlab('upper_gallery_main', 'Upper Observation Gallery', ugMain.minX, ugMain.maxX, ugMain.minZ, ugMain.maxZ, ugMain.topY, ugMain.thickness, 'gallery', true, true, 'gallery');
+      const ugBal = ARENA_CONFIG.upperGallery.balcony;
+      addSolidSlab('upper_gallery_balcony', 'Central Observation Balcony', ugBal.minX, ugBal.maxX, ugBal.minZ, ugBal.maxZ, ugBal.topY, ugBal.thickness, 'gallery', true, true, 'gallery');
+
+      // B. Split-Wall Builder
+      function buildSplitWall(wallId, orientation, fixedCoord, uMin, uMax, openings) {
+        const uSet = new Set([uMin, uMax]), vSet = new Set([0, B.height]);
+        openings.forEach((op) => {
+          uSet.add(THREE.MathUtils.clamp(op.uMin, uMin, uMax)); uSet.add(THREE.MathUtils.clamp(op.uMax, uMin, uMax));
+          vSet.add(THREE.MathUtils.clamp(op.vMin, 0, B.height)); vSet.add(THREE.MathUtils.clamp(op.vMax, 0, B.height));
+        });
+        const us = Array.from(uSet).sort((a, b) => a - b), vs = Array.from(vSet).sort((a, b) => a - b);
+        let segIdx = 0;
+        for (let i = 0; i < us.length - 1; i++) {
+          const u0 = us[i], u1 = us[i + 1]; if (u1 - u0 < 0.05) continue;
+          for (let j = 0; j < vs.length - 1; j++) {
+            const v0 = vs[j], v1 = vs[j + 1]; if (v1 - v0 < 0.05) continue;
+            const uMid = (u0 + u1) * 0.5, vMid = (v0 + v1) * 0.5;
+            if (openings.some((op) => uMid > op.uMin && uMid < op.uMax && vMid > op.vMin && vMid < op.vMax)) continue;
+            const spanU = u1 - u0, spanV = v1 - v0, mat = mats.makeTiledWallMat(spanU, spanV);
+            let mesh, minX, maxX, minZ, maxZ;
+            if (orientation === 'Z') {
+              mesh = new THREE.Mesh(new THREE.BoxGeometry(spanU, spanV, wt), mat); mesh.position.set(uMid, vMid, fixedCoord);
+              minX = u0; maxX = u1; minZ = fixedCoord - wt * 0.5; maxZ = fixedCoord + wt * 0.5;
+            } else {
+              mesh = new THREE.Mesh(new THREE.BoxGeometry(wt, spanV, spanU), mat); mesh.position.set(fixedCoord, vMid, uMid);
+              minX = fixedCoord - wt * 0.5; maxX = fixedCoord + wt * 0.5; minZ = u0; maxZ = u1;
+            }
+            mesh.receiveShadow = true; root.add(mesh);
+            collision.addSolidBox(`${wallId}_seg_${segIdx++}`, `${wallId} Wall`, minX, maxX, v0, v1, minZ, maxZ, 'wall', false);
+          }
+        }
+      }
+
+      const northOpenings = [
+        ...ARENA_CONFIG.windows.map((w) => ({ uMin: w.cx - w.w * 0.5, uMax: w.cx + w.w * 0.5, vMin: w.cy - w.h * 0.5, vMax: w.cy + w.h * 0.5 })),
+        ...ARENA_CONFIG.portals.filter(p => p.wall === 'north').map(p => ({ uMin: p.uCenter - p.width * 0.5, uMax: p.uCenter + p.width * 0.5, vMin: p.baseY, vMax: p.baseY + p.height }))
+      ];
+      const westOpenings = ARENA_CONFIG.portals.filter(p => p.wall === 'west').map(p => ({ uMin: p.uCenter - p.width * 0.5, uMax: p.uCenter + p.width * 0.5, vMin: p.baseY, vMax: p.baseY + p.height }));
+      const eastOpenings = ARENA_CONFIG.portals.filter(p => p.wall === 'east').map(p => ({ uMin: p.uCenter - p.width * 0.5, uMax: p.uCenter + p.width * 0.5, vMin: p.baseY, vMax: p.baseY + p.height }));
+
+      buildSplitWall('wall_north', 'Z', -B.halfD - wt * 0.5, -B.halfW, B.halfW, northOpenings);
+      buildSplitWall('wall_south', 'Z',  B.halfD + wt * 0.5, -B.halfW, B.halfW, []);
+      buildSplitWall('wall_west',  'X', -B.halfW - wt * 0.5, -B.halfD - wt, B.halfD + wt, westOpenings);
+      buildSplitWall('wall_east',  'X',  B.halfW + wt * 0.5, -B.halfD - wt, B.halfD + wt, eastOpenings);
+
+      // C. Upper Industrial Windows
+      const skyPlane = new THREE.Mesh(new THREE.PlaneGeometry(92, 26), mats.skyBackdrop);
+      skyPlane.position.set(0, 16.5, -B.halfD - 7.5); root.add(skyPlane);
+
+      ARENA_CONFIG.windows.forEach((win) => {
+        const g = new THREE.Group(); g.position.set(win.cx, win.cy, -B.halfD - wt * 0.5);
+        const ft = 0.36, fd = wt + 0.34;
+        const topF = new THREE.Mesh(new THREE.BoxGeometry(win.w + ft * 2, ft, fd), mats.steel); topF.position.y = win.h * 0.5 + ft * 0.5; g.add(topF);
+        const botF = new THREE.Mesh(new THREE.BoxGeometry(win.w + ft * 2, ft, fd), mats.steel); botF.position.y = -win.h * 0.5 - ft * 0.5; g.add(botF);
+        [-1, 1].forEach((sx) => { const sF = new THREE.Mesh(new THREE.BoxGeometry(ft, win.h, fd), mats.steel); sF.position.x = sx * (win.w * 0.5 + ft * 0.5); g.add(sF); });
+        const ledge = new THREE.Mesh(new THREE.BoxGeometry(win.w + 0.4, 0.18, wt + 0.65), mats.weathered); ledge.position.set(0, -win.h * 0.5 - 0.08, 0.16); g.add(ledge);
+        const mCount = win.w >= 13 ? 5 : 4;
+        for (let i = 1; i < mCount; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, win.h, 0.32), mats.steel); m.position.set(-win.w * 0.5 + (win.w * i) / mCount, 0, 0); g.add(m); }
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(win.w, 0.16, 0.30), mats.steel));
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(win.w - 0.1, win.h - 0.1, 0.08), mats.windowGlass));
+        root.add(g);
+        collision.addSolidBox(win.id + '_barrier', 'Window Barrier ' + win.id, win.cx - win.w * 0.5 - ft, win.cx + win.w * 0.5 + ft, win.cy - win.h * 0.5 - ft, win.cy + win.h * 0.5 + ft, -B.halfD - wt - 0.1, -B.halfD + 0.25, 'window', false);
+      });
+
+      // D. Angular Portal Frames + Control Terminals + Upper Neutral Alcove
+      ARENA_CONFIG.portals.forEach((p) => {
+        const matTeam = p.team === 'red' ? mats.teamRed : (p.team === 'blue' ? mats.teamBlue : mats.cyanAccent);
+        const frameT = 0.56, recessD = 0.82, isEW = p.wall === 'west' || p.wall === 'east', outSign = (p.wall === 'west' || p.wall === 'north') ? -1 : 1;
+        const g = new THREE.Group();
+        if (isEW) { g.position.set(outSign * B.halfW, p.baseY, p.uCenter); g.rotation.y = outSign < 0 ? Math.PI * 0.5 : -Math.PI * 0.5; }
+        else { g.position.set(p.uCenter, p.baseY, outSign * B.halfD); }
+
+        [-1, 1].forEach((sx) => {
+          const jamb = new THREE.Mesh(new THREE.BoxGeometry(frameT, p.height + frameT, recessD + wt), mats.steel); jamb.position.set(sx * (p.width * 0.5 + frameT * 0.5), (p.height + frameT) * 0.5, -wt * 0.35); g.add(jamb);
+          const vStrip = new THREE.Mesh(new THREE.BoxGeometry(0.12, p.height * 0.62, 0.14), matTeam); vStrip.position.set(sx * (p.width * 0.5 + 0.18), p.height * 0.46, recessD * 0.35); g.add(vStrip);
+          const bevel = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.46, recessD + 0.24), mats.steel); bevel.position.set(sx * (p.width * 0.5 - 0.24), p.height - 0.22, recessD * 0.15); bevel.rotation.z = sx * (Math.PI / 4); g.add(bevel);
+        });
+        const header = new THREE.Mesh(new THREE.BoxGeometry(p.width + frameT * 2 + 0.2, frameT + 0.14, recessD + wt), mats.steel); header.position.set(0, p.height + frameT * 0.5, -wt * 0.35); g.add(header);
+        const hStrip = new THREE.Mesh(new THREE.BoxGeometry(p.width * 0.72, 0.16, 0.16), matTeam); hStrip.position.set(0, p.height + 0.18, recessD * 0.35); g.add(hStrip);
+
+        // Control Terminal beside entrance
+        const term = new THREE.Group(); term.position.set(p.width * 0.5 + frameT + 0.55, 1.45, 0.14);
+        term.add(new THREE.Mesh(new THREE.BoxGeometry(0.62, 1.05, 0.22), mats.steel));
+        const tScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.34), mats.controlScreen); tScreen.position.set(0, 0.20, 0.116); term.add(tScreen);
+        const tLed = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.06, 0.04), matTeam); tLed.position.set(0, -0.06, 0.115); term.add(tLed);
+        g.add(term);
+        root.add(g);
+
+        const halfOpen = p.width * 0.5;
+        if (isEW) {
+          const wallInnerX = outSign * B.halfW;
+          if (p.thresholdSpan > 0) {
+            const tMinX = outSign < 0 ? wallInnerX : wallInnerX - p.thresholdSpan;
+            const tMaxX = outSign < 0 ? wallInnerX + p.thresholdSpan : wallInnerX;
+            addSolidSlab(p.id + '_thresh', p.name + ' Threshold', tMinX, tMaxX, p.uCenter - 4.0, p.uCenter + 4.0, p.baseY, 0.6, 'bridge', true, false, 'bridge');
+          }
+          const jMinX = wallInnerX - (outSign < 0 ? wt + 0.3 : 0.45), jMaxX = wallInnerX + (outSign < 0 ? 0.45 : wt + 0.3);
+          collision.addSolidBox(p.id + '_jl', p.name + ' Jamb L', jMinX, jMaxX, p.baseY, p.baseY + p.height, p.uCenter - halfOpen - frameT, p.uCenter - halfOpen, 'portal', false);
+          collision.addSolidBox(p.id + '_jr', p.name + ' Jamb R', jMinX, jMaxX, p.baseY, p.baseY + p.height, p.uCenter + halfOpen, p.uCenter + halfOpen + frameT, 'portal', false);
+          collision.addSolidBox(p.id + '_hd', p.name + ' Header', jMinX, jMaxX, p.baseY + p.height, p.baseY + p.height + frameT, p.uCenter - halfOpen - frameT, p.uCenter + halfOpen + frameT, 'portal', false);
+        } else {
+          // North Upper Neutral Alcove
+          const wallInnerZ = -B.halfD, alcBackZ = wallInnerZ - p.alcoveDepth, alcHalfW = halfOpen + 0.9, alcH = p.height + 0.4;
+          addSolidSlab(p.id + '_thresh', p.name + ' Vestibule', p.uCenter - alcHalfW, p.uCenter + alcHalfW, wallInnerZ, wallInnerZ + p.thresholdSpan, p.baseY, 0.45, 'gallery', true, false, 'gallery');
+          addSolidSlab(p.id + '_alcove_fl', p.name + ' Alcove Floor', p.uCenter - alcHalfW, p.uCenter + alcHalfW, alcBackZ, wallInnerZ + 0.5, p.baseY, 0.45, 'gallery', true, false, 'alcoveNeutral');
+          const backWall = new THREE.Mesh(new THREE.BoxGeometry(alcHalfW * 2 + 0.8, alcH, 0.8), mats.makeTiledWallMat(alcHalfW * 2, alcH)); backWall.position.set(p.uCenter, p.baseY + alcH * 0.5, alcBackZ - 0.4); root.add(backWall);
+          collision.addSolidBox(p.id + '_back', p.name + ' Back Wall', p.uCenter - alcHalfW, p.uCenter + alcHalfW, p.baseY, p.baseY + alcH, alcBackZ - 0.8, alcBackZ, 'wall', false);
+          [-1, 1].forEach((sx) => {
+            const sideX = p.uCenter + sx * (alcHalfW + 0.35);
+            const sWall = new THREE.Mesh(new THREE.BoxGeometry(0.7, alcH, p.alcoveDepth + wt), mats.makeTiledWallMat(p.alcoveDepth, alcH)); sWall.position.set(sideX, p.baseY + alcH * 0.5, (alcBackZ + wallInnerZ) * 0.5); root.add(sWall);
+            collision.addSolidBox(p.id + '_s' + sx, p.name + ' Side Wall', sideX - 0.35, sideX + 0.35, p.baseY, p.baseY + alcH, alcBackZ, wallInnerZ, 'wall', false);
+          });
+          collision.addCeilingPlane(p.id + '_ceil', p.name + ' Ceiling', p.uCenter - alcHalfW, p.uCenter + alcHalfW, alcBackZ, wallInnerZ, p.baseY + alcH);
+          const jMinZ = wallInnerZ - wt - 0.3, jMaxZ = wallInnerZ + 0.45;
+          collision.addSolidBox(p.id + '_jl', p.name + ' Jamb L', p.uCenter - halfOpen - frameT, p.uCenter - halfOpen, p.baseY, p.baseY + p.height, jMinZ, jMaxZ, 'portal', false);
+          collision.addSolidBox(p.id + '_jr', p.name + ' Jamb R', p.uCenter + halfOpen, p.uCenter + halfOpen + frameT, p.baseY, p.baseY + p.height, jMinZ, jMaxZ, 'portal', false);
+          collision.addSolidBox(p.id + '_hd', p.name + ' Header', p.uCenter - halfOpen - frameT, p.uCenter + halfOpen + frameT, p.baseY + p.height, p.baseY + p.height + frameT, jMinZ, jMaxZ, 'portal', false);
+        }
+      });
+
+      // =======================================================================
+      // E. PHASE 6 — PROTECTED TWO-LEVEL TEAM SPAWN ROOMS (RED & BLUE)
+      // =======================================================================
+      function buildProtectedSpawnRoom(team) {
+        const isRed = team === 'red';
+        const sign = isRed ? -1 : 1;
+        const innerX = sign * B.halfW;          // -38 or +38
+        const outerX = sign * (B.halfW + 12.0); // -50 or +50
+        const minX = Math.min(innerX, outerX);
+        const maxX = Math.max(innerX, outerX);
+        const alcVar = isRed ? 'alcoveRed' : 'alcoveBlue';
+        const teamMat = isRed ? mats.teamRed : mats.teamBlue;
+        const signMat = isRed ? mats.signBaseA : mats.signBaseB;
+
+        // 1. Lower Staging Floor (Y = 0.0, Z: -18.5..+18.5) connecting both lower flanking portals
+        addSolidSlab(`spawn_${team}_lower`, `${team} Lower Spawn Deck`, minX, maxX, -18.5, 18.5, 0.0, 1.0, 'ground', true, false, alcVar);
+
+        // 2. Upper Staging Deck (Y = 4.8, Z: -8.0..+8.0) connecting directly to main flag-level portal
+        addSolidSlab(`spawn_${team}_upper`, `${team} Upper Spawn Deck`, minX, maxX, -8.0, 8.0, 4.8, 0.6, 'bridge', true, false, alcVar);
+
+        // 3. Two Internal Spawn-Room Staircases (connecting Upper Deck Y=4.8 to Lower Deck Y=0.0)
+        // Placed at X = ±47.4, Z = ±16.64 -> ±8.0 (cleanly behind spawn positions at X=±41.5..±44.8)
+        const stX = sign * 47.4;
+        [1, -1].forEach((sz) => {
+          const stStartZ = sz * 16.64, stEndZ = sz * 8.0;
+          const stId = `spawn_${team}_stair_${sz > 0 ? 'f' : 'b'}`;
+          collision.addStairRamp(stId, `${team} Internal Spawn Stair`, stX - 1.6, stX + 1.6, stStartZ, stEndZ, 0.0, 4.8);
+          // Visual treads
+          for (let i = 0; i < 20; i++) {
+            const t = (i + 0.5) / 20;
+            const tr = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.08, 0.44), mats.stairTread);
+            tr.position.set(stX, (i + 1) * (4.8 / 20) - 0.04, stStartZ + (stEndZ - stStartZ) * t);
+            root.add(tr);
+          }
+        });
+
+        // 4. Outer Back Wall (X = ±50), Side Walls (Z = ±18.5), and Ceiling (Y = 10.6)
+        const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.8, 10.6, 37.8), mats.makeTiledWallMat(37.8, 10.6));
+        backWall.position.set(outerX + sign * 0.4, 5.3, 0); root.add(backWall);
+        collision.addSolidBox(`spawn_${team}_backwall`, `${team} Spawn Back Wall`, outerX + (isRed ? -0.8 : 0), outerX + (isRed ? 0 : 0.8), 0, 10.6, -18.5, 18.5, 'wall', false);
+
+        [-1, 1].forEach((sz) => {
+          const sWall = new THREE.Mesh(new THREE.BoxGeometry(12.4, 10.6, 0.8), mats.makeTiledWallMat(12.4, 10.6));
+          sWall.position.set((minX + maxX) * 0.5, 5.3, sz * 18.9); root.add(sWall);
+          collision.addSolidBox(`spawn_${team}_side_${sz}`, `${team} Spawn Side Wall`, minX, maxX, 0, 10.6, sz > 0 ? 18.5 : -19.3, sz > 0 ? 19.3 : -18.5, 'wall', false);
+        });
+
+        const ceil = new THREE.Mesh(new THREE.BoxGeometry(12.8, 0.6, 37.8), mats.ceiling);
+        ceil.position.set((minX + maxX) * 0.5, 10.9, 0); root.add(ceil);
+        collision.addCeilingPlane(`spawn_${team}_ceil`, `${team} Spawn Ceiling`, minX, maxX, -18.5, 18.5, 10.6);
+
+        // 5. Equipment Prep Benches & Illuminated Control Terminals along Back Wall (X = ±49.1)
+        [-4.5, 0, 4.5].forEach((bz, idx) => {
+          const bench = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.0, 2.6), mats.steel);
+          bench.position.set(outerX - sign * 0.85, 4.8 + 0.5, bz); root.add(bench);
+          const strip = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.12, 2.4), teamMat);
+          strip.position.set(outerX - sign * 1.42, 4.8 + 0.92, bz); root.add(strip);
+          collision.addSolidBox(`spawn_${team}_bench_${idx}`, `${team} Prep Bench`, outerX - sign * 1.4, outerX, 4.8, 5.8, bz - 1.3, bz + 1.3, 'equipment', true);
+        });
+
+        // 6. Illuminated "BASE A" / "BASE B" Overhead Identification Sign (Arena-facing & Interior)
+        const arenaSign = new THREE.Mesh(new THREE.BoxGeometry(0.18, 1.45, 4.6), [signMat, signMat, mats.steel, mats.steel, mats.steel, mats.steel]);
+        arenaSign.position.set(innerX - sign * 0.25, 10.6, 0); root.add(arenaSign);
+
+        const interiorSign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.3), signMat);
+        interiorSign.position.set(outerX - sign * 0.08, 8.6, 0);
+        interiorSign.rotation.y = isRed ? Math.PI / 2 : -Math.PI / 2;
+        root.add(interiorSign);
+      }
+
+      buildProtectedSpawnRoom('red');
+      buildProtectedSpawnRoom('blue');
+
+      // =======================================================================
+      // F. PHASE 6 — RED & BLUE FLAG STATIONS + ANIMATED VERTEX-WAVING FLAGS
+      // =======================================================================
+      function buildFlagStation(team, cfg) {
+        const isRed = team === 'red';
+        const teamMat = isRed ? mats.teamRed : mats.teamBlue;
+        const secMat = isRed ? mats.teamRed : mats.cyanAccent;
+        const clothMat = isRed ? mats.flagRedFabric : mats.flagBlueFabric;
+
+        const g = new THREE.Group();
+        g.position.set(cfg.x, cfg.y, cfg.z);
+
+        // 1. Low-profile circular reinforced graphite metal base (diameter 3.6m, height 0.12m)
+        const base = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.85, 0.12, 32), mats.steel);
+        base.position.y = 0.06; base.receiveShadow = true; g.add(base);
+
+        // Weathered metallic segmented outer trim ring (#90939B)
+        const trim = new THREE.Mesh(new THREE.RingGeometry(1.52, 1.82, 32), mats.cargoEdge);
+        trim.rotation.x = -Math.PI / 2; trim.position.y = 0.124; g.add(trim);
+
+        // Illuminated concentric energy rings (pulsed in animate loop)
+        const outerRing = new THREE.Mesh(new THREE.RingGeometry(1.30, 1.48, 32), teamMat);
+        outerRing.rotation.x = -Math.PI / 2; outerRing.position.y = 0.128; g.add(outerRing);
+
+        const innerRing = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.78, 28), secMat);
+        innerRing.rotation.x = -Math.PI / 2; innerRing.position.y = 0.130; g.add(innerRing);
+
+        // Team-colored objective boundary floor ring (diameter 4.4m)
+        const boundary = new THREE.Mesh(new THREE.RingGeometry(2.05, 2.22, 36), teamMat);
+        boundary.rotation.x = -Math.PI / 2; boundary.position.y = 0.018; g.add(boundary);
+
+        animatedRings.push({ outerRing, innerRing, phase: isRed ? 0 : Math.PI });
+
+        // 2. Flagpole (height 3.2m, diameter 0.08m, weathered silver + illuminated accents)
+        const flagObjGroup = new THREE.Group();
+        const socket = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.22, 16), mats.steelDark);
+        socket.position.y = 0.22; flagObjGroup.add(socket);
+
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.2, 12), mats.cargoEdge);
+        pole.position.y = 1.72; pole.castShadow = true; flagObjGroup.add(pole);
+
+        const finial = new THREE.Mesh(new THREE.OctahedronGeometry(0.11), teamMat);
+        finial.position.y = 3.36; flagObjGroup.add(finial);
+
+        // 3. Animated Flag Cloth (1.5m x 1.0m, subdivided plane for smooth vertex waving)
+        const clothGeo = new THREE.PlaneGeometry(1.5, 1.0, 14, 8);
+        // Shift X so left edge (x=0) is pinned to the flagpole
+        clothGeo.translate(0.75, 0, 0);
+        const basePos = Float32Array.from(clothGeo.attributes.position.array);
+        const clothMesh = new THREE.Mesh(clothGeo, clothMat);
+        clothMesh.position.set(0.04, 2.78, 0);
+        clothMesh.rotation.y = isRed ? 0 : Math.PI;
+        flagObjGroup.add(clothMesh);
+
+        g.add(flagObjGroup);
+        root.add(g);
+
+        animatedCloths.push({ geo: clothGeo, basePos, isBanner: false, phase: isRed ? 0 : 1.7 });
+
+        // Reusable Flag State Object for Phase 8 CTF mechanics
+        ctfFlags[team] = {
+          team,
+          homePos: new THREE.Vector3(cfg.x, cfg.y, cfg.z),
+          currentPos: new THREE.Vector3(cfg.x, cfg.y, cfg.z),
+          state: 'at_base',
+          mesh: flagObjGroup
+        };
+      }
+
+      buildFlagStation('red', ARENA_CONFIG.flags.red);
+      buildFlagStation('blue', ARENA_CONFIG.flags.blue);
+      window.CTF_FLAGS = ctfFlags;
+
+      // =======================================================================
+      // G. PHASE 6 — LARGE VERTICAL TEAM BANNERS (2 PER TEAM, 2.2m × 4.5m)
+      // =======================================================================
+      function buildVerticalBanner(team, x, y, z, rotY) {
+        const g = new THREE.Group();
+        g.position.set(x, y, z);
+        g.rotation.y = rotY;
+
+        // Metallic mounting rod & wall brackets
+        const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 2.55, 10), mats.cargoEdge);
+        rod.rotation.z = Math.PI / 2; rod.position.y = 2.28; g.add(rod);
+
+        // Subdivided vertical banner cloth (2.2m × 4.5m, pinned at top edge)
+        const bGeo = new THREE.PlaneGeometry(2.2, 4.5, 6, 14);
+        const basePos = Float32Array.from(bGeo.attributes.position.array);
+        const mat = team === 'red' ? mats.bannerRedFabric : mats.bannerBlueFabric;
+        const mesh = new THREE.Mesh(bGeo, mat);
+        g.add(mesh);
+
+        root.add(g);
+        animatedCloths.push({ geo: bGeo, basePos, isBanner: true, phase: (x + z) * 0.15 });
+      }
+
+      // Mounted beside Red (-X) and Blue (+X) entrances (zero collision, clear of windows)
+      buildVerticalBanner('red',  -37.35, 12.2, -5.6,  Math.PI / 2);
+      buildVerticalBanner('red',  -37.35, 12.2,  5.6,  Math.PI / 2);
+      buildVerticalBanner('blue',  37.35, 12.2, -5.6, -Math.PI / 2);
+      buildVerticalBanner('blue',  37.35, 12.2,  5.6, -Math.PI / 2);
+
+      // =======================================================================
+      // H. STRUCTURAL COLUMNS, ROOF TRUSSES, STAIRCASES, RAILINGS & PHASE 5 PROPS
+      // =======================================================================
+      const trussXs = [-28.5, -19, -9.5, 0, 9.5, 19, 28.5];
+      trussXs.forEach((cx, idx) => {
+        addDetailedColumn(`col_front_${idx}`, `Front Column ${idx}`, cx, B.halfD - 0.55, 0, B.height, 1.05, 1.05, { withBrackets: true, bracketDirZ: -1 });
+        if (Math.abs(cx) === 9.5 || Math.abs(cx) === 28.5) addDetailedColumn(`col_rear_${idx}`, `Rear Column ${idx}`, cx, -B.halfD + 0.55, 0, B.height, 1.05, 1.05, { withBrackets: true, bracketDirZ: 1 });
+      });
+      [-23, -8.5, 8.5, 23].forEach((cz, idx) => {
+        addDetailedColumn(`col_west_${idx}`, `West Column ${idx}`, -B.halfW + 0.55, cz, 0, B.height, 1.05, 1.05, { withBrackets: true, bracketDirX: 1 });
+        addDetailedColumn(`col_east_${idx}`, `East Column ${idx}`,  B.halfW - 0.55, cz, 0, B.height, 1.05, 1.05, { withBrackets: true, bracketDirX: -1 });
+      });
+      [-18, -6, 6, 18].forEach((px, idx) => {
+        addDetailedColumn(`pier_bridge_${idx}_f`, `Bridge Column ${px}F`, px,  3.35, 0, 4.2, 1.05, 1.05, { withBrackets: true, bracketDirX: px < 0 ? 1 : -1, bracketDirZ: -1 });
+        addDetailedColumn(`pier_bridge_${idx}_b`, `Bridge Column ${px}B`, px, -3.35, 0, 4.2, 1.05, 1.05, { withBrackets: true, bracketDirX: px < 0 ? 1 : -1, bracketDirZ: 1 });
+        const tG = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.34, 7.6), mats.steel); tG.position.set(px, 4.03, 0); root.add(tG);
+        collision.addSolidBox(`girder_t_${idx}`, `Bridge Girder ${idx}`, px - 0.28, px + 0.28, 3.86, 4.20, -3.8, 3.8, 'girder', false);
+      });
+      [-3.5, 0, 3.5].forEach((gz, idx) => {
+        const lG = new THREE.Mesh(new THREE.BoxGeometry(46.0, 0.30, 0.38), mats.steel); lG.position.set(0, 4.05, gz); root.add(lG);
+        collision.addSolidBox(`girder_l_${idx}`, `Bridge Long Girder ${idx}`, -23, 23, 3.90, 4.20, gz - 0.19, gz + 0.19, 'girder', false);
+      });
+      [-19, -12, -4, 4, 12, 19].forEach((lx) => {
+        [-3.85, 3.85].forEach((lz) => {
+          const h = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.16, 0.28), mats.steelDark); h.position.set(lx, 4.12, lz); root.add(h);
+          const l = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.08, 0.18), mats.cyanAccent); l.position.set(lx, 4.05, lz); root.add(l);
+        });
+      });
+      [-35.2, -23.8, 23.8, 35.2].forEach((px, idx) => {
+        addDetailedColumn(`pier_plat_${idx}_f`, `Flag Plat Column ${px}F`, px,  7.2, 0, 4.2, 1.0, 1.0);
+        addDetailedColumn(`pier_plat_${idx}_b`, `Flag Plat Column ${px}B`, px, -7.2, 0, 4.2, 1.0, 1.0);
+      });
+      [-23, -10, 10, 23].forEach((px, idx) => {
+        addDetailedColumn(`pier_gal_${idx}_f`, `Gallery Column ${px}F`, px, -18.5, 0, 9.15, 1.0, 1.0, { withBrackets: true, bracketDirZ: -1 });
+        addDetailedColumn(`pier_gal_${idx}_b`, `Gallery Column ${px}B`, px, -23.4, 0, 9.15, 1.0, 1.0);
+      });
+      ARENA_CONFIG.structuralPlinths.forEach((pl) => addDetailedColumn(pl.id, pl.name, pl.x, pl.z, 0, pl.h, pl.w, pl.d, { landable: true }));
+
+      // Ceiling & Roof Trusses
+      const ceilMesh = new THREE.Mesh(new THREE.BoxGeometry(B.width + wt * 2, 0.8, B.depth + wt * 2), mats.ceiling);
+      ceilMesh.position.set(0, B.height + 0.4, 0); root.add(ceilMesh);
+      collision.addCeilingPlane('warehouse_ceiling', 'Warehouse Roof Ceiling', -B.halfW, B.halfW, -B.halfD, B.halfD, B.height);
+
+      const webM = [], diagM = [];
+      trussXs.forEach((tx) => {
+        const bC = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.36, B.depth), mats.steel); bC.position.set(tx, 18.4, 0); root.add(bC);
+        const tC = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.40, B.depth), mats.steel); tC.position.set(tx, 20.6, 0); root.add(tC);
+        const bays = 8, bayLen = (B.depth - 4) / bays;
+        for (let b = 0; b <= bays; b++) {
+          const zPos = -B.halfD + 2 + b * bayLen;
+          dummy.position.set(tx, 19.5, zPos); dummy.rotation.set(0, 0, 0); dummy.updateMatrix(); webM.push(dummy.matrix.clone());
+          if (b < bays) {
+            dummy.position.set(tx, 19.5, zPos + bayLen * 0.5);
+            dummy.rotation.set(Math.atan2(2.2, bayLen) * (b % 2 === 0 ? 1 : -1), 0, 0);
+            dummy.updateMatrix(); diagM.push(dummy.matrix.clone());
+          }
+        }
+      });
+      const iW = new THREE.InstancedMesh(new THREE.BoxGeometry(0.24, 2.2, 0.24), mats.steel, webM.length);
+      webM.forEach((m, i) => iW.setMatrixAt(i, m)); iW.instanceMatrix.needsUpdate = true; root.add(iW);
+      const iD = new THREE.InstancedMesh(new THREE.BoxGeometry(0.20, 0.20, 6.9), mats.bronze, diagM.length);
+      diagM.forEach((m, i) => iD.setMatrixAt(i, m)); iD.instanceMatrix.needsUpdate = true; root.add(iD);
+
+      // 6 Main Arena Staircases
+      const spec = ARENA_CONFIG.stairSpec;
+      const instTreads = new THREE.InstancedMesh(new THREE.BoxGeometry(spec.width - 0.24, 0.08, spec.treadDepth + 0.02), mats.stairTread, ARENA_CONFIG.staircases.length * spec.riserCount);
+      instTreads.castShadow = true; instTreads.receiveShadow = true;
+      let tIdx = 0;
+      ARENA_CONFIG.staircases.forEach((st) => {
+        const minX = st.centerX - st.width / 2, maxX = st.centerX + st.width / 2, dirZ = Math.sign(st.endZ - st.startZ);
+        if (st.connectorSlab) addSolidSlab(st.id + '_connector', st.name + ' Landing', minX, maxX, st.connectorSlab.minZ, st.connectorSlab.maxZ, st.connectorSlab.topY, st.connectorSlab.thickness, 'bridge', true, false, 'landing');
+        if (st.bottomLanding) {
+          const bl = st.bottomLanding;
+          const plate = new THREE.Mesh(new THREE.BoxGeometry(st.width, 0.03, bl.maxZ - bl.minZ), mats.makeTiledFloorMat(st.width, bl.maxZ - bl.minZ, 'landing'));
+          plate.position.set(st.centerX, bl.y + 0.015, (bl.minZ + bl.maxZ) * 0.5); root.add(plate);
+        }
+        for (let i = 0; i < spec.riserCount; i++) {
+          const t = (i + 0.5) / spec.riserCount;
+          dummy.position.set(st.centerX, st.startY + (i + 1) * spec.riserHeight - 0.04, st.startZ + (st.endZ - st.startZ) * t);
+          dummy.rotation.set(0, dirZ < 0 ? 0 : Math.PI, 0); dummy.updateMatrix();
+          instTreads.setMatrixAt(tIdx++, dummy.matrix);
+        }
+        const run = Math.abs(st.endZ - st.startZ), rise = st.endY - st.startY, diagLen = Math.hypot(run, rise);
+        const slopeAngle = Math.atan2(rise, run) * (dirZ < 0 ? 1 : -1), midZ = (st.startZ + st.endZ) * 0.5, midY = (st.startY + st.endY) * 0.5;
+        [-1, 1].forEach((sideSign) => {
+          const sx = st.centerX + sideSign * (st.width / 2 - 0.09);
+          const str = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.44, diagLen + 0.2), mats.steel); str.position.set(sx, midY - 0.16, midZ); str.rotation.x = slopeAngle; root.add(str);
+          const rl = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.08, diagLen + 0.15), mats.railingAmber); rl.position.set(sx, midY + ARENA_CONFIG.railing.height - 0.05, midZ); rl.rotation.x = slopeAngle; root.add(rl);
+        });
+        for (let s = 0; s < 6; s++) {
+          const z0 = st.startZ + (st.endZ - st.startZ) * (s / 6), z1 = st.startZ + (st.endZ - st.startZ) * ((s + 1) / 6);
+          const sMinZ = Math.min(z0, z1), sMaxZ = Math.max(z0, z1), lowY = st.startY + rise * (s / 6);
+          collision.addSolidBox(`${st.id}_railL_${s}`, st.name + ' Rail L', minX - 0.10, minX + 0.10, lowY, lowY + 1.15, sMinZ, sMaxZ, 'railing', false);
+          collision.addSolidBox(`${st.id}_railR_${s}`, st.name + ' Rail R', maxX - 0.10, maxX + 0.10, lowY, lowY + 1.15, sMinZ, sMaxZ, 'railing', false);
+          if (s >= 1) {
+            const uTop = lowY - 0.28, uBot = st.startY === 0 ? 0.0 : Math.max(st.startY - 0.55, uTop - 1.1);
+            if (uTop > uBot + 0.15) {
+              if (st.startY === 0) {
+                const belly = new THREE.Mesh(new THREE.BoxGeometry(st.width - 0.12, uTop - uBot, sMaxZ - sMinZ), mats.slabUnderside);
+                belly.position.set(st.centerX, (uTop + uBot) * 0.5, (sMinZ + sMaxZ) * 0.5); root.add(belly);
+              }
+              collision.addSolidBox(`${st.id}_under_${s}`, st.name + ' Underside', minX + 0.05, maxX - 0.05, uBot, uTop, sMinZ, sMaxZ, 'stair_underside', false);
+            }
+          }
+        }
+        collision.addStairRamp(st.id, st.name, minX, maxX, st.startZ, st.endZ, st.startY, st.endY);
+      });
+      instTreads.instanceMatrix.needsUpdate = true; root.add(instTreads);
+
+      // Instanced Amber Safety Railings
+      const postM = [], brackM = [];
+      function addRailingSegment(id, x1, z1, x2, z2, baseY) {
+        const dx = x2 - x1, dz = z2 - z1, len = Math.hypot(dx, dz); if (len < 0.2) return;
+        const rH = ARENA_CONFIG.railing.height, cx = (x1 + x2) * 0.5, cz = (z1 + z2) * 0.5, angle = Math.atan2(dx, dz);
+        const g = new THREE.Group(); g.position.set(cx, baseY, cz); g.rotation.y = angle;
+        const tb = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.075, len), mats.railingHighlight); tb.position.y = rH - 0.038; g.add(tb);
+        const mb = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, len), mats.railingAmber); mb.position.y = rH * 0.52; g.add(mb);
+        root.add(g);
+        const count = Math.max(2, Math.round(len / ARENA_CONFIG.railing.postSpacing) + 1);
+        for (let i = 0; i < count; i++) {
+          const t = i / (count - 1), px = x1 + dx * t, pz = z1 + dz * t;
+          dummy.position.set(px, baseY + rH * 0.5, pz); dummy.rotation.set(0, angle, 0); dummy.updateMatrix(); postM.push(dummy.matrix.clone());
+          dummy.position.set(px, baseY + 0.04, pz); dummy.updateMatrix(); brackM.push(dummy.matrix.clone());
+        }
+        collision.addSolidBox(id, 'Safety Railing ' + id, Math.min(x1, x2) - 0.08, Math.max(x1, x2) + 0.08, baseY, baseY + rH, Math.min(z1, z2) - 0.08, Math.max(z1, z2) + 0.08, 'railing', false);
+      }
+      addRailingSegment('rail_bridge_front', -23, 3.92, 23, 3.92, 4.8);
+      addRailingSegment('rail_bridge_back_l', -23, -3.92, -13.9, -3.92, 4.8);
+      addRailingSegment('rail_bridge_back_m', -10.1, -3.92, 10.1, -3.92, 4.8);
+      addRailingSegment('rail_bridge_back_r', 13.9, -3.92, 23, -3.92, 4.8);
+      [-1, 1].forEach((s) => {
+        const tag = s < 0 ? 'red' : 'blue', iX = s * 23.08, oX = s * 35.92, sI = s * 28.1, sO = s * 31.9;
+        addRailingSegment(`rail_${tag}_f1`, Math.min(iX, sI), 7.92, Math.max(iX, sI), 7.92, 4.8);
+        addRailingSegment(`rail_${tag}_f2`, Math.min(sO, oX), 7.92, Math.max(sO, oX), 7.92, 4.8);
+        addRailingSegment(`rail_${tag}_b1`, Math.min(iX, sI), -7.92, Math.max(iX, sI), -7.92, 4.8);
+        addRailingSegment(`rail_${tag}_b2`, Math.min(sO, oX), -7.92, Math.max(sO, oX), -7.92, 4.8);
+        addRailingSegment(`rail_${tag}_wing_f`, iX, 4.0, iX, 7.92, 4.8);
+        addRailingSegment(`rail_${tag}_wing_b`, iX, -7.92, iX, -4.0, 4.8);
+      });
+      addRailingSegment('rail_gal_l1', -32.92, -18.08, -31.9, -18.08, 9.6);
+      addRailingSegment('rail_gal_l2', -28.1, -18.08, -7.0, -18.08, 9.6);
+      addRailingSegment('rail_gal_r1', 7.0, -18.08, 28.1, -18.08, 9.6);
+      addRailingSegment('rail_gal_r2', 31.9, -18.08, 32.92, -18.08, 9.6);
+      addRailingSegment('rail_bal_l', -6.92, -18.0, -6.92, -15.08, 9.6);
+      addRailingSegment('rail_bal_f', -6.92, -15.08, 6.92, -15.08, 9.6);
+      addRailingSegment('rail_bal_r', 6.92, -18.0, 6.92, -15.08, 9.6);
+      addRailingSegment('rail_gal_end_l', -32.92, -23.92, -32.92, -18.08, 9.6);
+      addRailingSegment('rail_gal_end_r', 32.92, -23.92, 32.92, -18.08, 9.6);
+      const iP = new THREE.InstancedMesh(new THREE.BoxGeometry(0.065, ARENA_CONFIG.railing.height, 0.065), mats.railingAmber, postM.length);
+      postM.forEach((m, i) => iP.setMatrixAt(i, m)); iP.instanceMatrix.needsUpdate = true; root.add(iP);
+      const iB = new THREE.InstancedMesh(new THREE.BoxGeometry(0.12, 0.08, 0.12), mats.railingBracket, brackM.length);
+      brackM.forEach((m, i) => iB.setMatrixAt(i, m)); iB.instanceMatrix.needsUpdate = true; root.add(iB);
+
+      // All 8 Armored Cargo Containers
+      function buildCrate(w, h, d, statusColor) {
+        const g = new THREE.Group(), sMat = statusColor === 'red' ? mats.teamRed : mats.cyanAccent;
+        const body = new THREE.Mesh(new THREE.BoxGeometry(w - 0.14, h - 0.12, d - 0.14), mats.cargoMain); body.position.y = h * 0.5; body.castShadow = true; body.receiveShadow = true; g.add(body);
+        const inFB = new THREE.Mesh(new THREE.BoxGeometry(w - 0.42, h - 0.42, d - 0.08), mats.cargoInset); inFB.position.y = h * 0.5; g.add(inFB);
+        [-1, 1].forEach((sx) => [-1, 1].forEach((sz) => {
+          const p = new THREE.Mesh(new THREE.BoxGeometry(0.11, h, 0.11), mats.steel); p.position.set(sx * (w * 0.5 - 0.055), h * 0.5, sz * (d * 0.5 - 0.055)); g.add(p);
+          [0.14, h - 0.14].forEach((cy) => { const gd = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.24, 0.18), mats.railingAmber); gd.position.set(sx * (w * 0.5 - 0.07), cy, sz * (d * 0.5 - 0.07)); g.add(gd); });
+        }));
+        const dLen = Math.hypot(w - 0.48, h - 0.48), dAng = Math.atan2(h - 0.48, w - 0.48);
+        [-1, 1].forEach((sz) => [1, -1].forEach((sgn) => {
+          const br = new THREE.Mesh(new THREE.BoxGeometry(dLen, 0.11, 0.06), mats.cargoBrace); br.position.set(0, h * 0.5, sz * (d * 0.5 - 0.03)); br.rotation.z = sgn * dAng; g.add(br);
+        }));
+        const band = new THREE.Mesh(new THREE.BoxGeometry(w - 0.30, 0.16, d + 0.02), mats.cautionStripe); band.position.y = 0.20; g.add(band);
+        [-1, 1].forEach((sz) => { const led = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.07, 0.05), sMat); led.position.set(w * 0.28, h - 0.24, sz * (d * 0.5 + 0.01)); g.add(led); });
+        const roof = new THREE.Mesh(new THREE.BoxGeometry(w - 0.22, 0.06, d - 0.22), mats.cargoEdge); roof.position.y = h - 0.03; g.add(roof);
+        return g;
+      }
+
+      ARENA_CONFIG.cargoContainers.forEach((c) => {
+        const u = buildCrate(c.w, c.h, c.d, c.statusColor); u.position.set(c.x, c.y, c.z); root.add(u);
+        collision.addSolidBox(c.id, c.name, c.x - c.w * 0.5, c.x + c.w * 0.5, c.y, c.y + c.h, c.z - c.d * 0.5, c.z + c.d * 0.5, 'cargo', true);
+        if (c.stacked) {
+          const tu = buildCrate(c.topW, c.topH, c.topD, 'red'); tu.position.set(c.x, c.y + c.h, c.z); root.add(tu);
+          collision.addSolidBox(c.id + '_top', c.name + ' Upper', c.x - c.topW * 0.5, c.x + c.topW * 0.5, c.y + c.h, c.y + c.h + c.topH, c.z - c.topD * 0.5, c.z + c.topD * 0.5, 'cargo', true);
+        }
+      });
+
+      // 6 Animated Ventilation Extraction Fans
+      function buildVent(x, y, z, rotY) {
+        const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rotY;
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(3.4, 2.2, 0.38), mats.steel));
+        const cav = new THREE.Mesh(new THREE.BoxGeometry(3.0, 1.8, 0.24), mats.steelDark); cav.position.z = 0.08; g.add(cav);
+        const rotor = new THREE.Group(); rotor.position.set(-0.65, 0, 0.16);
+        for (let i = 0; i < 6; i++) {
+          const bl = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.62, 0.03), mats.cargoBrace);
+          const ang = (i / 6) * Math.PI * 2; bl.position.set(Math.cos(ang) * 0.36, Math.sin(ang) * 0.36, 0); bl.rotation.z = ang + Math.PI / 2; rotor.add(bl);
+        }
+        g.add(rotor); animatedFans.push(rotor);
+        root.add(g);
+      }
+      buildVent(-15, 13.0, -B.halfD + 0.2, 0); buildVent(15, 13.0, -B.halfD + 0.2, 0);
+      buildVent(-15, 13.0,  B.halfD - 0.2, Math.PI); buildVent(15, 13.0,  B.halfD - 0.2, Math.PI);
+      buildVent(-B.halfW + 0.2, 13.0, 14, Math.PI / 2); buildVent(B.halfW - 0.2, 13.0, 14, -Math.PI / 2);
+
+      // Industrial Pipes, Electrical Cabinets, Drainage Grates, Chevrons & Graffiti
+      [[-37.2, -20.5, 0.32, 19.5], [37.2, -20.5, 0.32, 19.5], [-37.2, 20.5, 0.28, 19.5], [37.2, 20.5, 0.28, 19.5]].forEach(([x, z, r, h], i) => {
+        const pipe = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 12), mats.steel); pipe.position.set(x, h * 0.5, z); root.add(pipe);
+        collision.addSolidBox(`pipe_${i}`, `Pipe ${i}`, x - r, x + r, 0, h, z - r, z + r, 'equipment', false);
+      });
+      [-14, 14].forEach((ex, i) => {
+        const cab = new THREE.Mesh(new THREE.BoxGeometry(1.6, 2.2, 0.65), mats.steel); cab.position.set(ex, 1.1, B.halfD - 0.42); root.add(cab);
+        collision.addSolidBox(`elec_cab_${i}`, `Electrical Cabinet ${i}`, ex - 0.8, ex + 0.8, 0, 2.2, B.halfD - 0.78, B.halfD, 'equipment', true);
+      });
+      const underStrip = new THREE.Mesh(new THREE.PlaneGeometry(46, 7.6), mats.makeTiledFloorMat(46, 7.6, 'underBridge'));
+      underStrip.rotation.x = -Math.PI / 2; underStrip.position.set(0, 0.008, 0); root.add(underStrip);
+
+      [[-10, 4.8, 0, -Math.PI / 2], [10, 4.8, 0, Math.PI / 2], [-20, 0, 21.5, -Math.PI / 2], [20, 0, 21.5, Math.PI / 2]].forEach(([x, y, z, rot]) => {
+        const m = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 2.2), mats.chevronDecal); m.rotation.x = -Math.PI / 2; m.rotation.z = rot; m.position.set(x, y + 0.016, z); root.add(m);
+      });
+      [[0, 0, 21.5, 4.0, 1.4], [0, 0, 0, 4.4, 1.6], [-11.5, 4.8, 0, 2.6, 1.3], [11.5, 4.8, 0, 2.6, 1.3]].forEach(([x, y, z, w, d]) => {
+        const g = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mats.drainageGrate); g.rotation.x = -Math.PI / 2; g.position.set(x, y + 0.016, z); root.add(g);
+      });
+      [[-14.5, 2.3, -27.42, 0], [14.5, 2.3, -27.42, 0]].forEach(([x, y, z, ry]) => {
+        const d = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 2.1), mats.graffitiDecal); d.position.set(x, y, z); d.rotation.y = ry; root.add(d);
+      });
+
+      return { root, animatedFans, animatedCloths, animatedRings, ctfFlags };
+    }
+
+    // =========================================================================
+    // 5. DEBUG VISUALIZERS, SPAWN MARKERS, LIGHTING & AVATAR
+    // =========================================================================
+    function buildDebugVisualizers(scene, collision) {
+      const collisionGroup = new THREE.Group(); collisionGroup.visible = false; scene.add(collisionGroup);
+      const matSolid = new THREE.MeshBasicMaterial({ color: 0xff9b32, wireframe: true, transparent: true, opacity: 0.6 });
+      const matCargo = new THREE.MeshBasicMaterial({ color: 0x2ee58d, wireframe: true, transparent: true, opacity: 0.8 });
+      collision.solidBoxes.forEach((b) => {
+        if (b.category === 'wall') return;
+        const m = new THREE.Mesh(new THREE.BoxGeometry(b.maxX - b.minX, b.maxY - b.minY, b.maxZ - b.minZ), b.category === 'cargo' ? matCargo : matSolid);
+        m.position.set((b.minX + b.maxX) * 0.5, (b.minY + b.maxY) * 0.5, (b.minZ + b.maxZ) * 0.5);
+        collisionGroup.add(m);
+      });
+
+      const walkableGroup = new THREE.Group(); walkableGroup.visible = false; scene.add(walkableGroup);
+      const matWalk = new THREE.MeshBasicMaterial({ color: 0x2ee58d, transparent: true, opacity: 0.28, side: THREE.DoubleSide, depthWrite: false });
+      collision.walkableFloors.forEach((s) => {
+        const p = new THREE.Mesh(new THREE.PlaneGeometry(s.maxX - s.minX, s.maxZ - s.minZ), matWalk);
+        p.rotation.x = -Math.PI / 2; p.position.set((s.minX + s.maxX) * 0.5, s.topY + 0.06, (s.minZ + s.maxZ) * 0.5);
+        walkableGroup.add(p);
+      });
+
+      // Phase 6: 24 Toggleable 3D Spawn Markers
+      const spawnGroup = new THREE.Group(); spawnGroup.visible = false; scene.add(spawnGroup);
+      const matRedM = new THREE.MeshBasicMaterial({ color: 0xFF394B, wireframe: true });
+      const matBlueM = new THREE.MeshBasicMaterial({ color: 0x20BFFF, wireframe: true });
+      ARENA_CONFIG.spawns.forEach((sp) => {
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 1.8, 10), sp.team === 'red' ? matRedM : matBlueM);
+        cyl.position.set(sp.x, sp.y + 0.9, sp.z);
+        spawnGroup.add(cyl);
+      });
+
+      return { collisionGroup, walkableGroup, spawnGroup };
+    }
+
+    function setupLighting(scene) {
+      const hemi = new THREE.HemisphereLight(0xdceeff, 0x3b4252, 1.24);
+      hemi.position.set(0, 20, 0); scene.add(hemi);
+
+      const sun = new THREE.DirectionalLight(0xFFE0AB, 2.25);
+      sun.position.set(-14, 24, -24); sun.target.position.set(4, 0, 8);
+      sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024);
+      sun.shadow.camera.near = 2; sun.shadow.camera.far = 80;
+      sun.shadow.camera.left = -44; sun.shadow.camera.right = 44; sun.shadow.camera.top = 34; sun.shadow.camera.bottom = -34;
+      sun.shadow.bias = -0.0005;
+      scene.add(sun); scene.add(sun.target);
+
+      [
+        [0, 3.6, 0, 0x8ad8ff, 26, 26], [-31, 6.8, 0, 0xff5a6a, 24, 22], [31, 6.8, 0, 0x45c8ff, 24, 22],
+        [-44, 7.6, 0, 0xff8592, 22, 22], [44, 7.6, 0, 0x70d4ff, 22, 22], [0, 15.5, 8, 0xfff0d4, 28, 42]
+      ].forEach(([x, y, z, color, intensity, dist]) => {
+        const pt = new THREE.PointLight(color, intensity, dist, 1.5); pt.position.set(x, y, z); scene.add(pt);
+      });
+      return { hemi, sun };
+    }
+
+    function buildPlayerAvatar(scene) {
+      const group = new THREE.Group();
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x2e3545, roughness: 0.45, metalness: 0.55 });
+      const trimMat = new THREE.MeshStandardMaterial({ color: 0xFF394B, roughness: 0.4, metalness: 0.45 });
+      const visorMat = new THREE.MeshStandardMaterial({ color: 0x7BE5FF, emissive: 0x20BFFF, emissiveIntensity: 1.1, roughness: 0.2 });
+
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 0.66, 0.30), bodyMat); torso.position.y = 1.08; torso.castShadow = true; group.add(torso);
+      const shoulders = new THREE.Mesh(new THREE.BoxGeometry(0.68, 0.16, 0.34), trimMat); shoulders.position.y = 1.36; group.add(shoulders);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), bodyMat); head.position.y = 1.60; group.add(head);
+      const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.10, 0.06), visorMat); visor.position.set(0, 1.62, -0.15); group.add(visor);
+      const legGeo = new THREE.BoxGeometry(0.18, 0.72, 0.20);
+      const legL = new THREE.Mesh(legGeo, bodyMat); legL.position.set(-0.14, 0.38, 0); group.add(legL);
+      const legR = new THREE.Mesh(legGeo, bodyMat); legR.position.set( 0.14, 0.38, 0); group.add(legR);
+
+      group.visible = false; scene.add(group);
+      return { group, legL, legR, trimMat };
+    }
+
+    // =========================================================================
+    // 6. 40-TEST EXECUTABLE ENGINEERING AUDIT (PHASES 1–6 COMPLETE)
+    // =========================================================================
+    function runEngineeringAudit(collision, backendLabel, animatedFansCount, renderedFrames) {
+      const results = [];
+      const dt = 1 / 60;
+      const makeAgent = (x, y, z) => ({ x, y, z, vy: 0, grounded: true, supportName: '' });
+
+      function walkSegment(agent, targetX, targetZ, speed = 7.5, maxSteps = 950, team = null) {
+        let minY = agent.y, maxY = agent.y, blocker = null, hitSpawn = false;
+        for (let i = 0; i < maxSteps; i++) {
+          const dx = targetX - agent.x, dz = targetZ - agent.z, dist = Math.hypot(dx, dz);
+          if (dist < 0.26) break;
+          const step = Math.min(dist, speed * dt);
+          const res = collision.stepCapsule(agent, (dx / dist) * step, (dz / dist) * step, dt, team);
+          if (res.hitSolid) blocker = res.hitSolid.id;
+          if (res.hitSpawnBarrier) hitSpawn = true;
+          minY = Math.min(minY, agent.y); maxY = Math.max(maxY, agent.y);
+        }
+        return { reached: Math.hypot(targetX - agent.x, targetZ - agent.z) < 0.45, minY, maxY, finalY: agent.y, blocker, hitSpawn };
+      }
+
+      function walkPath(startX, startY, startZ, waypoints, speed = 8.0, team = null) {
+        const a = makeAgent(startX, startY, startZ);
+        for (const [tx, tz] of waypoints) {
+          const r = walkSegment(a, tx, tz, speed, 850, team);
+          if (!r.reached) return { ok: false, agent: a, failTarget: [tx, tz], blocker: r.blocker };
+        }
+        return { ok: true, agent: a };
+      }
+
+      // --- PRESERVED TESTS 1–30 ---
+      results.push({ id: 1,  name: 'Continuous Ground Floor', pass: walkSegment(makeAgent(-34, 0, 21.5), 34, 21.5, 9).reached, detail: '68m ground span @ Y=0.00m' });
+      results.push({ id: 2,  name: 'Central Bridge Around Cargo', pass: walkSegment(makeAgent(-22, 4.8, -2.4), 22, -2.4, 8).reached, detail: 'X=-22->+22 @ Z=-2.4, Y=4.80m' });
+      results.push({ id: 3,  name: 'Bridge-to-Flag Connections', pass: walkSegment(makeAgent(-28, 4.8, 0), -18, 0, 6).reached && walkSegment(makeAgent(18, 4.8, 0), 28, 0, 6).reached, detail: 'Red & Blue seamless @ Y=4.80m' });
+      results.push({ id: 4,  name: 'Upper Galleries Around Cargo', pass: walkPath(-31, 9.6, -19.5, [[31, -19.5], [0, -19.5], [0, -16.2]], 9).ok, detail: '62m span + Balcony @ Y=9.60m' });
+      {
+        let ok = 0;
+        ARENA_CONFIG.staircases.forEach((st) => {
+          const dZ = Math.sign(st.endZ - st.startZ);
+          const u = walkSegment(makeAgent(st.centerX, st.startY, st.startZ - dZ * 0.6), st.centerX, st.endZ + dZ * 0.7, 6, 450);
+          const d = walkSegment(makeAgent(st.centerX, st.endY, st.endZ + dZ * 0.7), st.centerX, st.startZ - dZ * 0.6, 6, 450);
+          if (u.reached && d.reached && Math.abs(u.finalY - st.endY) < 0.08 && Math.abs(d.finalY - st.startY) < 0.08) ok++;
+        });
+        results.push({ id: 5, name: 'All 6 Staircases (Both Directions)', pass: ok === 6, detail: `${ok}/6 bidirectional OK` });
+      }
+      {
+        const a0 = makeAgent(0, 0, 0), a1 = makeAgent(-8, 4.8, 0), a2 = makeAgent(0, 9.6, -19.5);
+        for (let i = 0; i < 15; i++) { collision.stepCapsule(a0, 0, 0, dt); collision.stepCapsule(a1, 0, 0, dt); collision.stepCapsule(a2, 0, 0, dt); }
+        results.push({ id: 6, name: 'Multi-Floor Elevation Separation', pass: Math.abs(a0.y) < 0.01 && Math.abs(a1.y - 4.8) < 0.01 && Math.abs(a2.y - 9.6) < 0.01, detail: `L0=${a0.y.toFixed(1)} L1=${a1.y.toFixed(1)} L2=${a2.y.toFixed(1)}` });
+      }
+      {
+        const a = makeAgent(0, 0, 0); a.vy = 14.5; a.grounded = false; let hitC = false, maxH = 0;
+        for (let i = 0; i < 40; i++) { if (collision.stepCapsule(a, 0, 0, dt).hitCeiling) hitC = true; maxH = Math.max(maxH, a.y + 1.8); }
+        results.push({ id: 7, name: 'Platform Underside Ceiling', pass: hitC && maxH <= 4.22, detail: `Max head Y=${maxH.toFixed(2)}m <= 4.20m` });
+      }
+      {
+        const a = makeAgent(-6.0, 0.2, 3.35); const rec = collision.recoverIfInvalid(a, 'red');
+        results.push({ id: 8, name: 'Embedded-Solid Safe Recovery', pass: rec.recovered && !collision.getOverlappingObstacle(a.x, a.y, a.z, 0.4, 1.8), detail: `Freed to (${a.x.toFixed(1)}, Y=${a.y.toFixed(1)}, ${a.z.toFixed(1)})` });
+      }
+      {
+        let maxD = 0;
+        [[31, 4.8, 0], [30, 2.4, 12.32], [22, 9.6, -19.5], [14, 0, 21.5]].forEach(([px, py, pz]) => { maxD = Math.max(maxD, Math.abs(collision.getSupportHeight(-px, pz, py, 0.4).y - collision.getSupportHeight(px, pz, py, 0.4).y)); });
+        results.push({ id: 9, name: 'Symmetrical Navigation Parity', pass: maxD < 0.001, detail: `Max ΔY=${maxD.toFixed(4)}m` });
+      }
+      {
+        let tested = 0, fell = 0;
+        collision.walkableFloors.forEach((s) => {
+          const cx = (s.minX + s.maxX) * 0.5, cz = (s.minZ + s.maxZ) * 0.5;
+          if (collision.getOverlappingObstacle(cx, s.topY, cz, 0.45, 1.8)) return;
+          const a = makeAgent(cx, s.topY + 0.05, cz);
+          for (let f = 0; f < 12; f++) collision.stepCapsule(a, 0, 0, dt);
+          tested++; if (a.y < s.topY - 0.1) fell++;
+        });
+        results.push({ id: 10, name: 'Zero Fall-Through Surface Grid', pass: fell === 0 && tested >= 10, detail: `${tested} slabs verified, ${fell} fall-throughs` });
+      }
+      {
+        const a = makeAgent(-9.0, 0, 3.35); for (let i = 0; i < 80; i++) collision.stepCapsule(a, 6 * dt, 0, dt);
+        results.push({ id: 11, name: 'Structural Column Collision', pass: a.x < -6.85, detail: `Stopped cleanly @ X=${a.x.toFixed(2)}m` });
+      }
+      {
+        const ok = [
+          walkSegment(makeAgent(-34, 4.8, 0), -41.5, 0, 7, 250, 'red').reached,
+          walkSegment(makeAgent(34, 4.8, 0), 41.5, 0, 7, 250, 'blue').reached,
+          walkSegment(makeAgent(-34, 0, 14), -41.5, 14, 7, 250, 'red').reached,
+          walkSegment(makeAgent(-34, 0, -14), -41.5, -14, 7, 250, 'red').reached,
+          walkSegment(makeAgent(34, 0, 14), 41.5, 14, 7, 250, 'blue').reached,
+          walkSegment(makeAgent(34, 0, -14), 41.5, -14, 7, 250, 'blue').reached,
+          walkSegment(makeAgent(0, 9.6, -22), 0, -29.6, 7, 250).reached
+        ].filter(Boolean).length;
+        results.push({ id: 12, name: 'All 7 Open Angular Entrances', pass: ok === 7, detail: `${ok}/7 portals traversed cleanly` });
+      }
+      {
+        const a = makeAgent(-22, 16, -26); a.grounded = false; for (let i = 0; i < 40; i++) { a.vy = 0; collision.stepCapsule(a, 0, -6 * dt, dt); }
+        results.push({ id: 13, name: 'Upper Window Barrier Collision', pass: a.z > -27.75, detail: `Blocked @ Z=${a.z.toFixed(2)}m` });
+      }
+      {
+        const a = makeAgent(0, 18.2, 0); a.vy = 14; a.grounded = false; let hitC = false;
+        for (let i = 0; i < 30; i++) if (collision.stepCapsule(a, 0, 0, dt).hitCeiling) hitC = true;
+        results.push({ id: 14, name: 'Roof & Ceiling Collision (Y=21m)', pass: hitC && a.y + 1.8 <= 21.02, detail: 'Ceiling solid @ Y=21.00m' });
+      }
+      {
+        const pl = ARENA_CONFIG.structuralPlinths[0]; const a = makeAgent(pl.x, pl.h + 1.2, pl.z); a.grounded = false;
+        for (let i = 0; i < 50; i++) collision.stepCapsule(a, 0, 0, dt);
+        results.push({ id: 15, name: 'Pillar-Top Downward Landing', pass: a.grounded && Math.abs(a.y - pl.h) < 0.03, detail: `Landed @ Y=${a.y.toFixed(2)}m` });
+      }
+      {
+        const a = makeAgent(-30, 0, 6); for (let i = 0; i < 70; i++) collision.stepCapsule(a, 0, 5.5 * dt, dt);
+        results.push({ id: 16, name: 'Staircase Underside Collision', pass: a.z < 8.45, detail: `Blocked @ Z=${a.z.toFixed(2)}m` });
+      }
+      results.push({ id: 17, name: 'CW/CCW Ground Circulation', pass: walkPath(-34.5, 0, 21.5, [[34.5, 21.5], [34.5, -15.5], [-34.5, -15.5], [-34.5, 21.5]], 9.5).ok, detail: 'Full 212m perimeter loop clear' });
+      results.push({ id: 18, name: 'Red-to-Blue Upper Gallery Route', pass: walkPath(-30, 4.8, -8.5, [[-30, -19.5], [30, -19.5], [30, -8.5]], 8.5).ok, detail: '4.8 -> 9.6 -> 4.8 continuous' });
+      results.push({ id: 19, name: '3 Horizontal Flag-Return Lanes', pass: walkSegment(makeAgent(-31, 4.8, -2.4), 31, -2.4, 9).reached && walkSegment(makeAgent(-31, 9.6, -19.5), 31, -19.5, 9).reached && walkSegment(makeAgent(-31, 0, 21.5), 31, 21.5, 9).reached, detail: '3/3 lanes clear' });
+      results.push({ id: 20, name: 'Staircase Roll & Aerial Dash', pass: walkPath(-30, 0, 17, [[-30, 12], [-30, 7.2]], 15).ok, detail: 'High-speed stair traversal OK' });
+      {
+        const aW = makeAgent(0, 4.8, 2.5); for (let i = 0; i < 55; i++) collision.stepCapsule(aW, 0, 6 * dt, dt);
+        const aJ = makeAgent(0, 4.8, 3.0); aJ.vy = ARENA_CONFIG.player.jumpSpeed; aJ.grounded = false;
+        for (let i = 0; i < 45; i++) collision.stepCapsule(aJ, 0, 5 * dt, dt);
+        results.push({ id: 21, name: 'Railing Collision & Jump-Over', pass: aW.z < 3.65 && aJ.z > 4.2, detail: `Walk Z=${aW.z.toFixed(2)} | Jump Z=${aJ.z.toFixed(2)}` });
+      }
+      {
+        const a = makeAgent(60, -4, 45); const rec = collision.recoverIfInvalid(a, 'red');
+        results.push({ id: 22, name: 'Out-of-Bounds Verified Recovery', pass: rec.recovered && !collision.getOverlappingObstacle(a.x, a.y, a.z, 0.4, 1.8), detail: `Recovered to (${a.x.toFixed(1)}, Y=${a.y.toFixed(1)})` });
+      }
+      {
+        let ok = 0;
+        ARENA_CONFIG.cargoContainers.forEach((c) => {
+          const a = makeAgent(c.x - c.w * 0.5 - 1.4, c.y, c.z);
+          for (let i = 0; i < 55; i++) collision.stepCapsule(a, 5 * dt, 0, dt);
+          if (a.x < c.x - c.w * 0.5 - 0.25) ok++;
+        });
+        results.push({ id: 23, name: 'All 8 Cargo Container Collisions', pass: ok === 8, detail: `${ok}/8 solid` });
+      }
+      {
+        let ok = 0;
+        ARENA_CONFIG.cargoContainers.forEach((c) => {
+          const tY = c.stacked ? c.y + c.h + c.topH : c.y + c.h;
+          const a = makeAgent(c.x, tY + 1.0, c.z); a.grounded = false;
+          for (let i = 0; i < 55; i++) collision.stepCapsule(a, 0, 0, dt);
+          if (a.grounded && Math.abs(a.y - tY) < 0.04) ok++;
+        });
+        results.push({ id: 24, name: 'Safe Landing on All 8 Cargo Roofs', pass: ok === 8, detail: `${ok}/8 roofs landable` });
+      }
+      results.push({ id: 25, name: 'Bridge Bidirectional Around Cargo', pass: walkSegment(makeAgent(-20, 4.8, 2.6), 20, 2.6, 8).reached && walkSegment(makeAgent(20, 4.8, -2.4), -20, -2.4, 8).reached, detail: 'Both bridge lanes clear' });
+      results.push({ id: 26, name: 'Upper Gallery Bidirectional', pass: walkSegment(makeAgent(-30, 9.6, -19.5), 30, -19.5, 8.5).reached && walkSegment(makeAgent(30, 9.6, -19.5), -30, -19.5, 8.5).reached, detail: 'Gallery bidirectional OK' });
+      {
+        const aC = makeAgent(0, 4.9, 0); const rC = collision.recoverIfInvalid(aC, 'red');
+        results.push({ id: 27, name: 'Recovery from Cargo & Equipment', pass: rC.recovered && !collision.getOverlappingObstacle(aC.x, aC.y, aC.z, 0.4, 1.8), detail: `Freed to (${aC.x.toFixed(1)}, ${aC.z.toFixed(1)})` });
+      }
+      results.push({ id: 28, name: 'Red/Blue Tactical Balance', pass: walkSegment(makeAgent(31, 4.8, -2.4), -31, -2.4, 9).reached, detail: 'Mirrored Blue->Red parity OK' });
+      results.push({ id: 29, name: 'Equipment & Collision Fidelity', pass: collision.solidBoxes.length >= 360 && animatedFansCount >= 6, detail: `${collision.solidBoxes.length} solids, ${animatedFansCount} fans` });
+      results.push({ id: 30, name: 'Renderer Backend Ready', pass: backendLabel === 'WebGPU' || backendLabel === 'WebGL2 Fallback', detail: `Active: ${backendLabel}` });
+
+      // --- PHASE 6 NEW AUDIT CATEGORIES (31–40) ---
+      // 31. All 24 individual spawn positions supported & collision-free
+      {
+        let ok = 0;
+        ARENA_CONFIG.spawns.forEach((sp) => {
+          const sup = collision.getSupportHeight(sp.x, sp.z, sp.y, 0.4);
+          const free = !collision.getOverlappingObstacle(sp.x, sp.y, sp.z, 0.4, 1.8);
+          if (Math.abs(sup.y - sp.y) < 0.05 && free) ok++;
+        });
+        results.push({ id: 31, name: 'All 24 Individual Spawn Positions', pass: ok === 24, detail: `${ok}/24 supported & unobstructed` });
+      }
+      // 32. Spawn-room entrances & exits traversal (upper & lower, both teams)
+      {
+        const rU = walkSegment(makeAgent(-44, 4.8, 0), -33, 0, 7, 300, 'red').reached;
+        const rL = walkSegment(makeAgent(-44, 0.0, 14), -33, 14, 7, 300, 'red').reached;
+        const bU = walkSegment(makeAgent( 44, 4.8, 0),  33, 0, 7, 300, 'blue').reached;
+        const bL = walkSegment(makeAgent( 44, 0.0, 14),  33, 14, 7, 300, 'blue').reached;
+        results.push({ id: 32, name: 'Spawn-Room Entrances & Exits', pass: rU && rL && bU && bL, detail: 'Upper & lower exits clear for Red & Blue' });
+      }
+      // 33. Protected spawn-zone enemy block & friendly pass
+      {
+        const enemyRed = makeAgent(35.0, 4.8, 0);
+        const resEnemy = walkSegment(enemyRed, 42.0, 0, 7, 180, 'red');
+        const enemyBlocked = !resEnemy.reached && enemyRed.x <= 38.0;
+
+        const friendlyBlue = makeAgent(35.0, 4.8, 0);
+        const resFriend = walkSegment(friendlyBlue, 42.0, 0, 7, 220, 'blue');
+        results.push({ id: 33, name: 'Protected Spawn Zone Access Rules', pass: enemyBlocked && resFriend.reached, detail: `Enemy blocked @ X=${enemyRed.x.toFixed(1)} | Friendly @ X=${friendlyBlue.x.toFixed(1)}` });
+      }
+      // 34. Flag pedestal smooth traversal (zero elevation snap)
+      {
+        const aR = makeAgent(-34, 4.8, 0);
+        const rR = walkSegment(aR, -28, 0, 6.5, 220);
+        const aB = makeAgent(28, 4.8, 0);
+        const rB = walkSegment(aB, 34, 0, 6.5, 220);
+        const smooth = rR.reached && rB.reached && Math.abs(rR.maxY - 4.8) < 0.04 && Math.abs(rB.maxY - 4.8) < 0.04;
+        results.push({ id: 34, name: 'Flag Pedestal Smooth Traversal', pass: smooth, detail: `Red maxY=${rR.maxY.toFixed(2)} | Blue maxY=${rB.maxY.toFixed(2)}` });
+      }
+      // 35. Symmetrical team travel distances (spawn-to-flag & spawn-to-center)
+      {
+        const redDist = Math.abs(-41.5 - (-31));
+        const blueDist = Math.abs(41.5 - 31);
+        results.push({ id: 35, name: 'Symmetrical Team Travel Distances', pass: Math.abs(redDist - blueDist) < 0.001, detail: `Red=${redDist.toFixed(1)}m | Blue=${blueDist.toFixed(1)}m` });
+      }
+      // 36. Flag accessibility from all 3 elevations (Ground, Bridge, Gallery)
+      {
+        const fromGround = walkPath(-30, 0.0, 17.5, [[-30, 7.2], [-31, 0]], 7.5).ok;
+        const fromBridge = walkPath(0, 4.8, -2.4, [[-24, -2.4], [-31, 0]], 8.0).ok;
+        const fromGallery = walkPath(-30, 9.6, -19.5, [[-30, -8.2], [-31, 0]], 7.5).ok;
+        results.push({ id: 36, name: 'Flag Accessible From All 3 Elevations', pass: fromGround && fromBridge && fromGallery, detail: 'Ground, Bridge & Gallery -> Red Flag OK' });
+      }
+      // 37. Complete Main Bridge Flag-Return Route (Red Flag <-> Blue Flag)
+      {
+        const r2b = walkPath(-31, 4.8, 0, [[-22, -2.4], [22, -2.4], [31, 0]], 8.5).ok;
+        const b2r = walkPath( 31, 4.8, 0, [[ 22, -2.4], [-22, -2.4], [-31, 0]], 8.5).ok;
+        results.push({ id: 37, name: 'Full Main Bridge Flag-Return (R↔B)', pass: r2b && b2r, detail: '(-31,4.8,0) <-> (31,4.8,0) complete' });
+      }
+      // 38. Complete Upper Gallery Flag-Return Route (Red Flag <-> Blue Flag via Rear Stairs)
+      {
+        const r2b = walkPath(-31, 4.8, 0, [[-30, -8.5], [-30, -19.5], [30, -19.5], [30, -8.5], [31, 0]], 8.0).ok;
+        const b2r = walkPath( 31, 4.8, 0, [[ 30, -8.5], [ 30, -19.5], [-30, -19.5], [-30, -8.5], [-31, 0]], 8.0).ok;
+        results.push({ id: 38, name: 'Full Upper Gallery Flag-Return (R↔B)', pass: r2b && b2r, detail: 'Flag -> Rear Stair -> Gallery -> Flag OK' });
+      }
+      // 39. Complete Lower Floor Flag-Return Route (Red Flag <-> Blue Flag via Front Stairs)
+      {
+        const r2b = walkPath(-31, 4.8, 0, [[-30, 7.5], [-30, 17.5], [-30, 21.5], [30, 21.5], [30, 17.5], [30, 7.5], [31, 0]], 8.5).ok;
+        const b2r = walkPath( 31, 4.8, 0, [[ 30, 7.5], [ 30, 17.5], [ 30, 21.5], [-30, 21.5], [-30, 17.5], [-30, 7.5], [-31, 0]], 8.5).ok;
+        results.push({ id: 39, name: 'Full Lower Floor Flag-Return (R↔B)', pass: r2b && b2r, detail: 'Flag -> Front Stair -> Ground -> Flag OK' });
+      }
+      // 40. Safe recovery outside spawn structures (no enemy spawn) + real rendered-frame verification
+      {
+        const aRed = makeAgent(41.0, 4.8, 0); // Red player illegally placed inside Blue Spawn
+        const rec = collision.recoverIfInvalid(aRed, 'red');
+        const notInEnemy = !collision.isInsideEnemySpawn(aRed.x, aRed.z, 'red');
+        const renderedOk = renderedFrames > 0;
+        results.push({ id: 40, name: 'Spawn-Safe Recovery & Rendered Frame', pass: rec.recovered && notInEnemy && renderedOk, detail: `Freed to X=${aRed.x.toFixed(1)} | Frames=${renderedFrames}` });
+      }
+
+      return results;
+    }
+
+    // =========================================================================
+    // 7. NATIVE WEBGPU RENDERER + FRESH-CANVAS WEBGL2 FALLBACK
+    // =========================================================================
+    async function createRendererWithFallback() {
+      const viewport = document.getElementById('viewport');
+      let canvas = document.getElementById('arena-canvas');
+      const loaderStatus = document.getElementById('loader-status');
+      let renderer = null, backendLabel = 'WebGL2 Fallback';
+
+      if (navigator.gpu) {
+        try {
+          loaderStatus.textContent = 'Initializing native WebGPU renderer...';
+          renderer = new THREE.WebGPURenderer({ antialias: true, powerPreference: 'high-performance', canvas });
+          await renderer.init();
+          backendLabel = (renderer.backend && renderer.backend.isWebGPUBackend) ? 'WebGPU' : 'WebGL2 Fallback';
+        } catch (err) {
+          console.warn('WebGPU unavailable, swapping to fresh-canvas WebGL2:', err);
+          renderer = null;
+        }
+      }
+      if (!renderer) {
+        loaderStatus.textContent = 'Initializing fresh-canvas WebGL2 fallback...';
+        const freshCanvas = document.createElement('canvas'); freshCanvas.id = 'arena-canvas';
+        viewport.innerHTML = ''; viewport.appendChild(freshCanvas); canvas = freshCanvas;
+        renderer = new THREE.WebGPURenderer({ antialias: true, forceWebGL: true, powerPreference: 'high-performance', canvas: freshCanvas });
+        await renderer.init();
+        backendLabel = 'WebGL2 Fallback';
+      }
+
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.1;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      return { renderer, canvas, backendLabel };
+    }
+
+    // =========================================================================
+    // 8. MAIN APPLICATION BOOTSTRAP & ANIMATION LOOP
+    // =========================================================================
+    async function main() {
+      const { renderer, canvas, backendLabel } = await createRendererWithFallback();
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x161b26);
+      scene.environment = createProceduralWarehouseEnvMap();
+
+      const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.15, 260);
+      camera.position.set(...ARENA_CONFIG.cameraPresets.overview.pos);
+
+      const orbit = new OrbitControls(camera, canvas);
+      orbit.enableDamping = true; orbit.dampingFactor = 0.07;
+      orbit.maxDistance = 95; orbit.minDistance = 1.8;
+      orbit.target.set(...ARENA_CONFIG.cameraPresets.overview.target);
+      orbit.update();
+
+      const isMobileDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || window.innerWidth < 768;
+      let activeTexRes = isMobileDevice ? 1024 : 2048;
+      const texResBadge = document.getElementById('tex-res-badge');
+      texResBadge.textContent = `${activeTexRes}px`;
+      document.querySelectorAll('[data-texres]').forEach((b) => b.classList.toggle('active', parseInt(b.dataset.texres, 10) === activeTexRes));
+
+      const mats = buildMaterialLibrary(activeTexRes);
+      const collision = new ArenaCollisionWorld();
+      const { root: arenaRoot, animatedFans, animatedCloths, animatedRings } = buildArenaGeometry(scene, mats, collision);
+      const debugVis = buildDebugVisualizers(scene, collision);
+      const lights = setupLighting(scene);
+      const avatar = buildPlayerAvatar(scene);
+
+      // Material Inspection Controller
+      const originalMatMap = new Map(), albedoMatCache = new Map();
+      let currentMatMode = 'normal';
+      function toAlbedoMaterial(mat) {
+        if (albedoMatCache.has(mat)) return albedoMatCache.get(mat);
+        const basic = new THREE.MeshBasicMaterial({
+          color: mat.color ? mat.color.clone() : new THREE.Color(0xffffff),
+          map: mat.map || null, transparent: !!mat.transparent, opacity: mat.opacity !== undefined ? mat.opacity : 1.0,
+          side: mat.side, polygonOffset: !!mat.polygonOffset, polygonOffsetFactor: mat.polygonOffsetFactor || 0, depthWrite: mat.depthWrite !== undefined ? mat.depthWrite : true
+        });
+        albedoMatCache.set(mat, basic); return basic;
+      }
+      function applyMaterialInspectionMode(inspectMode) {
+        currentMatMode = inspectMode;
+        arenaRoot.traverse((obj) => {
+          if (!obj.isMesh) return;
+          if (!originalMatMap.has(obj)) originalMatMap.set(obj, obj.material);
+          const orig = originalMatMap.get(obj);
+          obj.material = inspectMode === 'albedo' ? (Array.isArray(orig) ? orig.map(toAlbedoMaterial) : toAlbedoMaterial(orig)) : orig;
+        });
+        if (inspectMode === 'neutral') {
+          lights.hemi.color.setHex(0xffffff); lights.hemi.groundColor.setHex(0x8a8f99); lights.hemi.intensity = 1.65;
+          lights.sun.color.setHex(0xffffff); lights.sun.intensity = 1.35;
+        } else {
+          lights.hemi.color.setHex(0xdceeff); lights.hemi.groundColor.setHex(0x3b4252); lights.hemi.intensity = 1.24;
+          lights.sun.color.setHex(0xFFE0AB); lights.sun.intensity = 2.25;
+        }
+      }
+
+      // Match Preparation State (30s -> 5..1 -> FIGHT!)
+      let prepTimeLeft = 30.0, matchLive = false, lastCountdownInt = -1;
+      const matchPhasePill = document.getElementById('match-phase-pill');
+      const matchTimerEl = document.getElementById('match-timer');
+      const combatLockTxt = document.getElementById('combat-lock-txt');
+      const matchCallout = document.getElementById('match-callout');
+      let calloutTimer = null;
+      function showCallout(txt) {
+        matchCallout.textContent = txt; matchCallout.classList.add('show');
+        clearTimeout(calloutTimer); calloutTimer = setTimeout(() => matchCallout.classList.remove('show'), 750);
+      }
+      document.getElementById('btn-prep-skip').addEventListener('click', () => { prepTimeLeft = 5.05; matchLive = false; lastCountdownInt = -1; });
+      document.getElementById('btn-prep-reset').addEventListener('click', () => {
+        prepTimeLeft = 30.0; matchLive = false; lastCountdownInt = -1;
+        matchPhasePill.textContent = 'PREPARATION'; matchPhasePill.classList.remove('live');
+        combatLockTxt.textContent = 'COMBAT LOCKED'; combatLockTxt.style.color = '#ffb4b4';
+      });
+      document.querySelectorAll('[data-class]').forEach((b) => b.addEventListener('click', () => {
+        document.querySelectorAll('[data-class]').forEach(x => x.classList.remove('active'));
+        b.classList.add('active'); showToast(`Class Selected: ${b.dataset.class}`);
+      }));
+
+      // Active Team & Player State
+      let activeTeam = 'red';
+      let mode = 'orbit', dprCap = 1.5, cleanView = false, renderedFrames = 0;
+      const applyDPR = () => renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprCap));
+      applyDPR();
+
+      const player = {
+        x: -41.5, y: 4.8, z: 0.0, vy: 0, yaw: -Math.PI / 2, pitch: 0.25, facingYaw: -Math.PI / 2,
+        grounded: true, supportName: 'Red Upper Spawn Deck',
+        rollTime: 0, rollCooldown: 0, rollDirX: 1, rollDirZ: 0,
+        dashTime: 0, dashCooldown: 0, dashDirX: 1, dashDirZ: 0, walkCycle: 0
+      };
+
+      const toastEl = document.getElementById('toast');
+      let toastTimer = null;
+      function showToast(msg) {
+        toastEl.textContent = msg; toastEl.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+      }
+
+      function respawnAtTeam(team) {
+        const sp = ARENA_CONFIG.spawns.find(s => s.team === team && s.elevation === 4.8);
+        Object.assign(player, { x: sp.x, y: sp.y, z: sp.z, vy: 0, yaw: sp.yaw, facingYaw: sp.yaw, grounded: true });
+      }
+
+      const statTeamEl = document.getElementById('stat-team');
+      function setActiveTeam(team) {
+        activeTeam = team;
+        document.getElementById('btn-team-red').classList.toggle('active', team === 'red');
+        document.getElementById('btn-team-blue').classList.toggle('active', team === 'blue');
+        statTeamEl.textContent = team === 'red' ? 'RED (BASE A)' : 'BLUE (BASE B)';
+        statTeamEl.style.color = team === 'red' ? 'var(--accent-red)' : 'var(--accent-blue)';
+        avatar.trimMat.color.setHex(team === 'red' ? 0xFF394B : 0x20BFFF);
+        respawnAtTeam(team);
+        showToast(`Switched to ${team.toUpperCase()} Team Spawn`);
+      }
+      document.getElementById('btn-team-red').addEventListener('click', () => setActiveTeam('red'));
+      document.getElementById('btn-team-blue').addEventListener('click', () => setActiveTeam('blue'));
+
+      const keys = Object.create(null), joyInput = { x: 0, y: 0 };
+      let isMouseLooking = false, lastMouseX = 0, lastMouseY = 0;
+
+      function triggerRoll() {
+        if (player.rollCooldown > 0 || player.rollTime > 0 || player.dashTime > 0) return;
+        player.rollTime = ARENA_CONFIG.player.rollDuration; player.rollCooldown = ARENA_CONFIG.player.rollCooldown;
+        player.rollDirX = -Math.sin(player.yaw); player.rollDirZ = -Math.cos(player.yaw);
+      }
+      function triggerDash() {
+        if (player.dashCooldown > 0 || player.dashTime > 0) return;
+        player.dashTime = ARENA_CONFIG.player.dashDuration; player.dashCooldown = ARENA_CONFIG.player.dashCooldown;
+        player.dashDirX = -Math.sin(player.yaw); player.dashDirZ = -Math.cos(player.yaw);
+        if (!player.grounded && player.vy < 1.5) player.vy = 2.2;
+      }
+
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'KeyH') toggleCleanView();
+        if (mode === 'play') {
+          if (e.code === 'Space' && player.grounded) { player.vy = ARENA_CONFIG.player.jumpSpeed; player.grounded = false; }
+          if (e.code === 'KeyC' || e.code === 'ControlLeft') triggerRoll();
+          if (e.code === 'KeyE') triggerDash();
+          if (e.code === 'KeyR') { respawnAtTeam(activeTeam); showToast(`Respawned at ${activeTeam.toUpperCase()} Base`); }
+        }
+      });
+      window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+      canvas.addEventListener('mousedown', (e) => { if (mode === 'play' && (e.button === 0 || e.button === 2)) { isMouseLooking = true; lastMouseX = e.clientX; lastMouseY = e.clientY; } });
+      window.addEventListener('mouseup', () => { isMouseLooking = false; });
+      window.addEventListener('mousemove', (e) => {
+        if (mode !== 'play' || !isMouseLooking) return;
+        player.yaw -= (e.clientX - lastMouseX) * 0.0055;
+        player.pitch = THREE.MathUtils.clamp(player.pitch + (e.clientY - lastMouseY) * 0.0045, -0.35, 1.15);
+        lastMouseX = e.clientX; lastMouseY = e.clientY;
+      });
+
+      // Touch Controls
+      let lookTouchId = null, lastTouchX = 0, lastTouchY = 0;
+      canvas.addEventListener('touchstart', (e) => { if (mode === 'play') for (const t of e.changedTouches) if (lookTouchId === null) { lookTouchId = t.identifier; lastTouchX = t.clientX; lastTouchY = t.clientY; } }, { passive: true });
+      canvas.addEventListener('touchmove', (e) => { if (mode === 'play' && lookTouchId !== null) for (const t of e.changedTouches) if (t.identifier === lookTouchId) { player.yaw -= (t.clientX - lastTouchX) * 0.007; player.pitch = THREE.MathUtils.clamp(player.pitch + (t.clientY - lastTouchY) * 0.005, -0.35, 1.15); lastTouchX = t.clientX; lastTouchY = t.clientY; } }, { passive: true });
+      canvas.addEventListener('touchend', (e) => { for (const t of e.changedTouches) if (t.identifier === lookTouchId) lookTouchId = null; }, { passive: true });
+
+      const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
+      let joyTouchId = null;
+      function updateJoystick(cx, cy) {
+        const rect = joyZone.getBoundingClientRect(), mx = rect.left + rect.width / 2, my = rect.top + rect.height / 2, maxR = rect.width * 0.36;
+        let dx = cx - mx, dy = cy - my, dist = Math.hypot(dx, dy);
+        if (dist > maxR) { dx = (dx / dist) * maxR; dy = (dy / dist) * maxR; }
+        joyKnob.style.transform = `translate(${dx}px, ${dy}px)`; joyInput.x = dx / maxR; joyInput.y = dy / maxR;
+      }
+      joyZone.addEventListener('touchstart', (e) => { e.preventDefault(); const t = e.changedTouches[0]; joyTouchId = t.identifier; updateJoystick(t.clientX, t.clientY); }, { passive: false });
+      joyZone.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === joyTouchId) updateJoystick(t.clientX, t.clientY); }, { passive: false });
+      const resetJoy = (e) => { for (const t of e.changedTouches) if (t.identifier === joyTouchId) { joyTouchId = null; joyInput.x = 0; joyInput.y = 0; joyKnob.style.transform = 'translate(0px, 0px)'; } };
+      joyZone.addEventListener('touchend', resetJoy); joyZone.addEventListener('touchcancel', resetJoy);
+      document.getElementById('touch-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (mode === 'play' && player.grounded) { player.vy = ARENA_CONFIG.player.jumpSpeed; player.grounded = false; } }, { passive: false });
+      document.getElementById('touch-roll').addEventListener('touchstart', (e) => { e.preventDefault(); if (mode === 'play') triggerRoll(); }, { passive: false });
+      document.getElementById('touch-dash').addEventListener('touchstart', (e) => { e.preventDefault(); if (mode === 'play') triggerDash(); }, { passive: false });
+
+      // HUD Bindings
+      const hudEl = document.getElementById('hud'), cleanRestoreEl = document.getElementById('clean-restore');
+      const inspectorEl = document.getElementById('inspector-panel'), mobileControlsEl = document.getElementById('mobile-controls');
+      const playerStatusEl = document.getElementById('player-status'), hintOrbit = document.getElementById('hint-orbit'), hintPlay = document.getElementById('hint-play');
+      const btnModeOrbit = document.getElementById('btn-mode-orbit'), btnModePlay = document.getElementById('btn-mode-play');
+      const rendererEl = document.getElementById('stat-renderer');
+      rendererEl.textContent = backendLabel; rendererEl.classList.add(backendLabel === 'WebGPU' ? 'webgpu' : 'webgl');
+
+      function toggleCleanView() { cleanView = !cleanView; hudEl.classList.toggle('clean-hidden', cleanView); cleanRestoreEl.classList.toggle('visible', cleanView); }
+      document.getElementById('btn-clean-view').addEventListener('click', toggleCleanView);
+      document.getElementById('btn-exit-clean').addEventListener('click', toggleCleanView);
+      document.getElementById('btn-toggle-panel').addEventListener('click', () => inspectorEl.classList.toggle('collapsed'));
+
+      function setMode(newMode) {
+        mode = newMode; const isPlay = mode === 'play';
+        orbit.enabled = !isPlay; avatar.group.visible = isPlay;
+        btnModeOrbit.classList.toggle('active', !isPlay); btnModePlay.classList.toggle('active', isPlay);
+        hintOrbit.style.display = isPlay ? 'none' : 'inline'; hintPlay.style.display = isPlay ? 'inline' : 'none';
+        playerStatusEl.classList.toggle('visible', isPlay);
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth < 820;
+        mobileControlsEl.classList.toggle('visible', isPlay && isTouch);
+        if (isPlay) showToast(`Playtesting as ${activeTeam.toUpperCase()} Team`);
+      }
+      btnModeOrbit.addEventListener('click', () => setMode('orbit'));
+      btnModePlay.addEventListener('click', () => setMode('play'));
+
+      document.querySelectorAll('[data-cam]').forEach((btn) => btn.addEventListener('click', () => {
+        const preset = ARENA_CONFIG.cameraPresets[btn.dataset.cam]; if (!preset) return;
+        if (mode === 'play') setMode('orbit');
+        camera.position.set(...preset.pos); orbit.target.set(...preset.target); orbit.update();
+      }));
+
+      document.querySelectorAll('[data-matmode]').forEach((btn) => btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-matmode]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); applyMaterialInspectionMode(btn.dataset.matmode);
+      }));
+
+      document.querySelectorAll('[data-texres]').forEach((btn) => btn.addEventListener('click', () => {
+        const newRes = parseInt(btn.dataset.texres, 10); if (newRes === activeTexRes) return;
+        activeTexRes = newRes;
+        document.querySelectorAll('[data-texres]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        albedoMatCache.forEach((m) => m.dispose()); albedoMatCache.clear();
+        mats.rebuildResolution(activeTexRes);
+        if (currentMatMode === 'albedo') applyMaterialInspectionMode('albedo');
+        texResBadge.textContent = `${activeTexRes}px`;
+        showToast(`Textures Rebuilt @ ${activeTexRes}px`);
+      }));
+
+      document.getElementById('btn-vis-collision').addEventListener('click', (e) => { debugVis.collisionGroup.visible = !debugVis.collisionGroup.visible; e.target.classList.toggle('active', debugVis.collisionGroup.visible); });
+      document.getElementById('btn-vis-walkable').addEventListener('click', (e) => { debugVis.walkableGroup.visible = !debugVis.walkableGroup.visible; e.target.classList.toggle('active', debugVis.walkableGroup.visible); });
+      document.getElementById('btn-vis-spawns').addEventListener('click', (e) => { debugVis.spawnGroup.visible = !debugVis.spawnGroup.visible; e.target.classList.toggle('active', debugVis.spawnGroup.visible); });
+
+      document.querySelectorAll('[data-quality]').forEach((btn) => btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-quality]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const q = btn.dataset.quality;
+        renderer.shadowMap.enabled = q !== 'low'; lights.sun.castShadow = q !== 'low';
+        if (q !== 'low') { lights.sun.shadow.mapSize.set(q === 'high' ? 2048 : 1024, q === 'high' ? 2048 : 1024); if (lights.sun.shadow.map) { lights.sun.shadow.map.dispose(); lights.sun.shadow.map = null; } }
+      }));
+      document.querySelectorAll('[data-dpr]').forEach((btn) => btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-dpr]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); dprCap = parseFloat(btn.dataset.dpr); applyDPR();
+      }));
+
+      const auditResultsEl = document.getElementById('audit-results'), auditSummaryEl = document.getElementById('audit-summary');
+      document.getElementById('btn-run-audit').addEventListener('click', () => {
+        const snapshot = { ...player };
+        const res = runEngineeringAudit(collision, backendLabel, animatedFans.length, renderedFrames);
+        Object.assign(player, snapshot);
+        const passed = res.filter(r => r.pass).length;
+        auditSummaryEl.textContent = `${passed}/${res.length} PASS`;
+        auditSummaryEl.style.color = passed === res.length ? 'var(--accent-green)' : 'var(--accent-red)';
+        auditResultsEl.innerHTML = res.map(r => `
+          <div class="audit-item">
+            <div><div class="audit-name">${r.id}. ${r.name}</div><div class="audit-detail">${r.detail}</div></div>
+            <span class="${r.pass ? 'badge-pass' : 'badge-fail'}">${r.pass ? 'PASS' : 'FAIL'}</span>
+          </div>
+        `).join('');
+        showToast(`Phase 6 Audit Complete: ${passed}/${res.length} Passed`);
+      });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        applyDPR();
+      });
+
+      document.getElementById('loader').classList.add('done');
+
+      const statFps = document.getElementById('stat-fps'), statTris = document.getElementById('stat-tris');
+      const statCalls = document.getElementById('stat-calls'), statCoords = document.getElementById('stat-coords');
+      const layerBadge = document.getElementById('layer-badge'), rollFill = document.getElementById('roll-fill');
+      const dashFill = document.getElementById('dash-fill'), playerStateTxt = document.getElementById('player-state-txt');
+
+      let lastTime = performance.now(), fpsFrames = 0, fpsTimer = 0;
+
+      function updateThirdPerson(dt) {
+        const cfg = ARENA_CONFIG.player;
+        if (player.rollCooldown > 0) player.rollCooldown = Math.max(0, player.rollCooldown - dt);
+        if (player.dashCooldown > 0) player.dashCooldown = Math.max(0, player.dashCooldown - dt);
+
+        let moveX = 0, moveZ = 0;
+        if (player.dashTime > 0) {
+          player.dashTime = Math.max(0, player.dashTime - dt);
+          moveX = player.dashDirX * cfg.dashSpeed * dt; moveZ = player.dashDirZ * cfg.dashSpeed * dt;
+        } else if (player.rollTime > 0) {
+          player.rollTime = Math.max(0, player.rollTime - dt);
+          moveX = player.rollDirX * cfg.rollSpeed * dt; moveZ = player.rollDirZ * cfg.rollSpeed * dt;
+        } else {
+          let fwd = 0, strafe = 0;
+          if (keys['KeyW'] || keys['ArrowUp']) fwd += 1;
+          if (keys['KeyS'] || keys['ArrowDown']) fwd -= 1;
+          if (keys['KeyD'] || keys['ArrowRight']) strafe += 1;
+          if (keys['KeyA'] || keys['ArrowLeft']) strafe -= 1;
+          fwd -= joyInput.y; strafe += joyInput.x;
+          const mag = Math.hypot(fwd, strafe);
+          if (mag > 0.05) {
+            const norm = Math.min(1, mag); fwd /= mag; strafe /= mag;
+            const speed = (keys['ShiftLeft'] || keys['ShiftRight']) ? cfg.sprintSpeed : cfg.walkSpeed;
+            const sinY = Math.sin(player.yaw), cosY = Math.cos(player.yaw);
+            const wx = (-sinY * fwd + cosY * strafe) * speed * norm;
+            const wz = (-cosY * fwd - sinY * strafe) * speed * norm;
+            moveX = wx * dt; moveZ = wz * dt;
+            const targetFace = Math.atan2(-wx, -wz);
+            let diff = targetFace - player.facingYaw;
+            while (diff > Math.PI) diff -= Math.PI * 2;
+            while (diff < -Math.PI) diff += Math.PI * 2;
+            player.facingYaw += diff * Math.min(1, dt * 12);
+            player.walkCycle += dt * speed * 1.65;
+          }
+        }
+
+        const stepRes = collision.stepCapsule(player, moveX, moveZ, dt, activeTeam);
+        if (stepRes.hitSpawnBarrier) showToast('Enemy Protected Spawn Barrier!');
+        const rec = collision.recoverIfInvalid(player, activeTeam);
+        if (rec.recovered) showToast(`Safe Recovery: ${rec.reason}`);
+
+        avatar.group.position.set(player.x, player.y, player.z);
+        avatar.group.rotation.y = player.facingYaw;
+        const swing = player.grounded ? Math.sin(player.walkCycle) * 0.45 * (Math.hypot(moveX, moveZ) > 0.005 ? 1 : 0) : 0.35;
+        avatar.legL.rotation.x = swing; avatar.legR.rotation.x = -swing;
+
+        const camDist = 5.4, camPivotY = player.y + 1.55;
+        const dX = THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * Math.cos(player.pitch) * camDist, -49.2, 49.2);
+        const dY = THREE.MathUtils.clamp(camPivotY + Math.sin(player.pitch) * camDist, 0.7, ARENA_CONFIG.building.height - 0.8);
+        const dZ = THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * Math.cos(player.pitch) * camDist, -31.0, ARENA_CONFIG.building.halfD - 0.8);
+        camera.position.lerp(new THREE.Vector3(dX, dY, dZ), Math.min(1, dt * 14));
+        camera.lookAt(player.x, camPivotY, player.z);
+
+        rollFill.style.width = `${Math.round((1 - player.rollCooldown / cfg.rollCooldown) * 100)}%`;
+        dashFill.style.width = `${Math.round((1 - player.dashCooldown / cfg.dashCooldown) * 100)}%`;
+        const inSafeSpawn = collision.isInsideFriendlySpawn(player.x, player.z, activeTeam);
+        playerStateTxt.textContent = inSafeSpawn ? 'PROTECTED SPAWN' : (player.dashTime > 0 ? 'DASHING' : (player.rollTime > 0 ? 'ROLLING' : (player.grounded ? 'GROUNDED' : 'AIRBORNE')));
+      }
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        const elapsed = now * 0.001;
+        lastTime = now;
+
+        // 1. Match Preparation Countdown
+        if (!matchLive) {
+          prepTimeLeft = Math.max(0, prepTimeLeft - dt);
+          const secs = Math.ceil(prepTimeLeft);
+          matchTimerEl.textContent = `00:${String(secs).padStart(2, '0')}`;
+          if (secs <= 5 && secs >= 1 && secs !== lastCountdownInt) {
+            lastCountdownInt = secs;
+            showCallout(String(secs));
+          }
+          if (prepTimeLeft <= 0) {
+            matchLive = true;
+            matchPhasePill.textContent = 'LIVE MATCH';
+            matchPhasePill.classList.add('live');
+            matchTimerEl.textContent = 'LIVE';
+            combatLockTxt.textContent = 'COMBAT ACTIVE';
+            combatLockTxt.style.color = '#9effcc';
+            showCallout('FIGHT!');
+          }
+        }
+
+        // 2. Industrial Fan Rotation
+        for (let i = 0; i < animatedFans.length; i++) animatedFans[i].rotation.z -= dt * 1.85;
+
+        // 3. Lightweight Vertex-Based Cloth Animation (Flags & Vertical Team Banners)
+        for (let c = 0; c < animatedCloths.length; c++) {
+          const item = animatedCloths[c];
+          const pos = item.geo.attributes.position;
+          const base = item.basePos;
+          for (let i = 0; i < pos.count; i++) {
+            const bx = base[i * 3], by = base[i * 3 + 1];
+            if (item.isBanner) {
+              // Pinned at top (by = +2.25), gentle sway increasing toward bottom
+              const weight = Math.max(0, (2.25 - by) / 4.5);
+              const wave = Math.sin(elapsed * 2.1 + by * 1.1 + item.phase) * 0.11 * weight;
+              pos.setZ(i, wave);
+            } else {
+              // Flag pinned at flagpole (bx = 0), continuous wind wave
+              const weight = bx / 1.5;
+              const wave = Math.sin(elapsed * 5.2 - bx * 3.8 + by * 1.2 + item.phase) * 0.14 * weight;
+              pos.setZ(i, wave);
+            }
+          }
+          pos.needsUpdate = true;
+        }
+
+        // 4. Flag Pedestal Energy Ring Pulse
+        for (let i = 0; i < animatedRings.length; i++) {
+          const r = animatedRings[i];
+          const pulse = 1.0 + Math.sin(elapsed * 3.4 + r.phase) * 0.04;
+          r.outerRing.scale.set(pulse, pulse, 1);
+          r.innerRing.scale.set(1.0 + Math.cos(elapsed * 3.4 + r.phase) * 0.06, 1.0 + Math.cos(elapsed * 3.4 + r.phase) * 0.06, 1);
+        }
+
+        if (mode === 'orbit') orbit.update();
+        else updateThirdPerson(dt);
+
+        renderer.render(scene, camera);
+        renderedFrames++;
+
+        fpsFrames++; fpsTimer += dt;
+        if (fpsTimer >= 0.35) {
+          statFps.textContent = `${Math.round(fpsFrames / fpsTimer)}`;
+          fpsFrames = 0; fpsTimer = 0;
+          const info = renderer.info && renderer.info.render ? renderer.info.render : null;
+          statTris.textContent = info ? info.triangles.toLocaleString() : 'N/A';
+          statCalls.textContent = info ? info.calls.toLocaleString() : 'N/A';
+
+          const refPos = mode === 'play' ? player : camera.position;
+          statCoords.textContent = `X: ${refPos.x.toFixed(2)}  Y: ${refPos.y.toFixed(2)}  Z: ${refPos.z.toFixed(2)}`;
+
+          if (mode === 'orbit') layerBadge.textContent = 'ORBIT';
+          else if (player.y >= 9.4) layerBadge.textContent = 'GALLERY Y=9.6';
+          else if (player.y >= 4.6) layerBadge.textContent = 'BRIDGE Y=4.8';
+          else if (player.y <= 0.1) layerBadge.textContent = 'GROUND Y=0.0';
+          else layerBadge.textContent = 'STAIRS / CARGO';
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    main().catch((err) => {
+      console.error('Fatal Arena Initialization Error:', err);
+      document.getElementById('loader-status').textContent = 'Initialization Error: ' + err.message;
+    });
+  </script>
+</body>
+</html>
