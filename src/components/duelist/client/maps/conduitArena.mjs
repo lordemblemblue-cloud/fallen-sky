@@ -2,6 +2,7 @@
 // Draft import; not registered in live TDM until authoritative collision and traversal are validated.
 import * as THREE from 'three';
 import { createConduitLighting } from './conduitLighting.mjs';
+import { createConduitCrownPlan } from './conduitCrown.mjs';
         const CFG = Object.freeze({
             foundationR: 44.8,
             pitRadius: 24.0,
@@ -342,7 +343,7 @@ export { CFG as CONDUIT_CONFIG };
             }
         }
 export { UnifiedCollisionWorld as ConduitCollisionWorld };
-export function createConduitArena(hostScene, { quality = 'medium', enableLights = true } = {}) {
+export function createConduitArena(hostScene, { quality = 'medium', enableLights = true, enableCrownTactics = true } = {}) {
     if (!hostScene?.isObject3D) throw new TypeError('Conduit needs an existing Three.js scene or group');
     const scene = new THREE.Group(); scene.name = 'The Conduit';
     const MAT = createMaterialLibrary(quality);
@@ -889,8 +890,13 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             world.addDisc(0, 0, CFG.crownRadius, CFG.yCrown - CFG.crownThick, CFG.yCrown, true, 'Central Crown Platform');
             world.addCylinder(0, 0, 1.75, 0, CFG.yCrown - CFG.crownThick, 'Crown Support Column');
 
+            const crownTactics = enableCrownTactics ? createConduitCrownPlan(CFG) : null;
+            if(crownTactics){
+                for(const b of crownTactics.cover)addBox(upperGroup,b.sx,b.sy,b.sz,b.x,b.y,b.z,MAT.gunmetal,{walkable:b.walkable,label:b.label},b.rotY);
+                for(const d of crownTactics.details)detailBox(upperGroup,MAT[d.material],d.x,d.y,d.z,d.sx,d.sy,d.sz,d.rotY);
+            }
             CFG.cardinals.forEach((a, idx) => {
-                addBox(upperGroup, 2.0, 0.75, 0.7, Math.sin(a) * 5.3, CFG.yCrown + 0.375, Math.cos(a) * 5.3, MAT.gunmetal, { walkable: true, label: `Crown Cover ${idx + 1}` }, a);
+                if(!crownTactics)addBox(upperGroup, 2.0, 0.75, 0.7, Math.sin(a) * 5.3, CFG.yCrown + 0.375, Math.cos(a) * 5.3, MAT.gunmetal, { walkable: true, label: `Crown Cover ${idx + 1}` }, a);
                 addBox(upperGroup, 2.2, 1.2, 0.9, Math.sin(a) * 31.1, CFG.yT2 + 0.6, Math.cos(a) * 31.1, MAT.gunmetal, { walkable: true, label: `T2 Cover ${idx + 1}` }, a);
             });
 
@@ -1109,7 +1115,7 @@ export function createConduitArena(hostScene, { quality = 'medium', enableLights
             }
     hostScene.add(scene);
     let disposed=false;
-    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting,
+    return {root:scene, world, config:CFG, upperGroup,t0Group, buildingRoofs, lighting, crownTactics,
         spawnCandidates:tdmSpawns, selectTDMSpawn, navGraph:{nodes:navNodes,findPath:findAStarPath},
         pickups:pickups.map(p=>({id:p.id,label:p.label,position:p.pos.slice(),respawn:p.respawn})),
         setPickupAvailable(id,available){const p=pickups.find(p=>p.id===id);if(p)p.sym.visible=!!available;},
