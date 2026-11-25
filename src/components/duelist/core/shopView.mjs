@@ -33,7 +33,7 @@ export function filterShopItems(me, {stats=[],statuses=[],search='',matchAll=tru
   const owned=Array.isArray(me?.items)?me.items:[];
   const q=search.trim().toLowerCase();
   return SHOP_ITEMS.filter(item=>{
-    if(q && ![item.name,item.category,item.passive.text,tierItemPassive(item,1)?.text || ''].some(s=>s.toLowerCase().includes(q)))return false;
+    if(q && ![item.name,item.category,...[1,2,3].map(tier=>tierItemPassive(item,tier)?.text || '')].some(s=>s.toLowerCase().includes(q)))return false;
     if(stats.length && !(matchAll?stats.every(s=>supportsStat(item,s)):stats.some(s=>supportsStat(item,s))))return false;
     const tier=itemTier(owned,item.id);
     return statuses.every(s=>{
