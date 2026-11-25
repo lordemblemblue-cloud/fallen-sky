@@ -6,13 +6,14 @@ import * as THREE from "three";
       canvas.height = 256;
       const ctx = canvas.getContext('2d');
 
+      let seed=7482;const rand=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
       if (type === 'road') {
         ctx.fillStyle = '#1e2633';
         ctx.fillRect(0, 0, 256, 256);
         for (let i = 0; i < 1400; i++) {
-          const x = Math.random() * 256;
-          const y = Math.random() * 256;
-          const v = 26 + Math.floor(Math.random() * 18);
+          const x = rand() * 256;
+          const y = rand() * 256;
+          const v = 26 + Math.floor(rand() * 18);
           ctx.fillStyle = `rgb(${v},${v + 5},${v + 12})`;
           ctx.fillRect(x, y, 2, 2);
         }
@@ -634,6 +635,12 @@ import * as THREE from "three";
       }
 
       _buildRampStair(parent, startVec, endVec, width, section, addSideRails = true, mat = null) {
+        if(!section.endsWith("_Landing")&&/^(PointA_(West|East)|CP1_|CP2_(West|East)|PointB_(West|East)).*Stair/.test(section)){
+          const old=endVec.clone(),dir=new THREE.Vector3().subVectors(endVec,startVec);dir.y=0;dir.normalize();
+          endVec=endVec.clone().addScaledVector(dir,-1.05);
+          const landEnd=old.clone().addScaledVector(dir,.65);
+          this._buildRampStair(parent,endVec,landEnd,width,section+'_Landing',false,mat);
+        }
         const diff = new THREE.Vector3().subVectors(endVec, startVec);
         const horizLen = Math.hypot(diff.x, diff.z);
         const totalLen = diff.length();
@@ -747,7 +754,7 @@ import * as THREE from "three";
           );
         });
 
-        const sampleCount = 160;
+        const sampleCount = 480;
         const up = new THREE.Vector3(0, 1, 0);
         for (let i = 0; i <= sampleCount; i++) {
           const t = i / sampleCount;
@@ -763,18 +770,31 @@ import * as THREE from "three";
         const roadUVs = [];
         const bridgePositions = [];
         const bridgeUVs = [];
-        const platformRects = this.platforms.map((p) => ({
-          minX: p.cx - p.w * 0.5 + 0.25,
-          maxX: p.cx + p.w * 0.5 - 0.25,
-          minZ: p.cz - p.d * 0.5 + 0.25,
-          maxZ: p.cz + p.d * 0.5 - 0.25
+        const junctionPlatforms = this.platforms.map(p=>p.id==="DeliveryB"?{...p,w:48,d:44,cz:157}:p);
+        const platformRects = junctionPlatforms.map((p) => ({
+          minX: p.cx - p.w * 0.5,
+          maxX: p.cx + p.w * 0.5,
+          minZ: p.cz - p.d * 0.5,
+          maxZ: p.cz + p.d * 0.5
         }));
 
+        const junctionY = v => {
+          const p=v.clone();
+          for(const pf of junctionPlatforms){
+            const d=Math.hypot(Math.max(0,Math.abs(p.x-pf.cx)-pf.w/2),Math.max(0,Math.abs(p.z-pf.cz)-pf.d/2));
+            const f=THREE.MathUtils.smoothstep(d,0,12);
+            p.y=pf.cy+(p.y-pf.cy)*f;
+            if(d<12)break;
+          }
+          return p;
+        };
         const pushUpwardTri = (a, b, c, targetPos, targetUV, section) => {
+          a=junctionY(a);b=junctionY(b);c=junctionY(c);
           const ab = new THREE.Vector3().subVectors(b, a);
           const ac = new THREE.Vector3().subVectors(c, a);
           const n = new THREE.Vector3().crossVectors(ab, ac);
           let v0 = a, v1 = b, v2 = c;
+          if (Math.abs(n.y)<1e-8) return;
           if (n.y < 0) {
             v1 = c;
             v2 = b;
@@ -821,8 +841,8 @@ import * as THREE from "three";
           const insideAnyPlatform = platformRects.some(
             (r) => midPt.x >= r.minX - 2.0 && midPt.x <= r.maxX + 2.0 && midPt.z >= r.minZ - 2.0 && midPt.z <= r.maxZ + 2.0
           );
-          if (!insideAnyPlatform && i % 2 === 0 && i + 2 <= sampleCount) {
-            const sNext = this.pathSamples[i + 2];
+          if (!insideAnyPlatform && i % 6 === 0 && i + 6 <= sampleCount) {
+            const sNext = this.pathSamples[i + 6];
             const nl0 = s0.point.clone().addScaledVector(s0.right, -hw0);
             const nl1 = sNext.point.clone().addScaledVector(sNext.right, -sNext.width * 0.5);
             const nr0 = s0.point.clone().addScaledVector(s0.right, hw0);
@@ -833,7 +853,7 @@ import * as THREE from "three";
             this._registerBarrierSegment(nr0.x, nr0.z, nr1.x, nr1.z, minY, maxY, `RoadRailR_${i}`, 'Phase1', g);
           }
 
-          if (isBridgeSeg && i % 10 === 0) {
+          if (isBridgeSeg && i % 30 === 0) {
             const pierH = s0.point.y + 4.5;
             [-hw0 + 2.2, hw0 - 2.2].forEach((lat) => {
               const pPos = s0.point.clone().addScaledVector(s0.right, lat);
@@ -870,11 +890,12 @@ import * as THREE from "three";
         const chevGeo = new THREE.ShapeGeometry(chevShape);
         chevGeo.rotateX(-Math.PI / 2);
 
-        for (let i = 10; i < sampleCount - 8; i += 12) {
+        for (let i = 30; i < sampleCount - 24; i += 36) {
           const s = this.pathSamples[i];
           const chev = new THREE.Mesh(chevGeo, this.mats.cyanGlow);
-          chev.position.set(s.point.x, s.point.y + 0.08, s.point.z);
-          chev.rotation.y = Math.atan2(s.tangent.x, s.tangent.z);
+          const pos=junctionY(s.point);
+          chev.position.set(pos.x,pos.y+0.08,pos.z);
+          chev.rotation.y = Math.atan2(s.tangent.x, s.tangent.z)+Math.PI;
           g.add(chev);
           this.chevrons.push({ pos: s.point.clone(), dir: s.tangent.clone(), up: new THREE.Vector3(0, 1, 0) });
         }
@@ -1336,7 +1357,7 @@ import * as THREE from "three";
         const trim6A = new THREE.Mesh(new THREE.BoxGeometry(10.2, 0.14, 8.2), this.mats.emeraldGlow);
         trim6A.position.set(56, 6.18, -114);
         g.add(trim6A);
-        this._buildRampStair(g, new THREE.Vector3(56, 2.2, -103.5), new THREE.Vector3(56, 6.2, -110.0), 3.2, 'P6_Overlook6A_Stair', true);
+        this._buildRampStair(g, new THREE.Vector3(56, 2.2, -103.5), new THREE.Vector3(56, 6.2, -111.0), 3.2, 'P6_Overlook6A_Stair', true);
 
         // 2. Interconnected Under-Bridge Tactical Passage (Y = 1.5m under 8.8m apex)
         addDeck(-4, 1.5, 4, 18, 18, 'P6_UnderBridge_Hub');
@@ -1781,13 +1802,13 @@ import * as THREE from "three";
           const u = (dot11 * dot02 - dot01 * dot12) * inv;
           const v = (dot00 * dot12 - dot01 * dot02) * inv;
 
-          if (u >= -0.03 && v >= -0.03 && u + v <= 1.03) {
+          if (u >= -0.00001 && v >= -0.00001 && u + v <= 1.00001) {
             const y = a.y + u * (c.y - a.y) + v * (b.y - a.y);
             if (refY === null) {
               if (bestY === null || y > bestY) bestY = y;
             } else {
               const dy = Math.abs(y - refY);
-              if (dy <= maxStep && dy < bestDist) {
+              if (dy <= maxStep && (bestY===null || y>bestY)) {
                 bestDist = dy;
                 bestY = y;
               }
@@ -1975,7 +1996,7 @@ import * as THREE from "three";
 
         // 6. Phases 2–4 Elevation-Verified Stairs & Catwalks
         const p2W = this._testBidirectionalPath(-16, -138.5, -16, -144.5, 0.0, 4.5, 14);
-        const p2Cat = this._testBidirectionalPath(-11.2, -153, 11.2, -153, 4.5, 4.5, 18);
+        const catTests=[this._testBidirectionalPath(-11.2,-153,-7,-153,4.5,6.2,18),this._testBidirectionalPath(-7,-153,7,-153,6.2,6.2,36),this._testBidirectionalPath(7,-153,11.2,-153,6.2,4.5,18)];const p2Cat=catTests.find(t=>!t.pass)||{pass:true};
         const p3StA = this._testBidirectionalPath(36.5, -44.5, 36.5, -50.0, 4.0, 8.5, 14);
         const p4StW = this._testBidirectionalPath(-73.5, 68.2, -73.5, 62.5, 6.0, 10.8, 14);
         const nav24Ok = p2W.pass && p2Cat.pass && p3StA.pass && p4StW.pass;
@@ -2002,7 +2023,7 @@ import * as THREE from "three";
         const p6Checks = [
           { label: 'Flank6A South', res: this._testBidirectionalPath(22.5, -136.0, 50.5, -108.0, 0.0, 2.2, 20) },
           { label: 'Flank6A North', res: this._testBidirectionalPath(60.0, -95.0, 71.5, -67.0, 2.2, 4.0, 20) },
-          { label: 'Overlook6A', res: this._testBidirectionalPath(56.0, -103.5, 56.0, -110.0, 2.2, 6.2, 14) },
+          { label: 'Overlook6A', res: this._testBidirectionalPath(56.0, -103.5, 56.0, -111.0, 2.2, 6.2, 14) },
           { label: 'UnderBridge E', res: this._testBidirectionalPath(4.0, -4.0, 34.5, -41.0, 1.5, 4.0, 22) },
           { label: 'UnderBridge W', res: this._testBidirectionalPath(-12.0, 12.0, -38.5, 43.0, 1.5, 6.0, 22) },
           { label: 'UnderBridge Spur', res: this._testBidirectionalPath(-10.5, -1.0, -14.5, -3.5, 1.5, 4.2, 14) },
@@ -2354,7 +2375,7 @@ import * as THREE from "three";
       _extendBridgePiers() {
         // Scenery-only extensions beneath original bridge piers wherever the river bed was carved lower.
         const mat=new THREE.MeshStandardMaterial({color:0x4b555a,roughness:.88});
-        for(let i=0;i<this.map.pathSamples.length-1;i+=10){const s=this.map.pathSamples[i],next=this.map.pathSamples[i+1];if(!s.isBridge&&!next.isBridge)continue;
+        for(let i=0;i<this.map.pathSamples.length-1;i+=30){const s=this.map.pathSamples[i],next=this.map.pathSamples[i+1];if(!s.isBridge&&!next.isBridge)continue;
           for(const lat of [-s.width*.5+2.2,s.width*.5-2.2]){const p=s.point.clone().addScaledVector(s.right,lat);const y=this._height(p.x,p.z);const top=-4.75;if(y>=top)continue;const h=top-y+.35;const pier=new THREE.Mesh(new THREE.BoxGeometry(1.6,h,1.6),mat);pier.position.set(p.x,top-h/2+.15,p.z);this.group.add(pier);}
         }
       }
