@@ -8,8 +8,8 @@ export const MENU_MODES = Object.freeze({
     rules: ['The server chooses the mode randomly.', 'Open seats are filled with bots until more players join.'],
   },
   practice: {
-    title: 'Practice', icon: Target, accent: '#9fe8ff', online: false,
-    blurb: 'You and up to three bots. No score, no clock.',
+    title: 'Practice', icon: Target, accent: '#9fe8ff', online: true,
+    blurb: 'Train alone or with another player. No score, no clock.',
     rules: ['Try every strike, Telekinesis power and roll.', 'Fall and you are back on your feet in a moment.', 'Pick the bots\' level and how many.'],
   },
   duel: {
