@@ -2,7 +2,7 @@ import { DEFAULT_PUBLIC_ROOMS } from '../net/protocol.mjs';
 // Public Duelist server browser contract. A room is selected by its exact
 // server-issued ID; never convert a row click into a matchmaking/quick-join request.
 export const ONLINE_SERVER_MODES = Object.freeze([
-  'duel', 'ffa', 'tdm', 'ctf', 'escort', 'football', 'control',
+  'duel', 'ffa', 'tdm', 'ctf', 'escort', 'football', 'control', 'practice',
 ]);
 const MODES = new Set(ONLINE_SERVER_MODES);
 const MAX_HUMANS = 20;
