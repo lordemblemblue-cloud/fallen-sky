@@ -37,7 +37,16 @@ export function createConduitMatchAdapter(manifest,{mode='tdm',random=null}={}){
     blue:Object.freeze(data.spawns.blue.filter(p=>p.z<0&&auditConduitPlacement(world,p).ok)),
     red:Object.freeze(data.spawns.red.filter(p=>p.z>0&&auditConduitPlacement(world,p).ok))
   });
-  const ffa=Object.freeze([...teams.blue,...teams.red].map(p=>Object.freeze({...p,team:null})));
+  // Eight evenly spaced Ring Walk anchors, offset from the four pad axes.
+  // No Crown spawns: they would grant immediate power-up/landing control.
+  const upper=[];
+  for(const i of [2,6,10,14,18,22,26,30]){
+    const node=nodes.get('t2_arc_'+i);
+    if(!node)continue;
+    const p={id:'ffa_upper_'+i,team:null,...point(node.pos)};
+    if(p.y===5&&auditConduitPlacement(world,p).ok)upper.push(p);
+  }
+  const ffa=Object.freeze([...teams.blue,...teams.red,...upper].map(p=>Object.freeze({...p,team:null})));
   function reserveSpawn(playerId,team=null,{enemies=[],occupants=[],recentIds=[],canSee=null,requireUnexposed=false}={}){
     if(typeof playerId!=='string'||!playerId||(mode==='tdm'?!Object.hasOwn(teams,team):team!==null))return null;
     if(reserved.has(playerId)){
