@@ -12,12 +12,12 @@ export const EFFECTS = Object.freeze({
   quick: Object.freeze({ move: 1.4, rate: 1.2 }),
   rage: Object.freeze({ damage: SPECIAL_BALANCE.rageDamageMultiplier, move: SPECIAL_BALANCE.rageMoveMultiplier, rate: SPECIAL_BALANCE.rageAttackSpeedMultiplier }),
   empower: Object.freeze({ damage: 1.4 }),
-  levitate: Object.freeze({ height: 2.1, move: 0.6 }),
+  levitate: Object.freeze({ height: 2.1, move: 0 }),
   cloak: Object.freeze({ seenWithin: 3 }), // metres: closer than this, a cloaked fighter shimmers into view
   dominate: Object.freeze({ breakHits: 2 }), // a dominated fighter is freed by its second hit
 });
 // effect kinds as bits, for snapshots (net/protocol.mjs)
-export const EFFECT_BITS = Object.freeze({ quick: 1, rage: 2, cloak: 4, levitate: 8, mend: 16, empower: 32, dominated: 64 });
+export const EFFECT_BITS = Object.freeze({ quick: 1, rage: 2, cloak: 4, levitate: 8, mend: 16, empower: 32, dominated: 64, levitateFall: 128 });
 
 export function addEffect(f, kind, until, data = {}) {
   if (!f.effects) f.effects = {};
