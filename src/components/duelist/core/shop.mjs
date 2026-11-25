@@ -79,9 +79,8 @@ export const SHOP_ITEMS = Object.freeze([
   item('graspbreaker', 'Graspbreaker Charm', 'relic', 560, { health: 24, tenacity: 0.06 }, passive('gripEscape', 36, 'Negate one Telekinetic Grip every 36 s; the next grip can still hold you')),
 ]);
 
-// Phase 1: only the five primary Damage paths get tailored Tier I stats.
-// Early effects persist at their initial strength at Tier II until its own balance pass.
-// At Tier III the existing completed passive replaces the early one (never adds to it).
+// Damage phases I–II: tailored component profiles. Each tier replaces its previous
+// effect, never stacks with the same item's earlier tier.
 const DAMAGE_TIER_ONE = Object.freeze({
   ironfang: Object.freeze({ stats: Object.freeze({ power: 0.02, critChance: 0.02 }) }),
   warbanner: Object.freeze({ stats: Object.freeze({ power: 0.02, critDefense: 0.025 }), passive: Object.freeze(passive('onKillShield', 3, 'Rally: Recover 3 shield after an elimination')) }),
@@ -89,15 +88,27 @@ const DAMAGE_TIER_ONE = Object.freeze({
   bloodrite: Object.freeze({ stats: Object.freeze({ power: 0.03 }), passive: Object.freeze(passive('lifesteal', 0.02, 'Blood Tribute: Restore HP equal to 2% of HP damage dealt')) }),
   starbreaker: Object.freeze({ stats: Object.freeze({ power: 0.045 }) }),
 });
+const DAMAGE_TIER_TWO = Object.freeze({
+  ironfang: Object.freeze({ stats: Object.freeze({ power: .04, critChance: .03 }), passive: Object.freeze(passive('lifesteal', .03, 'Predator: Restore HP equal to 3% of HP damage dealt')) }),
+  warbanner: Object.freeze({ stats: Object.freeze({ power: .045, critDefense: .035 }), passive: Object.freeze(passive('onKillShield', 7, 'Rally: Recover 7 shield after an elimination')) }),
+  eclipseedge: Object.freeze({ stats: Object.freeze({ power: .055, critSeverity: .06 }), passive: Object.freeze(passive('haste', .025, 'Echo: Class ability cooldowns 2.5% shorter')) }),
+  bloodrite: Object.freeze({ stats: Object.freeze({ power: .065 }), passive: Object.freeze(passive('lifesteal', .045, 'Blood Tribute: Restore HP equal to 4.5% of HP damage dealt')) }),
+  starbreaker: Object.freeze({ stats: Object.freeze({ power: .08 }), passive: Object.freeze(passive('onKillShield', 8, 'Starfall: Recover 8 shield after an elimination')) }),
+});
+const damageProfile = (item, tier) => {
+  const profiles = tier === 1 ? DAMAGE_TIER_ONE : tier === 2 ? DAMAGE_TIER_TWO : null;
+  return profiles && Object.hasOwn(profiles, item.id) ? profiles[item.id] : null;
+};
 export function tierItemStats(item, tier) {
   if (!item || !Number.isInteger(tier) || tier < 1 || tier > 3) return {};
-  if (tier === 1 && Object.hasOwn(DAMAGE_TIER_ONE, item.id)) return DAMAGE_TIER_ONE[item.id].stats;
+  const profile = damageProfile(item, tier);
+  if (profile) return profile.stats;
   return Object.fromEntries(Object.entries(item.stats).map(([stat, value]) => [stat, value * SHOP_RULES.tierShares[tier]]));
 }
 export function tierItemPassive(item, tier) {
   if (!item || !Number.isInteger(tier) || tier < 1 || tier > 3) return null;
   if (tier === 3) return item.passive;
-  return Object.hasOwn(DAMAGE_TIER_ONE, item.id) ? DAMAGE_TIER_ONE[item.id].passive || null : null;
+  return damageProfile(item, tier)?.passive || null;
 }
 
 const byId = new Map(SHOP_ITEMS.map((item) => [item.id, item]));
