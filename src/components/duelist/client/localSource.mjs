@@ -2,16 +2,18 @@
 // same shape as an online match (net/client.mjs createOnlineSource), so one renderer draws both.
 import { createMatch, stepMatch, matchView, queueMatchClass, purchaseMatchItem, sellPracticeItem, setPracticeOption, MODES } from '../sim/match.mjs';
 import { cleanPracticeSettings } from '../core/practiceSettings.mjs';
+import { createPracticeDemonstration } from './practiceDemonstration.mjs';
 import { BODY_IDS } from '../net/protocol.mjs';
 
 const STEP = 1 / 60;
 
 // classId: the class the player fights as (core/classes.mjs); chooseClass changes it for the next spawn.
 // progress: the player's EXP per class from this browser (client/prefs.mjs): offline, the browser keeps the levels
-export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bots = 1, testMode = false, practiceMode = false, practiceSettings = null, testBots = false, seed = 1, youBody = BODY_IDS[0], foeBody = BODY_IDS[1], classId = null, progress = null } = {}) {
+export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bots = 1, testMode = false, practiceMode = false, practiceSettings = null, testBots = false, seed = 1, youBody = BODY_IDS[0], foeBody = BODY_IDS[1], classId = null, progress = null, demonstration = null } = {}) {
   const def = MODES[mode] || MODES.practice;
   const match = createMatch({ mode: def.id, seed, botLevel, players: [{ id: 'you', name: 'You', classId, progress }], testMode, practiceMode: practiceMode || def.id === 'practice', seats: testMode ? (testBots ? def.seats : 1) : def.id === 'practice' ? 1 + bots : null });
   if (match.training) for (const [id,value] of Object.entries(cleanPracticeSettings(practiceSettings))) setPracticeOption(match,'you',id,value);
+  const demo = def.id === 'practice' && demonstration ? createPracticeDemonstration(match, demonstration) : null;
   let classAnswer = null;
   let shopAnswer = null;
   // bodies: yours; the duel or practice opponent's; everyone else in turn from the rest
@@ -27,6 +29,7 @@ export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bot
   let accumulator = 0;
   return {
     match,
+    demonstration: demo,
     world: match.world,
     meId: 'you',
     mode: def.id,
@@ -54,10 +57,10 @@ export function createLocalSource({ mode = 'practice', botLevel = 'duelist', bot
       let first = true;
       while (accumulator >= STEP) {
         accumulator -= STEP;
-        const input = readInput();
-        if (!first) input.presses = [];
+        const input = demo ? null : readInput();
+        if (!first && input) input.presses = [];
         first = false;
-        const r = stepMatch(match, STEP, { you: input });
+        const r = stepMatch(match, STEP, demo ? demo.inputs() : { you: input });
         if (r.effects.length) out.effects.push(...r.effects);
         if (r.events.length) out.events.push(...r.events);
       }
