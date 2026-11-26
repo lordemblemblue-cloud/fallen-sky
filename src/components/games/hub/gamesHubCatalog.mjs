@@ -17,7 +17,6 @@ const BASE44_MEDIA = 'https://media.base44.com/images/public/6af625cd654fa5b8954
 export const GAMES_HUB_TILES = Object.freeze([
   Object.freeze({
     id: 'duelist',
-    gpuPrompt: true,
     to: '/duelist',
     title: 'Duelist Adventure',
     tagline: 'Blade-to-blade duels: real-time combat, powers and story missions.',
@@ -30,7 +29,6 @@ export const GAMES_HUB_TILES = Object.freeze([
   Object.freeze({
     id: 'fallen-sky',
     releaseStatus: 'beta-experimental',
-    gpuPrompt: true,
     to: '/gameview',
     title: 'Fallen Sky Online',
     tagline: 'The living world of Adam and Eve: factions, companions, mounts and quests.',
