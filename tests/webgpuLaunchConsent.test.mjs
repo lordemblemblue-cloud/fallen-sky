@@ -48,11 +48,9 @@ test('explicit renderer URL remains a developer override', () => {
   browser.location.search='?renderer=webgpu';
   assert.equal(chooseSceneRendererFor('fallen-sky',browser).kind,'webgpu');
 });
-test('hub launch modal has only the two immediate choices and no instructions or extra GPU allocation',()=>{
-  const source=readFileSync(new URL('../src/components/games/hub/GpuLaunchPrompt.jsx',import.meta.url),'utf8');
-  assert.match(source,/Allow WebGPU\?/);
-  assert.match(source,/launch\(true\)\}>Yes/);
-  assert.match(source,/launch\(false\)\}>No/);
-  assert.match(source,/setLaunchRendererPreference\(allow \? 'auto' : 'webgl', window\)/);
-  assert.doesNotMatch(source,/Check my GPU|How to enable it|settings\/system|requestAdapter\(|requestDevice\(/);
+test('hub launches immediately and only displays an optional WebGPU hint',()=>{
+  const source=readFileSync(new URL('../src/components/games/hub/GamesCrossScroll.jsx',import.meta.url),'utf8');
+  assert.ok(source.includes('>Enable WebGPU</p>'));
+  assert.match(source,/onLaunch\?\.\(launch, tile\)/);
+  assert.doesNotMatch(source,/GpuLaunchPrompt|pendingLaunch|setLaunchRendererPreference|requestAdapter\(|requestDevice\(/);
 });
