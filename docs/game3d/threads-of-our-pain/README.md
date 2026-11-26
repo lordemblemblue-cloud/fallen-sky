@@ -18,6 +18,8 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | S10 | Water Behind Water | [Expanded optional quest and shared terrain brief](D08_S10.md) | Ready for proposed blockout; unverified |
 | D09 | The Drowned Bell | [Expanded scene script](D09_S11.md) | Ready for proposed blockout; unverified |
 | S11 | The Bell Below | [Expanded optional quest and shared terrain brief](D09_S11.md) | Ready for proposed blockout; unverified |
+| D10 | The Hidden Bandage | [Expanded scene script](D10_S12.md) | Ready for proposed blockout; unverified |
+| S12 | The Empty Shrine | [Expanded optional quest and shared terrain brief](D10_S12.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -36,3 +38,7 @@ D08 and S10 are now expanded in one shared script with independently tracked com
 ## Revision R12 — 26 November 2026
 
 [D09/S11](D09_S11.md) retains the Sunken Temple, bell silhouette, dry chamber, clapper, optional Warning Chime cue and original evacuation bell. Local blocked outlet and supporting dialogue are proposals; do not equate the two floods historically. Twelve distinct discovery briefs, two expanded optional quests, no expanded main quests yet. Cumulative v0.8 R12 saved to the owner's Fallen Sky Story Bible Library folder. Next D10 — The Hidden Bandage / S12 — The Empty Shrine. Pending chat drafts D02, D03, D05, D06 and M07 require reconciliation. Claude return actual anchors and traversal/performance checks; no terrain built, no runtime changes, no merge.
+
+## Revision R13 — 26 November 2026
+
+[D10/S12](D10_S12.md) preserves the woodland shrine, three candle shadows/folded hand, older medic's storage niche, field dressing and recipe. Missing votive objects lead to noncombat restitution; traveler circumstances and optional trench hazard are proposed. Independent quest and discovery completion. Thirteen distinct expanded discovery briefs, three expanded optional quests, zero expanded main quests. Cumulative v0.9 R13 saved to the Fallen Sky Story Bible Library folder. Next D11 — Roots of Yesterday / S14 (Herbalism Satchel); S13 is separate, do not renumber. D02, D03, D05, D06 and M07 still need reconciliation. Claude return actual terrain anchors, traversal and performance tests. No game code, merge, credits or deployment.
