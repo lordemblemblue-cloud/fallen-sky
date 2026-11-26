@@ -581,3 +581,25 @@
     animation: none !important;
   }
 }
+
+/* A passive hint on the games gallery only; never blocks input or launch. */
+.xs-webgpu-notice {
+  position: absolute;
+  z-index: 4;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(8, 18, 32, 0.46);
+  color: #cbe9fa;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  pointer-events: none;
+}
+@media (max-width: 760px) {
+  .xs-webgpu-notice { top: calc(env(safe-area-inset-top, 0px) + 46px); font-size: 11px; padding: 3px 8px; }
+}
