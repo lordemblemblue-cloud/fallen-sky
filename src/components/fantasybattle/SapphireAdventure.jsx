@@ -516,7 +516,7 @@ function DungeonEntrance({profile,world,candidate,encounter,running,original,lay
   const completed=Boolean(profile&&candidate&&profile.world.completedEncounters.includes(candidate.id));
   const category=candidate?.category||'—';
   const title=candidate?.label||'No encounter selected';
-  const description=ready?(candidate.id==='wilds_grove_01'?GROVE_STORY.warning:candidate.id==='wilds_waterfall_01'?'Mist Scout: Listen to the water. The voice goes the wrong way.':candidate.id==='wilds_cave_01'?'An old signal echoes from within the cave.':candidate.id==='wilds_heights_01'?'The first relay is repeating an old warning.':candidate.id==='wilds_heights_02'?'The next relay points toward the sanctuary.':candidate.id==='wilds_heights_elite'?'Optional elite trial. Check your party and prepare before challenging the guardian.':'Review the enemy formation and tactics before entering battle.'):encounter?'An encounter is already active.':'Approach an encounter marker in the world.';
+  const description=ready?(candidate.id==='wilds_grove_01'?GROVE_STORY.warning:candidate.id==='wilds_waterfall_01'?'Mist Scout: Listen to the water. The voice goes the wrong way.':candidate.id==='wilds_cave_01'?'An old signal echoes from within the cave.':candidate.id==='wilds_heights_01'?'The first relay is repeating an old warning.':candidate.id==='wilds_heights_02'?'The next relay points toward the sanctuary.':candidate.id==='wilds_heights_elite'?'Optional elite trial. Check your party and prepare before challenging the guardian.':candidate.id==='wilds_sanctuary_guard'?'The outer guard still obeys the ancient emergency order.':candidate.id==='wilds_sanctuary_boss'?'The Gatekeeper is protecting the failing shrine network. Review its three phases before entering.':'Review the enemy formation and tactics before entering battle.'):encounter?'An encounter is already active.':'Approach an encounter marker in the world.';
   const roster=<>{enemies.length?enemies.map(e=><div className="fa-entrance-enemy" key={e.id}><EnemyPortrait enemy={e}/><strong>{e.name}</strong><small>HP {e.maxHp}</small></div>):<p>No enemy formation available.</p>}</>;
   const stats=<StatRows stats={{'Encounter type':category,'Enemy HP':lead?.maxHp??'—','Enemy attack':lead?.atk??'—','Enemy defense':lead?.def??'—'}}/>;
   const details=<><p>{description}</p>{completed&&<p>Previously defeated. First-victory rewards cannot be earned again.</p>}</>;
@@ -547,6 +547,7 @@ function BossIntroduction({profile,candidate,encounter,running,original,layout,o
   const selected=enemies.find(e=>e.id===selectedId)||lead;
   const title=candidate?.label||'No encounter selected';
   const category=candidate?.category||'—';
+  const sanctuaryIntro=ready&&candidate.id==='wilds_sanctuary_boss'?'The watch is not waiting for us. It is waiting for the light to return.':null;
   const roster=enemies.map(e=><Btn key={e.id} primary={selected?.id===e.id} aria-pressed={selected?.id===e.id} onClick={()=>setSelectedId(e.id)}><EnemyPortrait enemy={e} small/><strong>{e.name}</strong><small>HP {e.maxHp}</small></Btn>);
   const details=<StatRows stats={{HP:selected?.maxHp??'—',Attack:selected?.atk??'—',Defense:selected?.def??'—',Speed:selected?.spd??'—'}}/>;
   const tactics=<>{enemies.map(e=><div className="fa-boss-tactic" key={e.id}><EnemyPortrait enemy={e} small/><div><strong>{e.name}</strong><p>{tacticFor(e.strategy,e.archetype)}</p></div></div>)}{!enemies.length&&<p>No encounter data available.</p>}</>;
@@ -555,7 +556,7 @@ function BossIntroduction({profile,candidate,encounter,running,original,layout,o
   if(original)return <div className="fa-original-boss">
     <h2 className="fa-boss-title">{category==='Boss'?'Boss Introduction':'Encounter Introduction'}</h2>
     <h3 className="fa-boss-name">{title}</h3><div className="fa-boss-category">{category} encounter</div>
-    <section className="fa-boss-description"><p>{ready?'Review the enemy formation before entering.':'Approach an encounter marker to begin.'}</p>{completed&&<p>Previously defeated.</p>}</section>
+    <section className="fa-boss-description"><p>{sanctuaryIntro||(ready?'Review the enemy formation before entering.':'Approach an encounter marker to begin.')}</p>{completed&&<p>Previously defeated.</p>}</section>
     <div className="fa-boss-preview">{selected?<><EnemyPortrait enemy={selected}/><strong>{selected.name}</strong></>:<p>No enemy selected</p>}</div>
     <h3 className="fa-boss-stats-title">Enemy details</h3><section className="fa-boss-stats">{details}</section>
     <h3 className="fa-boss-tactics-title">Enemy mechanics</h3><section className="fa-boss-tactics" aria-label="Enemy mechanics">{tactics}</section>
@@ -563,7 +564,7 @@ function BossIntroduction({profile,candidate,encounter,running,original,layout,o
     <h3 className="fa-boss-rewards-title">Battle rewards</h3><section className="fa-boss-rewards"><p>{reward}</p><small>Party {partySize}/4 · Fixed encounter difficulty · No reward at entry</small></section>
     {enter}<Btn className="fa-boss-close" aria-label="Back to entrance" onClick={back}>×</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><h2>{title}</h2><p>{category} · Party {partySize}/4</p>{roster}{details}</Panel><Panel rect={layout[1]}><h2>Enemy mechanics</h2>{tactics}<p>{reward}</p>{enter}<Btn onClick={back}>Back</Btn></Panel></>;
+  return <><Panel rect={layout[0]}><h2>{title}</h2><p>{category} · Party {partySize}/4</p>{sanctuaryIntro&&<p>{sanctuaryIntro}</p>}{roster}{details}</Panel><Panel rect={layout[1]}><h2>Enemy mechanics</h2>{tactics}<p>{reward}</p>{enter}<Btn onClick={back}>Back</Btn></Panel></>;
 }
 
 // Transparent original HUD: the stage remains responsible for action legality,
@@ -625,7 +626,8 @@ function BattleVictory({profile,encounter,result,hud,original,layout,onContinue,
   const currentLevel=profile?levelFor(profile.xp):0,previousLevel=profile?levelFor(Math.max(0,profile.xp-xp)):0;
   const rows=allies.map(u=><div key={u.id} className="fa-victory-member"><div className="fa-victory-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-victory-member-data"><strong>{u.name}</strong><small>{u.id==='hero'?'Level '+previousLevel+(currentLevel>previousLevel?' → '+currentLevel+' · Level up':''):'Companion'} · {u.hp===0?'Down':'Survived'}</small><progress aria-label={u.name+' final health'} value={u.hp} max={u.maxHp}/><small>Final HP {u.hp}/{u.maxHp}{u.id==='hero'?' · +'+xp+' XP':''}</small></div></div>);
   const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':xp===0?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(id=>ACTIONS[id]?.name||id).join(', ')}</p>}</>;
-  const summary=<><p>Result: {verified?'Victory':'Unavailable'}</p><p>Rounds: {verified?hud.round:'—'}</p><p>Enemies defeated: {enemies.filter(u=>u.hp===0).length}/{enemies.length}</p><p>Allies standing: {allies.filter(u=>u.hp>0).length}/{allies.length}</p><p>Experience: +{xp}</p><p>Gold: +{gold}</p><small>Duration, damage totals and battle ranks are not tracked in this build.</small></>;
+  const sanctuaryCleared=verified&&!encounter.practice&&encounter.id==='wilds_sanctuary_boss'&&profile.world.completedEncounters.includes('wilds_sanctuary_boss');
+  const summary=<><p>Result: {verified?'Victory':'Unavailable'}</p>{sanctuaryCleared&&<p>The Gatekeeper has fallen silent. Review the journal to record the sanctuary objectives.</p>}<p>Rounds: {verified?hud.round:'—'}</p><p>Enemies defeated: {enemies.filter(u=>u.hp===0).length}/{enemies.length}</p><p>Allies standing: {allies.filter(u=>u.hp>0).length}/{allies.length}</p><p>Experience: +{xp}</p><p>Gold: +{gold}</p><small>Duration, damage totals and battle ranks are not tracked in this build.</small></>;
   const nextLabel=verified&&result.leveled?'Level Up':'Continue';
   const controls=<><Btn disabled={!verified} onClick={onDetails}>Details</Btn><Btn primary disabled={!verified} onClick={onContinue}>{nextLabel}</Btn><Btn disabled={!earned.length} onClick={onItems}>View Items</Btn></>;
   if(original)return <div className="fa-original-victory">
