@@ -23,7 +23,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | ID | Item | Status | Source | Next step |
 |---|---|---|---|---|
 | FS-01 | Default entry stages an empty 24 m platform (`FALLEN_SKY_PLATFORM_MODE = true`) | Testing required | PR #382; `temporaryPlatform.mjs:2` | Owner decides when it turns off (FS-D1); WP-FS-07 adds a QA override |
-| FS-02 | Caves, dungeons, vortex deleted pending the story-first rebuild | Awaiting information | commits `f939845d`, `8511617b`; CLAUDE_TERRAIN_HANDOFF | MI-FS-W1; retire stale tests (TS-02) |
+| FS-02 | Caves, dungeons, vortex removed ("Owner-requested clean slate") pending the story-first rebuild | Implemented | PR #381; commits `f939845d`, `8511617b`; CLAUDE_TERRAIN_HANDOFF | Rebuild per Part A (MI-FS-W1); retire stale tests (TS-02) |
 | FS-03 | Hero level cap 155 | Implemented | `02e89b96`; `axePowerBudget.ts:11` | — |
 | FS-04 | Weapon skill points to 155, XP bank, par rows 110–155 | Awaiting approval | branch `claude/level-cap-155-20261119` `5e98b0cd` | WP-FS-03 after FS-D3 |
 | FS-05 | Gear tiers 1–155 (flag off) | Awaiting information | PR #99; GEAR_TIERS_20261119.md (8 questions) | MI-FS-P1 |
@@ -32,7 +32,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FS-08 | Enchantment VFX | Implemented | PR #80; 17/17 | — |
 | FS-09 | Weapon feel, montages | Implemented | WEAPON_FEEL, `208aa68e` | remote-combo tests fail (TS-01) |
 | FS-10 | Hold-to-charge remainder and Weapon Animation Studio | Awaiting approval | branch `claude/weapon-charge-20261119` `bbb97df7` | FS-D7 |
-| FS-11 | Effects light pool | Awaiting approval | branch `claude/effects-dispose-20261119` `6104562a` | WP-FS-05 (new PR) |
+| FS-11 | Effects light pool | Awaiting approval | branch `claude/effects-dispose-20261119` `6104562a` | WP-FS-04 (new PR) |
 | FS-12 | Gliding | Implemented | 12/12; owner "Yes, merge it" 2026-11-22 | Live re-check once the world returns |
 | FS-13 | Swimming | Implemented | 11/11 | Live re-check once the world returns |
 | FS-14 | Death, ash, nearby respawn | Implemented | 3/3, 5/5 | Live check not recorded |
@@ -48,9 +48,26 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FS-24 | War of Three Roads (bands 1–2 built, flag off; band 3 written) | Implemented (kept switched off by the owner, 2026-11-27) | `docs/game3d/three-empires/OWNER_REQUESTS.md`; merged `0b6ca52d` | Nothing more is built; reuse of its systems for the Threads is FS-D16 |
 | FS-25 | Cave-mouths branch `claude/wolfveil-cave-mouths-20261123` | Awaiting approval | conflicts with the 2026-11-25 removals | Close or keep (FS-D11) |
 
-Story, quest and world rows (FS-S…) follow in the next section.
+### Fallen Sky: story, quests and world (The Threads of Our Pain)
 
-<!-- FS-S rows inserted here -->
+| ID | Item | Status | Source | Next step |
+|---|---|---|---|---|
+| FS-S01 | Story documentation for all 125 IDs (M01–M20, D01–D50, S01–S55) | Implemented (documentation only) | R61, R85, R86 | — |
+| FS-S02 | Chronology and causality decision (R111 P0) | Awaiting information | R111 §7 | MI-FS-S1 |
+| FS-S03 | P01 opening slice M01–M03, isolated low-poly blockout (R132 T00–T07) | Awaiting approval | R112 §4, R113, R130–R136; R136 §1 "No owner approval recorded" | MI-FS-S6; then WP-FS-S1 |
+| FS-S04 | NPC-phase work, Phases 44–67 (fixtures, validators, M07–M18 intakes) | Awaiting approval | stacked branch chain, head PR #433; not in `main` | FS-S-D10; WP-FS-S5 native test run |
+| FS-S05 | Story-ID adapter rejecting unknown IDs (quest store accepts unknown IDs today) | Implementation-ready (isolated module) | R130 §5, R137 §1, Phase 43 risk 1 | WP-FS-S2 |
+| FS-S06 | Paired-discovery state model with the second vista (OWNER rule R66 §1) | Implementation-ready (disabled model) | R66, Phase 61 | WP-FS-S3 |
+| FS-S07 | "Main path completes with zero optional content" test | Implementation-ready | R85 §2, R76 §2 | WP-FS-S4 |
+| FS-S08 | NG+ (unlimited cycles, blue "155+", 2× enemy XP; 310 cap proposed) | Blocked | R76B–E, R84 (OWNER direction); no code | Cycle-state contract; MI-FS-S5 |
+| FS-S09 | Endings A and B, postgame continuation with gear kept | Blocked | R64A, R65, R76 (OWNER direction) | MI-FS-S2, FS-S02 |
+| FS-S10 | Optional lane policies and small canon confirmations | Awaiting information | R104, R66 | MI-FS-S3 |
+| FS-S11 | Encounter and progression numbers (M03 boss, M10, defence waves, NG+ curves) | Awaiting information | M03, R134, Phases 49/57/60/64 | MI-FS-S4 |
+| FS-S12 | Cast: 30-NPC registry identities, families, legacy characters, reuse of Three Roads models | Awaiting information | Phase 42/43 | MI-FS-S5 |
+| FS-S13 | World rebuild: region layout, connections, dimensions; checkpoint regions beyond `wolfveil`/`forest` | Awaiting information | terrain hand-off, R113–R128 | MI-FS-W1, MI-FS-S6 |
+| FS-S14 | Characters, rigs, low-poly modules, reward items, voice, music for the campaign | Awaiting assets | A3 | MI-FS-S7, MI-FS-S8 |
+| FS-S15 | Legacy quests (archer quests, `AXE_QUESTS`, Echo Chronicle, living Artemis) alongside the Threads | Awaiting approval | NPC_PHASE43_RUNTIME_AUDIT risk 4 | FS-S-D9 |
+| FS-S16 | Source materials: latest Word Story Bible, the hourly story task and NPC design conversations | Awaiting information | R85 §8, R86 §3 | MI-00, MI-FS-S7 |
 
 ## Fantasy Battle
 
@@ -109,7 +126,7 @@ Story, quest and world rows (FS-S…) follow in the next section.
 |---|---|---|---|---|
 | AN-01 | Local studio: RGB MoCap → Cascadeur → Blender, first archer package (10 clips) | In progress | owner spec 2026-11-27 (`animation-studio/OWNER_SPEC_20261127.md`); session `local_49f2a304` | That session reports to the hub |
 | AN-02 | Duelist clips without specified timings (strafe, backpedal, Levitate, Mend, Sanctuary, Leap Strike, Repulse, Grip, double jump, air dash, finisher variants, death variety, bow set, held grip) | Awaiting information | DUELIST_RECORD §11 | MI-DA-06 |
-| AN-03 | Fallen Sky clips for approved story beats | Awaiting information | depends on Part A scenes | MI-FS (cinematics) |
+| AN-03 | Fallen Sky clips for approved story beats and encounters | Awaiting information | depends on Part A scenes | MI-FS-S4, MI-FS-S8 |
 | AN-04 | Existing clip packs (Duelist 144, Fallen Sky weapon clips) are working, not final | Awaiting approval | directive §7, §14 | Owner decides which get re-made in the pipeline |
 
 ## Asset production
@@ -157,7 +174,7 @@ On `0b6ca52d` (3040 tests, 2884 pass, 156 fail) the list below holds except that
 | SE-01 | Keep guest-only entry and server-side authorization (no login redirects, no service-role bypass) | Implemented | AGENTS.md; BASE44_SECURITY_HARDENING_20261123.md |
 | SE-02 | Guest identity design for public multiplayer (abuse-resistant, server-issued) | Awaiting information | issue #298; MI-X-02 |
 | SE-03 | Reward ownership and idempotency server-side (R139 contract) | In progress | R139–R145 |
-| SE-04 | Review Base44 functions' anonymous-write permissions against the hardening doc | Implementation-ready | WP-FS-09 |
+| SE-04 | Review Base44 functions' anonymous-write permissions against the hardening doc | Implementation-ready | WP-FS-08 |
 | SE-05 | Fantasy Battle saves are local only; stale-stamp protection not atomic across tabs | Testing required | `adventureState.mjs` |
 
 ## Performance

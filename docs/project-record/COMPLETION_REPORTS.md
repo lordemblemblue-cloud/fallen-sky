@@ -30,7 +30,21 @@ Reachability: on the default entry (the 24 m platform) every world-dependent ite
 
 ### Story inventory (125 story IDs)
 
-<!-- FS story counts inserted here -->
+Counted from FALLEN_SKY_RECORD Part A (R61, R86, R110, R128 and the reader's code search). Each row counts IDs that have the stated item; the rows are not exclusive.
+
+| Measure | Count | % of 125 | Source |
+|---|---|---|---|
+| Primary script in the repository | 125 | 100 | R86 (verified 125/125 unique IDs, 68/68 primary source files) |
+| Construction packet (terrain prompt) | 125 | 100 | R128 ("all 125/125 narrative IDs covered by 15 construction packets") |
+| Voice and cinematic selection (draft) | 125 | 100 | R110 ("combined 125/125 documented") |
+| Script signed off by the owner as canon | 0 found | 0 | every script is marked draft; owner decisions on record are rules and directions (R64A, R66 §1, R76–R76E), not script approvals |
+| Exists only in recovered archives | 26 | 21 | A2 (all optional IDs) |
+| Main chapters whose original-world part waits on R111 | 13 of 20 main | — | A1 (M07–M19) |
+| Fixture code on the NPC-phase branch chain (not in `main`) | 6 | 5 | M01–M06, Phases 44–53 |
+| Implemented in `main` (playable or wired) | 0 | 0 | reader's search of `src/`, `server/`, `base44/` |
+| Built in the world (terrain placed) | 0 | 0 | platform mode; no blockout exists |
+
+Story, quests and world therefore read: written 125/125, approved as canon 0, implemented 0. The first slice that can be built is P01 (M01–M03) once the owner records the scope (WP-FS-S1).
 
 ### By area
 
@@ -40,9 +54,9 @@ Reachability: on the default entry (the 24 m platform) every world-dependent ite
 | Backend | Base44 functions for vault, guest vault, item upgrade, quests and party; a large private server (`server/game3d/`, 1748 tests, 88 fail, mostly network/PG suites); reward authority only as fixtures |
 | Frontend | Character creation, services, Blacksmith, skillbooks, HUD all present; many Clone-UI tests stale |
 | Gameplay | 8 of 22 Implemented (above) |
-| Story | See story inventory |
-| Quests | See story inventory; the questbook system exists, flags off |
-| World | Default entry is the 24 m platform; caves and dungeons deleted; the rebuild waits on MI-FS-W1 |
+| Story | Written 125/125, owner-approved as canon 0, implemented 0 (story inventory); the R111 chronology decision blocks most chapters after M06 |
+| Quests | The questbook system exists with flags off and accepts unknown IDs (WP-FS-S2); no campaign quest is wired; legacy quests remain (FS-S-D9) |
+| World | Default entry is the 24 m platform; the old caves and dungeons were removed at the owner's request; the rebuild starts with P01 once authorized (MI-FS-S6) |
 | Assets | Gear-tier looks, armor gaps, mount cosmetics, Luna mansion, world art missing (MI-FS-P2, issue #261) |
 | Animation | Weapon montages and fused-body clips in `main`; new clips go through the studio pipeline (AN-01, AN-03) |
 | Testing | 129 failing Fallen Sky tests in `tests/` on `ab03f50a`, ~45 from the deleted caves, ~45 stale Clone-UI checks (TS-01) |
@@ -112,7 +126,7 @@ Reachability: on the default entry (the 24 m platform) every world-dependent ite
 
 1. **MI-00:** export the ChatGPT, claude.ai and Gemini conversations (or the specific ones listed), and the Word manuscript.
 2. **Merges:** six of the seven hub-verified branches were merged on 2026-11-27; the cave-mouths branch remains (FS-D11). The open PRs are listed in each record.
-3. **Fallen Sky:** FS-D1 (platform off when, with which world), FS-D2 (caves stay deleted), the story decisions in FALLEN_SKY_RECORD Part A, and FS-D3 to FS-D15.
+3. **Fallen Sky:** first FS-S-D1 (the R111 chronology decision) and FS-S-D6 (authorize P01); then FS-D1 (platform off when, with which world), FS-D2 (retire the stale cave work), FS-D16 (reuse of the Three Roads systems and models), the other story decisions FS-S-D2 to D10, and FS-D3 to FS-D15.
 4. **Duelist:** DA-D1 to DA-D10, first DA-D2 (progression model) and DA-D3 (server deployment).
 5. **Fantasy Battle:** FB-D1 to FB-D8, first FB-D3 (release flag before QA) and FB-D2 (story canon).
 6. **Deployment:** Base44 publish and the function deploy order (DP-01, DP-03); hosting for the Duelist match server (DP-02).

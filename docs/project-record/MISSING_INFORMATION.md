@@ -7,7 +7,7 @@ Written 2026-11-27 from the recovery baseline (`main` `ab03f50a`). Each request 
 | Group | Requests | Unblocks |
 |---|---|---|
 | 0. Conversation exports | MI-00 | Most of the groups below |
-| FS-S. Fallen Sky story, quests, world | MI-FS-S… (from the story reader) | The campaign, the world rebuild, cinematics |
+| FS-S. Fallen Sky story, quests, world | MI-FS-S1 to S8 | The campaign, the world rebuild, cinematics |
 | FS-P. Fallen Sky progression and balance | MI-FS-P1 to P3 | Gear tiers, curve, achievements |
 | FS-W. Fallen Sky world and bosses | MI-FS-W1, W2 | The platform switch-off, dungeons, bosses |
 | FB. Fantasy Battle | MI-FB-01 to 07 | Story, dungeons, skills, rewards, assets |
@@ -44,7 +44,88 @@ Written 2026-11-27 from the recovery baseline (`main` `ab03f50a`). Each request 
 
 ## Group FS-S. Fallen Sky story, quests and world
 
-<!-- FS-S requests inserted here -->
+These come from the story documents' own open questions (`docs/game3d/threads-of-our-pain/`). They can be answered in the story conversation that produced the R-series, then committed as decision records. Answer MI-FS-S1 first: it unblocks most of the campaign after M06.
+
+### MI-FS-S1 Original-world chronology and causality (R111 P0)
+- **Project:** Fallen Sky, The Threads of Our Pain.
+- **Feature or section:** the original-world (age 18) scenes from M07 to M19 that come after the M05 death; the overlap in M10; the interleaving in M19.
+- **What has already been completed:** the fixed facts (R111 §1); candidate models A, B, C and A1, A2, A3 with tests (R111 §1–4); dependency audits (R97, R98); drafted clarifying lines (R111 §5).
+- **What information is missing:** the approved local order of the later original-world scenes relative to M05; where the link between the two lives comes from; how far its causal reach may go.
+- **Why this information is required:** without it, living original-world characters could contradict the canonical death; it blocks waves W03–W06 and the ending contracts (R112 §3).
+- **Specific questions that must be answered:** (1) Approve A (all later original-world scenes happen before the death in local time), or name another mechanism? (2) Does M05 preserve a connection that already existed (A1) or create it? (3) May the rescue in M10 physically help the younger hero survive? (4) Is it confirmed that the brace in M19 has no causal link to the tether? (5) Which R111.A lines are approved?
+- **Required files or assets:** a written decision (a reply in the story conversation, or an R111 decision record).
+- **Other systems affected:** NPC lifetimes (Phases 54–67), the save and phase model, objective windows for 105 IDs, the endings, NG+.
+- **Work that can continue without this information:** P01 (M01–M03); local art for M04–M05; the preserved-side town and archive; validators; the terrain survey.
+
+### MI-FS-S2 Endings and the postgame world
+- **Project:** Fallen Sky. **Feature or section:** M19, M20, endings A and B, the postgame.
+- **What has already been completed:** the owner's direction (R64A); the R65 draft script; the rules for keeping gear and continuing quests (R76, R84).
+- **What information is missing:** how far the player can roam in ending A; when and at what age ending B starts relative to the coda of about 20 years; a survivor ledger per character; where the third reality fits, and the shrine of the Twelve; the expansion rules; the exact time that passes.
+- **Why this information is required:** it decides spawn points, which NPCs appear, which map variants exist and what the save commits.
+- **Specific questions that must be answered:** (1) In ending A, what can the player explore? (2) Does ending B's play start right after the fusion at age 18, with the coda as a cutscene only? (3) Which named NPCs are alive in ending B? (4) Does the third reality appear in the base game? (5) Is carrying over more than gear approved (skill ranks, currency, cosmetics, achievements)?
+- **Required files or assets:** the owner's decision; a survey of the destination map.
+- **Other systems affected:** terrain, quest availability, NG+, backend transactions (R139).
+- **Work that can continue without this information:** R65 staging studies; the ending-transaction fixture design; the NG+ display formatter (WP-FS-S6).
+
+### MI-FS-S3 Optional quest lane policies and small canon confirmations
+- **Project:** Fallen Sky. **Feature or section:** S27/S29, S39, S53, S55, S34, S09, D31/S46, S42/S54, the D26/M08 crest, D48, S36, S50.
+- **What has already been completed:** the scripts; the R66 and R104 proposals; the R77–R82 availability classes.
+- **What information is missing:** approval of each lane policy; who wrote or made each named item.
+- **Why this information is required:** it decides when a quest counts as complete and who grants the reward, so nobody gets false credit.
+- **Specific questions that must be answered:** (1) Can S29 count S27's verified receipt before S27's repairs are done? (2) Is the exchange the core of S39, with the song optional? (3) Is S53 complete on delivery plus scouting, with the inscription optional? (4) Does S55 need both gardens? (5) Can S34 be completed late? (6) Is D26's crest distinct from M08's? (7) Who carved D48, and who wrote S36's letters? (8) Are S50's geometry and marker approved? (9) Does D31/S46 use a record or an echo?
+- **Required files or assets:** the owner's reply.
+- **Other systems affected:** the quest adapter, rewards, NPC schedules.
+- **Work that can continue without this information:** every other optional ID; data models with these lanes flagged pending.
+
+### MI-FS-S4 Encounter and progression numbers
+- **Project:** Fallen Sky. **Feature or section:** the M03 boss, the M10 survival fight, the defence waves in M13, M15 and M19, NG+.
+- **What has already been completed:** proposed phases and telegraphs (M03, R134); proposed defences (Phases 57, 60, 64); the owner's NG+ direction (R76B–E).
+- **What information is missing:** enemy stats and HP, phase thresholds, wave sizes; XP and items per reward; the permanent level ceiling and which categories carry over; the difficulty curve; animation requirements (timings, damage windows) for each encounter.
+- **Why this information is required:** the directive forbids inventing combat timings, damage windows or ability mechanics.
+- **Specific questions that must be answered:** (1) Which existing enemy templates and level bands apply in each chapter? (2) Are M03's three phases approved? (3) Is 310 the final cap? (4) What happens to gold, materials and quest XP in NG+?
+- **Required files or assets:** a balance sheet; animation specifications for the RGB MoCap → Cascadeur → Blender pipeline.
+- **Other systems affected:** combat, the economy, the R139 authority, the animation studio.
+- **Work that can continue without this information:** encounter state models whose interfaces need no placeholder numbers (the Phase 49 pattern); arena terrain.
+
+### MI-FS-S5 Cast and NPC identities
+- **Project:** Fallen Sky. **Feature or section:** the 30-NPC overlay (Phase 42), the families, the legacy characters.
+- **What has already been completed:** a disabled registry (30 IDs, a coordinator for each of the 55 S quests) and a validator.
+- **What information is missing:** the source conversation for NPC Phases 01–41; approval of the proposed names; mapping to `archer_lyra` and to the Three Roads cast; personal-quest scripts and rewards.
+- **Why this information is required:** no NPC can be placed or voiced without an identity and a lifetime.
+- **Specific questions that must be answered:** (1) Approve or rename the proposed NPCs? (2) Is `archer_lyra` the Lyra of the Threads? (3) Are the Three Roads' Sable Vey, Hesper, Tome, Henut and Livilla the Threads characters, and may their models be reused (FS-D16)? (4) Who speaks in M16?
+- **Required files or assets:** the NPC design conversation export; character models and rigs; voice casting.
+- **Other systems affected:** world placement, dialogue, quest givers, voice.
+- **Work that can continue without this information:** validators; staging by role without binding a character.
+
+### MI-FS-S6 P01 authorization, the replacement world and the region layout
+- **Project:** Fallen Sky. **Feature or section:** the replacement world, the P01 preview.
+- **What has already been completed:** R113 and R130–R137 specifications; the platform; the construction prompts R113–R128 for every chapter and optional ID.
+- **What information is missing:** the owner's T00 scope record (R136 §1); the region layout and connections; for each place (still TBD in the briefs): dimensions, entry and exit points, elevation, cave connections, enemy, NPC and quest placement, hazards, boss arenas; the M04 destination.
+- **Why this information is required:** no chapter can run on a 24 m platform, and the briefs' measurements are suggestions, not coordinates (terrain hand-off).
+- **Specific questions that must be answered:** (1) Accept P01 under R131's option of a separate local-only entry? (2) Terrain owner: Claude, with Gemini only for comparison previews? (3) When does the platform mode switch off: after P01 is accepted? (4) Is there an approved map sketch for the region order?
+- **Required files or assets:** the owner's record; any map sketch.
+- **Other systems affected:** the checkpoint allowlist, streaming, NPC placement, every quest.
+- **Work that can continue without this information:** WP-FS-S2 to S6; story-side contracts; data models; tests.
+
+### MI-FS-S7 Story source materials
+- **Project:** Fallen Sky. **Feature or section:** the Word Story Bible and the source conversations.
+- **What has already been completed:** the repository holds 125 of 125 IDs (R86).
+- **What information is missing:** the latest cumulative Word master (later than v5.6 / R60; only an older v0.1 was found by the story agent); the conversation history of the hourly story task; the conversation for NPC Phases 01–41; the owner's own words behind R64A, R76 and R66.
+- **Why this information is required:** to check the manuscript (R85 §8, R86 §3) and confirm the owner decisions were recorded accurately.
+- **Specific questions that must be answered:** Where is the latest master? Can the conversations be exported (MI-00)?
+- **Required files or assets:** the `.docx`; the exports.
+- **Other systems affected:** none at runtime.
+- **Work that can continue without this information:** everything that uses the repository as its source.
+
+### MI-FS-S8 Voice, music and animation for the campaign
+- **Project:** Fallen Sky. **Feature or section:** the lines selected in R106–R110, the lullaby, the S39 song, character animation for story beats.
+- **What has already been completed:** draft line selections.
+- **What information is missing:** an approved script per beat; casting; permission to record and to spend voice credits; the melodies; the clip lists.
+- **Why this information is required:** none of these exist yet.
+- **Specific questions that must be answered:** Are the selections approved? Who is cast? Who composes the music?
+- **Required files or assets:** voice and music files; animation clips through the studio pipeline.
+- **Other systems affected:** cinematics, captions.
+- **Work that can continue without this information:** captions and text stand-ins (the R134 contract).
 
 ---
 

@@ -8,7 +8,9 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 
 | Game | Package | Kind | Why first |
 |---|---|---|---|
-| Fallen Sky | WP-FS-S1 P01 opening slice preparation (see Part A packages) | Ready (documentation-bounded) | The owner's first priority is the story; P01 is the only slice with a full source-to-acceptance chain |
+| Fallen Sky | WP-FS-S1 P01 opening slice M01–M03, isolated low-poly blockout | Approval (one owner "yes" to the R136 §1 scope record starts it) | The owner's first priority is the story; P01 is the only slice with a full source-to-acceptance chain |
+| Fallen Sky | WP-FS-S2 story-ID adapter; WP-FS-S3 paired-discovery state model | Ready (isolated, disabled modules) | Story-side foundations that bind no unknown content |
+| Fallen Sky | WP-FS-S5 native test run of the NPC-phase branch chain | Ready (verification) | 62 files of story work wait outside `main` |
 | Fallen Sky | WP-FS-01 skill damage curve failures | Ready | A real behaviour failure on `main` |
 | Duelist | WP-DA-05 push rework | Ready | Owner request 2026-11-22, fully specified, not built |
 | Duelist | WP-DA-01 triage the 24 failing tests | Ready | Keeps corrected problems from coming back |
@@ -18,7 +20,35 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 
 ## Fallen Sky: story, quests and world (Part A)
 
-<!-- FS story packages inserted here -->
+Ownership follows the terrain hand-off and R112 §2: the story agent supplies dialogue and location constraints; Claude owns terrain layout, cave and dungeon architecture and implementation within them; the owner approves consequential rules. None of these packages may resolve an intentional mystery (FALLEN_SKY_RECORD A4) or bind an unknown actor lifetime, chronology, reward policy or final position (R112 §6).
+
+### WP-FS-S1 P01: the opening slice M01–M03 as an isolated low-poly blockout — Approval
+- Original requirements: R112 §4 (P01 work order), R113 (source-to-acceptance worksheet, 11 landmark rows, 16 stages, 14 planned tests), R130 (pinned-main technical intake), R131 (preview isolation; preferred option: a separate local dev entry with ephemeral fixtures, no live stores, quest rewards or platform changes), R132 (tickets T00–T07, ten review gates, evidence template), R133 (eleven landmark groups, 20 logical asset modules), R134 (cue, character and encounter presentation, later scope), R135 (receipts and reset acceptance), R136 (approval and evidence package), R87/R87A/R87B (low-poly-first standard and prompts). Scripts `M01.md`–`M03.md`.
+- Status: fully specified; not authorized: R136 §1 records "No owner approval recorded"; eight decisions D01–D08 open (FS-S-D6).
+- Dependencies: the owner's T00 scope record; a runner and preview path verified (R131); no edits to the platform mode or live stores.
+- Assets available: R133's module list (none produced); missing: final characters (hero at 15, the Moon Goddess, the beast), voice, music.
+- Steps: T00 authorization and runner verification; then T01–T07 as R132 lists, stopping at isolated low-poly blockout and controller evidence.
+- Testing: R113's 14 planned tests; R131's 16 supplemental checks; EV01–EV10 evidence rows (R136).
+- Completion: the owner reviews the low-poly build (R136 milestone C) with the evidence template filled; nothing merged into the live entry.
+
+### WP-FS-S2 Story-ID adapter in front of the quest store — Ready (isolated module)
+- Requirement: R130 §5, R137 §1, NPC_PHASE43_RUNTIME_AUDIT risk 1 (today `useQuestStore.jsx` `acceptQuest` accepts an unknown ID when no definition resolves); Phase 45's adapter exists on the branch chain and should be reused, not rewritten.
+- Dependencies: none for the isolated module; the owner for integration. Keep story IDs apart from `tr_m01…` (Three Roads), AXE and legacy IDs (Phase 62).
+- Completion: unknown and disabled IDs rejected; definitions passed in by callers refused; legacy callers unchanged; tested with two characters in isolation.
+
+### WP-FS-S3 Paired-discovery state model with the second vista — Ready (disabled model)
+- Requirement: the owner's rule that every paired discovery needs a second vista after the relic (R66 §1, OWNER); the Phase 61 framework (PR #427, on the branch chain); R76 §4.
+- Completion: works in both observation orders; a claim before the vista works; legacy "done" states marked; one claim only; safe exit independent of the vista. No terrain or reward integration.
+
+### WP-FS-S4 Zero-optional completion test — Ready
+- Requirement: the main path can be finished with no optional content (R85 §2, R76 §2, Phase 42 acceptance). A data-level test over the story registry; no gameplay change.
+
+### WP-FS-S5 Native test run of the NPC-phase branch chain — Ready (verification)
+- Requirement: the owner decides whether Phases 44–67 enter `main` (FS-S-D10). Run the chain head's 9 test files and 3 validators with `node --test` in a full checkout, plus lint and the import graph (nothing mounted live), and report. On a copy they passed 64/64 and 171/171 [reader].
+- Completion: a hand-back record with raw results; no merge.
+
+### WP-FS-S6 NG+ level display formatter — Ready (pure function)
+- Requirement: R76D (OWNER: earned level never resets; show the level with a blue plus, e.g. "155+"); R84 §3. A pure formatter with tests from 155+ up to the proposed 310+; no cycle state or live use until the cycle-state contract exists.
 
 ## Fallen Sky: systems (Part B)
 
