@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady } from '@/lib/webgpuSceneRenderer.js';
 import { buildRig, createPuppetState, stepPuppet, socketPosition, setLookTarget as lookAt, triggerExpression as expressionOf } from './core/puppetCore.mjs';
 import { makeCompanionRig, requiredCompanionParts, visualFor } from './core/companionVisuals.mjs';
+import {createSecondaryMotion,sampleMotion,resetSecondaryMotion} from './core/secondaryMotion.mjs';
 import { MELEE_SKILLS, isMeleeSkill, approachWeight, classAnimationLibrary, guardPose } from './core/meleeSkills.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
 import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
@@ -53,6 +54,7 @@ export class Fighter {
     this.scale = scale;
     this.facing = facing;
     this.state = createPuppetState(rig, { seed });
+    this.motion=createSecondaryMotion();this.state.externalMotion=this.motion;
     this.skills = new SkillPlayer(combatClass?[...skillDoc.skills,...MELEE_SKILLS,...classAnimationLibrary(combatClass)]:skillDoc.skills);
     this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase, combatClass, gearVisuals, weaponId });
     this.view.group.position.set(x, y, 0);
@@ -106,9 +108,10 @@ export class Fighter {
     this.view.group.position.set(this.x,this.y,0);
     this.shadow?.position.set(this.x,this.y+6,0);
     const animation=this.skills.evaluate()||(this.stage.activeGuards?.has(this.id)?guardPose(this.combatClass):null);
+    if(this.motion)sampleMotion(this.motion,this.x*this.facing/this.scale,this.y/this.scale,dt);
     stepPuppet(this.rig, this.state, dt, animation);
     this.view.flash = Math.max(0, this.view.flash - dt * 3.5);
-    this.view.update(this.state);
+    this.view.update(this.state,dt);
     return out;
   }
 }
@@ -134,7 +137,7 @@ export class FantasyBattleStage {
     this.disposed = false;
     this.sfx = new SfxSynth();
     this.onAudioEvent = (sfxId) => this.sfx.play(sfxId);
-    this.settings = { parallax: 1, stiffness: 1, smear: 1, speed: 1, wireframe: false, pivots: false, hitboxes: false };
+    this.settings = { parallax: 1, stiffness: 1, smear: 1, secondaryMotion:1, speed: 1, wireframe: false, pivots: false, hitboxes: false };
     this.numbers = [];
     this.missShown = new WeakSet();
     this.rendererInfo = null;
@@ -259,7 +262,7 @@ export class FantasyBattleStage {
     if (!this.fighters) return;
     this.speed = this.settings.speed;
     for (const f of Object.values(this.fighters)) {
-      Object.assign(f.state.settings, { parallax: this.settings.parallax, stiffness: this.settings.stiffness, smear: this.settings.smear });
+      Object.assign(f.state.settings, { parallax: this.settings.parallax, stiffness: this.settings.stiffness, smear: this.settings.smear, secondaryMotion:this.settings.secondaryMotion });
       f.view.setDebug({ wireframe: this.settings.wireframe, pivots: this.settings.pivots });
     }
     this.fx.setDebugHitboxes(this.settings.hitboxes);
@@ -484,6 +487,9 @@ export class FantasyBattleStage {
     this.activeGuards = new Set();
     for (const f of Object.values(this.fighters)) {
       f.skills.stop();
+      if(f.motion)resetSecondaryMotion(f.motion);
+      f.view.resetCloth?.();
+      for(const spring of f.state.springs||[])if(spring)Object.assign(spring,{angle:0,vel:0,prevAnchor:null,prevVel:[0,0],prevAngle:null,prevAngVel:0});
       f.view.opacity = 1;
       f.state.life.combatTarget = this.mode === 'battle' ? 1 : 0.6;
       this.fx.clearWard(f.id);

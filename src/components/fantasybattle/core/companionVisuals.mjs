@@ -20,14 +20,14 @@ export function makeCompanionRig(id,base,manifest){
  if(MELEE_STANCES[v.kind])data.stances=JSON.parse(JSON.stringify(MELEE_STANCES[v.kind]));
  const orig=(id)=>{const l=base.layers.find(l=>l.id===id);return {...l,...(l.pos?{pos:p(...l.pos)}:{})};};
  data.layers=[
-  layer('hairBack','back',v.kind==='grove'?'head':'spine',v.kind==='grove'?p(-17,590):p(0,465),1,{grid:[4,8],spring:{stiffness:55,damping:8,limit:10}}),
+  layer('hairBack','back',v.kind==='grove'?'head':'spine',v.kind==='grove'?p(-17,590):p(0,465),1,{grid:[4,8],spring:{axis:[[90,10],[90,230]],stiffness:v.kind==='warden'?72:v.kind==='scout'?38:48,damping:v.kind==='warden'?13:8,inertia:v.kind==='warden'?.7:1.15,gravity:.12,limit:v.kind==='warden'?12:19,power:1.8}}),
   layer('legBack','leg','legBack',p(27,137),3),layer('legFront','leg','legFront',p(-30,137),4),
   layer('sandalBack','boot','footBack',p(26,0),5),layer('sandalFront','boot','footFront',p(-31,0),6),
   layer('drawUpperArm','upper','drawArm',bone('drawArm'),10,{grid:[2,3]}),
   layer('bowUpperArm','upper','bowArm',bone('bowArm'),11,{grid:[2,3]}),
   layer('neck','neck','neck',bone('neck'),20),
   layer('torso','torso','spine',p(0,300),25,{grid:[4,5]}),
-  layer('skirt','lower','pelvis',p(0,305),30,{grid:[4,6],spring:{stiffness:85,damping:10,limit:5}}),
+  layer('skirt','lower','pelvis',p(0,305),30,{grid:[4,6],spring:{axis:[[ (v.width+20)/2,15],[(v.width+20)/2,235]],stiffness:v.kind==='warden'?105:65,damping:v.kind==='warden'?14:10,inertia:.65,gravity:.08,limit:v.kind==='warden'?6:11,power:2}}),
   // Original bow and hand geometry kept for the archer so authored nock alignment is preserved.
   orig('bow'),
   ...(v.kind==='grove'?[orig('quiver'),orig('bowHand'),orig('bowForearm'),orig('drawHand'),orig('drawForearm')]:[

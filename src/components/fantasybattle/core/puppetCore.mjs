@@ -371,10 +371,12 @@ export function socketPosition(rig, state, name) {
 export function stepSprings(rig, state, dt) {
   if (dt <= 0) return;
   const stiffScale = state.settings.stiffness ?? 1;
+  const motionAmount = state.settings.secondaryMotion ?? 1;
   for (const l of rig.layers) {
     const sp = l.spring;
     if (!sp) continue;
     const st = state.springs[l.index];
+    if(motionAmount<=0){st.angle=0;st.vel=0;st.prevAnchor=null;st.prevVel=[0,0];st.prevAngle=null;st.prevAngVel=0;continue;}
     const w = boneMat(state.world, l.boneIndex);
     const anchor = matApply(w, sp.root[0], sp.root[1]);
     const tipW = matApply(w, sp.tip[0], sp.tip[1]);
@@ -395,10 +397,12 @@ export function stepSprings(rig, state, dt) {
     st.prevAnchor = anchor;
     st.prevAngle = boneAngle;
     // keep one-frame spikes (teleports, the first frame of a skill) from flinging the strand
+    acc[0]=(acc[0]+(state.externalMotion?.ax||0))*motionAmount;
+    acc[1]=(acc[1]+(state.externalMotion?.ay||0))*motionAmount;
     const accLen = Math.hypot(acc[0], acc[1]);
     const maxAcc = 60000;
     if (accLen > maxAcc) { acc[0] *= maxAcc / accLen; acc[1] *= maxAcc / accLen; }
-    angAcc = clamp(angAcc, -900, 900);
+    angAcc = clamp(angAcc*motionAmount, -900, 900);
     const k = sp.stiffness * stiffScale;
     const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
     const h = dt / steps;
