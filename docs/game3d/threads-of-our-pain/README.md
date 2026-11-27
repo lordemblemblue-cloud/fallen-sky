@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R131 — P01 preview isolation and fixture contract:** [Opening forest preview boundary](R131_P01_PREVIEW_BOUNDARY_AND_FIXTURE_CONTRACT.md). 12 pinned technical paths, 11 source anchor groups, three proposed isolation options and 16 supplemental planned checks. Prefer separate local dev entry with ephemeral fixtures, no live stores/quest rewards/platform changes; controller/asset compatibility and launch path remain unverified. Next R132 bounded implementation ticket and acceptance template.
+
 > **R130 — pinned-main P01 technical intake:** [Verified source inventory and isolation gates](R130_P01_PINNED_MAIN_TECHNICAL_INTAKE.md). 20 technical paths at main 9da8d909, platform enabled (24 m), renderer choice and recovery, existing movement/quest/checkpoint integration; checkpoint v1 only wolfveil/forest, dedicated isolated preview unverified. Partial P01.0 survey, no runtime/build evidence or live changes. Next R131 preview boundary and fixture contract.
 
 > **R129 — source-to-production readiness matrix:** [125-ID production matrix](R129_SOURCE_TO_PRODUCTION_READINESS_MATRIX.md). All 125 IDs mapped to primary sources, 15 construction packet references, optional classification/family and proposed intake waves; 105 optional source paths match R61. Eight P01 gates and decision/evidence queue. Documentary coverage only, actual survey/build/runtime status unverified. Next R130 read-only technical intake of current main.
