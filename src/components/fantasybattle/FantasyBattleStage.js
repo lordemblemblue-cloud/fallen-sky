@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady } from '@/lib/webgpuSceneRenderer.js';
 import { buildRig, createPuppetState, stepPuppet, socketPosition, setLookTarget as lookAt, triggerExpression as expressionOf } from './core/puppetCore.mjs';
+import { makeCompanionRig, requiredCompanionParts, visualFor } from './core/companionVisuals.mjs';
 import { MELEE_SKILLS, isMeleeSkill, approachWeight } from './core/meleeSkills.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
 import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
@@ -65,8 +66,8 @@ export class Fighter {
   toLocal([x, y]) { return [(x - this.x) * this.facing/this.scale, (y-this.y)/this.scale]; }
 
   hurtbox() {
-    const p = this.toWorld(socketPosition(this.rig, this.state, rigData.hurtbox.socket));
-    return { x: p[0], y: p[1], r: rigData.hurtbox.radius*this.scale };
+    const p = this.toWorld(socketPosition(this.rig, this.state, this.rig.data.hurtbox.socket));
+    return { x: p[0], y: p[1], r: this.rig.data.hurtbox.radius*this.scale };
   }
 
   headWorld() { return this.toWorld(socketPosition(this.rig, this.state, 'headTop')); }
@@ -91,7 +92,7 @@ export class Fighter {
     if (this.lookWorld) {
       const target = this.toLocal(this.lookWorld);
       const head = socketPosition(this.rig, this.state, 'headTop');
-      const range = rigData.look.range;
+      const range = this.rig.data.look.range;
       lookAt(this.state.life, (target[0] - head[0]) / range, (target[1] - (head[1] - 50)) / range);
     }
     const out = this.skills.update(dt);
@@ -103,6 +104,7 @@ export class Fighter {
       this.y=this.homeY+(target.homeY-this.homeY)*w;
     }else{this.x=this.homeX;this.y=this.homeY;}
     this.view.group.position.set(this.x,this.y,0);
+    this.shadow?.position.set(this.x,this.y+6,0);
     stepPuppet(this.rig, this.state, dt, this.skills.evaluate());
     this.view.flash = Math.max(0, this.view.flash - dt * 3.5);
     this.view.update(this.state);
@@ -177,6 +179,13 @@ export class FantasyBattleStage {
     this.manifest = manifest;
     this.rig = buildRig(rigData, manifest);
     this.textures = textures;
+    const companionIds=this.units.filter(u=>u.team==='player'&&visualFor(u.id)).map(u=>u.id);
+    const loader=new THREE.TextureLoader();
+    // All settled so a failed asset or a cancelled mount does not leak successful textures.
+    const loaded=await Promise.allSettled(requiredCompanionParts(companionIds).map(async a=>[a.key,prepareTexture(await loader.loadAsync(a.url))]));
+    if(this.disposed||loaded.some(a=>a.status==='rejected')){for(const a of loaded)if(a.status==='fulfilled')a.value[1].dispose();if(this.disposed)return;throw new Error('Companion artwork failed to load.');}
+    for(const a of loaded)this.textures.set(...a.value);
+    this.companionRigs=new Map(companionIds.map(id=>{const v=makeCompanionRig(id,rigData,manifest);return [id,buildRig(v.data,v.manifest)];}));
     this.rendererInfo.api = renderer.isWebGPURenderer ? (renderer.backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL2 (WebGPU renderer)') : 'WebGL';
     this.buildScene();
     this.restart();
@@ -200,13 +209,14 @@ export class FantasyBattleStage {
       const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
       const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
       const y=compact&&idx>=2?185:0;
-      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,rig:this.companionRigs?.get(u.id)||this.rig,textures:this.textures,arrowTexture,tint:this.companionRigs?.has(u.id)?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
     }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
       shadow.scale.set(380*f.scale, 70*f.scale, 1);
       shadow.position.set(f.x, f.y+6, 0);
       shadow.renderOrder = 2;
+      f.shadow=shadow;
       this.scene.add(shadow, f.view.group);
     }
     this.applySettings();
@@ -648,7 +658,7 @@ export class FantasyBattleStage {
     this.renderer?.domElement.removeEventListener('pointerdown', this.onPointer);
     for (const w of this.waiters) w.resolve();
     for (const t of this.timers) t.resolve();
-    if (this.fighters) for (const f of Object.values(this.fighters)) f.view.dispose();
+    if (this.fighters) for (const f of Object.values(this.fighters)) {f.view.dispose();f.shadow?.geometry.dispose();f.shadow?.material.dispose();}
     this.fx?.dispose();
     if (this.textures) for (const t of this.textures.values()) t.dispose();
     this.backdrop?.material.map?.dispose();

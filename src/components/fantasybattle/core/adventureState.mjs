@@ -19,7 +19,7 @@ export function selectAppearance(p,id){
   if(!isProfile(p)||!Object.hasOwn(APPEARANCES,id))throw Error('Unknown appearance.');
   return {...p,appearance:id};
 }
-// First recruitable companion uses the existing bow rig until distinct art is authored.
+// Recruit IDs and saved progress are stable; visual definitions are maintained separately.
 // All values below are prototype balancing, not a new character class or story canon.
 export const COMPANION=Object.freeze({id:'groveArcher',name:'Grove Archer',tint:0x9fe8ce,role:'Archer',maxHp:85,atk:9,def:9,spd:9,requiredEncounter:'wilds_grove_01'});
 export const ROSTER=Object.freeze([

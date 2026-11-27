@@ -62,3 +62,15 @@ test('bulwark mitigates more damage than the normal guard and resets each round'
 test('melee animation timelines have exactly one impact per potential hit and no projectiles',()=>{
  for(const s of MELEE_SKILLS){assert.ok(validateSkill(s).ok);assert.equal(s.events.filter(e=>e.effect==='meleeImpact').length,B.ACTIONS[s.id].hits);assert.ok(!s.events.some(e=>e.type==='spawnArrow'));const player=new SkillPlayer([s]);player.play(s.id);const fired=player.update(s.totalDuration+1).events;assert.equal(fired.length,B.ACTIONS[s.id].hits);assert.equal(player.current,null);assert.equal(approachWeight(0,s.totalDuration),0);assert.equal(approachWeight(s.totalDuration,s.totalDuration),0);}
 });
+
+import {makeCompanionRig,requiredCompanionParts,visualFor} from '../src/components/fantasybattle/core/companionVisuals.mjs';
+import {buildRig,createPuppetState,stepPuppet,socketPosition} from '../src/components/fantasybattle/core/puppetCore.mjs';
+import {readFileSync} from 'node:fs';
+test('three companion art packs contain individual rig geometry and valid local assets',()=>{
+ const read=p=>JSON.parse(readFileSync(new URL(p,import.meta.url),'utf8'));
+ const base=read('../src/components/fantasybattle/data/archerRig.json'),manifest=read('../public/fantasybattle/archer/parts.json');
+ const ids=A.ROSTER.map(m=>m.id);const all=requiredCompanionParts(ids);assert.equal(new Set(all.map(p=>p.key)).size,all.length);assert.equal(requiredCompanionParts(['hero','unknown']).length,0);
+ for(const id of ids){const custom=makeCompanionRig(id,base,manifest);const rig=buildRig(custom.data,custom.manifest);const s=createPuppetState(rig);stepPuppet(rig,s,1/60);for(const name of ['chest','headTop','bowGrip','nock'])assert.ok(socketPosition(rig,s,name).every(Number.isFinite));assert.ok(s.positions.every(p=>p.every(Number.isFinite)));assert.notEqual(rig.data.id,base.id);assert.ok(visualFor(id));}
+ for(const a of all){const source=readFileSync(new URL('../public'+a.url,import.meta.url),'utf8');assert.ok(source.startsWith('<svg'));assert.ok(!/<script|<foreignObject|https?:\/\/(?!www\.w3\.org)/i.test(source));}
+ assert.equal(makeCompanionRig('hero',base,manifest),null);assert.notEqual(makeCompanionRig(ids[1],base,manifest).data.bones[4].pos[1],makeCompanionRig(ids[2],base,manifest).data.bones[4].pos[1]);
+});
