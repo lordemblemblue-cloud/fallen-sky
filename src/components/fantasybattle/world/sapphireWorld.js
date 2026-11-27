@@ -1761,6 +1761,7 @@ import worldMarkup from './worldMarkup.html?raw';
         const now = performance.now(); let nearEnc = null, nearDisc = null;
         for (const e of this.encounters) {
           e.mesh.rotation.y = t * 1.4; e.mesh.position.y = 1.3 + Math.sin(t * 2.5 + e.x) * 0.16;
+          if (this.completedEncounters?.has(e.id)) { e.mesh.parent.visible=false; continue; }
           if (now < (this.retriggerCooldowns.get(e.id) || 0)) continue;
           if (Math.hypot(this.playerPos.x - e.pos.x, this.playerPos.z - e.pos.z) <= e.triggerRadius && Math.abs(this.playerPos.y - e.pos.y) < 1.8) nearEnc = e;
         }
@@ -1846,26 +1847,31 @@ export async function mountSapphireWorld(root, onEvent) {
   root.replaceChildren(...Array.from(parsed.body.childNodes));
   const app = new SapphireSumiViewer();
   const send = (type, data = {}) => onEvent({type, ...data});
-  const snapshot = () => ({
+  const snapshot = () => {
+    for(const e of app.encounters) registeredMarkers.set(e.id,{id:e.id,label:e.label,position:e.pos.toArray(),category:e.category,completed:app.completedEncounters.has(e.id)});
+    for(const m of registeredMarkers.values()) m.completed=app.completedEncounters.has(m.id);
+    return ({
     position: app.playerPos.toArray(), regions: app.sectionSpecs.map(({id,name,minX,maxX})=>({id,name,minX,maxX})),
-    encounters: app.encounters.map(e=>({id:e.id,label:e.label,position:e.pos.toArray(),category:e.category})),
+    encounters: [...registeredMarkers.values()],
     discoveries: [...app.foundDiscoveries], region: app.getWildsSectionName(app.playerPos.x),
-    nearby: app.activeDiscovery?.label || app.activeEncounter?.label || null, renderer: app.renderInfo.backend
-  });
+    nearby: app.activeDiscovery?.label || app.activeEncounter?.label || null, renderer: app.renderInfo.backend, mode:app.mode
+  }); };
   app.triggerEncounterTransition = async (enc) => {
     if(app.inputLocked || app.completedEncounters.has(enc.id)) return;
-    app.resetInput(); app.inputLocked=true;
-    send('encounter',{encounter:{id:enc.id,label:enc.label,category:enc.category},world:snapshot()});
+    const world=snapshot(); app.resetInput(); app.inputLocked=true;
+    send('encounter',{encounter:{id:enc.id,label:enc.label,category:enc.category},world});
   };
   app.completedEncounters = new Set();
+  const registeredMarkers = new Map();
   const collect = app.collectDiscovery.bind(app);
   app.collectDiscovery = d => { collect(d); send('discovery',{id:d.id,label:d.label,world:snapshot()}); };
   await app.init();
-  const timer=setInterval(()=>send('world',{world:snapshot()}),250);
+  const timer=setInterval(()=>{if(app.mode==='wilds')send('world',{world:snapshot()});},250);
   send('ready',{world:snapshot()});
   return {
     snapshot,
     pause(value){app.resetInput();app.inputLocked=Boolean(value);},
+    battle(){app.resetInput();app.inputLocked=true;app.loadMode('sanctuary');app.controls.enabled=false;send('battleReady');},
     restore(data){if(!data || !Array.isArray(data.position))return;
       const [x,,z]=data.position;if(!Number.isFinite(x)||!Number.isFinite(z))return;
       app.foundDiscoveries=new Set(data.discoveries||[]);app.completedEncounters=new Set(data.completedEncounters||[]);
