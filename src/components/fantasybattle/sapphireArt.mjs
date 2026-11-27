@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '34':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/651bc205dcc192200ed4b5ccef3435f6_fantasy-battle-34-runtime.webp',source:'Original Fantasy Battle modular template batch 13 — 34.webp',mode:'full',wideOnly:true}),
  '29':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/60e9a9200d65467f9165bca2b146a066_fantasy-battle-29-runtime.webp',source:'Original Fantasy Battle modular template batch 14 — 29.webp + sample_region_art.webp',mode:'full',wideOnly:true}),
  '28':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/78708e764aed86d95185b1f6dbb3f1e8_fantasy-battle-28-runtime.webp',source:'Original Fantasy Battle modular template batch 14 — 28.webp',mode:'full',wideOnly:true}),
  '24':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/f92a10cff5a672300ec2005a867cb0be_fantasy-battle-24-runtime.webp',source:'Original Fantasy Battle template batch 10 — 24.webp',mode:'full',wideOnly:true}),
