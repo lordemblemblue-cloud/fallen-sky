@@ -99,10 +99,14 @@ export class Fighter {
 }
 
 export class FantasyBattleStage {
-  constructor(container, { onHud = null, seed = Date.now() % 100000 } = {}) {
+  constructor(container, { onHud = null, seed = Date.now() % 100000, units = UNITS, availableActions = ACTION_ORDER, transparentBackdrop = false } = {}) {
     this.container = container;
     this.onHud = onHud;
     this.seed = seed;
+    this.units = units;
+    this.availableActions = new Set(availableActions);
+    this.transparentBackdrop = transparentBackdrop;
+    this.paused = false;
     this.mode = 'battle';
     this.phase = 'loading';
     this.speed = 1;
@@ -125,13 +129,13 @@ export class FantasyBattleStage {
     const manifestLoad = fetch(`${ASSET_BASE}parts.json`).then((r) => r.json());
     const names = [...rigData.layers.map((l) => l.part), ...Object.values(rigData.expressions), 'arrow'];
     const texturesLoad = loadTextures(names, ASSET_BASE);
-    let { renderer, ready, kind, reason } = createSceneRenderer(SCENE_ID, { antialias: true, alpha: false, powerPreference: 'high-performance', gameplay: true });
+    let { renderer, ready, kind, reason } = createSceneRenderer(SCENE_ID, { antialias: true, alpha: this.transparentBackdrop, powerPreference: 'high-performance', gameplay: true });
     try {
       await ready;
     } catch (error) {
       console.warn('[fantasy-battle] WebGPU did not start; using WebGL', error);
       destroySceneRenderer(renderer);
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: this.transparentBackdrop });
       kind = 'webgl';
       reason = 'webgpu-failed';
     }
@@ -145,7 +149,8 @@ export class FantasyBattleStage {
     this.overlay.className = 'fb-numbers';
     this.container.appendChild(this.overlay);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x120f1c);
+    this.scene.background = this.transparentBackdrop ? null : new THREE.Color(0x120f1c);
+    if(this.transparentBackdrop) renderer.setClearColor(0x000000,0);
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -100, 100);
     this.camera.position.set(0, CAMERA_Y, 10);
     this.resize();
@@ -173,12 +178,12 @@ export class FantasyBattleStage {
     backdrop.position.set(0, 880 - 650, -5);
     backdrop.renderOrder = 0;
     this.backdrop = backdrop;
-    this.scene.add(backdrop);
+    if (!this.transparentBackdrop) this.scene.add(backdrop); else { backdrop.geometry.dispose(); backdrop.material.map?.dispose(); backdrop.material.dispose(); this.backdrop=null; }
     const arrowTexture = this.textures.get('arrow');
     this.fx = new FxSystem(this.scene, arrowTexture);
     this.fighters = {
-      hero: new Fighter(this, { id: 'hero', name: UNITS[0].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xffffff, x: -430, facing: 1, seed: 11, renderBase: 100 }),
-      rival: new Fighter(this, { id: 'rival', name: UNITS[1].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xb9a6e8, x: 430, facing: -1, seed: 29, renderBase: 300 }),
+      hero: new Fighter(this, { id: 'hero', name: this.units[0].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xffffff, x: -430, facing: 1, seed: 11, renderBase: 100 }),
+      rival: new Fighter(this, { id: 'rival', name: this.units[1].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xb9a6e8, x: 430, facing: -1, seed: 29, renderBase: 300 }),
     };
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
@@ -242,6 +247,7 @@ export class FantasyBattleStage {
   frame(now) {
     const real = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
+    if(this.paused)return;
     let dt = real * this.speed;
     if (this.hitStop > 0) { this.hitStop = Math.max(0, this.hitStop - real); dt = 0; }
     this.step(dt, real);
@@ -430,7 +436,7 @@ export class FantasyBattleStage {
   // ---- battle ----
   restart() {
     this.seed = (this.seed * 1103515245 + 12345) % 2147483647;
-    this.battle = createBattle({ seed: this.seed, units: UNITS });
+    this.battle = createBattle({ seed: this.seed, units: this.units });
     this.display = Object.fromEntries(this.battle.units.map((u) => [u.id, { hp: u.hp, focus: u.focus }]));
     this.koPending = null;
     this.round = null;
@@ -460,12 +466,12 @@ export class FantasyBattleStage {
 
   legal() {
     if (!this.battle) return [];
-    return legalActions(this.battle, 'hero').map((a) => ({ ...a, enabled: a.enabled && this.phase === 'choose' }));
+    return legalActions(this.battle, 'hero').map((a) => ({ ...a, enabled: a.enabled && this.phase === 'choose' && this.availableActions.has(a.id), reason: this.availableActions.has(a.id) ? a.reason : 'Not learned' }));
   }
 
   /** The player's choice for this round (battle mode). Returns false when it cannot be taken now. */
   async chooseAction(actionId) {
-    if (this.mode !== 'battle' || this.phase !== 'choose' || !isLegal(this.battle, 'hero', actionId)) return false;
+    if (this.paused || !this.availableActions.has(actionId) || this.mode !== 'battle' || this.phase !== 'choose' || !isLegal(this.battle, 'hero', actionId)) return false;
     this.sfx.ensure();
     const rivalAction = chooseAiAction(this.battle, 'rival');
     const { battle, round } = resolveRound(this.battle, { hero: actionId, rival: rivalAction });
@@ -537,7 +543,7 @@ export class FantasyBattleStage {
   }
 
   hudState() {
-    const units = (this.battle?.units || UNITS).map((u) => ({
+    const units = (this.battle?.units || this.units).map((u) => ({
       id: u.id, name: u.name, maxHp: u.maxHp, hp: this.display?.[u.id]?.hp ?? u.maxHp, focus: this.display?.[u.id]?.focus ?? 1, maxFocus: MAX_FOCUS,
       spd: u.spd, guarding: this.roundGuards?.has(u.id) ?? false,
     }));
