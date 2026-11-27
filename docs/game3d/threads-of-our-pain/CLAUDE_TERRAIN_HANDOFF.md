@@ -1,5 +1,7 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
+> **R85 — master implementation handbook:** [Story Bible and Claude production contract](R85_MASTER_STORY_BIBLE_IMPLEMENTATION_HANDBOOK.md). Current source precedence, all 20 main chapters, 105 provisional optional classifications, endings, NG+, terrain/quest/cinematic work packets, security/performance and implementation gates. Parsed index confirms 125 unique IDs and 68 distinct primary source paths; R86 must verify source files and headings. Latest Word manuscript unavailable for full text/visual QA; no implementation or publish.
+
 > **R75A:** [Concurrent progression addendum](R75A_POSTGAME_PROGRESSION_ADDENDUM.md) supplements the primary R75 with consumed/sold item provenance, safe snapshot failure recovery and historical journal states. Dialogue variants are alternatives. No owner approval or runtime validation.
 
 > **R75:** [Postgame progression and save decisions](R75_POSTGAME_PROGRESSION_DECISIONS.md) proposes preserving earned progression, isolated pre-finale replay and branch-safe play. Owner approval remains required; R74 completes all 105 detailed source reviews, not runtime validation.
