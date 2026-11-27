@@ -137,7 +137,7 @@ export function readSettings(storage){
 function mergeWorldIds(previous,incoming){
  if(!uniqueStrings(incoming))return previous;
  const known=new Set(previous),added=[];
- for(const id of incoming){if(!known.has(id)&&known.size<1000){known.add(id);added.push(id);}}
+ for(const id of incoming){if(!known.has(id)&&previous.length+added.length<1000){known.add(id);added.push(id);}}
  return added.length?[...previous,...added]:previous;
 }
 export function updateWorld(p,w){
