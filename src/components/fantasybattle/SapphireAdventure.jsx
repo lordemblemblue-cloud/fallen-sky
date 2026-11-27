@@ -6,7 +6,7 @@ import { ACTIONS, ACTION_ORDER, actionsForClass } from './core/battleRules.mjs';
 import {enemyPortrait} from './core/enemyVisuals.mjs';
 import { enemyFormation, tacticFor } from './core/enemyCatalog.mjs';
 import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalog.mjs';
-import { ITEMS, COMPANION, ROSTER, memberFor, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, craftTonic, heal, travelTo, comparison } from './core/adventureState.mjs';
+import { ITEMS, COMPANION, ROSTER, memberFor, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
@@ -711,7 +711,7 @@ function ItemAcquisition({profile,encounter,result,hud,discovery,loot,origin,ori
 
 // Trade uses the actual catalog and existing atomic one-item transactions.
 function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,back}){
-  const [mode,setMode]=useState('buy'),[filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[pageIndex,setPageIndex]=useState(0),[selectedId,setSelectedId]=useState(null);
+  const [mode,setMode]=useState('buy'),[filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[pageIndex,setPageIndex]=useState(0),[selectedId,setSelectedId]=useState(null),[quantity,setQuantity]=useState(1);
   const categories=[['all','All Goods'],['consumable','Consumables'],['material','Materials'],['weapon','Weapons'],['armor','Armor'],['accessory','Mantles & jewelry']];
   const inv=profile?.inventory||{},ready=Boolean(profile&&serviceAvailable);
   const matches=Object.entries(ITEMS).filter(([id,item])=>(mode==='buy'?item.buy>0:item.sell>0&&inv[id]>0)&&(filter==='all'||item.kind===filter||item.slot===filter||(filter==='accessory'&&['mantle','ring','necklace'].includes(item.slot)))&&item.name.toLowerCase().includes(query.trim().toLowerCase()));
@@ -719,15 +719,16 @@ function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,
   const selected=visible.find(([id])=>id===selectedId)||visible[0],id=selected?.[0],item=selected?.[1],owned=inv[id]||0;
   const equipped=profile&&item?.kind==='gear'?gearCount(profile,id):profile?.equipped===id&&id?1:0;
   const price=item?.[mode]||0;
-  const allowed=Boolean(ready&&price&&(mode==='buy'?profile.gold>=price&&owned<100000:owned>equipped));
-  const reset=()=>{setPageIndex(0);setSelectedId(null);};
+  const quote=tradeQuote(profile,mode,id,quantity),allowed=ready&&quote.ok;
+  const quantityControl=<label>Quantity <input aria-label="Trade quantity" type="number" min={1} max={MAX_TRADE_QUANTITY} step={1} value={quantity} onChange={e=>setQuantity(e.target.value===''?'':Number(e.target.value))}/></label>;
+  const reset=()=>{setPageIndex(0);setSelectedId(null);setQuantity(1);};
   const tabs=<>{['buy','sell'].map(m=><Btn key={m} primary={mode===m} aria-pressed={mode===m} onClick={()=>{setMode(m);reset();}}>{m==='buy'?'Buy':'Sell'}</Btn>)}</>;
   const filters=categories.map(([id,label])=><Btn key={id} primary={filter===id} aria-pressed={filter===id} onClick={()=>{setFilter(id);reset();}}>{label}</Btn>);
   const cards=visible.map(([key,i])=><Btn key={key} className="fa-merchant-card" primary={id===key} aria-pressed={id===key} onClick={()=>setSelectedId(key)}><ItemArt id={key}/><strong>{i.name}</strong><span>{i[mode]} gold</span><small>Owned: {inv[key]||0}</small></Btn>);
   const paging=<><Btn disabled={index===0} aria-label="Previous items" onClick={()=>setPageIndex(index-1)}>‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} aria-label="Next items" onClick={()=>setPageIndex(index+1)}>›</Btn></>;
-  const reason=!ready?'Visit a service marker to trade.':!item?'Select an available item.':mode==='buy'&&profile.gold<price?'Insufficient gold.':mode==='buy'&&owned>=100000?'Inventory limit reached.':mode==='sell'&&owned<=equipped?'Equipped items cannot be sold.':'Confirm to trade one item.';
+  const reason=!ready?'Visit a service marker to trade.':!item?'Select an available item.':quote.reason||'Confirm the displayed trade.';
   const detail=item?<><p>Type: {item.kind}</p>{(gearMetadata(id)||weaponMetadata(id))&&<p>{gearMetadata(id)||weaponMetadata(id)}</p>}<p>Owned: {owned} · Equipped: {equipped||0}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP.</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Buy: {item.buy||0} gold · Sell: {item.sell||0} gold</p></>:<p>No item selected.</p>;
-  const trade=<Btn primary className="fa-merchant-trade" disabled={!allowed} onClick={()=>onTrade(mode,id)}>{mode==='buy'?'Purchase':'Sell Item'}</Btn>;
+  const trade=<Btn primary className="fa-merchant-trade" disabled={!allowed} onClick={()=>onTrade(mode,id,quantity)}>{mode==='buy'?'Purchase':'Sell Item'}</Btn>;
   if(original)return <div className="fa-original-merchant">
     <h2 className="fa-merchant-title">Merchant Shop</h2><div className="fa-merchant-gold">Gold: {profile?.gold||0}</div>
     <div className="fa-merchant-name">{service?.label||'Merchant'}</div><div className="fa-merchant-greeting">{ready?'Browse available goods or sell unused items.':'Approach a service marker to trade.'}</div>
@@ -737,9 +738,9 @@ function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,
     <section className="fa-merchant-grid" aria-label="Merchant catalog">{cards}{!visible.length&&<p>No matching items</p>}</section>
     <div className="fa-merchant-pages">{paging}</div>
     <h3 className="fa-merchant-item-name">{item?.name||'Select an item'}</h3><div className="fa-merchant-item-art">{item&&<ItemArt id={id}/>}</div>
-    <section className="fa-merchant-detail">{detail}</section><div className="fa-merchant-reason" role="status">{reason}</div><div className="fa-merchant-price">Quantity: 1 · {price} gold</div>{trade}<Btn className="fa-merchant-back" onClick={back}>Leave</Btn>
+    <section className="fa-merchant-detail">{detail}</section><div className="fa-merchant-reason" role="status">{reason}</div><div className="fa-merchant-price">{quantityControl} · {Number.isInteger(quantity)&&quantity>=1&&quantity<=MAX_TRADE_QUANTITY?price*quantity:'—'} gold</div>{trade}<Btn className="fa-merchant-back" onClick={back}>Leave</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Merchant</h2><p>Gold: {profile?.gold||0}</p>{tabs}{filters}<input aria-label="Search merchant items" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{detail}<p>{reason}</p>{trade}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>Merchant</h2><p>Gold: {profile?.gold||0}</p>{tabs}{filters}<input aria-label="Search merchant items" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{detail}{quantityControl}<p>Total: {Number.isInteger(quantity)&&quantity>=1&&quantity<=MAX_TRADE_QUANTITY?price*quantity:'—'} gold</p><p>{reason}</p>{trade}</Panel></>;
 }
 
 // Enhancement is a preview of the existing bow upgrade, never a new forging economy.
@@ -774,23 +775,32 @@ function BlacksmithShop({profile,serviceAvailable,original,layout,onEnhance,back
 
 // Only the existing Recovery Tonic recipe is available; the painting is decorative.
 function CraftingShop({profile,serviceAvailable,original,layout,onCraft,back}){
-  const ore=profile?.inventory?.sapphireOre||0,tonics=profile?.inventory?.recoveryTonic||0,gold=profile?.gold||0;
-  const ready=Boolean(profile&&serviceAvailable),allowed=ready&&ore>=2&&tonics<100000;
-  const reason=!ready?'Approach a service marker to craft.':ore<2?'Requires 2 Sapphire Ore.':tonics>=100000?'Inventory limit reached.':'Ready to craft one Recovery Tonic.';
-  const recipe=<Btn primary aria-current="true" className="fa-craft-recipe" onClick={()=>document.getElementById('fa-craft-requirements')?.focus()}><ItemArt id="recoveryTonic"/><span>{ITEMS.recoveryTonic.name}</span><small>1 recipe</small></Btn>;
-  const requirements=<><div className="fa-craft-material"><ItemArt id="sapphireOre"/><div><strong>Sapphire Ore</strong><small>Required: 2 · Owned: {ore}</small></div><span>{ore>=2?'Ready':'Missing'}</span></div><p>No other ingredients required.</p><p>Gold cost: 0</p></>;
-  const output=<><ItemArt id="recoveryTonic"/><div><strong>Recovery Tonic ×1</strong><p>Restores up to {ITEMS.recoveryTonic.heal} HP.</p><small>Owned: {tonics}{allowed?' → '+(tonics+1):''}</small></div></>;
-  const confirm=<Btn primary className="fa-craft-confirm" disabled={!allowed} onClick={onCraft}>Craft</Btn>;
+  const [category,setCategory]=useState('All'),[selected,setSelected]=useState('recoveryTonic'),[quantity,setQuantity]=useState(1);
+  const categories=['All','Consumables','Weapons','Armor','Accessories'];
+  const visible=Object.values(RECIPES).filter(r=>category==='All'||r.category===category);
+  const r=visible.find(r=>r.id===selected)||visible[0],item=ITEMS[r.id];
+  const ore=profile?.inventory?.sapphireOre||0,gold=profile?.gold||0,owned=profile?.inventory?.[r.id]||0;
+  const ready=Boolean(profile&&serviceAvailable),q=craftQuote(profile,r.id,quantity),allowed=ready&&q.ok;
+  const valid=Number.isInteger(quantity)&&quantity>=1&&quantity<=MAX_TRADE_QUANTITY;
+  const requiredOre=valid?r.ore*quantity:0,requiredGold=valid?r.gold*quantity:0;
+  const reason=!ready?'Approach a service marker to craft.':q.reason||'Ready to craft.';
+  const tabs=categories.map(c=><Btn key={c} primary={category===c} aria-pressed={category===c} onClick={()=>{setCategory(c);setQuantity(1);}}>{c}</Btn>);
+  const recipes=visible.map(recipe=><Btn key={recipe.id} primary={r.id===recipe.id} aria-pressed={r.id===recipe.id} className="fa-craft-recipe" onClick={()=>{setSelected(recipe.id);setQuantity(1);}}><ItemArt id={recipe.id}/><span>{ITEMS[recipe.id].name}</span><small>Level {recipe.level}</small></Btn>);
+  const requirements=<><div className="fa-craft-material"><ItemArt id="sapphireOre"/><div><strong>Sapphire Ore</strong><small>Required: {valid?requiredOre:'—'} · Owned: {ore}</small></div><span>{valid&&ore>=requiredOre?'Ready':'Missing'}</span></div><p>Party level {r.level} required.</p><p>Gold cost: {valid?requiredGold:'—'}</p></>;
+  const description=item.heal?'Restores up to '+item.heal+' HP.':(gearMetadata(r.id)||weaponMetadata(r.id)||item.kind);
+  const output=<><ItemArt id={r.id}/><div><strong>{item.name} ×{valid?quantity:'—'}</strong><p>{description}</p><small>Owned: {owned}{allowed?' → '+(owned+quantity):''}</small></div></>;
+  const quantityControl=<label>Quantity <input aria-label="Craft quantity" type="number" min={1} max={MAX_TRADE_QUANTITY} step={1} value={quantity} onChange={e=>setQuantity(e.target.value===''?'':Number(e.target.value))}/></label>;
+  const confirm=<Btn primary className="fa-craft-confirm" disabled={!allowed} onClick={()=>onCraft(r.id,quantity)}>Craft</Btn>;
   if(original)return <div className="fa-original-craft">
     <h2 className="fa-craft-title">Crafting</h2><div className="fa-craft-gold">{gold} gold</div><div className="fa-craft-ore">{ore} ore</div><Btn className="fa-craft-back" aria-label="Leave crafting" onClick={back}>Back</Btn>
-    <nav className="fa-craft-tabs" aria-label="Recipe categories"><Btn aria-current="page" primary onClick={()=>document.getElementById('fa-craft-requirements')?.focus()}>Consumables</Btn>{['Weapons','Armor','Accessories','Materials','Special'].map(label=><Btn key={label} disabled title="No recipes available">{label}</Btn>)}</nav>
-    <h3 className="fa-craft-recipes-title">Available recipes</h3><div className="fa-craft-recipe-list">{recipe}<p>Additional recipes unavailable in this build.</p></div>
-    <h3 className="fa-craft-output-name">Recovery Tonic</h3><div className="fa-craft-owned">Owned: {tonics}</div><div className="fa-craft-description">Restore up to {ITEMS.recoveryTonic.heal} HP. The original potion illustration represents this recipe.</div>
+    <nav className="fa-craft-tabs" aria-label="Recipe categories">{tabs}</nav>
+    <h3 className="fa-craft-recipes-title">Available recipes</h3><div className="fa-craft-recipe-list">{recipes}</div>
+    <h3 className="fa-craft-output-name">{item.name}</h3><div className="fa-craft-owned">Owned: {owned}</div><div className="fa-craft-description">{description} · Artwork is decorative.</div>
     <h3 className="fa-craft-requirements-title">Materials</h3><section id="fa-craft-requirements" tabIndex={-1} className="fa-craft-requirements" aria-label="Recipe requirements">{requirements}</section>
     <h3 className="fa-craft-result-title">Crafting result</h3><section className="fa-craft-output" aria-label="Crafted item preview">{output}</section>
-    <div className="fa-craft-quantity">Quantity: 1 · Gold: 0</div><div className="fa-craft-status" role="status">{reason}</div>{confirm}
+    <div className="fa-craft-quantity">{quantityControl} · Gold: {valid?requiredGold:'—'}</div><div className="fa-craft-status" role="status">{reason}</div>{confirm}
   </div>;
-  return <><Panel rect={layout[0]}><h2>Crafting</h2><p>{gold} gold</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Recovery Tonic</h2>{requirements}{output}</Panel><Panel rect={layout[2]}><p>{reason}</p>{confirm}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>Crafting</h2><p>{gold} gold</p>{tabs}{recipes}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>{item.name}</h2>{requirements}{output}</Panel><Panel rect={layout[2]}>{quantityControl}<p>{reason}</p>{confirm}</Panel></>;
 }
 
 // Sanctuary uses the saved roster's base recovery limits, exactly as recoverParty does.
@@ -1439,10 +1449,10 @@ export default function SapphireAdventure(){
       <Btn className="fa-painted-button fa-save-back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
     </div>:<>{pane(0,<><h2>Save</h2><p>Save your current exploration position.</p></>)}{pane(1,<>{SLOT_IDS.map(s=>{const r=slots.slots.find(x=>x.id===s);return <Btn key={s} onClick={()=>setSelected(s)} primary={selected===s}>Slot {s} · {r?.status==='valid'?r.profile.name:r?'Damaged':'Empty'}</Btn>;})}</>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}{encounter&&<p>Manual saves are disabled during combat.</p>}</>)}</>;break;
     case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id)=>{const item=ITEMS[id];if(!Object.hasOwn(ITEMS,id)||!['buy','sell'].includes(mode)||!item[mode])return;requestConfirm((mode==='buy'?'Buy ':'Sell ')+item.name+' for '+item[mode]+' gold?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to trade.');return mode==='buy'?buyItem(p,id):sellItem(p,id);},mode==='buy'?'Item purchased':'Item sold'));}}/>;break;
+    case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id,quantity)=>{const p=current.current.profile,q=tradeQuote(p,mode,id,quantity);if(!q.ok)return;const profileId=p.id,serviceId=current.current.service?.id;let used=false;requestConfirm((mode==='buy'?'Buy ':'Sell ')+quantity+' × '+ITEMS[id].name+' for '+q.total+' gold?',()=>{if(used)return;used=true;transact(live=>{const s=current.current;if(live.id!==profileId||!serviceId||s.service?.id!==serviceId||s.world?.nearbyService!==serviceId||s.encounter)throw Error('Return to the original service marker to trade.');return mode==='buy'?buyItem(live,id,quantity):sellItem(live,id,quantity);},mode==='buy'?'Items purchased':'Items sold');});}}/>;break;
     case '17':content=<BlacksmithShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} go={go} onEnhance={(weapon,level,cost)=>{if(!Object.hasOwn(ITEMS,weapon)||ITEMS[weapon].kind!=='weapon')return;requestConfirm('Enhance '+ITEMS[weapon].name+' to +'+(level+1)+' for '+cost+' gold and 1 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to enhance.');if(p.equipped!==weapon||enhancementLevel(p,weapon)!==level||cost!==15+level*10)throw Error('Equipment changed. Review the new enhancement preview.');return enhanceWeapon(p);},'Weapon enhanced'));}}/>;break;
     case '21':content=<ItemInventory key={profile?.id||'guest'} profile={profile} encounter={encounter} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} initialItem={itemId} onSelect={setItemId} go={go} back={back}/>;break;
-    case '22':content=<CraftingShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onCraft={()=>requestConfirm('Craft 1 Recovery Tonic using 2 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to craft.');if(p.inventory.recoveryTonic>=100000)throw Error('Inventory limit reached.');return craftTonic(p);},'Recovery Tonic crafted'))}/>;break;
+    case '22':content=<CraftingShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onCraft={(id,quantity)=>{const p=current.current.profile,q=craftQuote(p,id,quantity);if(!q.ok)return;const profileId=p.id,serviceId=current.current.service?.id;let used=false;requestConfirm('Craft '+quantity+' × '+ITEMS[id].name+' using '+q.ore+' Sapphire Ore and '+q.gold+' gold?',()=>{if(used)return;used=true;transact(live=>{const s=current.current;if(live.id!==profileId||!serviceId||s.service?.id!==serviceId||s.world?.nearbyService!==serviceId||s.encounter)throw Error('Return to the original service marker to craft.');return craftItem(live,id,quantity);},'Items crafted');});}}/>;break;
     case '23':content=<DungeonEntrance profile={profile} world={world} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onDetails={()=>{const s=current.current;if(s.profile&&s.running&&s.candidate?.id===candidate?.id&&candidate&&!s.encounter)go('36');}}/>;break;
     case '24':content=<Bestiary key={profile?.id||'guest'} profile={profile} world={world} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '25':content=<FastTravel profile={profile} world={world} encounter={encounter} destination={destination} onSelect={setDestination} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{const profileId=current.current.profile?.id;if(!profileId||!region)return;requestConfirm('Travel to '+region.name+'?',()=>{if(transact(p=>{if(p.id!==profileId)throw Error('Active character changed. Select a destination again.');const liveRegion=current.current.world?.regions.find(r=>r.id===region.id);if(!liveRegion||!Number.isFinite(liveRegion.minX)||!Number.isFinite(liveRegion.maxX)||liveRegion.maxX<=liveRegion.minX)throw Error('Destination is no longer available.');return travelTo(p,liveRegion);},'Arrived at '+region.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}});}}/>;break;
