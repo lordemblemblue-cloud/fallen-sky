@@ -1,11 +1,23 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
-Owner direction, 2026-11-26. Story Bible v0.4 is the current baseline. This directory is the repository-readable narrative/terrain exchange; the story automation supplies successive scripts and briefs. This initial handoff is documentation only, not an implemented map or a request to publish.
+> **R69:** [Original opportunity schedule — first twenty IDs](R69_ORIGINAL_OPPORTUNITY_SCHEDULE.md) adds step-level conditions for D01–D10 and S01–S10. 20/105 reviewed at step level; 85 pending, exact original opening/closing phases TBD. No new travel or historical completion assumed.
+
+> **R68 unified story library:** [Read original and continuation together](CLAUDE_UNIFIED_STORY_LIBRARY.md). [Late campaign phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md) extends R67 through M13–M19; no dependency on ChatGPT Library storage. R64A/R65 finale and R66 mechanics precedence remain. All geometry and exact unknown dates remain subject to survey.
+
+> **R67 chronology:** [Opening actor and phase register](R67_ACTOR_PHASE_REGISTER.md) records M04–M12, S04–S06/M14 and ending anchors, separate clock axes, character lifetimes and proposed dialogue fallbacks. Local dates and individual survival are not certified. R65 remains finale script; R66 remains quest mechanics reconciliation.
+
+> **R66 quest continuity:** [Discovery completion and evidence reconciliation](R66_QUEST_CONTINUITY_RECONCILIATION.md) records second-vista completion, S27/S29 evidence eligibility, S39/S55 lane proposals and D31/S46/S43 state safeguards. Read before implementing affected IDs; proposed mechanics remain unverified.
+
+> **R65 current finale script:** [M19/M20 revised finale](R65_M19-M20_REVISED_FINALE.md) supersedes conflicting R39/R40/R54 branch scripts. Read with R64A. Retain existing approach, rescue and confrontation; sacrifice restores the age-eighteen existence with ancient former-world losses; refusal fuses the landscape and damage, with continued play and a roughly twenty-year reconstruction coda. Exact postgame mechanics and final script sign-off pending.
+
+> **Read first for all finale and postgame work:** [R64A owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) and [R64B opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md). The earlier R63 and historical ending directions below are superseded where they conflict. Sacrifice: restored reality and ancient former-world remnants, potential future spirit migration. Refusal: fused age-fifteen landscape bearing age-eighteen damage, roughly twenty-year rebuilding epilogue and continued play; prior death timeline replaced. No automatically reopened realm, unapproved reward transfer, invented dates or restored NPCs. Survey shared geography, scars, repairs and actor lifetimes; no new construction authorized by this documentation.
+
+Owner direction, 2026-11-26. Story Bible v0.4 was the initial baseline; the cumulative source is now v5.6 R60 with R61 repository reconciliation. This directory is the repository-readable narrative/terrain exchange; the story automation supplies successive scripts and briefs. This initial handoff is documentation only, not an implemented map or a request to publish.
 
 ## Read order and ownership
 1. Root AGENTS.md and this file.
-2. [README.md](README.md) for the current index, revision, and status.
-3. The relevant quest/discovery brief, then the latest terrain-agent response.
+2. [README.md](README.md) for current status, [R61 stable ID index](R61_STABLE_ID_INDEX.md) to locate the specific source, and [R61 continuity ledger](R61_CONTINUITY_LEDGER.md) for chronology, player knowledge and ownership constraints.
+3. The relevant quest/discovery brief (including R35–R47 recovered archives) and any later editorial delta, then the latest terrain-agent response. Historical revision counters are superseded; do not infer approved geometry, ending outcomes or post-M05 local event dates from presentation order.
 The new story supersedes conflicting War of Three Roads story/map assumptions. Preserve useful prior research, not old geometry by default. The owner is rebuilding the world; do not restore deleted caves, dungeons or world assets automatically. ChatGPT writes narrative, dialogue and constraints; Claude owns terrain layout, technical feasibility, cave/dungeon architecture and implementation within those constraints. Treat proposed measurements, routes and hazards as suggestions, not finalized map coordinates. Do not independently change the story or publish, spend credits or bypass security policy. Keep development work on appropriate feature branches and test before requesting integration.
 
 ## Narrative constraints
@@ -29,3 +41,11 @@ For each location, return the source revision, terrain branch/PR, actual blockou
 
 ## Workflow
 The hourly story task updates Markdown briefs with scene dialogue and staging and preserves cumulative Word documents separately. Read the latest committed handoff branch if the docs PR is not merged; use main once merged. Update the index as new briefs arrive; maintain stable D01–D50, M01–M20 and S01–S55 IDs. Expansion order is not the same as discovery ID (D01, D25, D36 expanded first; D31 is next). Dialogue first; blockout suggestions accompany it. Do not interpret missing detailed briefs as permission to invent finalized narrative.
+
+## R62 character and quest dependency constraints
+
+Read [R62 character and quest audit](R62_CHARACTER_QUEST_AUDIT.md) before staging recurring actors, the M11/M12/M16 family arc, diplomatic hall or witness scenes. Distinct NPC IDs and knowledge flags per reality; original melody may be shared but faces and histories are not cloned. Mandatory path independent of optional quests; partial/declined/completed variants must reflect actual quest state. Keep evidence provenance and consent, rewards idempotent, and no duplicated older equipment. Return actual actor IDs, camera/route anchors, local ordering annotations, test outcomes and measured performance; do not claim build or final ending approval from narrative specifications.
+
+## R63 finale and postgame staging gate
+
+Read [R63 ending/postgame contract](R63_ENDING_POSTGAME_CONTRACT.md) before staging M19/M20 or late phase-limited quests. All outcome contracts remain proposed: preserve M05 physical death, keep an original-world coda resident-led unless active older-avatar chronology is approved, preserve distinct third-reality actors and history, and keep public garden traversal independent of D50/S55. Reuse R54 anchors; no new live realm selector or portal. Separate save/replay contexts from canonical travel, and return branch availability, scene actor/anchor maps, actual surveyed phase windows, recovery and state-isolation tests, and measured performance. No finale commitment with missing contract approval; no claimed implementation from documentation alone.
