@@ -1298,6 +1298,13 @@ import worldMarkup from './worldMarkup.html?raw';
           if (registerRuntime) this.discoveries.push({ ...d, pos: dg.position, mesh: orb, ownerId: secId });
         };
         const addCamObs = (obj) => { if (registerRuntime) { obj.userData.ownerId = secId; this.cameraObstacles.push(obj); } };
+        if(this.servicePoints)for(const service of this.servicePoints.filter(s=>s.x>=spec.minX&&s.x<spec.maxX)){
+          const sy=this.terrainVisualHeight(service.x,service.z);
+          const marker=new THREE.Mesh(new THREE.OctahedronGeometry(.48,0),new THREE.MeshStandardMaterial({color:'#ebd6a6',emissive:'#ebd6a6',emissiveIntensity:.8}));
+          marker.name=service.id;marker.position.set(service.x,sy+1.15,service.z);marker.userData.ownedGeo=marker.userData.ownedMat=true;g.add(marker);
+          const ring=new THREE.Mesh(new THREE.RingGeometry(.55,.65,24),new THREE.MeshBasicMaterial({color:'#ebd6a6',side:THREE.DoubleSide,transparent:true,opacity:.75}));
+          ring.rotation.x=-Math.PI/2;ring.position.set(service.x,sy+.04,service.z);ring.userData.ownedGeo=ring.userData.ownedMat=true;g.add(ring);
+        }
 
         const vegStep = this.quality === 'performance' ? 14 : (this.quality === 'balanced' ? 10 : 8);
         for (let x = Math.max(8, spec.minX + 3); x < Math.min(214, spec.maxX); x += vegStep) {
@@ -1673,6 +1680,7 @@ import worldMarkup from './worldMarkup.html?raw';
           if (!e.repeat && e.code === 'KeyE' && this.mode === 'wilds') {
             if (this.activeDiscovery) this.collectDiscovery(this.activeDiscovery);
             else if (this.activeEncounter) this.triggerEncounterTransition(this.activeEncounter);
+            else this.openService?.();
           }
         });
         window.addEventListener('keyup', e => {
@@ -1854,7 +1862,7 @@ export async function mountSapphireWorld(root, onEvent) {
     position: app.playerPos.toArray(), regions: app.sectionSpecs.map(({id,name,minX,maxX})=>({id,name,minX,maxX})),
     encounters: [...registeredMarkers.values()],
     discoveries: [...app.foundDiscoveries], region: app.getWildsSectionName(app.playerPos.x),
-    nearby: app.activeDiscovery?.label || app.activeEncounter?.label || null, renderer: app.renderInfo.backend, mode:app.mode
+    nearby: app.activeDiscovery?.label || app.activeEncounter?.label || nearService()?.label || null, nearbyService:nearService()?.id||null, services:app.servicePoints, renderer: app.renderInfo.backend, mode:app.mode
   }); };
   app.triggerEncounterTransition = async (enc) => {
     if(app.inputLocked || app.completedEncounters.has(enc.id)) return;
@@ -1862,16 +1870,21 @@ export async function mountSapphireWorld(root, onEvent) {
     send('encounter',{encounter:{id:enc.id,label:enc.label,category:enc.category},world});
   };
   app.completedEncounters = new Set();
+  app.servicePoints=[{id:'grove_service',label:'Grove rest point',x:9,z:-1.4},{id:'sanctuary_service',label:'Sanctuary services',x:191,z:-1.4}];
+  const nearService=()=>app.mode==='wilds'&&app.servicePoints.find(s=>Math.hypot(app.playerPos.x-s.x,app.playerPos.z-s.z)<=2.4&&Math.abs(app.playerPos.y-app.terrainVisualHeight(s.x,s.z))<2);
+  app.openService=()=>{const service=nearService();if(service&&!app.inputLocked){app.resetInput();app.inputLocked=true;send('service',{service,world:snapshot()});}};
   const registeredMarkers = new Map();
   const collect = app.collectDiscovery.bind(app);
   app.collectDiscovery = d => { collect(d); send('discovery',{id:d.id,label:d.label,world:snapshot()}); };
   await app.init();
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  if(app.renderFailed)throw Error('World renderer did not start.');
   const timer=setInterval(()=>{if(app.mode==='wilds')send('world',{world:snapshot()});},250);
   send('ready',{world:snapshot()});
   return {
     snapshot,
     pause(value){app.resetInput();app.inputLocked=Boolean(value);},
-    battle(){app.resetInput();app.inputLocked=true;app.loadMode('sanctuary');app.controls.enabled=false;send('battleReady');},
+    battle(){app.resetInput();app.inputLocked=true;app.loadMode('sanctuary');app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!app.renderFailed)send('battleReady');else send('error',{message:'Sanctuary renderer failed.'});}));},
     restore(data){if(!data || !Array.isArray(data.position))return;
       const [x,,z]=data.position;if(!Number.isFinite(x)||!Number.isFinite(z))return;
       app.foundDiscoveries=new Set(data.discoveries||[]);app.completedEncounters=new Set(data.completedEncounters||[]);
@@ -1880,7 +1893,7 @@ export async function mountSapphireWorld(root, onEvent) {
       app.loadMode('wilds');send('world',{world:snapshot()});},
     finish(id,won){if(won)app.completedEncounters.add(id);app.retriggerCooldowns.set(id,performance.now()+3500);app.activeEncounter=null;app.resetInput();app.inputLocked=false;},
     quality(q){if(['performance','balanced','high','cinematic'].includes(q))app.applyQuality(q);},
-    interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);},
+    interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);else app.openService();},
     move(key,value){if(Object.hasOwn(app.keys,key))app.keys[key]=!app.inputLocked && Boolean(value);},
     jump(){if(!app.inputLocked&&app.grounded){app.playerVelY=7.6;app.grounded=false;}},
     stop(){clearInterval(timer);app.renderFailed=true;app.resetInput();app.renderer?.dispose();app.controls?.dispose();}
