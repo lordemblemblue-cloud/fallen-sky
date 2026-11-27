@@ -1158,3 +1158,39 @@
 .fa-original-smith .fa-smith-back{left:26%;width:11%;background:#142448c5}
 .fa-original-smith .fa-smith-confirm{left:40.3%;width:17.8%;color:#152448;text-shadow:none}
 .fa-original-smith .fa-smith-craft{left:61%;width:11.8%;background:#142448c5}
+
+/* 22 — original potion crafting illustration and retained frames, live recipe values. */
+.fa-ui.page[data-staged-original="true"][data-screen="22"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="22"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="22"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-craft{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.2vw,2.13vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-craft h2,.fa-original-craft h3,.fa-original-craft p{margin:.1em 0}
+.fa-original-craft .fa-button{pointer-events:auto;min-height:0;min-width:0;border:0;box-shadow:none;background:transparent;color:inherit;font:inherit;text-shadow:inherit;border-radius:7px;padding:.2em}
+.fa-original-craft .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 2px #d6b87f}
+.fa-original-craft .fa-button:focus-visible,.fa-craft-requirements:focus{outline:2px solid #78c9ed;outline-offset:1px}
+.fa-original-craft .fa-button:disabled{opacity:.5;cursor:not-allowed}
+.fa-craft-title{position:absolute;left:10%;top:2.5%;width:17%;height:5%;display:grid;place-items:center;font-size:1.6em}
+.fa-craft-gold,.fa-craft-ore{position:absolute;top:2.9%;height:4.2%;display:grid;place-items:center;font-weight:bold}.fa-craft-gold{left:70.3%;width:8%}.fa-craft-ore{left:80.5%;width:11.4%}
+.fa-original-craft .fa-craft-back{position:absolute;left:94%;top:2.2%;width:4.6%;height:5.4%;background:#142448dd;font-size:.78em}
+.fa-craft-tabs{position:absolute;left:7%;top:10.4%;width:85.5%;height:5.7%;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:1%}
+.fa-original-craft .fa-craft-tabs .fa-button{padding-left:22%;font-size:.82em}
+.fa-craft-recipes-title{position:absolute;left:8%;top:20.2%;width:22%;height:4%;font-size:1em}
+.fa-craft-recipe-list{position:absolute;left:5.9%;top:28.2%;width:25.2%;height:58%;pointer-events:auto;overflow:auto}
+.fa-original-craft .fa-craft-recipe{width:100%;height:12%;display:flex;align-items:center;gap:.5em;justify-content:flex-start;text-align:left;font-weight:bold}
+.fa-craft-recipe .fa-item-art{height:90%;width:auto;max-width:20%;object-fit:contain}
+.fa-craft-recipe small{margin-left:auto;font-size:.72em}.fa-craft-recipe-list p{margin-top:1.2em;background:#142448d9;padding:.5em;border-radius:7px;font-size:.9em}
+.fa-craft-output-name{position:absolute;left:36.6%;top:58.4%;width:26.7%;height:5.8%;display:grid;place-items:center;font-size:1.25em;text-align:center}
+.fa-craft-owned{position:absolute;left:40%;top:65.6%;width:20%;height:4%;display:grid;place-items:center;font-size:.9em}
+.fa-craft-description{position:absolute;left:37%;top:72%;width:24.5%;height:7%;display:grid;place-items:center;text-align:center;font-size:.84em;overflow:auto;pointer-events:auto}
+.fa-craft-requirements-title,.fa-craft-result-title{position:absolute;left:70%;width:23%;font-size:1.05em}
+.fa-craft-requirements-title{top:20.7%}.fa-craft-result-title{top:47%}
+.fa-craft-requirements{position:absolute;left:66.5%;top:25.5%;width:27.5%;height:18%;overflow:auto;pointer-events:auto;font-size:.9em}
+.fa-craft-material{display:flex;align-items:center;gap:.4em;height:34%;padding:.1em .2em}
+.fa-craft-material .fa-item-art{height:95%;width:auto;max-width:20%;object-fit:contain}
+.fa-craft-material>div{flex:1;min-width:0;display:flex;flex-direction:column}.fa-craft-material small,.fa-craft-material>span{font-size:.8em}
+.fa-craft-requirements p{height:32%;display:flex;align-items:center;padding-left:22%}
+.fa-craft-output{position:absolute;left:68.1%;top:51%;width:24%;height:10%;display:grid;grid-template-columns:28% 1fr;gap:4%;align-items:center;font-size:.9em;overflow:auto;pointer-events:auto}
+.fa-craft-output .fa-item-art{max-width:95%;max-height:95%;width:auto;height:auto;object-fit:contain}
+.fa-craft-quantity,.fa-craft-status{position:absolute;left:66.5%;width:27.5%;display:grid;place-items:center;text-align:center;overflow:auto;pointer-events:auto;font-size:.9em}
+.fa-craft-quantity{top:64%;height:5%}.fa-craft-status{top:70.5%;height:5.2%}
+.fa-original-craft .fa-craft-confirm{position:absolute;left:68.5%;top:79%;width:23.4%;height:8.2%;padding-left:8%;font-size:1.2em;font-weight:bold;border-radius:15px}

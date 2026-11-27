@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','23','25','26','27','30','31','32','35','36','38','40','42','43','44','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','22','23','25','26','27','30','31','32','35','36','38','40','42','43','44','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -305,4 +305,14 @@ test('original blacksmith previews only supported enhancement and rechecks confi
  for(const marker of ['profile?.equipped','15+level*10','level<5','gold>=cost','ore>=1','disabled={!allowed}','onEnhance(id,level,cost)','Not available in this build','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '17':"));
  for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.equipped!==weapon','p.enhancements[weapon]!==level','enhanceWeapon(p)'])assert.ok(handler.includes(marker),marker);
+});
+
+test('original crafting uses the actual tonic recipe and guards its confirmation',()=>{
+ assert.equal(stagedOriginalFor('22').wideOnly,true);
+ assert.ok(templateUrl('22').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function CraftingShop('),page.indexOf('function SaveToast('));
+ for(const marker of ['ore>=2','tonics<100000','ITEMS.recoveryTonic.heal','Gold cost: 0','disabled={!allowed}','No recipes available','serviceAvailable'])assert.ok(section.includes(marker),marker);
+ const handler=page.split('\n').find(line=>line.trim().startsWith("case '22':"));
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.inventory.recoveryTonic>=100000','craftTonic(p)'])assert.ok(handler.includes(marker),marker);
 });
