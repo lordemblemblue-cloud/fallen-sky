@@ -8,6 +8,7 @@ import {clone as cloneSkinnedEnemy} from 'three/examples/jsm/utils/SkeletonUtils
 import {consolidateModelMaterialGroups} from '../render/consolidateMaterialGroups.mjs';
 import {shrinkModelTextures} from '../npc/sharedNpcModel.mjs';
 import {game3dHiPolyRequested} from '../render/lowPolyWorld.mjs';
+import {zombieCampsCanSpawnInArea} from './WolfveilZombieAreaReach.mjs';
 import {getAXEEnemyStats} from '../axe/balance/AXEPowerBudget';
 import {
   planWolfveilZombieCamps,safeZombieGround,WOLFVEIL_ZOMBIE_MAX_ACTIVE,
@@ -28,7 +29,7 @@ const clipPromise=(loader,url,label)=>new Promise(resolve=>{
 });
 
 export function createWolfveilZombieHordeRuntime({
-  scene,loader,enemies,sampleGroundY,onCountChange=()=>{},
+  scene,loader,enemies,sampleGroundY,onCountChange=()=>{},area=null,
 }={}){
   if(!scene?.add||!loader?.load||!Array.isArray(enemies)||
       typeof sampleGroundY!=='function')throw Error('Missing live Game 3D zombie runtime dependencies');
@@ -44,7 +45,13 @@ export function createWolfveilZombieHordeRuntime({
     state.spawnedIds=[...active.keys()];
     onCountChange(enemies.filter(e=>e.alive&&!e.dying).length);
   };
+  // Low-poly world part 3: an area scene that no camp's spawn radius reaches (the town and the south) never shows a
+  // zombie, so it downloads nothing (the 16 MB zombie FBX and its six clips). ?hiPoly=1 and the whole valley
+  // (area null) load as before.
+  const skipLoad=Boolean(area)&&!game3dHiPolyRequested()&&!zombieCampsCanSpawnInArea(planned,area,ACTIVE_RADIUS);
+  if(skipLoad)state.skipped='no zombie camp can spawn in '+area;
   const loadOnce=new Promise(resolve=>{
+    if(skipLoad){resolve(null);return;}
     loader.load(ASSETS.model,root=>resolve(root),undefined,e=>{
       console.warn('Uploaded zombie mesh unavailable; camps stay unpopulated',e);
       state.failed=String(e?.message||e);
@@ -52,11 +59,11 @@ export function createWolfveilZombieHordeRuntime({
     });
   });
   Promise.all([loadOnce,Promise.all(Object.entries(ASSETS)
-    .filter(([key])=>key!=='model')
+    .filter(([key])=>key!=='model'&&!skipLoad)
     .map(async([key,url])=>{clips[key]=await clipPromise(loader,url,key);}))])
     .then(([root])=>{
       if(disposed)return;
-      if(!root){state.failed||='Missing owner-supplied zombie FBX';return;}
+      if(!root){if(!skipLoad)state.failed||='Missing owner-supplied zombie FBX';return;}
       source=root;
       // Low-poly world: the zombie's 205 draw groups (2 materials) become 2, and its 2048 px textures 1024 px, once
       // on the shared source before any clone is drawn (?hiPoly=1 keeps the file as loaded).
@@ -160,6 +167,13 @@ export function createWolfveilZombieHordeRuntime({
     return entry;
   }
 
+  function safeDispose(item){
+    try{item?.dispose?.();}
+    catch(error){
+      if(!state.disposeFailed)console.warn('[Wolfveil zombies] a released zombie could not be disposed cleanly',error);
+      state.disposeFailed=(state.disposeFailed||0)+1;
+    }
+  }
   function releaseEntity(entry){
     if(!entry)return;
     active.delete(entry.id);
@@ -169,9 +183,11 @@ export function createWolfveilZombieHordeRuntime({
     entry.mixer?.stopAllAction();
     entry.mixer?.uncacheRoot(entry.group);
     scene.remove(entry.group);
-    for(const mat of entry.tintMaterials)mat.dispose();
-    entry.ringGeometry?.dispose();
-    entry.ringMaterial?.dispose();
+    // A zombie released before WebGPU finished building it (spawned and dropped within one background compile, e.g.
+    // after a teleport) makes three's dispose throw; that must never stop the game loop.
+    for(const mat of entry.tintMaterials)safeDispose(mat);
+    safeDispose(entry.ringGeometry);
+    safeDispose(entry.ringMaterial);
     // Shared mesh geometry, skeleton source and original maps are NOT
     // disposed: other visible zombies still refer to the same assets.
   }

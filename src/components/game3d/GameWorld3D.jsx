@@ -1870,7 +1870,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // 30 rigged enemies at once. The single GameWorld3D AI/XP loop owns them.
     const zombieCamps=region==='wolfveil'
       ?createWolfveilZombieHordeRuntime({
-          scene,loader,enemies,sampleGroundY,onCountChange:setEnemyCount,
+          scene,loader,enemies,sampleGroundY,onCountChange:setEnemyCount,area:areaScenes?worldArea:null,
         }):null;
     if(typeof window!=='undefined')window.__gw3dZombieCamps=zombieCamps;
     // The War of Three Roads (places, cast, enemies, pledge steps). Off unless

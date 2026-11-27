@@ -9,6 +9,8 @@
  * authored for an incompatible skeleton.
  */
 import {loadSharedNpcModel} from './sharedNpcModel.mjs';
+import {hideParkedEffectMeshes} from './parkedEffectMeshes.mjs';
+import {game3dHiPolyRequested} from '../render/lowPolyWorld.mjs';
 
 export const AXE_QUEST_NPC_GLBS=Object.freeze({
   archer_lyra:Object.freeze({
@@ -61,6 +63,9 @@ export function loadAXEQuestNPCVisual({
     const model=gltf?.scene||gltf?.scenes?.[0];
     const embeddedIdleClip=pickAXEEmbeddedIdleClip(gltf?.animations);
     if(!model||!embeddedIdleClip)return fallback();
+    // Low-poly world part 3: the character file's ability effects stay parked (about 1/10,000 size) through the whole
+    // idle clip a quest giver plays; hide them instead of drawing hundreds of invisible meshes (?hiPoly=1 keeps them).
+    if(!game3dHiPolyRequested())model.userData.parkedEffects=hideParkedEffectMeshes(model,embeddedIdleClip);
     onLoaded({model,embeddedIdleClip,isEmbeddedGLB:true,sourceUrl:visual.url});
   },undefined,fallback);
 }
