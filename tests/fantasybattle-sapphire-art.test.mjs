@@ -292,9 +292,9 @@ test('original merchant displays catalog and guards confirmed transactions',()=>
  assert.ok(templateUrl('16').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function MerchantShop('),page.indexOf('function SaveToast('));
- for(const marker of ['Object.entries(ITEMS)','profile.gold>=price','owned>equipped','gearCount(profile,id)','owned<100000','disabled={!allowed}','onTrade(mode,id)','serviceAvailable'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['Object.entries(ITEMS)','tradeQuote(profile,mode,id,quantity)','gearCount(profile,id)','ready&&quote.ok','disabled={!allowed}','onTrade(mode,id,quantity)','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.slice(page.indexOf("case '16':"),page.indexOf("case '17':"));
- for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','buyItem(p,id)','sellItem(p,id)','transact(p=>'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==serviceId','buyItem(live,id,quantity)','sellItem(live,id,quantity)','transact(live=>','live.id!==profileId','if(used)return'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original blacksmith previews only supported enhancement and rechecks confirmed equipment',()=>{
@@ -312,9 +312,9 @@ test('original crafting uses the actual tonic recipe and guards its confirmation
  assert.ok(templateUrl('22').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function CraftingShop('),page.indexOf('function SaveToast('));
- for(const marker of ['ore>=2','tonics<100000','ITEMS.recoveryTonic.heal','Gold cost: 0','disabled={!allowed}','No recipes available','serviceAvailable'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['Object.values(RECIPES)','craftQuote(profile,r.id,quantity)','ready&&q.ok','requiredOre','requiredGold','disabled={!allowed}','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '22':"));
- for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.inventory.recoveryTonic>=100000','craftTonic(p)'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==serviceId','live.id!==profileId','if(used)return','craftItem(live,id,quantity)'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original sanctuary previews saved party recovery and guards the rest transaction',()=>{
@@ -696,4 +696,30 @@ test('reviewed item art registry rejects external URLs, unknown IDs and path tra
   assert.equal(validItemArtwork({groveRing:bad}),false);assert.equal(itemArtworkFor('groveRing',{groveRing:bad}),null);
  }
  assert.equal(validItemArtwork({unknown:path}),false);assert.equal(itemArtworkFor('unknown',{unknown:path}),null);
+});
+
+import {LAST_ESCORT,escortConversation} from '../src/components/fantasybattle/core/campaignQuests.mjs';
+test('Last Escort requires the real reliquary discovery and return service, with a bounded one-time claim',()=>{
+ const base=newRoadProfile('Escort test');
+ assert.equal(campaignQuest(base,LAST_ESCORT.id).state,'locked');assert.equal(escortConversation(base),null);
+ const prior={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02']}};
+ assert.ok(isRoadProfile(prior));assert.equal(campaignQuest(prior,LAST_ESCORT.id).state,'available');
+ const active=changeCampaignQuest(prior,LAST_ESCORT.id,'accept');assert.equal(escortConversation(active).state,'active');
+ assert.throws(()=>changeCampaignQuest(active,LAST_ESCORT.id,'claim',{serviceId:'grove_service'}));
+ const found={...active,world:{...active.world,discoveries:['disc_pilgrimage']}};
+ assert.equal(campaignQuest(found,LAST_ESCORT.id).state,'complete');
+ assert.throws(()=>changeCampaignQuest(found,LAST_ESCORT.id,'claim'));assert.throws(()=>changeCampaignQuest(found,LAST_ESCORT.id,'claim',{serviceId:'moonveil_service'}));
+ const done=changeCampaignQuest(found,LAST_ESCORT.id,'claim',{serviceId:'grove_service'});
+ assert.equal(done.gold,found.gold+20);assert.deepEqual(done.inventory,found.inventory);
+ assert.equal(campaignArc(done).completed,campaignArc(found).completed);assert.equal(campaignQuest(done,LAST_ESCORT.id).state,'claimed');
+ assert.throws(()=>changeCampaignQuest(done,LAST_ESCORT.id,'claim',{serviceId:'grove_service'}));
+ assert.ok(isRoadProfile(done));assert.deepEqual(parseRoadBackup(exportRoadBackup(done)).quests,done.quests);
+ assert.equal(changeCampaignQuest({...found,gold:9999999},LAST_ESCORT.id,'claim',{serviceId:'grove_service'}).gold,10000000);
+ const prefound={...prior,world:{...prior.world,discoveries:['disc_pilgrimage']}};
+ assert.equal(campaignQuest(changeCampaignQuest(prefound,LAST_ESCORT.id,'accept'),LAST_ESCORT.id).state,'complete');
+ assert.equal(isRoadProfile({...active,quests:{...active.quests,campaign:{...active.quests.campaign,lastEscort:'claimed'}}}),false);
+});
+test('Last Escort original interface exposes return, reward and live service guard',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['Return to Grove','Return reward:','escortConversation(profile)','Ask about the evacuation order','Ask about the missing escort','Report ledger · Complete quest','live.world?.nearbyService!==LAST_ESCORT.returnService',"discovery.id==='disc_pilgrimage'"])assert.ok(page.includes(marker),marker);
 });
