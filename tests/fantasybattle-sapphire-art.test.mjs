@@ -605,3 +605,35 @@ test('Final chapter UI displays arc progress and verified encounter narrative',(
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  for(const marker of ['campaignArc(profile)','arcLabel',"candidate.id==='wilds_moonveil_01'","candidate.id==='wilds_moonveil_elite'","candidate.id==='wilds_astral_01'","candidate.id==='wilds_astral_elite'","astralCleared","profile.world.completedEncounters.includes('wilds_astral_elite')"])assert.ok(page.includes(marker),marker);
 });
+
+import {GEAR,GEAR_SETS,gearEligible,activeGearSet,gearMetadata} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+import {equipGear as equipTestGear,memberStats as testMemberStats,gearComparison as testGearComparison,buyItem as testBuy,sellItem as testSell,recruitCompanion as testRecruit} from '../src/components/fantasybattle/core/adventureState.mjs';
+test('expanded gear respects party level, individual ownership and two-piece bonus',()=>{
+ const base=newRoadProfile('Gear test');
+ assert.ok(isRoadProfile(base));assert.equal(GEAR.groveVest.requiredLevel,1);
+ const owned={...base,gold:1000,inventory:{...base.inventory,pilgrimCuirass:1,pilgrimCloak:1}};
+ assert.ok(isRoadProfile(owned));assert.equal(gearEligible(owned,'pilgrimCuirass'),false);
+ assert.equal(testGearComparison(owned,'hero','pilgrimCuirass'),null);
+ assert.throws(()=>equipTestGear(owned,'hero','armor','pilgrimCuirass'));
+ const level2={...owned,xp:100};
+ const one=equipTestGear(level2,'hero','armor','pilgrimCuirass');
+ assert.equal(activeGearSet(one,'hero'),null);
+ const before=testMemberStats(one,'hero'),preview=testGearComparison(one,'hero','pilgrimCloak');
+ const two=equipTestGear(one,'hero','mantle','pilgrimCloak');
+ assert.deepEqual(preview.candidate,testMemberStats(two,'hero'));
+ assert.equal(preview.candidate.def-before.def,GEAR.pilgrimCloak.def+GEAR_SETS.pilgrim.def);
+ assert.equal(activeGearSet(two,'hero').name,'Pilgrim Watch');
+ assert.equal(activeGearSet(two,'groveArcher'),null);
+ assert.throws(()=>testSell(two,'pilgrimCloak'));
+ const recruited=testRecruit({...two,world:{...two.world,completedEncounters:['wilds_grove_01']}},'groveArcher');
+ assert.throws(()=>equipTestGear(recruited,'groveArcher','armor','pilgrimCuirass'));
+ const removed=equipTestGear(recruited,'hero','mantle',null);
+ assert.equal(activeGearSet(removed,'hero'),null);
+ assert.equal(testMemberStats(two,'hero').def-testMemberStats(removed,'hero').def,GEAR.pilgrimCloak.def+GEAR_SETS.pilgrim.def);
+ assert.ok(isRoadProfile(two));assert.equal(isRoadProfile({...two,xp:0}),false);
+ assert.deepEqual(parseRoadBackup(exportRoadBackup(two)).gear,two.gear);
+ assert.equal(testBuy(baseWithGold(base),'astralMantle').inventory.astralMantle,1);
+ assert.match(gearMetadata('astralMantle'),/Legendary · Level 4/);
+ assert.equal(gearMetadata('__proto__'),null);
+});
+function baseWithGold(p){return {...p,gold:500};}
