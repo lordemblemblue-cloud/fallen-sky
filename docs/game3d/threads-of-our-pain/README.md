@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed, 12 targeted source reviews, 93 still pending. No game implementation or final script sign-off.
+
 **Current R61 handoff:** [125-ID source navigation](R61_STABLE_ID_INDEX.md) and [three-reality continuity ledger](R61_CONTINUITY_LEDGER.md). The historical table and revision logs below are retained, but their coverage counters and backfill status are superseded by the R61 section.
 
 Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active; terrain has not been built or verified by this documentation change. Read [CLAUDE_TERRAIN_HANDOFF.md](CLAUDE_TERRAIN_HANDOFF.md) first.
