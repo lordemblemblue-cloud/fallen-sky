@@ -102,11 +102,14 @@ export function turnOrder(battle, choices, rng = battle.rng) {
 }
 
 /** The opponent's pick: guard when hurt and low on Focus, the heavy shot when it can, otherwise mostly quick shots. */
-export function chooseAiAction(battle, unitId) {
+export function chooseAiAction(battle, unitId, strategy='balanced') {
   const unit = unitById(battle, unitId);
   const r = rngNext((battle.rng ^ 0x9e3779b9 ^ (battle.round * 7919)) >>> 0)[0];
   const legal = new Set(legalActions(battle, unitId).filter((a) => a.enabled).map((a) => a.id));
   const hurt = unit.hp / unit.maxHp < 0.35;
+  if(strategy==='boss'){if(battle.round%3===1&&legal.has('guard'))return 'guard';if(legal.has('chargedShot'))return 'chargedShot';return 'quickShot';}
+  if(strategy==='warden'){if(battle.round%2===1&&legal.has('guard'))return 'guard';if(legal.has('volley'))return 'volley';return 'quickShot';}
+  if(strategy==='scout'){if(legal.has('volley'))return 'volley';return 'quickShot';}
   if (hurt && unit.focus < 2 && r < 0.45 && legal.has('guard')) return 'guard';
   if (legal.has('chargedShot') && r < 0.7) return 'chargedShot';
   if (legal.has('volley') && r < 0.45) return 'volley';
