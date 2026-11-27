@@ -85,7 +85,7 @@ export function createProfile(name){
   return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);
+  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);}catch{return false;}
 }
 // Legacy records have no revision. A complete serialized record also catches same-time edits.
 export const slotStamp=record=>record===undefined?null:JSON.stringify(record);
@@ -133,10 +133,22 @@ export function mostRecent(slots){return slots.filter(s=>s.status==='valid').sor
 export function readSettings(storage){
   try{const p=JSON.parse(storage.getItem(SETTINGS_KEY)||'{}');return {quality:['performance','balanced','high','cinematic'].includes(p.quality)?p.quality:'performance',muted:p.muted===true,reducedMotion:p.reducedMotion===true};}catch{return {...DEFAULT_SETTINGS};}
 }
+// Preserve existing references when no actual progress changes. Bounded merge cannot invalidate a legacy save.
+function mergeWorldIds(previous,incoming){
+ if(!uniqueStrings(incoming))return previous;
+ const known=new Set(previous),added=[];
+ for(const id of incoming){if(!known.has(id)&&known.size<1000){known.add(id);added.push(id);}}
+ return added.length?[...previous,...added]:previous;
+}
 export function updateWorld(p,w){
-  if(!p||!w||!Array.isArray(w.position)||w.position.length!==3||!w.position.every(Number.isFinite))return p;
-  const region=w.regions?.find(r=>w.position[0]>=r.minX&&w.position[0]<=r.maxX);
-  return {...p,world:{...p.world,position:[Math.max(1.5,Math.min(WORLD_MAX_X,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))],discoveries:uniqueStrings(w.discoveries)?[...new Set([...p.world.discoveries,...w.discoveries])]:p.world.discoveries,visitedRegions:region?[...new Set([...p.world.visitedRegions,region.id])]:p.world.visitedRegions}};
+ if(!p||!w||!Array.isArray(w.position)||w.position.length!==3||!w.position.every(Number.isFinite))return p;
+ const old=p.world;
+ const position=[Math.max(1.5,Math.min(WORLD_MAX_X,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))];
+ const region=Array.isArray(w.regions)&&w.regions.length<=32?w.regions.find(r=>r&&typeof r.id==='string'&&r.id.length<=160&&Number.isFinite(r.minX)&&Number.isFinite(r.maxX)&&r.minX<r.maxX&&position[0]>=r.minX&&position[0]<r.maxX):null;
+ const discoveries=mergeWorldIds(old.discoveries,w.discoveries);
+ const visitedRegions=region?mergeWorldIds(old.visitedRegions,[region.id]):old.visitedRegions;
+ if(position.every((value,i)=>value===old.position[i])&&discoveries===old.discoveries&&visitedRegions===old.visitedRegions)return p;
+ return {...p,world:{...old,position,discoveries,visitedRegions}};
 }
 // One guaranteed equipment drop per registered first victory. Values are prototype tuning.
 export const ENCOUNTER_GEAR_REWARDS=Object.freeze({
