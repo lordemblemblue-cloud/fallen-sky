@@ -1,4 +1,6 @@
-# Claude unified story library — R78
+# Claude unified story library — R79
+
+> **R79 — third quest objective classification:** [D21–D30 / S21–S30](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md). 60/105 IDs provisionally classified. Preserve independent S27 evidence and repair receipts, S29 distinct-source threshold (R66 adapter proposed), S23/S25 dual lanes and actual S30 escort arrivals; exact phase gates and ending access unresolved.
 
 > **R78 — second quest objective classification:** [D11–D20 / S11–S20](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md). 40/105 IDs provisionally classified. Preserve genuine S16 deliveries, S17 toy repair, S18 escorts, S19 two-lane completion and S13 authored notice reuse; exact phase gates and ending access remain unresolved.
 
