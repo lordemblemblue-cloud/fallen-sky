@@ -17,6 +17,7 @@ function WorldFrame() {
         else if(type==='battle')api.battle();
         else if(type==='finish')api.finish(data.id,data.won);
         else if(type==='quality')api.quality(data);
+        else if(type==='appearance')api.appearance(data);
         else if(type==='move')api.move(data.key,data.value);
         else if(type==='jump')api.jump();
         else if(type==='interact')api.interact();
