@@ -1249,7 +1249,7 @@ export default function SapphireAdventure(){
       if(!startReady.current){startReady.current=true;restorePending.current=false;clearTimeout(timeoutRef.current);post('pause',false);root('10');autosave(updated);}return;
     }
     if(e.type==='world'&&p&&startReady.current&&!s.encounter&&!failedLoad.current){
-      const updated=updateWorld(p,e.world);setWorld(e.world);replaceProfile(updated);
+      const updated=updateWorld(p,e.world);if(!e.unchanged)setWorld(e.world);if(updated!==p)replaceProfile(updated);
       const newRegion=updated.world.visitedRegions.find(x=>!p.world.visitedRegions.includes(x));
       if(newRegion&&s.id==='10'){const item=e.world.regions.find(x=>x.id===newRegion);if(p.world.visitedRegions.length){setDiscovery({kind:'region',id:newRegion,label:item?.name||e.world.region});go('42');notify('New region: '+(item?.name||e.world.region),'exploration');}autosave(updated);}
       else if(s.id==='10'&&s.slot&&positionSaveDue(lastPositionSave.current,updated.world.position,Date.now())){lastPositionSave.current={at:Date.now(),position:[...updated.world.position]};autosave(updated);}
