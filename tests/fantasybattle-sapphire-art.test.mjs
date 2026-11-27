@@ -157,7 +157,10 @@ test('original discovery screen reports persisted region and landmark data witho
  assert.ok(!section.includes('collectLoot('));
  assert.ok(page.includes("setDiscovery({kind:'region',id:newRegion"));
  assert.ok(page.includes("setDiscovery({kind:'landmark',id:e.id"));
- assert.ok(page.includes('<p>{discovery?.label}</p>{lootList}'));
+ assert.match(page,/case '31':content=<TreasureReveal profile=\{profile\} discovery=\{discovery\}/);
+ const treasure=page.slice(page.indexOf('function TreasureReveal('),page.indexOf('function ItemAcquisition('));
+ assert.ok(treasure.includes('discovery.label'));
+ assert.ok(treasure.includes('profile.rewardedDiscoveries.includes(discovery.id)'));
  assert.match(page,/case '42':content=<RegionDiscovery/);
 });
 
