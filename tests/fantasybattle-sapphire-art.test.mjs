@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','42','43','44','45','46','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','42','43','44','45','46','47','48']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -405,4 +405,15 @@ test('original notifications show only local session events and categorize actua
  for(const marker of ['notifications.filter','Math.ceil(matches.length/5)','No matching notifications','Local session events','new Date(n.time).toLocaleTimeString'])assert.ok(section.includes(marker),marker);
  for(const marker of ["category='system'",'[{message,category,time:Date.now()},...old].slice(0,40)',"notify(success,'activity')","gold','combat')","e.world.region),'exploration')","awarded.loot.length?'rewards':'exploration'","case '37':content=<GlobalNotifications"])assert.ok(page.includes(marker),marker);
  for(const forbidden of ['transact(','autosave(','rewardVictory(','localStorage'])assert.ok(!section.includes(forbidden),forbidden);
+});
+
+test('original first-time setup uses actual guest settings and routes drafts and valid saves through existing flows',()=>{
+ assert.equal(stagedOriginalFor('48').wideOnly,true);
+ assert.ok(templateUrl('48').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function FirstTimeSetup('),page.indexOf('function Panel('));
+ for(const marker of ['maxLength={40}','Object.entries(APPEARANCES)','settings.quality','settings.muted','settings.reducedMotion','onSettings({quality:value})','disabled={!validCount||Boolean(saveError)}','No account required','onClick={onCreate}'])assert.ok(section.includes(marker),marker);
+ for(const forbidden of ['localStorage','writeSlot(','createProfile(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
+ const handler=page.split('\n').find(line=>line.trim().startsWith("case '48':"));
+ for(const marker of ["s.id==='48'&&!s.running&&!s.encounter","go('19')",'reloadSlots()','mostRecent(fresh.slots)','fresh.error||!latest',"go('02')",'onSettings={applySettings}'])assert.ok(handler.includes(marker),marker);
 });

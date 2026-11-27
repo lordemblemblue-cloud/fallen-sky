@@ -34,6 +34,36 @@ const fmt=(n)=>new Intl.NumberFormat('en-US').format(n);
 const skillName=id=>ACTIONS[id]?.name||id;
 const isWorldScreen=id=>id==='10'||id==='09';
 
+// Onboarding only edits existing settings and a draft character; creation and save writes stay in their existing guarded flows.
+function FirstTimeSetup({name,onName,appearance,onAppearance,settings,onSettings,validCount,saveError,original,layout,back,onCreate,onLoad,onSettingsPage,onTutorial}){
+ const [section,setSection]=useState('profile');
+ const selected=Object.hasOwn(APPEARANCES,appearance)?appearance:'silver';
+ const sections=[['profile','Profile'],['display','Display'],['audio','Audio'],['controls','Controls'],['save','Local saves'],['confirm','Review']];
+ const selectSection=key=>{setSection(key);document.getElementById('fa-setup-'+key)?.focus();};
+ const nav=sections.map(([key,label])=><Btn key={key} primary={section===key} aria-current={section===key?'step':undefined} onClick={()=>selectSection(key)}>{label}</Btn>);
+ const nameInput=<input aria-label="Adventurer name" placeholder="Enter character name" value={name} maxLength={40} autoComplete="off" onChange={e=>onName(e.target.value)}/>;
+ const swatches=Object.entries(APPEARANCES).map(([key,a])=><Btn key={key} className="fa-setup-swatch" title={a.name} aria-label={a.name} aria-pressed={selected===key} onClick={()=>onAppearance(key)}><span style={{background:a.swatch}} aria-hidden="true"/></Btn>);
+ const quality=<select aria-label="Graphics quality" value={settings.quality} onChange={e=>{const value=e.target.value;if(['performance','balanced','high','cinematic'].includes(value))onSettings({quality:value});}}>{['performance','balanced','high','cinematic'].map(q=><option value={q} key={q}>{q[0].toUpperCase()+q.slice(1)}</option>)}</select>;
+ const mute=<label><span>Mute battle audio</span><input type="checkbox" checked={settings.muted} onChange={e=>onSettings({muted:e.target.checked})}/></label>;
+ const motion=<label><span>Reduce UI and clothing motion</span><input type="checkbox" checked={settings.reducedMotion} onChange={e=>onSettings({reducedMotion:e.target.checked})}/></label>;
+ const saveInfo=saveError?'Save storage could not be read. Review Settings before loading.':validCount?validCount+' valid local save'+(validCount===1?'':'s')+' available.':'No loadable saves on this browser.';
+ const load=<Btn className="fa-setup-load" disabled={!validCount||Boolean(saveError)} onClick={onLoad}>Load Existing Save</Btn>;
+ const create=<Btn primary className="fa-setup-begin" onClick={onCreate}>Continue to Character Creation</Btn>;
+ if(original)return <div className="fa-original-setup">
+  <h2 className="fa-setup-title">Fantasy Battle</h2><p className="fa-setup-subtitle">First-time setup · Welcome, adventurer</p>
+  <nav className="fa-setup-nav" aria-label="Setup sections"><Btn primary onClick={()=>selectSection('profile')}>Setup</Btn>{nav}</nav>
+  <h3 className="fa-setup-heading profile">Create your profile</h3><section id="fa-setup-profile" tabIndex={-1} className="fa-setup-profile" aria-label="Draft character profile">
+   <div className="fa-setup-portrait"><ArcherPortrait profile={{appearance:selected}} small/></div><label className="fa-setup-name"><span>Adventurer name</span>{nameInput}</label><div className="fa-setup-appearance"><span>{APPEARANCES[selected].name}</span><div>{swatches}</div></div>
+  </section>
+  <h3 className="fa-setup-heading display">Display settings</h3><section id="fa-setup-display" tabIndex={-1} className="fa-setup-display"><label><span>Graphics quality</span>{quality}</label><div><span>Resolution</span><strong>Automatic</strong></div><div><span>Display mode</span><Btn onClick={onSettingsPage}>Settings</Btn></div><small>Renderer detected when the world loads.</small></section>
+  <h3 className="fa-setup-heading audio">Audio settings</h3><section id="fa-setup-audio" tabIndex={-1} className="fa-setup-audio">{mute}<p>Battle audio is {settings.muted?'muted':'enabled'}.</p><small>Preferences save immediately in this browser. Individual volume sliders are not available.</small></section>
+  <h3 className="fa-setup-heading controls">Control preferences</h3><section id="fa-setup-controls" tabIndex={-1} className="fa-setup-controls"><div><span>Input</span><strong>Keyboard / touch</strong></div><div><span>Control reference</span><Btn onClick={onTutorial}>Tutorial</Btn></div>{motion}</section>
+  <h3 className="fa-setup-heading save">Local save setup</h3><section id="fa-setup-save" tabIndex={-1} className="fa-setup-save"><strong>Local save · This browser</strong>{load}</section><section id="fa-setup-confirm" tabIndex={-1} className="fa-setup-review" aria-label="Review setup"><p>No account required. Save to a slot in the game.</p><p role="status">{saveInfo}</p><p>Character creation reviews your draft before entering the world.</p></section>
+  <Btn className="fa-setup-back" onClick={back}>Back</Btn>{create}
+ </div>;
+ return <><Panel rect={layout[0]}><h2>First-time setup</h2>{nav}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><section id="fa-setup-profile" tabIndex={-1}><h2>Create your profile</h2><ArcherPortrait profile={{appearance:selected}} small/>{nameInput}{swatches}<p>{APPEARANCES[selected].name}</p></section></Panel><Panel rect={layout[2]}><section id="fa-setup-display" tabIndex={-1}><h3>Display</h3>{quality}<Btn onClick={onSettingsPage}>Settings</Btn></section><section id="fa-setup-audio" tabIndex={-1}>{mute}</section><section id="fa-setup-controls" tabIndex={-1}>{motion}<Btn onClick={onTutorial}>Tutorial</Btn></section><section id="fa-setup-save" tabIndex={-1}><p>No account required. Saves stay on this browser.</p><p role="status">{saveInfo}</p>{load}</section><section id="fa-setup-confirm" tabIndex={-1}>{create}</section></Panel></>;
+}
+
 function Panel({rect,children,className=''}) {
   if(!rect)return null;
   const [x,y,w,h]=rect;
@@ -1231,7 +1261,7 @@ export default function SapphireAdventure(){
       <div className="fa-menu-save">{recent?<><strong>{recent.profile.name}</strong><small>Level {levelFor(recent.profile.xp)}</small></>:<span>No saved game</span>}</div>
       {slots.error&&<small className="fa-menu-error" role="alert">{slots.error}</small>}
     </div>:pane(0,<><div className="fa-title-mark" aria-hidden="true">✧</div><h1>Fantasy Battle</h1><p className="fa-title-subtitle">A Sapphire Sumi adventure</p><div className="fa-title-divider" aria-hidden="true"/><Btn primary onClick={()=>go('48')}>Start New Game</Btn><Btn disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}>Continue</Btn><Btn disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}>Load Game</Btn><Btn onClick={()=>go('03')}>Settings</Btn><a className="fa-button" href="/">Back to Games</a>{slots.error&&<small role="alert">{slots.error}</small>}</>);break;
-    case '48':content=<>{pane(0,<>{nav(['03','34'])}<Btn onClick={back}>Back</Btn></>)}{pane(2,<><h2>Welcome, adventurer</h2><p>Guest progress is stored on this browser. No account is required. Choose your settings before beginning.</p><Btn primary onClick={()=>go('19')}>Create Character</Btn><Btn onClick={()=>go('03')}>Graphics and Audio</Btn><Btn onClick={()=>go('34')}>Tutorial</Btn></>)}</>;break;
+    case '48':content=<FirstTimeSetup name={name} onName={setName} appearance={creationAppearance} onAppearance={setCreationAppearance} settings={settings} onSettings={applySettings} validCount={validSlots.length} saveError={slots.error} original={original} layout={screen.layout} back={back} onCreate={()=>{const s=current.current;if(s.id==='48'&&!s.running&&!s.encounter)go('19');}} onLoad={()=>{const s=current.current;if(s.id!=='48'||s.running||s.encounter)return;const fresh=reloadSlots(),latest=mostRecent(fresh.slots);if(fresh.error||!latest){notify('No loadable saves on this browser.');return;}setSelected(latest.id);go('02');}} onSettingsPage={()=>go('03')} onTutorial={()=>{setLesson(0);go('34');}}/>;break;
     case '19':content=original?<div className="fa-original-creation">
       <section className="fa-creation-appearances" aria-label="Supported appearance presets"><p>Choose your archer appearance.</p>{Object.entries(APPEARANCES).map(([key,a])=><Btn key={key} primary={creationAppearance===key} aria-pressed={creationAppearance===key} onClick={()=>setCreationAppearance(key)}><span className="fa-swatch" style={{backgroundColor:a.swatch}} aria-hidden="true"/><span>{a.name}</span></Btn>)}<small>More customization options may be added in future updates.</small></section>
       <div className="fa-creation-viewer"><ArcherPortrait profile={{appearance:creationAppearance}}/></div>
