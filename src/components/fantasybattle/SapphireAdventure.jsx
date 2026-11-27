@@ -659,6 +659,39 @@ function ItemAcquisition({profile,encounter,result,hud,discovery,loot,origin,ori
   return <><Panel rect={layout[0]}><h2>Items Acquired</h2><p>{source}</p></Panel><Panel rect={layout[1]}>{cards}{details}<p>{message}</p></Panel><Panel rect={layout[2]}>{controls}</Panel></>;
 }
 
+// Trade uses the actual catalog and existing atomic one-item transactions.
+function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,back}){
+  const [mode,setMode]=useState('buy'),[filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[pageIndex,setPageIndex]=useState(0),[selectedId,setSelectedId]=useState(null);
+  const categories=[['all','All Goods'],['consumable','Consumables'],['material','Materials'],['weapon','Weapons'],['armor','Armor'],['mantle','Mantles']];
+  const inv=profile?.inventory||{},ready=Boolean(profile&&serviceAvailable);
+  const matches=Object.entries(ITEMS).filter(([id,item])=>(mode==='buy'?item.buy>0:item.sell>0&&inv[id]>0)&&(filter==='all'||item.kind===filter||item.slot===filter)&&item.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const pages=Math.max(1,Math.ceil(matches.length/12)),index=Math.min(pageIndex,pages-1),visible=matches.slice(index*12,index*12+12);
+  const selected=visible.find(([id])=>id===selectedId)||visible[0],id=selected?.[0],item=selected?.[1],owned=inv[id]||0;
+  const equipped=profile&&item?.kind==='gear'?gearCount(profile,id):profile?.equipped===id&&id?1:0;
+  const price=item?.[mode]||0;
+  const allowed=Boolean(ready&&price&&(mode==='buy'?profile.gold>=price&&owned<100000:owned>equipped));
+  const reset=()=>{setPageIndex(0);setSelectedId(null);};
+  const tabs=<>{['buy','sell'].map(m=><Btn key={m} primary={mode===m} aria-pressed={mode===m} onClick={()=>{setMode(m);reset();}}>{m==='buy'?'Buy':'Sell'}</Btn>)}</>;
+  const filters=categories.map(([id,label])=><Btn key={id} primary={filter===id} aria-pressed={filter===id} onClick={()=>{setFilter(id);reset();}}>{label}</Btn>);
+  const cards=visible.map(([key,i])=><Btn key={key} className="fa-merchant-card" primary={id===key} aria-pressed={id===key} onClick={()=>setSelectedId(key)}><ItemArt id={key}/><strong>{i.name}</strong><span>{i[mode]} gold</span><small>Owned: {inv[key]||0}</small></Btn>);
+  const paging=<><Btn disabled={index===0} aria-label="Previous items" onClick={()=>setPageIndex(index-1)}>‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} aria-label="Next items" onClick={()=>setPageIndex(index+1)}>›</Btn></>;
+  const reason=!ready?'Visit a service marker to trade.':!item?'Select an available item.':mode==='buy'&&profile.gold<price?'Insufficient gold.':mode==='buy'&&owned>=100000?'Inventory limit reached.':mode==='sell'&&owned<=equipped?'Equipped items cannot be sold.':'Confirm to trade one item.';
+  const detail=item?<><p>Type: {item.kind}</p><p>Owned: {owned} · Equipped: {equipped||0}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP.</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Buy: {item.buy||0} gold · Sell: {item.sell||0} gold</p></>:<p>No item selected.</p>;
+  const trade=<Btn primary className="fa-merchant-trade" disabled={!allowed} onClick={()=>onTrade(mode,id)}>{mode==='buy'?'Purchase':'Sell Item'}</Btn>;
+  if(original)return <div className="fa-original-merchant">
+    <h2 className="fa-merchant-title">Merchant Shop</h2><div className="fa-merchant-gold">Gold: {profile?.gold||0}</div>
+    <div className="fa-merchant-name">{service?.label||'Merchant'}</div><div className="fa-merchant-greeting">{ready?'Browse available goods or sell unused items.':'Approach a service marker to trade.'}</div>
+    <nav className="fa-merchant-filters" aria-label="Item categories">{filters}</nav>
+    <nav className="fa-merchant-tabs" aria-label="Trade mode">{tabs}</nav>
+    <div className="fa-merchant-search"><input aria-label="Search merchant items" placeholder="Search items" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/><span>{matches.length} items</span></div>
+    <section className="fa-merchant-grid" aria-label="Merchant catalog">{cards}{!visible.length&&<p>No matching items</p>}</section>
+    <div className="fa-merchant-pages">{paging}</div>
+    <h3 className="fa-merchant-item-name">{item?.name||'Select an item'}</h3><div className="fa-merchant-item-art">{item&&<ItemArt id={id}/>}</div>
+    <section className="fa-merchant-detail">{detail}</section><div className="fa-merchant-reason" role="status">{reason}</div><div className="fa-merchant-price">Quantity: 1 · {price} gold</div>{trade}<Btn className="fa-merchant-back" onClick={back}>Leave</Btn>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Merchant</h2><p>Gold: {profile?.gold||0}</p>{tabs}{filters}<input aria-label="Search merchant items" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{detail}<p>{reason}</p>{trade}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1010,7 +1043,7 @@ export default function SapphireAdventure(){
       <Btn className="fa-painted-button fa-save-back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
     </div>:<>{pane(0,<><h2>Save</h2><p>Save your current exploration position.</p></>)}{pane(1,<>{SLOT_IDS.map(s=>{const r=slots.slots.find(x=>x.id===s);return <Btn key={s} onClick={()=>setSelected(s)} primary={selected===s}>Slot {s} · {r?.status==='valid'?r.profile.name:r?'Damaged':'Empty'}</Btn>;})}</>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}{encounter&&<p>Manual saves are disabled during combat.</p>}</>)}</>;break;
     case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '16':content=<>{pane(0,<><h2>Merchant</h2><p>Gold: {profile?.gold||0}</p>{!serviceAvailable&&<p>Visit a service marker to trade.</p>}</>)}{pane(1,listItems((item)=>item.buy>0))}{pane(2,<><h2>{selectedItem?.name}</h2><p>Buy: {selectedItem?.buy||0} gold · Sell: {selectedItem?.sell||0} gold</p>{selectedItem?.kind==='gear'&&<><ItemArt id={itemId}/><StatRows stats={{Attack:selectedItem.atk,Defense:selectedItem.def,Speed:selectedItem.spd}}/><p>Equipped copies: {gearCount(profile,itemId)}</p></>}<Btn disabled={!serviceAvailable||!selectedItem?.buy||profile.gold<selectedItem.buy} onClick={()=>requestConfirm('Buy '+selectedItem.name+'?',()=>transact(p=>buyItem(p,itemId),'Item purchased'))}>Buy</Btn><Btn disabled={!serviceAvailable||!selectedItem?.sell||!inv[itemId]||(selectedItem.kind==='gear'&&inv[itemId]<=gearCount(profile,itemId))||(profile?.equipped===itemId&&inv[itemId]===1)} onClick={()=>requestConfirm('Sell '+selectedItem.name+'?',()=>transact(p=>sellItem(p,itemId),'Item sold'))}>Sell</Btn></>)}</>;break;
+    case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id)=>{const item=ITEMS[id];if(!Object.hasOwn(ITEMS,id)||!['buy','sell'].includes(mode)||!item[mode])return;requestConfirm((mode==='buy'?'Buy ':'Sell ')+item.name+' for '+item[mode]+' gold?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to trade.');return mode==='buy'?buyItem(p,id):sellItem(p,id);},mode==='buy'?'Item purchased':'Item sold'));}}/>;break;
     case '17':content=<>{pane(0,<><h2>Blacksmith</h2><p>Gold: {profile?.gold||0} · Ore: {inv.sapphireOre||0}</p>{!serviceAvailable&&<p>Visit a service marker.</p>}</>)}{pane(1,<><h2>{ITEMS[profile?.equipped]?.name}</h2><p>Enhancement +{profile?.enhancements?.[profile?.equipped]||0} / 5</p><p>Cost: {15+(profile?.enhancements?.[profile?.equipped]||0)*10} gold and 1 ore.</p></>)}{pane(2,<><p>Attack after enhancement: {stats.atk+2}</p><Btn disabled={!serviceAvailable||!inv.sapphireOre||(profile?.enhancements?.[profile?.equipped]||0)>=5} onClick={()=>requestConfirm('Enhance equipped bow?',()=>transact(enhanceWeapon,'Weapon enhanced'))}>Enhance</Btn></>)}</>;break;
     case '21':content=<>{pane(0,nav(['06','22']))}{pane(1,listItems((item,k)=>item.kind!=='weapon'&&inv[k]>0))}{pane(2,<><h2>{selectedItem?.name}</h2><p>Owned: {inv[itemId]||0}</p>{itemId==='recoveryTonic'&&<Btn disabled={!inv.recoveryTonic||Boolean(encounter)} onClick={()=>go('46')}>Use Tonic</Btn>}</>)}</>;break;
     case '22':content=<>{pane(0,<h2>Crafting</h2>)}{pane(1,<><h2>Recovery Tonic</h2><p>Requires 2 Sapphire Ore · Owned {inv.sapphireOre||0}</p></>)}{pane(2,<Btn disabled={!serviceAvailable||inv.sapphireOre<2} onClick={()=>requestConfirm('Craft Recovery Tonic?',()=>transact(craftTonic,'Recovery Tonic crafted'))}>Craft</Btn>)}</>;break;

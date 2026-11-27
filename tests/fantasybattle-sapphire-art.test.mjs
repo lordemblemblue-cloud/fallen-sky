@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','18','19','20','23','25','26','27','30','31','32','35','36','38','40','42','43','44','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','18','19','20','23','25','26','27','30','31','32','35','36','38','40','42','43','44','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -285,4 +285,14 @@ test('original acquisition reads only the originating reward and never awards it
  for(const forbidden of ['collectLoot(','rewardVictory(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
  assert.match(page,/case '38':content=<ItemAcquisition/);
  assert.ok(page.includes('origin={stack[stack.length-2]}'));
+});
+
+test('original merchant displays catalog and guards confirmed transactions',()=>{
+ assert.equal(stagedOriginalFor('16').wideOnly,true);
+ assert.ok(templateUrl('16').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function MerchantShop('),page.indexOf('function SaveToast('));
+ for(const marker of ['Object.entries(ITEMS)','profile.gold>=price','owned>equipped','gearCount(profile,id)','owned<100000','disabled={!allowed}','onTrade(mode,id)','serviceAvailable'])assert.ok(section.includes(marker),marker);
+ const handler=page.slice(page.indexOf("case '16':"),page.indexOf("case '17':"));
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','buyItem(p,id)','sellItem(p,id)','transact(p=>'])assert.ok(handler.includes(marker),marker);
 });
