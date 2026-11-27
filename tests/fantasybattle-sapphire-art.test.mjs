@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','12','18','19','20','27','32','35','40','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','12','18','19','20','27','32','35','40','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -75,4 +75,13 @@ test('original attribute screen previews a bounded draft before confirming via e
  for(const marker of ['fa-original-attributes','pointsFor(profile)','draft.slice(0,budget)','allocate(p,k)','old.length<budget','setDraft([])','onConfirm(profile,draft)','submitted.current','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
  const handler=page.slice(page.indexOf("case '32':"),page.indexOf("case '33':"));
  for(const marker of ['live!==base','draft.length>pointsFor(live)','STAT_KEYS.includes(k)','autosave(next)','finishLevel()'])assert.ok(handler.includes(marker),marker);
+});
+
+test('original skill unlock notification reflects only awarded and learned skills',()=>{
+ assert.equal(stagedOriginalFor('45').wideOnly,true);
+ assert.ok(templateUrl('45').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function SkillUnlocked('),page.indexOf('function SaveToast('));
+ for(const marker of ['fa-original-unlock','result?.unlocked','new Set(result.unlocked)','ACTION_ORDER.includes(id)','learned.includes(id)','ACTIONS[selected]','learnedAt[selected]','SkillArt id={selected}','No newly unlocked abilities','onContinue','onSkillbook','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
+ assert.match(page,/case '45':content=<SkillUnlocked/);
 });

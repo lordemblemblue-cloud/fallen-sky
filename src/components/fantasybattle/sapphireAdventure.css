@@ -506,3 +506,25 @@
 .fa-original-attributes .fa-attr-reset{left:27%;width:12%}.fa-original-attributes .fa-attr-confirm{left:42%;width:22%}.fa-original-attributes .fa-attr-cancel{left:66%;width:11%}
 .fa-panel .fa-attr-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:.3em}
 .fa-panel .fa-attr-row .fa-button{min-width:28px}
+
+/* 45 — original skill-unlock celebration plate. The large painted scene is
+   decorative; the live catalog icon, title and information identify the award. */
+.fa-ui.page[data-staged-original="true"][data-screen="45"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="45"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="45"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-unlock{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(11px,min(1.3vw,2.31vh),21px);text-shadow:0 1px 3px #081329}
+.fa-original-unlock h2,.fa-original-unlock h3,.fa-original-unlock p{margin:.15em 0}
+.fa-unlock-title{position:absolute;left:29%;top:18%;width:42%;height:8%;display:grid;place-items:center;font-size:2em;letter-spacing:.02em;text-align:center}
+.fa-unlock-subtitle{position:absolute;left:30%;top:3.5%;width:40%;text-align:center;font-size:.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fa-unlock-name{position:absolute;left:49.3%;top:37.1%;width:24.8%;height:4.8%;display:grid;place-items:center;text-align:center;font-size:1.25em}
+.fa-unlock-type{position:absolute;left:49.4%;top:52.8%;width:24.5%;height:3.5%;font-size:.78em;text-align:left}
+.fa-unlock-details{position:absolute;left:51%;top:57.2%;width:25%;height:17%;overflow:auto;pointer-events:auto;color:#122643;text-shadow:none;line-height:1.18;font-size:.78em;background:#eff3f0dc;border-radius:5px;padding:.35em .5em}
+.fa-unlock-action{display:flex;align-items:center;gap:.4em}
+.fa-unlock-action .fa-skill-art{width:2em;height:2em;flex:none}
+.fa-unlock-paging{display:flex;align-items:center;justify-content:space-between;gap:.25em}
+.fa-unlock-paging .fa-button{min-height:22px;padding:.12em .4em;font-size:.85em}
+.fa-original-unlock .fa-unlock-continue,.fa-original-unlock .fa-unlock-book{position:absolute;pointer-events:auto;min-height:0;padding:0;border:0;color:#fff6df;font:inherit;box-shadow:none;text-shadow:0 1px 3px #081329}
+.fa-original-unlock .fa-unlock-continue{left:38%;top:83.4%;width:24%;height:6.8%;padding-left:3.5%;border-radius:20px;background:transparent}
+.fa-original-unlock .fa-unlock-book{left:64%;top:84.1%;width:17%;height:5.5%;border:1px solid #d6b87f;border-radius:12px;background:#142448e8;font-size:.85em}
+.fa-original-unlock .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-unlock .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:2px}

@@ -165,6 +165,27 @@ function Attributes({profile,level,locked,original,layout,onConfirm,back,unlocke
   return <><Panel rect={layout[0]}><h2>{profile?.name||'No character'}</h2><p>Level {level}</p><p>{remaining} available · {draft.length} pending</p></Panel><Panel rect={layout[1]}><h2>Stat preview</h2>{stats}{skills.map(id=><p key={id}>{ACTIONS[id].name} unlocked</p>)}</Panel><Panel rect={layout[2]}><h2>Allocate points</h2>{rows.map(row)}{actions}</Panel></>;
 }
 
+// Celebration art is not a skill icon or an award. Display only committed unlocks.
+function SkillUnlocked({profile,result,level,original,layout,onContinue,onSkillbook}){
+  const learned=profile?availableActions(level):[];
+  const ids=Array.isArray(result?.unlocked)?[...new Set(result.unlocked)].filter(id=>ACTION_ORDER.includes(id)&&learned.includes(id)):[];
+  const [index,setIndex]=useState(0);
+  const selected=ids[Math.min(index,Math.max(0,ids.length-1))];
+  const action=selected?ACTIONS[selected]:null;
+  const detail=action?<><div className="fa-unlock-action"><SkillArt id={selected}/><strong>{action.name}</strong></div><p>{action.summary}</p><p>Learned at level {learnedAt[selected]} · Hotkey {action.hotkey}</p><p>Focus cost {action.focusCost} · Gain {action.focusGain}</p></>:<p>No newly unlocked abilities in this result.</p>;
+  const paging=ids.length>1?<div className="fa-unlock-paging"><Btn disabled={index<=0} onClick={()=>setIndex(i=>Math.max(0,i-1))}>Previous</Btn><span>{Math.min(index+1,ids.length)} / {ids.length}</span><Btn disabled={index>=ids.length-1} onClick={()=>setIndex(i=>Math.min(ids.length-1,i+1))}>Next</Btn></div>:null;
+  const controls=<><Btn className="fa-unlock-book" disabled={!profile} onClick={onSkillbook}>View Skillbook</Btn><Btn primary className="fa-unlock-continue" onClick={onContinue}>Continue</Btn></>;
+  if(original)return <div className="fa-original-unlock">
+    <h2 className="fa-unlock-title">{ids.length?'Skill Unlocked':'Skill Progression'}</h2>
+    <p className="fa-unlock-subtitle">{profile?profile.name+' · Level '+level:'No active character'}</p>
+    <h3 className="fa-unlock-name">{action?.name||'No new skill'}</h3>
+    <div className="fa-unlock-type">{action?('Archer · '+(action.kind==='guard'?'Defense':'Attack')):'Progression'}</div>
+    <section className="fa-unlock-details" aria-live="polite">{detail}{paging}</section>
+    {controls}
+  </div>;
+  return <><Panel rect={layout[0]}><PaintedIllustration name="skill-unlocked"/></Panel><Panel rect={layout[1]}><h2>{ids.length?'Skill Unlocked':'Skill Progression'}</h2>{detail}{paging}{controls}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -543,7 +564,7 @@ export default function SapphireAdventure(){
     case '42':content=<>{pane(1,<><h2>Discovered</h2><p>{discovery}</p><Btn primary onClick={back}>Continue</Btn><Btn onClick={()=>go('07')}>Map</Btn></>)}</>;break;
     case '43':content=<>{pane(0,<PaintedIllustration name="quest-offer"/>)}{pane(1,<><h2>Whispering Grove Spirit</h2><p>Defeat the Grove Spirit in the first exploration region.</p><p>Battle experience is awarded on victory, not again for claiming the quest.</p><Btn primary disabled={!profile||profile.quests.grove!=='available'} onClick={()=>{const p=acceptGroveQuest(profile);replaceProfile(p);autosave(p);root('10');go('08');}}>Accept Quest</Btn><Btn onClick={back}>Decline</Btn></>)}</>;break;
     case '44':content=<><PaintedIllustration name="quest-complete" variant="fa-event-side-art"/>{pane(0,<><h2>Quest Complete</h2><p>Whispering Grove Spirit · Completed</p><Btn primary onClick={()=>root('10')}>Continue</Btn></>)}</>;break;
-    case '45':content=<>{pane(0,<PaintedIllustration name="skill-unlocked"/>)}{pane(1,<><h2>Skill Unlocked</h2>{result?.unlocked?.map(k=><div key={k}><SkillArt id={k}/><strong>{skillName(k)}</strong><p>{ACTIONS[k].summary}</p></div>)}<Btn primary onClick={()=>{resumeWorld();go('12');}}>View Skillbook</Btn></>)}</>;break;
+    case '45':content=<SkillUnlocked key={profile?.id||'guest'} profile={profile} result={result} level={level} original={original} layout={screen.layout} onContinue={()=>{if(current.current.profile)resumeWorld();else back();}} onSkillbook={()=>{if(current.current.profile){resumeWorld();go('12');}else back();}}/>;break;
     case '46':content=<>{pane(0,statPanel)}{pane(1,<><h2>Recovery Tonic</h2><p>Restore up to 40 HP. Owned: {inv.recoveryTonic||0}</p></>)}{pane(2,<><p>HP: {profile?.hp} → {Math.min(stats.maxHp,(profile?.hp||0)+40)}</p><Btn primary disabled={!profile||Boolean(encounter)||!inv.recoveryTonic||profile.hp>=stats.maxHp} onClick={()=>{if(transact(p=>heal(p),'Health restored'))back();}}>Confirm Recovery</Btn></>)}</>;break;
     case '47':content=original?<div className="fa-original-error">
       <h2>Unable to continue</h2><p role="alert">{error}</p>
