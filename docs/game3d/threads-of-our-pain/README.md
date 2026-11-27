@@ -64,6 +64,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M10 | Against the Divine | [Expanded main quest](M10.md) | Ready for proposed blockout; unverified |
 | D28 | The House Between | [Expanded discovery](D28_S42.md) | Ready for proposed blockout; unverified |
 | S42 | The House With Two Doors | [Expanded optional quest and terrain brief](D28_S42.md) | Ready for proposed blockout; unverified |
+| M11 | Those Left Behind | [Expanded main quest](M11.md) | Ready for proposed blockout; unverified |
+| D29 | Rain Across the Stone | [Expanded discovery](D29_S44.md) | Ready for proposed blockout; unverified |
+| S44 | The Mirror of Rain | [Expanded optional quest and terrain brief](D29_S44.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -154,3 +157,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R30
 
 [M10](M10.md) expands physical interception, asymmetric recognition, survival intervals, and escape through prior-life experience, not Celestial Sight; hostile goddess remains undefeated. [D28/S42](D28_S42.md) preserves doorway alignment, repaired boots, old lodging, second vista and independent resident rescue. 30/50 discoveries, 20/55 optional quests, 10/20 main quests expanded; all 75 outlines retained. Master v2.6 R30 saved to Library, 221 pages, all 2,766 prior paragraphs preserved, all 214 previous page images byte-identical; seven new pages visually inspected. Next M11 — Those Left Behind, D29 — Rain Across the Stone / S44 — The Mirror of Rain. D02/D03/D05/D06 reconciliation pending; S13/S19/S25/S26/S29 separate. Claude return surveyed anchors, actor sightlines, encounter/traversal tests, actual layout and performance measurements. No terrain build, code, merge, deployment or credits.
+
+## Revision R31
+
+[M11](M11.md) expands mining refuge, ventilation, medicine, family trust and lullaby recall; no early M12 counterpart visit. [D29/S44](D29_S44.md) preserves wave alignment, ash rain, existing mantle, second vista and independent shelter route. 31/50 discoveries, 21/55 optional quests, 11/20 main quests expanded; all 75 outlines retained. Master v2.7 R31 saved to Library, 227 pages, all 2,852 prior paragraphs preserved; six new pages reviewed at overview scale, full-resolution review pending. Next M12 — A Song I Know, D30 — The Lunar Vault's Eye / S45 — The Silence of the Lunar Vault. D02/D03/D05/D06 reconciliation pending; S13/S19/S25/S26/S29 separate. Claude return surveyed anchors, actual layout, melody staging, wave sightlines, traversal and performance tests. No terrain build, code, merge, deployment or credits.
