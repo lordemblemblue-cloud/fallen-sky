@@ -594,6 +594,29 @@ function BattleVictory({profile,encounter,result,hud,original,layout,onContinue,
   return <Panel rect={layout[0]}><h2>Victory</h2><p>{encounter?.label}</p>{rows}{rewards}{summary}{controls}</Panel>;
 }
 
+// A defeat screen only reads the resolved battle; recovery uses existing guarded callbacks.
+function BattleDefeat({profile,encounter,result,hud,validSlots,original,layout,onRetry,onExplore,onLoad,onTitle}){
+  const verified=Boolean(profile&&encounter&&result&&hud?.phase==='over'&&hud?.winner!=='player');
+  const allies=verified?hud.units.filter(u=>u.team==='player'):[];
+  const entries=[
+    {label:'Retry Battle',description:'Restart the same encounter from its beginning.',enabled:verified,action:onRetry},
+    {label:'Return to Exploration',description:'Restore your pre-battle world position and profile.',enabled:verified,action:onExplore},
+    {label:'Load Game',description:validSlots.length?'Choose a valid saved game.':'No valid saved games on this browser.',enabled:validSlots.length>0,action:onLoad},
+    {label:'Return to Title',description:'Leave the session after confirmation.',enabled:true,action:onTitle}
+  ];
+  const recovery=entries.map((e,i)=><Btn key={e.label} primary={i===0} className={'fa-defeat-choice choice-'+i} disabled={!e.enabled} onClick={e.action}>{e.label}</Btn>);
+  const party=Array.from({length:4},(_,i)=>{const u=allies[i];return <div className="fa-defeat-member" key={u?.id||'empty'+i}><div className="fa-defeat-portrait">{u&&(u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>)}</div><div className="fa-defeat-member-data"><strong>{u?.name||'Empty'}</strong>{u?<><small>HP {u.hp}/{u.maxHp}</small><progress aria-label={u.name+' final health'} value={u.hp} max={u.maxHp}/><small>{u.hp===0?'Down':'Standing'}</small></>:<small>—</small>}</div></div>;});
+  const description=verified?'No progression rewards were granted. Your pre-battle saved profile remains unchanged.':'No confirmed defeat result is available.';
+  if(original)return <div className="fa-original-defeat">
+    <h2 className="fa-defeat-title">{verified?'Defeat':'Battle Result'}</h2><div className="fa-defeat-subtitle">{encounter?.label||'No encounter'}</div>
+    <nav className="fa-defeat-navigation" aria-label="Recovery options">{recovery}</nav>
+    <h3 className="fa-defeat-headline">{verified?'Fallen':'Result unavailable'}</h3><div className="fa-defeat-description"><p>{description}</p><p>{verified?'Round '+hud.round+' · '+allies.filter(u=>u.hp===0).length+'/'+allies.length+' allies down':''}</p></div>
+    <h3 className="fa-defeat-party-title">Party Condition</h3><section className="fa-defeat-party" aria-label="Final party condition">{party}</section>
+    <h3 className="fa-defeat-options-title">Recovery Options</h3><section className="fa-defeat-options">{entries.map(e=><div key={e.label}><strong>{e.label}</strong><small>{e.description}</small></div>)}</section>
+  </div>;
+  return <Panel rect={layout[0]}><h2>{verified?'Defeat':'Battle Result'}</h2><p>{encounter?.label}</p><p>{description}</p>{allies.map(u=><div key={u.id}><strong>{u.name}</strong><p>HP {u.hp}/{u.maxHp}</p></div>)}{recovery}</Panel>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -917,7 +940,7 @@ export default function SapphireAdventure(){
     case '11':content=<PartyFormation key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} transact={transact} go={go} back={back} statPanel={statPanel}/>;break;
     case '12':content=<Skillbook key={profile?.id||'guest'} profile={profile} level={level} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '14':content=<BattleVictory profile={profile} encounter={encounter} result={result} hud={hud} original={original} layout={screen.layout} onContinue={victoryContinue} onItems={()=>go('38')} onDetails={()=>go('37')}/>;break;
-    case '15':content=pane(0,<><h2>Defeat</h2><p>No rewards were granted.</p><Btn primary onClick={retryBattle}>Retry</Btn><Btn onClick={()=>resumeWorld()}>Return to Exploration</Btn><Btn disabled={!validSlots.length} onClick={()=>go('02')}>Load Game</Btn><Btn onClick={()=>requestConfirm('Return to the title?',leaveTitle)}>Title</Btn></>);break;
+    case '15':content=<BattleDefeat profile={profile} encounter={encounter} result={result} hud={hud} validSlots={validSlots} original={original} layout={screen.layout} onRetry={()=>{const s=current.current;if(s.id==='15'&&s.encounter&&s.profile)retryBattle();}} onExplore={()=>{const s=current.current;if(s.id==='15'&&s.encounter&&s.profile)resumeWorld(s.profile);}} onLoad={()=>{reloadSlots();go('02');}} onTitle={()=>requestConfirm('Return to the title?',leaveTitle)}/>;break;
     case '18':content=original?<div className="fa-original-save">
       <nav className="fa-art-side-nav fa-save-nav" aria-label="Save game navigation">
         <Btn className="fa-painted-button" onClick={()=>{if(running)root(encounter?'09':'10');else back();}}><span className="fa-art-sr">Resume</span></Btn>

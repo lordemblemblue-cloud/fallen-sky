@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','18','19','20','23','25','26','27','30','32','35','36','40','42','43','44','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','18','19','20','23','25','26','27','30','32','35','36','40','42','43','44','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -249,4 +249,15 @@ test('original victory reports the resolved result without granting or reusing r
  for(const forbidden of ['rewardVictory(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
  assert.match(page,/case '14':content=<BattleVictory/);
  assert.ok(page.includes('gold:0,loot:[],leveled:false,unlocked:[]});setLoot([])'));
+});
+
+test('original defeat uses resolved party condition and existing recovery actions',()=>{
+ assert.equal(stagedOriginalFor('15').wideOnly,true);
+ assert.ok(templateUrl('15').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function BattleDefeat('),page.indexOf('function SaveToast('));
+ for(const marker of ["hud?.phase==='over'","hud?.winner!=='player'",'hud.units.filter','max={u.maxHp}','validSlots.length>0','No progression rewards were granted','onRetry','onExplore','onLoad','onTitle'])assert.ok(section.includes(marker),marker);
+ for(const forbidden of ['rewardVictory(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
+ assert.match(page,/case '15':content=<BattleDefeat/);
+ assert.ok(page.includes("s.id==='15'&&s.encounter&&s.profile"));
 });
