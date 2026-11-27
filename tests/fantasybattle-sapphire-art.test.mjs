@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','11','12','13','18','19','20','25','26','27','30','32','35','40','42','43','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','11','12','13','18','19','20','25','26','27','30','32','35','40','42','43','44','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -180,4 +180,14 @@ test('original quest offer respects current saved state and does not grant dupli
  const handler=page.slice(page.indexOf("case '43':"),page.indexOf("case '44':"));
  for(const marker of ['transact(p=>','acceptGroveQuest(p)',"p.quests.grove!=='available'","go('08')"])assert.ok(handler.includes(marker),marker);
  assert.ok(!handler.includes('rewardVictory'));
+});
+
+test('original quest completion only acknowledges actual recorded completion',()=>{
+ assert.equal(stagedOriginalFor('44').wideOnly,true);
+ assert.ok(templateUrl('44').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function QuestCompletion('),page.indexOf('function SaveToast('));
+ for(const marker of ['fa-original-completion','profile?.quests.grove',"state==='claimed'&&defeated",'completedEncounters.includes','No additional experience, gold or loot','onContinue','onJournal','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
+ for(const forbidden of ['rewardVictory(','claimGroveQuest(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
+ assert.match(page,/case '44':content=<QuestCompletion/);
 });

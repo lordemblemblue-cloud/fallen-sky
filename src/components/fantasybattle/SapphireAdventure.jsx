@@ -445,6 +445,24 @@ function QuestOffer({profile,encounter,original,layout,onAccept,back}){
   return <><Panel rect={layout[0]}><PaintedIllustration name="quest-offer"/></Panel><Panel rect={layout[1]}><h2>Whispering Grove Spirit</h2>{description}<h3>Objective</h3>{objective}<h3>Rewards</h3>{rewards}{controls}</Panel></>;
 }
 
+// Completion is a read-only acknowledgement, never a reward transaction.
+function QuestCompletion({profile,original,layout,onContinue,onJournal}){
+  const state=profile?.quests.grove;
+  const defeated=Boolean(profile?.world.completedEncounters.includes('wilds_grove_01'));
+  const completed=state==='claimed'&&defeated;
+  const heading=completed?'Quest Complete':'Quest Progress';
+  const objective=<><p>Grove Spirit defeated: {defeated?'Yes':'No'}</p><p>Journal completion: {completed?'Recorded':state==='complete'?'Ready to complete':'Not recorded'}</p><progress aria-label="Quest objective progress" max={1} value={defeated?1:0}/></>;
+  const reward=<><p>{completed?'Battle rewards were awarded when the encounter was first defeated.':'Rewards are handled by the battle system.'}</p><p>No additional experience, gold or loot is granted by this screen.</p><p>{completed?'Quest completion is recorded in your active profile.':'Return to the journal to review the quest.'}</p></>;
+  const controls=<><Btn primary className="fa-complete-continue" onClick={onContinue}>Continue</Btn><Btn className="fa-complete-journal" onClick={onJournal}>Quest Journal</Btn></>;
+  if(original)return <div className="fa-original-completion">
+    <h2 className="fa-complete-title">{heading}</h2><h3 className="fa-complete-name">Whispering Grove Spirit</h3>
+    <h3 className="fa-complete-objective-title">Objectives</h3><section className="fa-complete-objectives" aria-label="Quest objectives">{objective}</section>
+    <h3 className="fa-complete-reward-title">Reward record</h3><section className="fa-complete-rewards" aria-live="polite">{reward}</section>
+    {controls}
+  </div>;
+  return <><PaintedIllustration name="quest-complete" variant="fa-event-side-art"/><Panel rect={layout[0]}><h2>{heading}</h2><h3>Whispering Grove Spirit</h3>{objective}{reward}{controls}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -822,7 +840,7 @@ export default function SapphireAdventure(){
     case '41':content=pane(0,<p role="status">{saveStatus||'No save operation in progress.'}</p>);break;
     case '42':content=<RegionDiscovery discovery={discovery} world={world} profile={profile} original={original} layout={screen.layout} onContinue={back} onMap={()=>{back();go('07');}}/>;break;
     case '43':content=<QuestOffer profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onAccept={()=>{if(transact(p=>{if(p.quests.grove!=='available')throw Error('Quest is no longer available.');return acceptGroveQuest(p);},'Quest accepted')){root('10');go('08');}}}/>;break;
-    case '44':content=<><PaintedIllustration name="quest-complete" variant="fa-event-side-art"/>{pane(0,<><h2>Quest Complete</h2><p>Whispering Grove Spirit · Completed</p><Btn primary onClick={()=>root('10')}>Continue</Btn></>)}</>;break;
+    case '44':content=<QuestCompletion profile={profile} original={original} layout={screen.layout} onContinue={()=>root('10')} onJournal={()=>{root('10');go('08');}}/>;break;
     case '45':content=<SkillUnlocked key={profile?.id||'guest'} profile={profile} result={result} level={level} original={original} layout={screen.layout} onContinue={()=>{if(current.current.profile)resumeWorld();else back();}} onSkillbook={()=>{if(current.current.profile){resumeWorld();go('12');}else back();}}/>;break;
     case '46':content=<>{pane(0,statPanel)}{pane(1,<><h2>Recovery Tonic</h2><p>Restore up to 40 HP. Owned: {inv.recoveryTonic||0}</p></>)}{pane(2,<><p>HP: {profile?.hp} → {Math.min(stats.maxHp,(profile?.hp||0)+40)}</p><Btn primary disabled={!profile||Boolean(encounter)||!inv.recoveryTonic||profile.hp>=stats.maxHp} onClick={()=>{if(transact(p=>heal(p),'Health restored'))back();}}>Confirm Recovery</Btn></>)}</>;break;
     case '47':content=original?<div className="fa-original-error">

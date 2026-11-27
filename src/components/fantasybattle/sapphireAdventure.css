@@ -812,3 +812,22 @@
 .fa-original-offer .fa-offer-accept{left:37%;top:81%;width:24%;height:8%;color:#fff6df;text-shadow:0 1px 3px #081329}
 .fa-original-offer .fa-offer-accept:disabled{background:#142448b0;opacity:.8;cursor:not-allowed}
 .fa-original-offer .fa-offer-decline{left:65%;top:81%;width:20%;height:8%;color:#152448;text-shadow:none}
+
+/* 44 — original quest completion painting, with verified state only. */
+.fa-ui.page[data-staged-original="true"][data-screen="44"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="44"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="44"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-completion{position:absolute;inset:0;pointer-events:none;color:#152448;font-size:clamp(10px,min(1.25vw,2.22vh),20px)}
+.fa-original-completion h2,.fa-original-completion h3,.fa-original-completion p{margin:.2em 0}
+.fa-complete-title{position:absolute;left:35%;top:15.5%;width:36%;height:10%;display:grid;place-items:center;color:#fff6df;text-shadow:0 1px 3px #081329;font-size:2em;text-align:center}
+.fa-complete-name{position:absolute;left:43%;top:29.5%;width:25%;height:6%;display:grid;place-items:center;font-size:1.1em;text-align:center}
+.fa-complete-objective-title,.fa-complete-reward-title{position:absolute;top:43.7%;height:4%;font-size:1em;color:#fff6df;text-shadow:0 1px 3px #081329}
+.fa-complete-objective-title{left:29%;width:21%}.fa-complete-reward-title{left:58.6%;width:25%}
+.fa-complete-objectives,.fa-complete-rewards{position:absolute;top:50.5%;height:21%;overflow:auto;pointer-events:auto;line-height:1.32;padding:.4em .6em;background:#f4eee6c9;border-radius:6px}
+.fa-complete-objectives{left:26%;width:24.5%}.fa-complete-rewards{left:56%;width:30%}
+.fa-complete-objectives progress{width:95%;height:10px;accent-color:#2859b8}
+.fa-original-completion .fa-button{position:absolute;pointer-events:auto;min-width:0;min-height:0;border:0;box-shadow:none;font:inherit;font-weight:bold;border-radius:15px}
+.fa-original-completion .fa-complete-continue{left:39.5%;top:82%;width:25%;height:8%;background:transparent;color:#fff6df;text-shadow:0 1px 3px #081329;padding-left:4%}
+.fa-original-completion .fa-complete-journal{left:70%;top:82%;width:16%;height:6%;background:#f4eee6e6;border:1px solid #d6b87f;color:#152448;font-size:.85em}
+.fa-original-completion .fa-button:hover{box-shadow:inset 0 0 0 2px #d6b87f}
+.fa-original-completion .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:2px}
