@@ -1,0 +1,18 @@
+# Phase 47 — M01 merchant interaction bridge (development only)
+
+Sources: [M01](M01.md), [R51 voice pass](R51_M01-M06_VOICE_PASS.md), [Phase 46 region](NPC_PHASE46_OPENING_REGION.md), [Phase 45 state contract](NPC_PHASE45_QUEST_STATE.md). Proposed NPC FS_NPC_001/Aldren is the merchant role candidate, not an approved runtime mapping. No new quest IDs.
+
+## Interaction contract
+- Start at surveyed M01_SPAWN; accept M01 once. Merchant warning by dialogue or delivered proximity cue at M01_MERCHANT. No requirement to open dialogue or help with strap.
+- Base warning “The animals won't go near the ridge.” Ask route, offer help, or continue. R51 strap dialogue only after completed contextual hold, not on selecting help. Cancel leaves no completed help flag. Optional goodwill is stored as factual help boolean; no numeric relationship bonus or item grant.
+- Insect silence, scattering birds, lunar seam and distant fragment: present without forced camera. Valid visual/audio/accessible cue; if missed, use actual residual glow and journal at safe route before voluntary arrival. Preserve cue on reload; host chooses steady seam, not a repeated cutscene. Intent variants at fork: concern/curiosity/fear; no morality score. Homeward detour is optional after cue; streamside detour is recorded only after warning in this first bridge (earlier scenic walk must remain physically available without tracking).
+- Threshold or overlook confirmation requires safe destination readiness. Model rejects an arrival without cues or readiness. It returns M01 completion and M02 available, not automatic M02 acceptance. No wolf attack, goddess identity, older reality footage, combat, timer or focus. Do not show proposed alias until approved. No terrain rebuild here.
+
+## Implementation boundaries
+Pure bridge combines Phase 45 quest snapshot with replayable scene observations in one proposed save bundle. Stable semantic quest event IDs, scoped validation, exact retries, optional observation-count revision, strict anchors/modes, replay consistency and all-or-nothing in-memory result. Host must deliver actual cues, verify surveyed anchors/proximity, actual hold completion, voluntary choice and safe loading; boolean readiness and client observations are not evidence of server authority. Persist the full bundle atomically using a single-writer or transactional compare-and-commit against both revisions; never write one half independently. No localStorage writes, migration, actual voice/animations, UI mount, rewards, relationship increments, privileged endpoints or live activation. Phase 46 definitions remain disabled; tests explicitly enable isolated copies. Optional flags frozen after M01 completion; later revisits and S01/S30 belong to separately reviewed systems. Exact source timing and physical navigation remain unverified.
+
+## Terrain / presentation return
+Claude: survey M01_MERCHANT and safe cart pullout, animal idle/reaction, strap hold anchor and walking bypass; preserve clear sky window, ridge fork, return and both walking routes. Provide actual anchor transforms, interaction radius, safe landing/checkpoint, mobile keyboard/touch controls, captions and muted/low-graphics cue tests. Do not alter platform mode or restore old world. Use shared assets; no paid generation.
+
+## Verification
+29 isolated JavaScript scenarios executed using fetched Phase 45 adapter and Phase 46 JSON. Committed Node test suite and full CI/build/lint, deployed Base44 review and real gameplay tests remain pending. No merge/deployment. Next: Phase 48 M02 interaction bridge; actual presentation host and terrain survey remain blockers.
