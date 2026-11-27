@@ -439,6 +439,11 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
     /** 3. PROCEDURAL ASSET FACTORY (25 Rocks, Arch Kit, Trees, Flora, Castle) */
     class AssetFactory {
       constructor(mats) { this.mats = mats; this.geoCache = new Map(); }
+      // Cache only immutable primitives; seeded/deformed geometry stays independently owned.
+      sharedGeo(key, create) {
+        if (!this.geoCache.has(key)) this.geoCache.set(key, create());
+        return this.geoCache.get(key);
+      }
       rng(seed) { let s = (seed % 2147483647) || 1; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
       rockGeo(w, h, d, detail = 2, seed = 1, opts = {}) {
         const key = `r_${w.toFixed(3)}_${h.toFixed(3)}_${d.toFixed(3)}_${detail}_${seed}_${opts.taper ? 1 : 0}`;
@@ -503,7 +508,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
       }
       createColumn(height = 6.2, broken = false, seed = 10) {
         const g = new THREE.Group(), mat = this.mats.m01Stone();
-        const base = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.45, 1.28), mat); base.position.y = 0.225; base.castShadow = base.receiveShadow = true; g.add(base);
+        const base = new THREE.Mesh(this.sharedGeo('column-base', () => new THREE.BoxGeometry(1.28, 0.45, 1.28)), mat); base.position.y = 0.225; base.castShadow = base.receiveShadow = true; g.add(base);
         const shaftH = Math.max(0.7, height - (broken ? 0.5 : 1.0)), shaftGeo = new THREE.CylinderGeometry(0.38, 0.43, shaftH, 16, 4);
         if (broken) {
           const p = shaftGeo.attributes.position, rand = this.rng(seed);
@@ -512,8 +517,8 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         }
         const shaft = new THREE.Mesh(shaftGeo, mat); shaft.position.y = 0.45 + shaftH * 0.5; shaft.castShadow = shaft.receiveShadow = true; g.add(shaft);
         if (!broken) {
-          const cap = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.42, 1.22), mat); cap.position.y = height - 0.21; cap.castShadow = cap.receiveShadow = true; g.add(cap);
-          const gold = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.08, 16), this.mats.m09Gold()); gold.position.y = height - 0.46; g.add(gold);
+          const cap = new THREE.Mesh(this.sharedGeo('column-cap', () => new THREE.BoxGeometry(1.22, 0.42, 1.22)), mat); cap.position.y = height - 0.21; cap.castShadow = cap.receiveShadow = true; g.add(cap);
+          const gold = new THREE.Mesh(this.sharedGeo('column-gold', () => new THREE.CylinderGeometry(0.42, 0.42, 0.08, 16)), this.mats.m09Gold()); gold.position.y = height - 0.46; g.add(gold);
         }
         return g;
       }
@@ -524,14 +529,14 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         const maxSeg = state === 'complete' ? 11 : (state === 'partial' ? 7 : 3), rMid = openW * 0.5 + thick * 0.5;
         for (let i = 0; i < maxSeg; i++) {
           const ang = Math.PI - ((i + 0.5) / 11) * Math.PI;
-          const b = new THREE.Mesh(new THREE.BoxGeometry(thick * 0.92, 0.58, depth * 0.96), i === 5 ? this.mats.m09Gold() : mat);
+          const b = new THREE.Mesh(this.sharedGeo('arch-block', () => new THREE.BoxGeometry(thick * 0.92, 0.58, depth * 0.96)), i === 5 ? this.mats.m09Gold() : mat);
           b.position.set(Math.cos(ang) * rMid, pierH + Math.sin(ang) * rMid, 0); b.rotation.z = ang - Math.PI * 0.5; b.castShadow = b.receiveShadow = true; g.add(b);
         }
         return g;
       }
       createStaircase(steps = 10, width = 2.8, stepH = 0.17, stepD = 0.36) {
         const g = new THREE.Group(), mat = this.mats.m15Paving();
-        for (let i = 0; i < steps; i++) { const h = (i + 1) * stepH, t = new THREE.Mesh(new THREE.BoxGeometry(width, h, stepD + 0.02), mat); t.position.set(0, h * 0.5, -i * stepD); t.castShadow = t.receiveShadow = true; g.add(t); }
+        for (let i = 0; i < steps; i++) { const h = (i + 1) * stepH, t = new THREE.Mesh(this.sharedGeo(`stair:${width}:${h}:${stepD}`, () => new THREE.BoxGeometry(width, h, stepD + 0.02)), mat); t.position.set(0, h * 0.5, -i * stepD); t.castShadow = t.receiveShadow = true; g.add(t); }
         return g;
       }
       createWallBlock(w = 0.75, h = 0.38, d = 0.45, seed = 1) { const b = this.createFloorSlab(w, d, h, seed); b.name = 'WallBlock'; return b; }
@@ -552,7 +557,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         const rand = this.rng(seed), g = new THREE.Group(); g.name = 'HangingVine';
         const pts = Array.from({ length: 9 }, (_, i) => new THREE.Vector3(Math.sin(i * 0.75) * 0.10, -length * i / 8, Math.cos(i * 0.66) * 0.05));
         g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 12, 0.013, 5, false), this.mats.m07Moss()));
-        const lg = new THREE.SphereGeometry(0.09, 6, 4); lg.scale(0.7, 0.18, 1.4);
+        const lg = this.sharedGeo('vine-leaf', () => new THREE.SphereGeometry(0.09, 6, 4).scale(0.7, 0.18, 1.4));
         for (let i = 1; i < pts.length; i++) { const l = new THREE.Mesh(lg, this.mats.m07Moss()); l.position.copy(pts[i]); l.position.x += (i % 2 ? 1 : -1) * 0.08; l.rotation.set(rand(), rand() * 2, rand()); g.add(l); }
         return g;
       }
@@ -573,8 +578,8 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           const h = 0.22 + rand() * 0.2, ox = (rand() - 0.5) * 0.22, oz = (rand() - 0.5) * 0.22;
           const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, h, 5), this.mats.m07Moss()); stem.position.set(ox, h * 0.5, oz); g.add(stem);
           const head = new THREE.Group(); head.position.set(ox, h, oz);
-          const geo = new THREE.SphereGeometry(0.036, 6, 4); geo.scale(0.70, 0.24, 1.30);
-          const center = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 4), this.mats.m09Gold()); center.position.y = 0.015; head.add(center);
+          const geo = this.sharedGeo('flower-petal', () => new THREE.SphereGeometry(0.036, 6, 4).scale(0.70, 0.24, 1.30));
+          const center = new THREE.Mesh(this.sharedGeo('flower-center', () => new THREE.SphereGeometry(0.018, 6, 4)), this.mats.m09Gold()); center.position.y = 0.015; head.add(center);
           const petals = new THREE.InstancedMesh(geo, petalMat, 5 + (i % 2)), dummy = new THREE.Object3D();
           for (let k = 0; k < petals.count; k++) {
             const a = (k / petals.count) * Math.PI * 2;
@@ -585,7 +590,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         return g;
       }
       createGrassTuft(seed = 88) {
-        const g = new THREE.Group(), rand = this.rng(seed), bg = new THREE.ConeGeometry(0.028, 0.28, 3);
+        const g = new THREE.Group(), rand = this.rng(seed), bg = this.sharedGeo('grass-blade', () => new THREE.ConeGeometry(0.028, 0.28, 3));
         for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(bg, this.mats.m07Moss()), a = (i / 6) * Math.PI * 2 + rand() * 0.4; b.position.set(Math.cos(a) * 0.07, 0.13, Math.sin(a) * 0.07); b.rotation.set((rand() - 0.5) * 0.45, a, (rand() - 0.5) * 0.45); g.add(b); }
         return g;
       }
