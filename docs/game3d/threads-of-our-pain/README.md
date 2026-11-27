@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R97 — original-life chronology dependency audit:** [The chronology of two lives](R97_ORIGINAL_LIFE_CHRONOLOGY_DEPENDENCY_AUDIT.md). Source-based event dependencies and five dialogue repair proposals; candidate pre-death local ordering is not approved and does not yet resolve M19 causality. Preserve M05 physical death and actual M10 overlap. Next M19 causality and knowledge ledger, then optional opportunity windows.
+
 > **R96 — midcampaign continuity reconciliation:** [The stranger with my face](R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md). Six source-grounded M07–M12 editorial packets; R92–R96 now cover all 20 main IDs. Preserve M09/M10 physical overlap, distinct families, no Celestial Sight; next scene-level original chronology dependency audit. Draft, no implementation or owner approval.
 
 > **R95 — opening continuity reconciliation:** [The road before the world broke](R95_M01-M06_OPENING_CONTINUITY_RECONCILIATION.md). Six source-grounded scene packets for M01–M06, with fixed M05 death and unresolved older local chronology. R92–R95 cover 14/20 main IDs; next M07–M12. Earlier chat-only wording not recovered; no new quests or implementation.
