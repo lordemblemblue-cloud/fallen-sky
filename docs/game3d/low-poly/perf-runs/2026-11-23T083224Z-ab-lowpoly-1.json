@@ -1,0 +1,569 @@
+{
+  "schema": "game3d-perf-probe/1",
+  "label": "ab-lowpoly-1",
+  "startedAt": "2026-11-23T08:32:24.329Z",
+  "page": "/gameview?renderer=webgpu&threeRoads=0&perfProbe=1&perfPump=1",
+  "env": {
+    "backend": "WebGPU",
+    "rendererChoice": {
+      "kind": "webgpu",
+      "reason": "override"
+    },
+    "gpuInfo": {
+      "renderer": "amd rdna-3",
+      "gpuClass": "unknown",
+      "deviceMemoryGb": 32,
+      "cpuCores": 16,
+      "powerPreference": "high-performance",
+      "vramBytes": null,
+      "api": "WebGPU"
+    },
+    "adapter": {
+      "vendor": "amd",
+      "architecture": "rdna-3",
+      "device": "",
+      "description": ""
+    },
+    "glRenderer": null,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/6.6395.0 Chrome/156.0.8078.100 Safari/537.36 MSIX",
+    "browser": [
+      {
+        "brand": "Not:A-Brand",
+        "version": "8.0.0.0"
+      },
+      {
+        "brand": "Chromium",
+        "version": "156.0.8078.100"
+      }
+    ],
+    "timestampQuery": true,
+    "webglTimerQuery": false,
+    "canvas": {
+      "width": 960,
+      "height": 720,
+      "cssWidth": 1024,
+      "cssHeight": 768
+    },
+    "pixelRatio": 0.9375,
+    "devicePixelRatio": 1.25,
+    "graphicsSettings": {
+      "artStyle": "original",
+      "quality": "low",
+      "shadows": false,
+      "fpsCap": 60,
+      "inkPalette": "vibrant"
+    },
+    "graphicsBudget": {
+      "quality": "low",
+      "shadows": false,
+      "shadowSize": 256,
+      "shadowExtent": 14,
+      "fogScale": 0.45,
+      "particleScale": 0.2,
+      "tighten": "performance"
+    },
+    "inkLevel": 0,
+    "inkPalette": "vibrant",
+    "wholeWorld": false,
+    "area": "town",
+    "pageVisible": "hidden",
+    "hasFocus": false,
+    "rafPump": true,
+    "threeRoads": null
+  },
+  "governor": {
+    "pinnedTo": "profile 'off' (fixed pixel ratio, no adaptation)",
+    "before": {
+      "fps": 0,
+      "p50Ms": 0,
+      "p95Ms": 0,
+      "p99Ms": 0,
+      "maxMs": 0,
+      "frames": 0,
+      "profile": "performance",
+      "ratio": 0.9375,
+      "resolution": "720p",
+      "renderWidth": 960,
+      "renderHeight": 720,
+      "limited": false,
+      "applied": true
+    }
+  },
+  "rafIntervalMs": null,
+  "settings": {
+    "frames": 90,
+    "warmup": 20,
+    "eyeHeight": 1.7,
+    "playerHidden": true,
+    "gameDrawingPausedWhileTiming": true
+  },
+  "views": [
+    {
+      "id": "town.plaza.N",
+      "area": "town",
+      "point": "town.plaza",
+      "label": "Fountain plaza",
+      "heading": "N",
+      "local": {
+        "x": 0,
+        "z": -70
+      },
+      "eye": {
+        "x": 0,
+        "y": 24.36,
+        "z": 0,
+        "dirX": 0,
+        "dirZ": 1
+      },
+      "sceneArea": "town",
+      "settled": {
+        "settledMs": 14663,
+        "readings": 5,
+        "stable": true
+      },
+      "gameLoopHeld": true,
+      "counts": {
+        "drawCalls": 638,
+        "triangles": 1067420,
+        "points": 0,
+        "lines": 0
+      },
+      "frame": {
+        "frames": 90,
+        "medianMs": 30.9,
+        "p95Ms": 41.5,
+        "minMs": 26,
+        "maxMs": 58,
+        "meanMs": 32.07
+      },
+      "cpuSubmit": {
+        "frames": 90,
+        "medianMs": 13.9,
+        "p95Ms": 17.9,
+        "minMs": 9.7,
+        "maxMs": 22.8,
+        "meanMs": 13.98
+      },
+      "gpu": {
+        "frames": 90,
+        "medianMs": 10.68,
+        "p95Ms": 13.04,
+        "minMs": 7.47,
+        "maxMs": 19.53,
+        "meanMs": 10.98,
+        "passesPerFrame": 1,
+        "spanMedianMs": 10.68,
+        "timer": "WebGPU timestamp-query (per render pass)"
+      },
+      "pipelines": {
+        "before": 589,
+        "afterWarmup": 589,
+        "after": 589
+      },
+      "gameTicks": {
+        "frames": 123,
+        "medianMs": 15.1,
+        "p95Ms": 20.7,
+        "minMs": 10.5,
+        "maxMs": 31.2,
+        "meanMs": 15.53,
+        "note": "whole game loop callback: simulation + drawing submit, GPU not included; game camera, not the probe camera"
+      },
+      "budget": {
+        "drawCallShare": 1.276,
+        "triangleShare": 0.712,
+        "within": false,
+        "over": [
+          "drawCalls"
+        ],
+        "sceneryDrawCallShare": 1.823,
+        "sceneryTriangleShare": 1.067
+      },
+      "inventory": {
+        "method": "counted: visible meshes whose bounds touch the view frustum (one draw per mesh/material assumed)",
+        "byGroup": {
+          "other": {
+            "meshes": 14,
+            "triangles": 12568
+          },
+          "terrain": {
+            "meshes": 3,
+            "triangles": 30968
+          },
+          "roads": {
+            "meshes": 7,
+            "triangles": 31960
+          },
+          "nearGrass": {
+            "meshes": 15,
+            "triangles": 28486
+          },
+          "rocksPlants": {
+            "meshes": 29,
+            "triangles": 190505
+          },
+          "water": {
+            "meshes": 35,
+            "triangles": 5343
+          },
+          "trees": {
+            "meshes": 11,
+            "triangles": 150006
+          },
+          "town": {
+            "meshes": 181,
+            "triangles": 49091
+          },
+          "farGrass": {
+            "meshes": 18,
+            "triangles": 259920
+          },
+          "characters": {
+            "meshes": 228,
+            "triangles": 173303
+          },
+          "farMeadow": {
+            "meshes": 4,
+            "triangles": 80640
+          }
+        },
+        "top": [
+          {
+            "name": "characters | Artemis_Body / Artemis_Body_1",
+            "meshes": 1,
+            "triangles": 63517
+          },
+          {
+            "name": "trees | Game1_ShadowWolf_WolfveilValley / Game 1 ORIGINAL uploaded elm / elm-broad / elm-broad-bark",
+            "meshes": 1,
+            "triangles": 35508
+          },
+          {
+            "name": "farMeadow | WV_4MileRadius_StreamingSolidMeadow / WV_LivingMeadow_Grass_-1:1",
+            "meshes": 1,
+            "triangles": 34560
+          },
+          {
+            "name": "farMeadow | WV_4MileRadius_StreamingSolidMeadow / WV_LivingMeadow_Grass_0:1",
+            "meshes": 1,
+            "triangles": 34560
+          },
+          {
+            "name": "trees | Game1_ShadowWolf_WolfveilValley / Game 1 ORIGINAL uploaded elm / elm-broad / elm-broad-leaf",
+            "meshes": 1,
+            "triangles": 28302
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / SWV_Owner_LongGrass_Tile_2m_Far_-2:1",
+            "meshes": 1,
+            "triangles": 28080
+          },
+          {
+            "name": "characters | Scene / Armature / tripo_node_bdd73c28-af44-45e3-b758-1d783314f872",
+            "meshes": 4,
+            "triangles": 27680
+          },
+          {
+            "name": "trees | Game1_ShadowWolf_WolfveilValley / WV_Area_town_Game 1 ORIGINAL uploaded elm / elm-wild / elm-wild-bark",
+            "meshes": 1,
+            "triangles": 26100
+          },
+          {
+            "name": "terrain | Game1_ShadowWolf_WolfveilValley / SWV_Streamed_OverworldFloor / SWV_ActiveAreaFloor_town",
+            "meshes": 1,
+            "triangles": 25916
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / WV_Area_town_SWV_Owner_LongGrass_Tile_2m_Far_-3:2",
+            "meshes": 1,
+            "triangles": 23760
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / SWV_Owner_LongGrass_Tile_2m_Far_-1:1",
+            "meshes": 1,
+            "triangles": 22320
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / SWV_Owner_LongGrass_Tile_2m_Far_-1:2",
+            "meshes": 1,
+            "triangles": 21600
+          }
+        ]
+      }
+    },
+    {
+      "id": "town.plaza.S",
+      "area": "town",
+      "point": "town.plaza",
+      "label": "Fountain plaza",
+      "heading": "S",
+      "local": {
+        "x": 0,
+        "z": -70
+      },
+      "eye": {
+        "x": 0,
+        "y": 24.36,
+        "z": 0,
+        "dirX": 0,
+        "dirZ": -1
+      },
+      "sceneArea": "town",
+      "settled": {
+        "settledMs": 12875,
+        "readings": 3,
+        "stable": true
+      },
+      "gameLoopHeld": true,
+      "counts": {
+        "drawCalls": 673,
+        "triangles": 917088,
+        "points": 0,
+        "lines": 0
+      },
+      "frame": {
+        "frames": 90,
+        "medianMs": 27.4,
+        "p95Ms": 32.6,
+        "minMs": 22,
+        "maxMs": 45.8,
+        "meanMs": 27.98
+      },
+      "cpuSubmit": {
+        "frames": 90,
+        "medianMs": 12.6,
+        "p95Ms": 15.5,
+        "minMs": 9,
+        "maxMs": 30.3,
+        "meanMs": 12.88
+      },
+      "gpu": {
+        "frames": 90,
+        "medianMs": 9.76,
+        "p95Ms": 13.89,
+        "minMs": 9.63,
+        "maxMs": 16.97,
+        "meanMs": 10.21,
+        "passesPerFrame": 1,
+        "spanMedianMs": 9.76,
+        "timer": "WebGPU timestamp-query (per render pass)"
+      },
+      "pipelines": {
+        "before": 680,
+        "afterWarmup": 680,
+        "after": 680
+      },
+      "gameTicks": {
+        "frames": 134,
+        "medianMs": 15,
+        "p95Ms": 17.8,
+        "minMs": 10.9,
+        "maxMs": 19.6,
+        "meanMs": 15.06,
+        "note": "whole game loop callback: simulation + drawing submit, GPU not included; game camera, not the probe camera"
+      },
+      "budget": {
+        "drawCallShare": 1.346,
+        "triangleShare": 0.611,
+        "within": false,
+        "over": [
+          "drawCalls"
+        ],
+        "sceneryDrawCallShare": 1.923,
+        "sceneryTriangleShare": 0.917
+      },
+      "inventory": {
+        "method": "counted: visible meshes whose bounds touch the view frustum (one draw per mesh/material assumed)",
+        "byGroup": {
+          "other": {
+            "meshes": 12,
+            "triangles": 9826
+          },
+          "terrain": {
+            "meshes": 3,
+            "triangles": 30968
+          },
+          "roads": {
+            "meshes": 4,
+            "triangles": 25884
+          },
+          "nearGrass": {
+            "meshes": 13,
+            "triangles": 25618
+          },
+          "rocksPlants": {
+            "meshes": 33,
+            "triangles": 190565
+          },
+          "water": {
+            "meshes": 21,
+            "triangles": 5094
+          },
+          "town": {
+            "meshes": 49,
+            "triangles": 27320
+          },
+          "farGrass": {
+            "meshes": 12,
+            "triangles": 166320
+          },
+          "trees": {
+            "meshes": 8,
+            "triangles": 137848
+          },
+          "characters": {
+            "meshes": 398,
+            "triangles": 231771
+          },
+          "farMeadow": {
+            "meshes": 6,
+            "triangles": 30960
+          }
+        },
+        "top": [
+          {
+            "name": "characters | Armature / SK_Character / SK_Character_mesh",
+            "meshes": 1,
+            "triangles": 73947
+          },
+          {
+            "name": "trees | Game1_ShadowWolf_WolfveilValley / Game 1 ORIGINAL uploaded elm / elm-broad / elm-broad-bark",
+            "meshes": 1,
+            "triangles": 35508
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / SWV_Owner_LongGrass_Tile_2m_Far_-2:-4",
+            "meshes": 1,
+            "triangles": 30240
+          },
+          {
+            "name": "trees | Game1_ShadowWolf_WolfveilValley / Game 1 ORIGINAL uploaded elm / elm-broad / elm-broad-leaf",
+            "meshes": 1,
+            "triangles": 28302
+          },
+          {
+            "name": "characters | Scene / Armature / tripo_node_bdd73c28-af44-45e3-b758-1d783314f872",
+            "meshes": 4,
+            "triangles": 27680
+          },
+          {
+            "name": "trees | Game1_ShadowWolf_WolfveilValley / WV_Area_town_Game 1 ORIGINAL uploaded elm / elm-wild / elm-wild-bark",
+            "meshes": 1,
+            "triangles": 26100
+          },
+          {
+            "name": "terrain | Game1_ShadowWolf_WolfveilValley / SWV_Streamed_OverworldFloor / SWV_ActiveAreaFloor_town",
+            "meshes": 1,
+            "triangles": 25916
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / SWV_Owner_LongGrass_Tile_2m_Far_-1:-3",
+            "meshes": 1,
+            "triangles": 23760
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / SWV_Owner_LongGrass_Tile_2m_Far_-1:-4",
+            "meshes": 1,
+            "triangles": 23040
+          },
+          {
+            "name": "rocksPlants | Game1_ShadowWolf_WolfveilValley / SWV_BakedRockField / SWV_BakedRock_boulder_LOD2",
+            "meshes": 1,
+            "triangles": 21432
+          },
+          {
+            "name": "trees | Game1_ShadowWolf_WolfveilValley / WV_Area_town_Game 1 ORIGINAL uploaded elm / elm-wild / elm-wild-leaf",
+            "meshes": 1,
+            "triangles": 21100
+          },
+          {
+            "name": "farGrass | Game1_ShadowWolf_WolfveilValley / WV_Area_town_SWV_Owner_LongGrass_Tile_2m_Far_1:-4",
+            "meshes": 1,
+            "triangles": 20880
+          }
+        ]
+      }
+    }
+  ],
+  "toggles": [],
+  "errors": [],
+  "log": [
+    "08:32:46 town.plaza.N: 638 calls, 1067420 tris, frame median 30.9 ms, gpu 10.68 ms",
+    "08:33:05 town.plaza.S: 673 calls, 917088 tris, frame median 27.4 ms, gpu 9.76 ms"
+  ],
+  "envAfter": {
+    "backend": "WebGPU",
+    "rendererChoice": {
+      "kind": "webgpu",
+      "reason": "override"
+    },
+    "gpuInfo": {
+      "renderer": "amd rdna-3",
+      "gpuClass": "unknown",
+      "deviceMemoryGb": 32,
+      "cpuCores": 16,
+      "powerPreference": "high-performance",
+      "vramBytes": null,
+      "api": "WebGPU"
+    },
+    "adapter": {
+      "vendor": "amd",
+      "architecture": "rdna-3",
+      "device": "",
+      "description": ""
+    },
+    "glRenderer": null,
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Claude/6.6395.0 Chrome/156.0.8078.100 Safari/537.36 MSIX",
+    "browser": [
+      {
+        "brand": "Not:A-Brand",
+        "version": "8.0.0.0"
+      },
+      {
+        "brand": "Chromium",
+        "version": "156.0.8078.100"
+      }
+    ],
+    "timestampQuery": true,
+    "webglTimerQuery": false,
+    "canvas": {
+      "width": 960,
+      "height": 720,
+      "cssWidth": 1024,
+      "cssHeight": 768
+    },
+    "pixelRatio": 0.9375,
+    "devicePixelRatio": 1.25,
+    "graphicsSettings": {
+      "artStyle": "original",
+      "quality": "low",
+      "shadows": false,
+      "fpsCap": 60,
+      "inkPalette": "vibrant"
+    },
+    "graphicsBudget": {
+      "quality": "low",
+      "shadows": false,
+      "shadowSize": 256,
+      "shadowExtent": 14,
+      "fogScale": 0.45,
+      "particleScale": 0.2,
+      "tighten": "performance"
+    },
+    "inkLevel": 0,
+    "inkPalette": "vibrant",
+    "wholeWorld": false,
+    "area": "town",
+    "pageVisible": "hidden",
+    "hasFocus": false,
+    "rafPump": true,
+    "threeRoads": null
+  },
+  "finishedAt": "2026-11-23T08:33:05.472Z",
+  "received": {
+    "at": "2026-11-23T08:33:05.470Z",
+    "commit": "6cd0226d",
+    "branch": "claude/low-poly-world-20261122",
+    "dirty": false
+  }
+}

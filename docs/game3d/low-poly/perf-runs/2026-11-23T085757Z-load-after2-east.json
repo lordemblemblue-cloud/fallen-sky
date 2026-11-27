@@ -1,0 +1,214 @@
+{
+  "schema": "game3d-perf-probe/load-1",
+  "label": "load-after2-east",
+  "startedAt": "2026-11-23T08:57:57.319Z",
+  "kind": "travel",
+  "to": "east",
+  "landing": "east.flats",
+  "sceneMs": 6840,
+  "curtainError": false,
+  "renderer": "webgpu",
+  "area": "east",
+  "shownMs": 31989,
+  "settledMs": 32799,
+  "stable": true,
+  "counted": {
+    "meshes": 1186,
+    "triangles": 3397009,
+    "drawCalls": 1180,
+    "textures": 159,
+    "textureMB": 404
+  },
+  "groups": [
+    {
+      "owner": "WV_4MileRadius_StreamingSolidMeadow",
+      "meshes": 152,
+      "triangles": 1983304,
+      "drawCalls": 152,
+      "texMB": 0
+    },
+    {
+      "owner": "Game1_ShadowWolf_WolfveilValley",
+      "meshes": 158,
+      "triangles": 747702,
+      "drawCalls": 152,
+      "texMB": 141
+    },
+    {
+      "owner": "(scene)",
+      "meshes": 69,
+      "triangles": 245196,
+      "drawCalls": 69,
+      "texMB": 122
+    },
+    {
+      "owner": "Character",
+      "meshes": 393,
+      "triangles": 183409,
+      "drawCalls": 393,
+      "texMB": 26
+    },
+    {
+      "owner": "Scene",
+      "meshes": 5,
+      "triangles": 65997,
+      "drawCalls": 5,
+      "texMB": 72
+    },
+    {
+      "owner": "Artemis_Body",
+      "meshes": 3,
+      "triangles": 65353,
+      "drawCalls": 3,
+      "texMB": 16
+    },
+    {
+      "owner": "Game3D_Clone_AmbientBirds_VisualOnly",
+      "meshes": 5,
+      "triangles": 27694,
+      "drawCalls": 5,
+      "texMB": 1
+    },
+    {
+      "owner": "Wolfveil_Classic_Reused_Suigen_Trees_Bamboo_Rocks",
+      "meshes": 26,
+      "triangles": 13787,
+      "drawCalls": 26,
+      "texMB": 5
+    },
+    {
+      "owner": "Lunar_Anchor",
+      "meshes": 45,
+      "triangles": 13424,
+      "drawCalls": 45,
+      "texMB": 0
+    },
+    {
+      "owner": "Rain_Anchor",
+      "meshes": 77,
+      "triangles": 11420,
+      "drawCalls": 77,
+      "texMB": 0
+    },
+    {
+      "owner": "AXE_LunarMountainGate_3D",
+      "meshes": 70,
+      "triangles": 9974,
+      "drawCalls": 70,
+      "texMB": 0
+    },
+    {
+      "owner": "Husky_Anchor",
+      "meshes": 46,
+      "triangles": 9302,
+      "drawCalls": 46,
+      "texMB": 0
+    },
+    {
+      "owner": "root",
+      "meshes": 35,
+      "triangles": 7706,
+      "drawCalls": 35,
+      "texMB": 0
+    },
+    {
+      "owner": "node_0",
+      "meshes": 73,
+      "triangles": 6949,
+      "drawCalls": 73,
+      "texMB": 21
+    },
+    {
+      "owner": "AXE_MoonfallEntranceGate",
+      "meshes": 9,
+      "triangles": 4676,
+      "drawCalls": 9,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_weathered_tablet",
+      "meshes": 2,
+      "triangles": 780,
+      "drawCalls": 2,
+      "texMB": 0
+    },
+    {
+      "owner": "SWV_CaveDestinationPortals",
+      "meshes": 2,
+      "triangles": 208,
+      "drawCalls": 2,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_spirit_vein",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_reinforce_outcrop",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_soul_bloom",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    },
+    {
+      "owner": "Discovery_ft_hidden_divine_cache",
+      "meshes": 4,
+      "triangles": 32,
+      "drawCalls": 4,
+      "texMB": 0
+    }
+  ],
+  "precompile": {
+    "pipelines": 138,
+    "ms": 8897,
+    "timedOut": false
+  },
+  "downloads": {
+    "files": 2,
+    "mb": 0,
+    "transferMb": 0,
+    "largest": [
+      {
+        "file": "/models/luna-hi3d/warrior.glb",
+        "kb": 5,
+        "transferKb": 5,
+        "ms": 27
+      },
+      {
+        "file": "lic/6876751a602125f45f1861b9/ancient_tree_3d_model.fbm/ancient_tree_3d_model_basecolor.jpg",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 191
+      }
+    ]
+  },
+  "rendererAtEnd": {
+    "kind": "webgpu",
+    "reason": "override"
+  },
+  "modelCache": {
+    "files": 49,
+    "bytes": 122746356,
+    "hits": 223,
+    "misses": 88,
+    "evicted": 0,
+    "maxBytes": 201326592
+  },
+  "audit": [],
+  "received": {
+    "at": "2026-11-23T08:57:57.319Z",
+    "commit": "739321f3",
+    "branch": "claude/low-poly-world-2-20261123",
+    "dirty": false
+  }
+}

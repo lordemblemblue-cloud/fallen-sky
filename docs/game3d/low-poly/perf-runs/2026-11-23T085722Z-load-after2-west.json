@@ -1,0 +1,272 @@
+{
+  "schema": "game3d-perf-probe/load-1",
+  "label": "load-after2-west",
+  "startedAt": "2026-11-23T08:57:22.761Z",
+  "kind": "travel",
+  "to": "west",
+  "landing": "west.cedarTerraces",
+  "sceneMs": 12665,
+  "curtainError": false,
+  "renderer": "webgpu",
+  "area": "west",
+  "shownMs": 35182,
+  "settledMs": 40789,
+  "stable": true,
+  "counted": {
+    "meshes": 1099,
+    "triangles": 2495268,
+    "drawCalls": 1106,
+    "textures": 156,
+    "textureMB": 417
+  },
+  "groups": [
+    {
+      "owner": "Game1_ShadowWolf_WolfveilValley",
+      "meshes": 157,
+      "triangles": 1107978,
+      "drawCalls": 153,
+      "texMB": 128
+    },
+    {
+      "owner": "WV_4MileRadius_StreamingSolidMeadow",
+      "meshes": 140,
+      "triangles": 668242,
+      "drawCalls": 140,
+      "texMB": 0
+    },
+    {
+      "owner": "Character",
+      "meshes": 393,
+      "triangles": 183409,
+      "drawCalls": 393,
+      "texMB": 26
+    },
+    {
+      "owner": "(scene)",
+      "meshes": 44,
+      "triangles": 142336,
+      "drawCalls": 44,
+      "texMB": 122
+    },
+    {
+      "owner": "Scene",
+      "meshes": 5,
+      "triangles": 65997,
+      "drawCalls": 5,
+      "texMB": 72
+    },
+    {
+      "owner": "Artemis_Body",
+      "meshes": 3,
+      "triangles": 65353,
+      "drawCalls": 3,
+      "texMB": 16
+    },
+    {
+      "owner": "Game3D_Clone_AmbientBirds_VisualOnly",
+      "meshes": 5,
+      "triangles": 27694,
+      "drawCalls": 5,
+      "texMB": 1
+    },
+    {
+      "owner": "Wolfveil_Classic_Reused_Suigen_Trees_Bamboo_Rocks",
+      "meshes": 34,
+      "triangles": 18660,
+      "drawCalls": 34,
+      "texMB": 5
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_12",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_7",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_4",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_9",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_2",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_1",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_10",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_14",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_6",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_5",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Wolfveil_Zombie_southwest_ruins_0",
+      "meshes": 2,
+      "triangles": 15062,
+      "drawCalls": 3,
+      "texMB": 26
+    },
+    {
+      "owner": "Lunar_Anchor",
+      "meshes": 45,
+      "triangles": 13424,
+      "drawCalls": 45,
+      "texMB": 0
+    },
+    {
+      "owner": "Rain_Anchor",
+      "meshes": 77,
+      "triangles": 11420,
+      "drawCalls": 77,
+      "texMB": 0
+    },
+    {
+      "owner": "Husky_Anchor",
+      "meshes": 46,
+      "triangles": 9302,
+      "drawCalls": 46,
+      "texMB": 0
+    },
+    {
+      "owner": "root",
+      "meshes": 35,
+      "triangles": 7706,
+      "drawCalls": 35,
+      "texMB": 0
+    },
+    {
+      "owner": "node_0",
+      "meshes": 73,
+      "triangles": 6949,
+      "drawCalls": 73,
+      "texMB": 21
+    },
+    {
+      "owner": "Discovery_ft_weathered_tablet",
+      "meshes": 2,
+      "triangles": 780,
+      "drawCalls": 2,
+      "texMB": 0
+    }
+  ],
+  "precompile": {
+    "pipelines": 162,
+    "ms": 7327,
+    "timedOut": false
+  },
+  "downloads": {
+    "files": 7,
+    "mb": 0,
+    "transferMb": 0,
+    "largest": [
+      {
+        "file": "/models/luna-hi3d/warrior.glb",
+        "kb": 5,
+        "transferKb": 5,
+        "ms": 23
+      },
+      {
+        "file": "876751a602125f45f1861b9/files/public/6876751a602125f45f1861b9/b7fd6fb1f_standingidle01.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 8075
+      },
+      {
+        "file": "2125f45f1861b9/files/public/6876751a602125f45f1861b9/29505649e_standingdeathbackward01.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 8075
+      },
+      {
+        "file": "6876751a602125f45f1861b9/files/public/6876751a602125f45f1861b9/62b704f49_standingblock.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 8069
+      },
+      {
+        "file": "602125f45f1861b9/files/public/6876751a602125f45f1861b9/39c79f4e9_standingdodgebackward.fbx",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 8068
+      },
+      {
+        "file": "/images/public/6876751a602125f45f1861b9/78dd6d60b_ancient_tree_3d_model_basecolor.jpg",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 142
+      },
+      {
+        "file": "lic/6876751a602125f45f1861b9/ancient_tree_3d_model.fbm/ancient_tree_3d_model_basecolor.jpg",
+        "kb": 0,
+        "transferKb": 0,
+        "ms": 283
+      }
+    ]
+  },
+  "rendererAtEnd": {
+    "kind": "webgpu",
+    "reason": "override"
+  },
+  "modelCache": {
+    "files": 49,
+    "bytes": 122746356,
+    "hits": 144,
+    "misses": 87,
+    "evicted": 0,
+    "maxBytes": 201326592
+  },
+  "audit": [],
+  "received": {
+    "at": "2026-11-23T08:57:22.763Z",
+    "commit": "739321f3",
+    "branch": "claude/low-poly-world-2-20261123",
+    "dirty": false
+  }
+}

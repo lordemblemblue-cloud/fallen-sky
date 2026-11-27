@@ -3,6 +3,8 @@
 // Models remain scene-owned: do not dispose shared source geometry/materials while
 // any clone can still reference them.
 import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js';
+import { shrinkModelTextures } from '../npc/sharedNpcModel.mjs';
+import { game3dHiPolyRequested } from '../render/lowPolyWorld.mjs';
 
 const defaultSchedule = callback => typeof requestAnimationFrame === 'function'
   ? requestAnimationFrame(callback) : setTimeout(callback, 16);
@@ -13,6 +15,9 @@ export function createSharedSkinnedFBXSpawner(loader, url, {
   maxPerFrame = 2,
   scheduleFrame = defaultSchedule,
   cancelFrame = defaultCancel,
+  // opt-in (docs/GAME3D_LOW_POLY_20261122.md): scale the shared source's textures to 1024 px as they arrive, before any
+  // clone is drawn; ?hiPoly=1 keeps the file's own sizes
+  lowPolyTextures = false,
 } = {}) {
   if (!loader?.load || !url) throw new Error('A loader and asset URL are required');
   const budget = Math.max(1, Math.floor(Number(maxPerFrame) || 2));
@@ -39,7 +44,10 @@ export function createSharedSkinnedFBXSpawner(loader, url, {
     if (disposed) return Promise.reject(new Error('Enemy model source disposed'));
     if (!sourcePromise) {
       sourcePromise = new Promise((resolve, reject) => {
-        loader.load(url, resolve, undefined, reject);
+        loader.load(url, (source) => {
+          if (source && lowPolyTextures && !game3dHiPolyRequested()) shrinkModelTextures(source, 1024);
+          resolve(source);
+        }, undefined, reject);
       }).catch(error => {
         sourcePromise = null; // permit retry when the file temporarily fails
         throw error;
