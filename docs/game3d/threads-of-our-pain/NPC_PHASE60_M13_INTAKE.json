@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M13",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M13.md",
+    "D19_S23.md",
+    "R92_M13-M15_SOURCE_GROUNDED_SCENE_REFINEMENTS.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R118_M13_M14_MEMORIAL_AND_COUNCIL_CONSTRUCTION_PROMPTS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "M13_APPROACH",
+      "reality": "PRESERVED",
+      "anchor": "M13_PASS_ENTRY",
+      "requires": [
+        "M12_COMPLETE"
+      ],
+      "evidence": "Reach terrace and historian from Hollow Mountain trail"
+    },
+    {
+      "id": "M13_FIXED_EVIDENCE",
+      "reality": "PRESERVED",
+      "anchor": "M13_FIXED_NAMES",
+      "requires": [
+        "M13_APPROACH"
+      ],
+      "evidence": "Actual observations of protected old lettering, recent scratches and pale debris; blank panel distinguished"
+    },
+    {
+      "id": "M13_MIGRATE18",
+      "reality": "ORIGINAL",
+      "anchor": "M13_SAFE18",
+      "requires": [
+        "M13_FIXED_EVIDENCE"
+      ],
+      "evidence": "Voluntary authored safe transfer after combat/physics settle, destination preflight and rollback"
+    },
+    {
+      "id": "M13_ESCORT_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "M13_GUARD_NODE",
+      "requires": [
+        "M13_MIGRATE18"
+      ],
+      "evidence": "Actual group reaches protected worksite; guard confirms arrivals, no kill quota"
+    },
+    {
+      "id": "M13_ROOF_READY",
+      "reality": "ORIGINAL",
+      "anchor": "M13_ROOF_SOCKET",
+      "requires": [
+        "M13_MIGRATE18"
+      ],
+      "evidence": "Actual supported beam placement with worker and dry strip verified"
+    },
+    {
+      "id": "M13_NAMES",
+      "reality": "ORIGINAL",
+      "anchor": "M13_MASON",
+      "requires": [
+        "M13_ESCORT_SAFE",
+        "M13_ROOF_READY"
+      ],
+      "evidence": "Actual consent-scoped monument participation, scripted fictional names and planned blank space"
+    },
+    {
+      "id": "M13_RETURN15",
+      "reality": "PRESERVED",
+      "anchor": "M13_SAFE15",
+      "requires": [
+        "M13_NAMES"
+      ],
+      "evidence": "Authored safe return; original roof and names retained"
+    },
+    {
+      "id": "M13_REPORT",
+      "reality": "PRESERVED",
+      "anchor": "M13_REPORT",
+      "requires": [
+        "M13_RETURN15"
+      ],
+      "evidence": "Compare surviving evidence and remembered testimony separately; duplicate tracing authorized"
+    },
+    {
+      "id": "M13_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "M14_MESSENGER",
+      "requires": [
+        "M13_REPORT"
+      ],
+      "evidence": "Receive neutral Sable summons; no M14 spoiler or automatic acceptance"
+    }
+  ],
+  "actors": [
+    {
+      "role": "historian",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "assistant",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "survivor",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "mason",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "worker",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "carrier",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "parent",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "child",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "Sable Vey messenger",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_006",
+      "name": "Lyra the Seeker",
+      "link": "M12 lead and Wolfveil archive; not automatically terrace historian"
+    },
+    {
+      "id": "FS_NPC_013",
+      "name": "Doran Ironroot",
+      "link": "Mountain/mining thematic association; not original worker"
+    },
+    {
+      "id": "FS_NPC_018",
+      "name": "Veyron Starwatch",
+      "link": "S23 proposed coordinator, not verified historian or mason"
+    },
+    {
+      "id": "FS_NPC_022",
+      "name": "Garrick Ironheart",
+      "link": "Craft thematic association, not original mason"
+    },
+    {
+      "id": "FS_NPC_023",
+      "name": "Aster Windcrest",
+      "link": "Mountain guide thematic association, no physical assignment"
+    }
+  ],
+  "evidence": {
+    "fixedRequired": [
+      "protected_old_lettering",
+      "recent_shallow_scratches",
+      "pale_debris"
+    ],
+    "reservedBlankIsDamage": false,
+    "missingLettersReconstructed": false,
+    "culprit": "UNCONFIRMED",
+    "intent": "UNCONFIRMED",
+    "classes": [
+      "physical_observation",
+      "testimony",
+      "conjecture"
+    ],
+    "duplicateTracingToWolfveil": true,
+    "optionalReferencesRequireActualReceipts": true
+  },
+  "escort": {
+    "routes": [
+      "direct_worker_brace",
+      "guard_upper_bypass",
+      "lower_defense"
+    ],
+    "proposedExteriorWaves": 2,
+    "proposedEnemiesPerWave": [
+      1,
+      2
+    ],
+    "tuningStatus": "PROPOSED_UNTESTED",
+    "civilianProtectedWait": true,
+    "actualArrivalRequired": true,
+    "laggingCarrier": "WAIT_NEXT_SHELTER",
+    "defeat": "RESTORE_GUARDED_NODE",
+    "preserveArrivalsAndRoof": true,
+    "forcedCivilianDeath": false,
+    "killQuota": false
+  },
+  "roof": {
+    "workerSupportedPlacement": true,
+    "occupancyInterlock": true,
+    "freePhysics": false,
+    "visibleDryStrip": true,
+    "materialPurchaseRequired": false
+  },
+  "names": {
+    "alternatives": [
+      "carve_scripted_names",
+      "carry_slate",
+      "hold_panel_for_mason"
+    ],
+    "survivorConsentRequired": true,
+    "playerAccountNameAllowed": false,
+    "unknownNames": [
+      "leave_space",
+      "known_name_if_available",
+      "family_mark"
+    ],
+    "blankReservedForFutureArrivals": true,
+    "personalChiselRequired": false,
+    "actualParticipationRequired": true,
+    "previousS23SubtaskAcknowledgedOnlyIfVerified": true
+  },
+  "assets": {
+    "sharedMonument": "M13_D19_S23_MONUMENT_BASE",
+    "sharedPillars": [
+      "M13_PILLAR_A",
+      "M13_PILLAR_B"
+    ],
+    "preservedVariant": "weathered stone, mineral grooves, collapsed roof, recent scratches",
+    "originalVariant": "fresh grooves, intact pillars and timber roof",
+    "sameWorksiteAsD19S23": true,
+    "distinctFromM11Refuge": true,
+    "transforms": null,
+    "verified": false
+  },
+  "migration": {
+    "authoredOnly": true,
+    "deferWhileCombatOrPhysics": true,
+    "preflightCollisionControllerRigs": true,
+    "rollbackOnFailure": true,
+    "oneActiveReality": true
+  },
+  "optionalIndependent": [
+    "D19",
+    "S23"
+  ],
+  "d19": {
+    "twoInitialFocusEitherOrder": true,
+    "claimAndSecondVistaRequired": true,
+    "olderChiselRetained": true,
+    "cosmeticOnce": true,
+    "inscriptionCopyDistinctFromS23Fragment": true,
+    "noM13Grant": true
+  },
+  "s23": {
+    "youngerPositionGougesTrayRequired": true,
+    "olderActualWorksiteAndAcknowledgmentRequired": true,
+    "retrospectiveActualEvidenceOnly": true,
+    "skippedNpcRecordNotPlayerCredit": true,
+    "autoCompleteFromM13": false,
+    "exactPhase": "UNRESOLVED"
+  },
+  "completion": {
+    "next": "M14_READY",
+    "autoAccept": false,
+    "neutralSummons": true,
+    "spoiler": false,
+    "rewardGrant": false,
+    "ordinaryMainXpProposed": true,
+    "newPower": false
+  },
+  "prohibitions": [
+    "forced personal chisel",
+    "mandatory paired focus",
+    "mandatory D19 or S23",
+    "forced civilian death",
+    "account name in monument",
+    "invented missing text",
+    "confirmed eraser",
+    "M14 incident spoiler",
+    "free migration",
+    "runtime activation"
+  ]
+}
