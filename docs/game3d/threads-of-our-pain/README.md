@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R106 — opening voice and cinematic selection:** [Giving every character a voice](R106_M01-M10_VOICE_AND_CINEMATIC_SELECTION_PASS.md). M01–M10 primary and editorial sources checked; ten proposed performance packets, selection matrix and terrain deltas. Preserve deliberate M05 repetition/death and M10 physical overlap, avoid stacked alternatives. Voice QA 10/20; next M11–M20. Draft, not recorded or built.
+
 > **R105 — campaign pacing and regional content register:** [Making the world feel alive](R105_CAMPAIGN_PACING_AND_REGIONAL_CONTENT_REGISTER.md). Verified planning partition of 105 unique optional IDs into ten content families, eight campaign pacing bands and seven proposed connective scene packets. Not actual spatial density or new unlocks; survey and chronology pending. Next R106 voice/cinematic QA M01–M10. Draft only.
 
 > **R104 — completed supplemental opportunity review:** [What survives our absence](R104_S51-S55_FINAL_OPPORTUNITY_AND_DECISION_REGISTER.md). S51–S55 source re-audit, five proposed scene packets and Claude deltas; consolidated closure/ownership/consent decision register. Supplemental coverage 105/105 optional IDs and 20/20 main IDs; exact original phases and approval/runtime gates remain open. Next R105 pacing and regional quest density. Draft only.
