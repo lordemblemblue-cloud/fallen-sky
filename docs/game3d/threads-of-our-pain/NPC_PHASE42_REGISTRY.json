@@ -1,0 +1,744 @@
+{
+  "schemaVersion": 1,
+  "status": "DESIGN_DRAFT_NOT_RUNTIME",
+  "sourceAuthority": [
+    "AGENTS.md",
+    "README.md",
+    "R61_STABLE_ID_INDEX.md",
+    "R62_CHARACTER_QUEST_AUDIT.md",
+    "R64A_OWNER_ENDING_RECONCILIATION.md",
+    "R65_M19-M20_REVISED_FINALE.md",
+    "R66_QUEST_CONTINUITY_RECONCILIATION.md",
+    "R67_ACTOR_PHASE_REGISTER.md",
+    "R68_LATE_CAMPAIGN_PHASE_REGISTER.md",
+    "R69_ORIGINAL_OPPORTUNITY_SCHEDULE.md",
+    "R70_ORIGINAL_OPPORTUNITY_SCHEDULE.md",
+    "R71_ORIGINAL_OPPORTUNITY_SCHEDULE.md",
+    "R72_ORIGINAL_OPPORTUNITY_SCHEDULE.md",
+    "R73_ORIGINAL_OPPORTUNITY_SCHEDULE.md",
+    "R74_ORIGINAL_OPPORTUNITY_SCHEDULE.md",
+    "R75_POSTGAME_PROGRESSION_DECISIONS.md",
+    "R75A_POSTGAME_PROGRESSION_ADDENDUM.md"
+  ],
+  "canonicalIds": {
+    "main": [
+      "M01",
+      "M02",
+      "M03",
+      "M04",
+      "M05",
+      "M06",
+      "M07",
+      "M08",
+      "M09",
+      "M10",
+      "M11",
+      "M12",
+      "M13",
+      "M14",
+      "M15",
+      "M16",
+      "M17",
+      "M18",
+      "M19",
+      "M20"
+    ],
+    "side": [
+      "S01",
+      "S02",
+      "S03",
+      "S04",
+      "S05",
+      "S06",
+      "S07",
+      "S08",
+      "S09",
+      "S10",
+      "S11",
+      "S12",
+      "S13",
+      "S14",
+      "S15",
+      "S16",
+      "S17",
+      "S18",
+      "S19",
+      "S20",
+      "S21",
+      "S22",
+      "S23",
+      "S24",
+      "S25",
+      "S26",
+      "S27",
+      "S28",
+      "S29",
+      "S30",
+      "S31",
+      "S32",
+      "S33",
+      "S34",
+      "S35",
+      "S36",
+      "S37",
+      "S38",
+      "S39",
+      "S40",
+      "S41",
+      "S42",
+      "S43",
+      "S44",
+      "S45",
+      "S46",
+      "S47",
+      "S48",
+      "S49",
+      "S50",
+      "S51",
+      "S52",
+      "S53",
+      "S54",
+      "S55"
+    ],
+    "discoveries": [
+      "D01",
+      "D02",
+      "D03",
+      "D04",
+      "D05",
+      "D06",
+      "D07",
+      "D08",
+      "D09",
+      "D10",
+      "D11",
+      "D12",
+      "D13",
+      "D14",
+      "D15",
+      "D16",
+      "D17",
+      "D18",
+      "D19",
+      "D20",
+      "D21",
+      "D22",
+      "D23",
+      "D24",
+      "D25",
+      "D26",
+      "D27",
+      "D28",
+      "D29",
+      "D30",
+      "D31",
+      "D32",
+      "D33",
+      "D34",
+      "D35",
+      "D36",
+      "D37",
+      "D38",
+      "D39",
+      "D40",
+      "D41",
+      "D42",
+      "D43",
+      "D44",
+      "D45",
+      "D46",
+      "D47",
+      "D48",
+      "D49",
+      "D50"
+    ]
+  },
+  "notes": [
+    "Associations are proposed coordination or thematic links, not canonical quest-giver replacements or physical presence. Original-reality characters do not appear in preserved scenes; M12 associations are thematic.",
+    "S38 Hesper is subject; independent clerk/Sable own verification. S51 is local guide owned; hostile goddess is thematic only. Eryndor not identical to S20 spirit. S17/S18 preserve local craftsman and adult coordination.",
+    "Draft IDs, surnames, rewards and expansion prefixes require mapping to actual existing actor IDs. Aldren expansion prefix unresolved. Do not infer personal quest counts or activate content.",
+    "M20 associations are conditional on authorized actor lifetime, never proof of survival."
+  ],
+  "actors": [
+    {
+      "proposedNpcId": "FS_NPC_001",
+      "name": "Aldren",
+      "role": "Merchant",
+      "reality": "PRESERVED",
+      "proposedLocation": "Wolfveil market / trade road",
+      "sideQuestCoordination": [
+        "S01",
+        "S30"
+      ],
+      "mainStoryAssociations": [
+        "M01"
+      ],
+      "proposedReward": "trade accessories",
+      "proposedPersonalPrefix": null,
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_002",
+      "name": "Kael",
+      "role": "Outlaw",
+      "reality": "PRESERVED",
+      "proposedLocation": "West Root",
+      "sideQuestCoordination": [
+        "S02"
+      ],
+      "mainStoryAssociations": [
+        "M06"
+      ],
+      "proposedReward": "Fangs of Redemption",
+      "proposedPersonalPrefix": "KAE",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_003",
+      "name": "Eryndor",
+      "role": "Ancient spirit",
+      "reality": "PRESERVED",
+      "proposedLocation": "West Root crypt",
+      "sideQuestCoordination": [
+        "S03",
+        "S20"
+      ],
+      "mainStoryAssociations": [
+        "M07",
+        "M08"
+      ],
+      "proposedReward": "Eternal Promise",
+      "proposedPersonalPrefix": "ERY",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_004",
+      "name": "Moon Goddess",
+      "role": "Protector",
+      "reality": "AUTHORIZED_DIVINE",
+      "proposedLocation": "Lunar clearing / authorized story locations",
+      "sideQuestCoordination": [
+        "S45",
+        "S54"
+      ],
+      "mainStoryAssociations": [
+        "M02",
+        "M03",
+        "M05",
+        "M06",
+        "M17",
+        "M18",
+        "M19"
+      ],
+      "proposedReward": "Mantle of the Silver Guardian",
+      "proposedPersonalPrefix": "LUN",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_005",
+      "name": "Thoren Ashwood",
+      "role": "Hunter",
+      "reality": "PRESERVED",
+      "proposedLocation": "Forest edge",
+      "sideQuestCoordination": [
+        "S07"
+      ],
+      "mainStoryAssociations": [
+        "M03"
+      ],
+      "proposedReward": "Last Horizon",
+      "proposedPersonalPrefix": "HNT",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_006",
+      "name": "Lyra the Seeker",
+      "role": "Historian / explorer",
+      "reality": "PRESERVED",
+      "proposedLocation": "Wolfveil archive",
+      "sideQuestCoordination": [
+        "S04",
+        "S25"
+      ],
+      "mainStoryAssociations": [
+        "M06",
+        "M07",
+        "M08",
+        "M13"
+      ],
+      "proposedReward": "Compass of the Forgotten Age",
+      "proposedPersonalPrefix": "LYR",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_007",
+      "name": "Garran Stoneward",
+      "role": "Gate Warden",
+      "reality": "PRESERVED",
+      "proposedLocation": "Wolfveil gate",
+      "sideQuestCoordination": [
+        "S05",
+        "S24"
+      ],
+      "mainStoryAssociations": [
+        "M06",
+        "M15"
+      ],
+      "proposedReward": "Last Shield of Wolfveil",
+      "proposedPersonalPrefix": "GRD",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_008",
+      "name": "Tome",
+      "role": "Akitsu representative",
+      "reality": "PRESERVED",
+      "proposedLocation": "Akitsu / neutral hall",
+      "sideQuestCoordination": [
+        "S26"
+      ],
+      "mainStoryAssociations": [
+        "M14",
+        "M15",
+        "M16"
+      ],
+      "proposedReward": "Horizon's Edge",
+      "proposedPersonalPrefix": "TOM",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_009",
+      "name": "Henut",
+      "role": "Tameri representative",
+      "reality": "PRESERVED",
+      "proposedLocation": "Tameri / neutral hall",
+      "sideQuestCoordination": [
+        "S27",
+        "S31"
+      ],
+      "mainStoryAssociations": [
+        "M14",
+        "M15",
+        "M16"
+      ],
+      "proposedReward": "Heart of the Eternal River",
+      "proposedPersonalPrefix": "HEN",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_010",
+      "name": "Livilla",
+      "role": "Remoria representative",
+      "reality": "PRESERVED",
+      "proposedLocation": "Remoria / neutral hall",
+      "sideQuestCoordination": [
+        "S28"
+      ],
+      "mainStoryAssociations": [
+        "M14",
+        "M15",
+        "M16"
+      ],
+      "proposedReward": "Defender of Liberty",
+      "proposedPersonalPrefix": "LIV",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_011",
+      "name": "Sable Vey",
+      "role": "Neutral mediator",
+      "reality": "PRESERVED",
+      "proposedLocation": "Neutral hall / Wolfveil fountain",
+      "sideQuestCoordination": [
+        "S06",
+        "S29",
+        "S37"
+      ],
+      "mainStoryAssociations": [
+        "M14",
+        "M15",
+        "M16"
+      ],
+      "proposedReward": "Covenant of Three",
+      "proposedPersonalPrefix": "SAB",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_012",
+      "name": "Elias Windrow",
+      "role": "Courier",
+      "reality": "PRESERVED",
+      "proposedLocation": "Delivery station / river crossing",
+      "sideQuestCoordination": [
+        "S08",
+        "S35"
+      ],
+      "mainStoryAssociations": [
+        "M08",
+        "M16"
+      ],
+      "proposedReward": "Boots of the Endless Road",
+      "proposedPersonalPrefix": "COR",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_013",
+      "name": "Doran Ironroot",
+      "role": "Miner",
+      "reality": "PRESERVED",
+      "proposedLocation": "West Root cliff / mine",
+      "sideQuestCoordination": [
+        "S09",
+        "S10"
+      ],
+      "mainStoryAssociations": [
+        "M07",
+        "M13"
+      ],
+      "proposedReward": "Mountain's Resolve",
+      "proposedPersonalPrefix": "MIN",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_014",
+      "name": "Neris Tideborne",
+      "role": "Diver",
+      "reality": "PRESERVED",
+      "proposedLocation": "Sunken Temple",
+      "sideQuestCoordination": [
+        "S11",
+        "S44"
+      ],
+      "mainStoryAssociations": [
+        "M09",
+        "M17"
+      ],
+      "proposedReward": "Heart of the Forgotten Ocean",
+      "proposedPersonalPrefix": "DIV",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_015",
+      "name": "Selene Ashveil",
+      "role": "Shrine keeper",
+      "reality": "PRESERVED",
+      "proposedLocation": "Woodland shrine",
+      "sideQuestCoordination": [
+        "S12",
+        "S46"
+      ],
+      "mainStoryAssociations": [
+        "M09",
+        "M10"
+      ],
+      "proposedReward": "Light of the Unanswered Prayer",
+      "proposedPersonalPrefix": "SHR",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_016",
+      "name": "Orin Vellwood",
+      "role": "Bookbinder",
+      "reality": "PRESERVED",
+      "proposedLocation": "Wolfveil archive",
+      "sideQuestCoordination": [
+        "S13",
+        "S41"
+      ],
+      "mainStoryAssociations": [
+        "M08"
+      ],
+      "proposedReward": "Unwritten Testament",
+      "proposedPersonalPrefix": "BND",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_017",
+      "name": "Elowen Greenveil",
+      "role": "Gardener",
+      "reality": "PRESERVED",
+      "proposedLocation": "River meadow / garden",
+      "sideQuestCoordination": [
+        "S14",
+        "S55"
+      ],
+      "mainStoryAssociations": [
+        "M12",
+        "M20"
+      ],
+      "proposedReward": "Seed of Eternity",
+      "proposedPersonalPrefix": "GRN",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_018",
+      "name": "Veyron Starwatch",
+      "role": "Astronomer",
+      "reality": "PRESERVED",
+      "proposedLocation": "Ridge observatory",
+      "sideQuestCoordination": [
+        "S15",
+        "S23"
+      ],
+      "mainStoryAssociations": [
+        "M13",
+        "M17"
+      ],
+      "proposedReward": "Compass of the Endless Sky",
+      "proposedPersonalPrefix": "AST",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_019",
+      "name": "Amara Dawnveil",
+      "role": "Healer",
+      "reality": "PRESERVED",
+      "proposedLocation": "Apothecary / clinic",
+      "sideQuestCoordination": [
+        "S16",
+        "S33",
+        "S48"
+      ],
+      "mainStoryAssociations": [
+        "M11",
+        "M18"
+      ],
+      "proposedReward": "Heart of the Unbroken Healer",
+      "proposedPersonalPrefix": "MED",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_020",
+      "name": "Luma Everlight",
+      "role": "Refugee child",
+      "reality": "ORIGINAL",
+      "proposedLocation": "Mining refuge",
+      "sideQuestCoordination": [
+        "S17",
+        "S18"
+      ],
+      "mainStoryAssociations": [
+        "M11",
+        "M12"
+      ],
+      "proposedReward": "Narrative keepsakes",
+      "proposedPersonalPrefix": "LUM",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_021",
+      "name": "Mara Hearthwood",
+      "role": "Innkeeper",
+      "reality": "PRESERVED",
+      "proposedLocation": "Hearthwood Inn",
+      "sideQuestCoordination": [
+        "S19",
+        "S52"
+      ],
+      "mainStoryAssociations": [
+        "M15",
+        "M16"
+      ],
+      "proposedReward": "Keeper of the Hearth",
+      "proposedPersonalPrefix": "INN",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_022",
+      "name": "Garrick Ironheart",
+      "role": "Blacksmith",
+      "reality": "PRESERVED",
+      "proposedLocation": "Wolfveil forge",
+      "sideQuestCoordination": [
+        "S21",
+        "S32"
+      ],
+      "mainStoryAssociations": [
+        "M13",
+        "M14",
+        "M15",
+        "M16"
+      ],
+      "proposedReward": "Role-specific forge reward",
+      "proposedPersonalPrefix": "FRG",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_023",
+      "name": "Aster Windcrest",
+      "role": "Mountain guide",
+      "reality": "PRESERVED",
+      "proposedLocation": "Northern Highlands",
+      "sideQuestCoordination": [
+        "S22",
+        "S43",
+        "S50"
+      ],
+      "mainStoryAssociations": [
+        "M13",
+        "M17"
+      ],
+      "proposedReward": "Windwalker's Legacy",
+      "proposedPersonalPrefix": "MTG",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_024",
+      "name": "Cassian Valeward",
+      "role": "Commander",
+      "reality": "PRESERVED",
+      "proposedLocation": "Remorian fortress",
+      "sideQuestCoordination": [
+        "S34"
+      ],
+      "mainStoryAssociations": [
+        "M15"
+      ],
+      "proposedReward": "Last Bastion",
+      "proposedPersonalPrefix": "CMD",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_025",
+      "name": "Master Hesper",
+      "role": "Scholar; investigation subject",
+      "reality": "PRESERVED",
+      "proposedLocation": "Archive / diplomatic hall",
+      "sideQuestCoordination": [
+        "S38"
+      ],
+      "mainStoryAssociations": [
+        "M14",
+        "M15",
+        "M16"
+      ],
+      "proposedReward": "Signet of the Unwritten Truth",
+      "proposedPersonalPrefix": "HSP",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_026",
+      "name": "Seren Silverchord",
+      "role": "Musician",
+      "reality": "PRESERVED",
+      "proposedLocation": "Inn / eligible performance venues",
+      "sideQuestCoordination": [
+        "S39"
+      ],
+      "mainStoryAssociations": [
+        "M12",
+        "M16"
+      ],
+      "proposedReward": "Songbook of Two Skies",
+      "proposedPersonalPrefix": "MUS",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_027",
+      "name": "Riven Ashborne",
+      "role": "Soldier",
+      "reality": "PRESERVED",
+      "proposedLocation": "Border town / patrol",
+      "sideQuestCoordination": [
+        "S36",
+        "S40"
+      ],
+      "mainStoryAssociations": [
+        "M16",
+        "M17"
+      ],
+      "proposedReward": "Tomorrow's Resolve",
+      "proposedPersonalPrefix": "RIV",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_028",
+      "name": "Talia Ashwillow",
+      "role": "Caretaker",
+      "reality": "ORIGINAL",
+      "proposedLocation": "Original evacuation / refuge",
+      "sideQuestCoordination": [
+        "S42",
+        "S53"
+      ],
+      "mainStoryAssociations": [
+        "M04",
+        "M05",
+        "M11"
+      ],
+      "proposedReward": "Keeper of the Last Hope",
+      "proposedPersonalPrefix": "CTK",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_029",
+      "name": "Elaris Dawnseeker",
+      "role": "Mortal pilgrim",
+      "reality": "PRESERVED",
+      "proposedLocation": "Pilgrim Mountains",
+      "sideQuestCoordination": [
+        "S47",
+        "S49"
+      ],
+      "mainStoryAssociations": [
+        "M18"
+      ],
+      "proposedReward": "The Unbound Spirit",
+      "proposedPersonalPrefix": "PIL",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    },
+    {
+      "proposedNpcId": "FS_NPC_030",
+      "name": "Unnamed Goddess",
+      "role": "Antagonist; not quest giver",
+      "reality": "AUTHORIZED_DIVINE",
+      "proposedLocation": "Authorized encounters only",
+      "sideQuestCoordination": [
+        "S51"
+      ],
+      "mainStoryAssociations": [
+        "M09",
+        "M10",
+        "M14",
+        "M15",
+        "M16",
+        "M17",
+        "M18",
+        "M19"
+      ],
+      "proposedReward": "Remnant of Two Skies (campaign reward)",
+      "proposedPersonalPrefix": "FRX",
+      "contentStatus": "DRAFT",
+      "enabled": false
+    }
+  ]
+}
