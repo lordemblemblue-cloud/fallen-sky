@@ -665,3 +665,35 @@ test('expanded bows preserve old saves and independent enhancements with level a
  assert.equal(enhancementLevel(capped,'pilgrimBow'),5);assert.throws(()=>enhanceTestWeapon(capped));
  assert.equal(WEAPONS.astralBow.requiredLevel,4);
 });
+
+import {GEAR_SLOTS,gearSlotLabel,equippedVisuals} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+import {ITEM_ART_IDS,ITEM_ARTWORK,itemArtworkFor,validItemArtwork} from '../src/components/fantasybattle/core/itemArtwork.mjs';
+test('accessories use independent slots and stats without altering armor visuals or legacy saves',()=>{
+ const base=newRoadProfile('Jewelry test');
+ const stock={...base,xp:300,gold:1000,inventory:{...base.inventory,groveRing:1,astralPendant:1,groveVest:1}};
+ const armor=equipTestGear(stock,'hero','armor','groveVest');
+ const ring=equipTestGear(armor,'hero','ring','groveRing');
+ const both=equipTestGear(ring,'hero','necklace','astralPendant');
+ assert.deepEqual(GEAR_SLOTS,['armor','mantle','ring','necklace']);
+ assert.equal(gearSlotLabel('ring'),'Ring');
+ assert.deepEqual(equippedVisuals(both,'hero'),['groveVest']);
+ assert.equal(testMemberStats(both,'hero').atk-testMemberStats(armor,'hero').atk,3);
+ assert.equal(testMemberStats(both,'hero').def-testMemberStats(armor,'hero').def,3);
+ assert.equal(testMemberStats(both,'hero').spd-testMemberStats(armor,'hero').spd,2);
+ assert.throws(()=>equipTestGear(stock,'hero','necklace','groveRing'));
+ assert.throws(()=>equipTestGear({...stock,xp:0},'hero','necklace','astralPendant'));
+ assert.throws(()=>testSell(both,'groveRing'));
+ assert.ok(isRoadProfile(both));assert.deepEqual(parseRoadBackup(exportRoadBackup(both)).gear,both.gear);
+ const removed=equipTestGear(both,'hero','ring',null);
+ assert.equal(removed.gear.hero.ring,undefined);assert.ok(isRoadProfile(removed));
+});
+test('reviewed item art registry rejects external URLs, unknown IDs and path traversal',()=>{
+ assert.equal(new Set(ITEM_ART_IDS).size,ITEM_ART_IDS.length);assert.ok(validItemArtwork(ITEM_ARTWORK));
+ const path='/fantasybattle/sapphire/items/groveRing.webp';
+ assert.ok(validItemArtwork({groveRing:path}));assert.equal(itemArtworkFor('groveRing',{groveRing:path}),path);
+ assert.equal(itemArtworkFor('groveRing'),null);
+ for(const bad of ['https://example.com/groveRing.webp','/fantasybattle/sapphire/items/../groveRing.webp','data:image/svg+xml,evil','/fantasybattle/sapphire/items/astralPendant.webp']){
+  assert.equal(validItemArtwork({groveRing:bad}),false);assert.equal(itemArtworkFor('groveRing',{groveRing:bad}),null);
+ }
+ assert.equal(validItemArtwork({unknown:path}),false);assert.equal(itemArtworkFor('unknown',{unknown:path}),null);
+});
