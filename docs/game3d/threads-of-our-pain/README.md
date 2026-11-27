@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R110 — completed optional voice and cinematic selection:** [The final voices](R110_D41-D50_S41-S55_FINAL_OPTIONAL_VOICE_SELECTION.md). D41–D50/S41–S55, 25 performance selections and staging deltas. Optional voice QA 105/105; main voice QA 20/20; combined 125/125 documented. Next R111 chronology/owner decision packet. Draft, not recorded or built.
+
 > **R109 — optional voice selection, second forty entries:** [The people behind the banners](R109_D21-D40_S21-S40_OPTIONAL_VOICE_SELECTION.md). D21–D40/S21–S40 performance and staging selection, political evidence, guardian rest and consent boundaries. Optional voice QA 80/105; main voice QA 20/20. Next R110 D41–D50/S41–S55. Draft, not recorded or built.
 
 > **R108 — optional voice selection, first forty entries:** [Every encounter has a personality](R108_D01-D20_S01-S20_OPTIONAL_VOICE_SELECTION.md). D01–D20/S01–S20 performance and staging selections, shared-location dialogue de-duplication and actual state guards. Optional voice QA 40/105; main voice QA 20/20. Next R109 D21–D40/S21–S40. Draft, not recorded or built.
