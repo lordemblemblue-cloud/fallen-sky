@@ -382,12 +382,12 @@ function QuestJournal({profile,encounter,original,layout,go,back,onClaim,onRoadA
   const roadObjective=<>{road.objectives.map(o=><p key={o.id}>{o.done?'Completed':'Pending'}: {o.label}</p>)}<progress aria-label="Pilgrim Road objectives" max={road.total} value={road.count}/><p>{road.count}/{road.total} encounters cleared.</p></>;
   const roadAction=road.state==='available'||road.state==='complete'?<Btn primary className="fa-journal-action" disabled={Boolean(encounter)} onClick={()=>onRoadAction(road.state==='available'?'accept':'claim')}>{road.state==='available'?'Accept quest':'Complete quest'}</Btn>:<Btn primary className="fa-journal-action" disabled={Boolean(encounter)||road.state==='claimed'} onClick={()=>go('07')}>{road.state==='claimed'?'Completed':'View objective'}</Btn>;
   const shownAction=roadSelected?roadAction:action;
-  if(original)return <div className="fa-original-journal">
+  if(original)return <div className={'fa-original-journal'+(road.state!=='locked'?' fa-journal-expanded':'')}>
     <h2 className="fa-journal-title">Quest Journal</h2>
     <nav className="fa-journal-tabs" aria-label="Quest filters">{filterButtons}<Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={back}>Back</Btn></nav>
     <nav className="fa-journal-nav" aria-label="Journal views">{filterButtons}<Btn onClick={()=>go('07')}>World map</Btn><Btn onClick={()=>go('24')}>Bestiary</Btn><Btn onClick={back}>Back</Btn></nav>
     <h3 className="fa-journal-list-title">Quest log</h3><section className="fa-journal-list" aria-label="Quest list">{questEntry}</section>
-    <div className="fa-journal-empty">{road.state==='locked'?'No additional quests until the Grove quest is completed.':'Chapter 2 unlocked'}</div>
+    {road.state==='locked'&&<div className="fa-journal-empty">No additional quests until the Grove quest is completed.</div>}
     {visible?<><h3 className="fa-journal-name">{title}</h3><div className="fa-journal-status">{roadSelected?roadStatus:status}</div><h3 className="fa-journal-objective-title">Objective</h3><section className="fa-journal-objective">{roadSelected?roadObjective:objective}</section>
     <h3 className="fa-journal-description-title">Quest details</h3><section className="fa-journal-description"><p>{story}</p>{encounter&&<p>Quest actions are locked during combat.</p>}</section>
     <h3 className="fa-journal-reward-title">Rewards</h3><section className="fa-journal-rewards">{reward}</section></>:<section className="fa-journal-no-selection"><p>Select a filter with an available quest to view its objectives.</p></section>}
