@@ -1,6 +1,8 @@
 # R84 — Unified New Game Plus and postgame progression contract
 27 November 2026 | Owner-directed consolidation of R76–R76E with R83 chronology. Design requirements and proposed implementation handoff, not code or final balance. R76A–E and R64A/R65 take precedence over older broad R75/R76 replay proposals.
 
+> **R80–R82 — completed provisional objective classification:** [R80 reconstructed D31–D40/S31–S40](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md), [R81 D41–D50/S41–S50](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md), [R82 S51–S55 and final coverage](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md). 105/105 IDs provisionally classified (50 discoveries, 55 adventures). R80 reconstructed from source, not recovered verbatim. Exact closing predicates, ending access, pending policy approvals and runtime validation remain open. R83/R84 precedence retained.
+
 ## 1. Confirmed owner direction and open decisions
 | Topic | Current contract | Status |
 |---|---|---|
