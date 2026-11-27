@@ -1548,3 +1548,6 @@
 .fa-merchant-price label,.fa-craft-quantity label{display:inline-flex;align-items:center;gap:.25em}
 .fa-merchant-price input,.fa-craft-quantity input{width:3.5em;min-width:0;max-height:100%;padding:.1em .2em;font:inherit;color:#edf2f6;background:#142448;border:1px solid #728eb7;border-radius:4px;pointer-events:auto}
 .fa-original-craft .fa-craft-recipe{min-height:2.8em}
+
+/* Six live conversation options share the original navigation area. */
+.fa-dialogue-escort .fa-dialogue-nav{grid-template-rows:repeat(6,minmax(0,1fr));gap:2%;overflow:auto;pointer-events:auto}
