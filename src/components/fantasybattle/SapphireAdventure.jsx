@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FantasyBattleStage, UNITS } from './FantasyBattleStage.js';
-import { GEAR, GEAR_SLOTS, gearFor, gearCount, equippedVisuals } from './core/equipmentCatalog.mjs';
+import { GEAR, GEAR_SLOTS, gearFor, gearCount, equippedVisuals, gearMetadata, gearEligible, activeGearSet } from './core/equipmentCatalog.mjs';
 import { companionAsset, visualFor } from './core/companionVisuals.mjs';
 import { ACTIONS, ACTION_ORDER, actionsForClass } from './core/battleRules.mjs';
 import {enemyPortrait} from './core/enemyVisuals.mjs';
@@ -725,7 +725,7 @@ function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,
   const cards=visible.map(([key,i])=><Btn key={key} className="fa-merchant-card" primary={id===key} aria-pressed={id===key} onClick={()=>setSelectedId(key)}><ItemArt id={key}/><strong>{i.name}</strong><span>{i[mode]} gold</span><small>Owned: {inv[key]||0}</small></Btn>);
   const paging=<><Btn disabled={index===0} aria-label="Previous items" onClick={()=>setPageIndex(index-1)}>‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} aria-label="Next items" onClick={()=>setPageIndex(index+1)}>›</Btn></>;
   const reason=!ready?'Visit a service marker to trade.':!item?'Select an available item.':mode==='buy'&&profile.gold<price?'Insufficient gold.':mode==='buy'&&owned>=100000?'Inventory limit reached.':mode==='sell'&&owned<=equipped?'Equipped items cannot be sold.':'Confirm to trade one item.';
-  const detail=item?<><p>Type: {item.kind}</p><p>Owned: {owned} · Equipped: {equipped||0}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP.</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Buy: {item.buy||0} gold · Sell: {item.sell||0} gold</p></>:<p>No item selected.</p>;
+  const detail=item?<><p>Type: {item.kind}</p>{gearMetadata(id)&&<p>{gearMetadata(id)}</p>}<p>Owned: {owned} · Equipped: {equipped||0}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP.</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Buy: {item.buy||0} gold · Sell: {item.sell||0} gold</p></>:<p>No item selected.</p>;
   const trade=<Btn primary className="fa-merchant-trade" disabled={!allowed} onClick={()=>onTrade(mode,id)}>{mode==='buy'?'Purchase':'Sell Item'}</Btn>;
   if(original)return <div className="fa-original-merchant">
     <h2 className="fa-merchant-title">Merchant Shop</h2><div className="fa-merchant-gold">Gold: {profile?.gold||0}</div>
@@ -851,7 +851,7 @@ function EquipmentComparison({profile,encounter,initialItem,initialWearer,origin
  const result=profile&&item?(item.kind==='gear'?gearComparison(profile,wearer,id):comparison(profile,id)):null;
  const before=profile?memberStats(profile,wearer):null,after=result?.candidate;
  const allowed=Boolean(profile&&!encounter&&result&&id!==currentId);
- const reason=!profile?'No active character.':encounter?'Equipment changes are disabled during battle.':!item?'Select owned equipment.':id===currentId?'Already equipped.':!result?'No available copy for this wearer.':'Equip the selected item.';
+ const reason=!profile?'No active character.':encounter?'Equipment changes are disabled during battle.':!item?'Select owned equipment.':id===currentId?'Already equipped.':item.kind==='gear'&&!gearEligible(profile,id)?'Requires party level '+item.requiredLevel+'.':!result?'No available copy for this wearer.':'Equip the selected item.';
  const fields=[['Attack','atk'],['Defense','def'],['Speed','spd'],['Max HP','maxHp']];
  const stats=(values)=>fields.map(([label,key])=><div key={key}><span>{label}</span><strong>{values?.[key]??'—'}</strong></div>);
  const reset=()=>{setPage(0);setSelected(null);};
@@ -870,12 +870,12 @@ function EquipmentComparison({profile,encounter,initialItem,initialWearer,origin
   <div className="fa-compare-current-icon">{currentId&&<ItemArt id={currentId}/>}</div><div className="fa-compare-current-name"><strong>{ITEMS[currentId]?.name||'Empty slot'}</strong>{slot==='weapon'&&currentId&&<small>Enhancement +{profile?.enhancements?.[currentId]||0}</small>}</div>
   <div className="fa-compare-candidate-icon">{id&&<ItemArt id={id}/>}</div><div className="fa-compare-candidate-name"><strong>{item?.name||'Select gear'}</strong>{slot==='weapon'&&id&&<small>Enhancement +{profile?.enhancements?.[id]||0}</small>}</div>
   <section className="fa-compare-current-stats" aria-label="Current character statistics">{stats(before)}</section><section className="fa-compare-candidate-stats" aria-label="Projected character statistics">{stats(after)}</section>
-  <div className="fa-compare-current-detail"><p>Wearer: {members.find(m=>m.id===wearer)?.name||'—'}</p><p>Slot: {slot}</p><p>Current equipment remains equipped until confirmed.</p></div>
-  <div className="fa-compare-candidate-detail"><p>Owned: {inv[id]||0}</p>{item?.kind==='gear'&&<p>Equipped copies: {profile?gearCount(profile,id):0}</p>}<p>{reason}</p></div>
+  <div className="fa-compare-current-detail"><p>Wearer: {members.find(m=>m.id===wearer)?.name||'—'}</p><p>Slot: {slot}</p><p>Current equipment remains equipped until confirmed.</p>{activeGearSet(profile,wearer)&&<p>Active set: {activeGearSet(profile,wearer).name}</p>}</div>
+  <div className="fa-compare-candidate-detail"><p>Owned: {inv[id]||0}</p>{gearMetadata(id)&&<p>{gearMetadata(id)}</p>}{item?.kind==='gear'&&<p>Equipped copies: {profile?gearCount(profile,id):0}</p>}<p>{reason}</p></div>
   <h3 className="fa-compare-delta-title">Stat changes</h3><section className="fa-compare-deltas" aria-label="Stat differences">{deltas}</section>
   {equip}<Btn className="fa-compare-back" onClick={back}>Back</Btn><Btn className="fa-compare-inventory" onClick={()=>go('06')}>Equipment</Btn><Btn className="fa-compare-items" onClick={()=>go('21')}>Items</Btn>
  </div>;
- return <><Panel rect={layout[0]}>{pick}{search}{filters}{cards}{paging}</Panel><Panel rect={layout[1]}><h2>Equipped</h2><p>{ITEMS[currentId]?.name||'Empty slot'}</p>{stats(before)}</Panel><Panel rect={layout[2]}><h2>Selected</h2><p>{item?.name||'Select gear'}</p>{stats(after)}</Panel><Panel rect={layout[3]}>{deltas}<p>{reason}</p>{equip}<Btn onClick={back}>Back</Btn></Panel></>;
+ return <><Panel rect={layout[0]}>{pick}{search}{filters}{cards}{paging}</Panel><Panel rect={layout[1]}><h2>Equipped</h2><p>{ITEMS[currentId]?.name||'Empty slot'}</p>{stats(before)}</Panel><Panel rect={layout[2]}><h2>Selected</h2><p>{item?.name||'Select gear'}</p>{gearMetadata(id)&&<p>{gearMetadata(id)}</p>}{stats(after)}</Panel><Panel rect={layout[3]}>{deltas}<p>{reason}</p>{equip}<Btn onClick={back}>Back</Btn></Panel></>;
 }
 
 // Inventory is a read-only catalog of owned items; use and equip delegate to their guarded screens.
@@ -898,7 +898,7 @@ function ItemInventory({profile,encounter,serviceAvailable,original,layout,initi
   const enabled=Boolean(profile&&!encounter&&item&&(equipment||(tonic&&profile.hp<hpMax)||(material&&serviceAvailable)));
   const reason=!item?'Select an owned item.':encounter?'Item use and equipment changes are disabled during battle.':tonic&&profile.hp>=hpMax?'Health is already full.':material&&!serviceAvailable?'Visit a service marker to craft.':equipment?'Inspect the equipment comparison before equipping.':tonic?'Review recovery before consuming one tonic.':material?'View available recipes.':'No available action.';
   const use=()=>{if(!enabled)return;onSelect(id);go(tonic?'46':equipment?'39':'22');};
-  const details=item?<><p>Category: {item.kind==='gear'?item.slot:item.kind}</p><p>Owned: {inv[id]}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Sell value: {item.sell||0} gold</p></>:<p>No item selected.</p>;
+  const details=item?<><p>Category: {item.kind==='gear'?item.slot:item.kind}</p>{gearMetadata(id)&&<p>{gearMetadata(id)}</p>}<p>Owned: {inv[id]}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Sell value: {item.sell||0} gold</p></>:<p>No item selected.</p>;
   const action=<Btn primary className="fa-item-inv-use" disabled={!enabled} onClick={use}>{tonic?'Use Tonic':equipment?'Compare':material?'Crafting':'Use Item'}</Btn>;
   if(original)return <div className="fa-original-item-inv">
     <h2 className="fa-item-inv-title">Inventory</h2>
@@ -1370,7 +1370,7 @@ export default function SapphireAdventure(){
         <StatRows stats={{Attack:stats.atk,Defense:stats.def,Speed:stats.spd,'Unspent points':pointsFor(profile)}}/></>}
       </section>
       <section className="fa-character-lower fa-character-appearance"><h3>Appearance</h3><p>{profile?appearanceFor(profile).name:'No character'}</p><Btn disabled={!profile||Boolean(encounter)} onClick={()=>go('27')}>Wardrobe</Btn></section>
-      <section className="fa-character-lower fa-character-gear"><h3>Equipment</h3>{profile&&<><p>Bow: {ITEMS[profile.equipped]?.name||'None'}</p>{GEAR_SLOTS.map(s=><p key={s}>{s==='armor'?'Armor':'Mantle'}: {GEAR[gearFor(profile,'hero')[s]]?.name||'None'}</p>)}</>}</section>
+      <section className="fa-character-lower fa-character-gear"><h3>Equipment</h3>{profile&&<><p>Bow: {ITEMS[profile.equipped]?.name||'None'}</p>{GEAR_SLOTS.map(s=><p key={s}>{s==='armor'?'Armor':'Mantle'}: {GEAR[gearFor(profile,'hero')[s]]?.name||'None'}</p>)}{activeGearSet(profile,'hero')&&<p>Active set: {activeGearSet(profile,'hero').name}</p>}</>}</section>
       <section className="fa-character-lower fa-character-skills"><h3>Learned skills</h3>{profile&&availableActions(level).map(k=><p key={k}>{skillName(k)}</p>)}</section>
       <Btn className="fa-character-back" onClick={back}>Back</Btn><Btn className="fa-character-done" primary onClick={back}>Done</Btn>
     </div>:<>{pane(0,nav(['06','12','32','27']))}{pane(1,<><h2>{profile?.name||'No character'}</h2><ArcherPortrait profile={profile}/><p>Archer · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
@@ -1397,7 +1397,7 @@ export default function SapphireAdventure(){
         <div className="fa-eq-inventory-title">Inventory · {visibleEquipment.length} types</div>
         <nav className="fa-eq-shortcuts" aria-label="Equipment services"><Btn onClick={()=>setEquipmentFilter('all')}>All</Btn><Btn onClick={()=>setEquipmentFilter('weapon')}>Bows</Btn><Btn onClick={()=>setEquipmentFilter('gear')}>Gear</Btn><Btn onClick={()=>go('17')}>Forge</Btn><Btn onClick={()=>go('21')}>Items</Btn></nav>
         <section className="fa-eq-grid" aria-label="Owned equipment">{visibleEquipment.map(([k,item])=><Btn key={k} primary={k===itemId} aria-pressed={k===itemId} aria-label={item.name+' ×'+inv[k]} title={item.name} onClick={()=>setItemId(k)}><ItemArt id={k}/><span>×{inv[k]}</span></Btn>)}{!visibleEquipment.length&&<p>No owned equipment in this category.</p>}</section>
-        <section className="fa-eq-detail" aria-label="Selected item">{selectedOwned?<><ItemArt id={itemId}/><div><strong>{selectedItem.name}</strong><p>{selectedItem.kind==='gear'?'Available: '+Math.max(0,(inv[itemId]||0)-gearCount(profile,itemId)):'Owned: '+inv[itemId]}</p><small>{selectedItem.kind==='gear'?(worn[selectedItem.slot]===itemId?'Equipped on this character':'Gear'):(profile.equipped===itemId?'Equipped bow':'Bow')}</small></div></>:<p>Select an owned item.</p>}</section>
+        <section className="fa-eq-detail" aria-label="Selected item">{selectedOwned?<><ItemArt id={itemId}/><div><strong>{selectedItem.name}</strong>{gearMetadata(itemId)&&<small>{gearMetadata(itemId)}</small>}<p>{selectedItem.kind==='gear'?'Available: '+Math.max(0,(inv[itemId]||0)-gearCount(profile,itemId)):'Owned: '+inv[itemId]}</p><small>{selectedItem.kind==='gear'?(worn[selectedItem.slot]===itemId?'Equipped on this character':'Gear'):(profile.equipped===itemId?'Equipped bow':'Bow')}</small></div></>:<p>Select an owned item.</p>}</section>
         <section className="fa-eq-compare" aria-label="Equipment statistic comparison"><strong>Current → After equipping</strong>{profile&&Object.entries(memberStats(profile,wearer)).filter(([k])=>['maxHp','atk','def','spd'].includes(k)).map(([k,v])=>{const next=liveCompare?.candidate?.[k];return <div key={k}><span>{{maxHp:'Maximum HP',atk:'Attack',def:'Defense',spd:'Speed'}[k]}</span><span>{v}</span><span>{next??'—'}</span><span>{next==null?'—':(next-v>0?'+':'')+(next-v)}</span></div>;})}</section>
         <Btn primary className="fa-eq-equip" disabled={!canEquip} onClick={()=>selectedItem.kind==='gear'?transact(p=>equipGear(p,wearer,selectedItem.slot,itemId),'Gear equipped'):transact(p=>equipItem(p,itemId),'Weapon equipped')}>Equip</Btn>
         <Btn className="fa-eq-remove" disabled={!canRemove} onClick={()=>transact(p=>equipGear(p,wearer,selectedItem.slot,null),'Gear removed')}>Remove</Btn><Btn className="fa-eq-back" onClick={back}>Back</Btn>
