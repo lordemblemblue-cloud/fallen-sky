@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '12':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/2d8c26651d4dbb6d379744abbf28b5fa_fantasy-battle-12-runtime.webp',source:'Fantasy Battle original modular templates batch 18 — Skillbook',mode:'full',wideOnly:true}),
  '27':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/9e862ab4de9ba85fc9a2cc24bbcff4f9_fantasy-battle-27-runtime.webp',source:'Sapphire Blossom Appearance Screen.png — original modular template batch 13',mode:'full',wideOnly:true}),
  '01':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/5f168663ac580c456e81ad1f56f83326_main-menu.webp',source:'Fantasy Adventure UI Design Atlas — main menu',mode:'full',wideOnly:true}),
  '02':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/99ac60466316703a6a3aceaa6923d4d1_load-menu.webp',source:'Fantasy Adventure UI Design Atlas — load game',mode:'full',wideOnly:true}),

@@ -429,3 +429,43 @@
 .fa-original-wardrobe .fa-large-swatch{display:block;width:1.6em;height:1.6em;border-radius:50%;border:1px solid #efd594;margin:.3em auto}
 .fa-original-wardrobe .fa-wardrobe-apply,.fa-original-wardrobe .fa-wardrobe-reset,.fa-original-wardrobe .fa-wardrobe-back{position:absolute!important;border-radius:14px;height:5.6%}
 .fa-original-wardrobe .fa-wardrobe-apply{left:67%;top:86%;width:11%;background:#193d82!important}.fa-original-wardrobe .fa-wardrobe-reset{left:84%;top:86%;width:10%}.fa-original-wardrobe .fa-wardrobe-back{left:80%;top:74%;width:9.2%;height:4.5%}
+
+/* 12 — original modular skillbook plate. Artwork remains a single image;
+   only actual combat actions and legal navigation are interactive. */
+.fa-ui.page[data-staged-original="true"][data-screen="12"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="12"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="12"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-skillbook{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.15vw,2.04vh),18px);text-shadow:0 1px 3px #081329}
+.fa-original-skillbook h2,.fa-original-skillbook h3,.fa-original-skillbook p{margin:.2em 0}
+.fa-original-skillbook .fa-button{pointer-events:auto;min-width:0;min-height:0;padding:.1em .2em;background:#14244890;border:0;box-shadow:none;color:inherit;font:inherit;line-height:1.08;overflow:hidden}
+.fa-original-skillbook .fa-button:hover,.fa-original-skillbook .fa-button[aria-pressed="true"]{background:#193d82c0;box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-skillbook .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:1px}
+.fa-skillbook-title{position:absolute;left:4.5%;top:12%;width:17%;text-align:center;font-size:1.9em}
+.fa-skillbook-subtitle{position:absolute;left:4.5%;top:18%;width:17%;text-align:center;font-style:italic;font-size:.85em}
+.fa-skillbook-nav{position:absolute;left:5%;top:25.5%;width:15%;height:34%;display:grid;grid-template-rows:repeat(5,1fr);gap:5%}
+.fa-skillbook-nav .fa-button,.fa-skillbook-nav>span{display:grid;place-items:center;border-radius:15px;text-align:center;padding-left:15%}
+.fa-skillbook-nav>span{color:#fff0c1;font-weight:bold}
+.fa-skillbook-heading{position:absolute;left:27.5%;top:11.2%;width:22%;font-size:1.35em}
+.fa-skillbook-level{position:absolute;left:51%;top:11.9%;width:9%;text-align:center;font-size:.9em}
+.fa-skillbook-filter{position:absolute;left:23%;top:16.6%;width:46.8%;height:3.5%;text-align:center;background:#132746e8;border-radius:9px}
+.fa-skillbook-active-label,.fa-skillbook-passive-label,.fa-skillbook-ultimate-label{position:absolute;left:26.7%;width:8.4%;font-size:.84em}
+.fa-skillbook-active-label{top:25.7%}.fa-skillbook-passive-label{top:39.5%}.fa-skillbook-ultimate-label{top:53%}
+.fa-skillbook-active-label small,.fa-skillbook-passive-label small,.fa-skillbook-ultimate-label small{display:block;margin-top:.4em}
+.fa-skillbook-nodes{position:absolute;left:35.3%;top:22.8%;width:34.4%;height:12.7%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1.3%}
+.fa-original-skillbook .fa-skillbook-node{background:transparent;border-radius:8px;gap:.12em;justify-content:flex-start;font-size:.72em}
+.fa-skillbook-nodes .fa-skill-art{width:55%;height:59%;flex:none;max-width:none;max-height:none}
+.fa-skillbook-node span,.fa-skillbook-node small{display:block;max-width:100%;text-align:center;overflow-wrap:anywhere}
+.fa-skillbook-node small{font-size:.85em;color:#e3ebff}
+.fa-skillbook-progress,.fa-skillbook-rules{position:absolute;top:67%;height:15.8%;width:22.5%;overflow:auto;pointer-events:auto;padding:.3em;font-size:.86em}
+.fa-skillbook-progress{left:22.8%}.fa-skillbook-rules{left:47%}
+.fa-skillbook-progress h3,.fa-skillbook-rules h3{font-size:1.1em;color:#fff0c1}
+.fa-skillbook-footer{position:absolute;left:27%;top:85.3%;width:31%;height:3%;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fa-skillbook-selected-title{position:absolute;left:77%;top:10.3%;width:18%;height:6%;text-align:center;font-size:1.2em}
+.fa-skillbook-icon{position:absolute;left:73%;top:17.5%;width:22.6%;height:17.2%;display:grid;place-items:center}
+.fa-skillbook-icon .fa-skill-art{height:80%;width:auto;max-width:90%;max-height:none}
+.fa-skillbook-status{position:absolute;left:74%;top:35.6%;width:21%;height:4.5%;display:grid;place-items:center;color:#fff0c1}
+.fa-skillbook-description{position:absolute;left:74%;top:40.2%;width:21%;height:15.5%;overflow:auto;pointer-events:auto;font-size:.82em;line-height:1.13}
+.fa-skillbook-description strong{display:none}
+.fa-skillbook-requirement{position:absolute;left:75%;top:60.2%;width:20%;height:4.2%;display:grid;place-items:center;font-size:.9em}
+.fa-skillbook-materials{position:absolute;left:74%;top:65.4%;width:21.5%;height:13.3%;background:#142448e8;padding:.4em;border-radius:8px;overflow:auto;pointer-events:auto;font-size:.86em}
+.fa-original-skillbook .fa-skillbook-done{position:absolute;left:76.7%;top:84.1%;width:16.7%;height:5%;border-radius:14px;color:#132448;text-shadow:none;background:transparent;font-weight:bold}
