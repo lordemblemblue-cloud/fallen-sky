@@ -1,4 +1,6 @@
-# Claude unified story library — R76D
+# Claude unified story library — R76E
+
+> **R76E — NG+ enemy scaling and XP:** [Late-game opening baseline, escalating encounters and double enemy experience](R76E_NEW_GAME_PLUS_ENEMY_SCALING.md). Opening enemies approach original late-game strength, midpoint approaches original endgame, and late encounters escalate further. Enemy XP 2x; compare 1.5x–2x tuning candidates without compounding blindly. Exact stat curves and gold/material rewards remain open.
 
 > **R76D — owner-confirmed NG+ level display:** [Retained level and highlighted blue plus indicator](R76D_NEW_GAME_PLUS_LEVEL_DISPLAY.md). Earned level never resets; show actual level with a blue plus suffix, e.g. 155+. Proposed 310 ceiling remains per R76C.
 
