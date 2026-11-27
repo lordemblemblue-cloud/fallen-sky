@@ -354,6 +354,31 @@ function QuestJournal({profile,encounter,original,layout,go,back,onClaim}){
   return <><Panel rect={layout[0]}>{filterButtons}<Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Quest log</h2>{questEntry}</Panel><Panel rect={layout[2]}>{visible?<><h2>Whispering Grove Spirit</h2><p>{status}</p>{objective}{reward}{action}</>:<p>No quest selected.</p>}</Panel></>;
 }
 
+// Travel choices use live streamed bounds and saved discoveries. The painting
+// is decorative and never authorizes a destination, facility or travel route.
+function FastTravel({profile,world,encounter,destination,onSelect,onTravel,original,layout,go,back}){
+  const regions=(world?.regions||[]).filter(r=>Number.isFinite(r.minX)&&Number.isFinite(r.maxX)&&r.maxX>r.minX);
+  const visited=regions.filter(r=>profile?.world.visitedRegions.includes(r.id));
+  const selected=visited.find(r=>r.id===destination?.id);
+  const canTravel=Boolean(profile&&selected&&!encounter);
+  const choices=regions.map(r=>{const discovered=visited.some(v=>v.id===r.id);return <Btn key={r.id} primary={selected?.id===r.id} disabled={!discovered} aria-pressed={selected?.id===r.id} onClick={()=>onSelect(r)}><span>{r.name}</span><small>{discovered?'Discovered':'Undiscovered · Locked'}</small></Btn>;});
+  const details=<><p>{selected?'Discovered destination':'Choose a discovered region.'}</p><p>{encounter?'Travel is unavailable during battle.':!profile?'Load a character before travelling.':'Confirm to move to a safe entry position in the selected region.'}</p></>;
+  const route=<><p>Current region: {world?.region||'World not loaded'}</p><p>{visited.length} / {regions.length} reported regions discovered.</p><p>No currency charge is applied by the current travel system.</p></>;
+  const travel=<Btn primary className="fa-fast-travel-confirm" disabled={!canTravel} onClick={()=>onTravel(selected)}>Travel</Btn>;
+  if(original)return <div className="fa-original-fast-travel">
+    <h2 className="fa-fast-travel-title">Fast Travel</h2><h3 className="fa-fast-travel-list-title">Destinations</h3>
+    <section className="fa-fast-travel-list" aria-label="Region destinations">{choices.length?choices:<p>No region data loaded.</p>}</section>
+    <div className="fa-fast-travel-map"><h3>Live region map</h3><RegionMap world={world} profile={profile}/><small>Original painted scenery is conceptual, not a travel route.</small></div>
+    <div className="fa-fast-travel-art-label">Decorative destination artwork</div>
+    <h3 className="fa-fast-travel-name">{selected?.name||'Select destination'}</h3>
+    <section className="fa-fast-travel-details" aria-live="polite">{details}</section>
+    <h3 className="fa-fast-travel-route-heading">Travel information</h3><section className="fa-fast-travel-route">{route}</section>
+    <h3 className="fa-fast-travel-rules-heading">Requirements</h3><section className="fa-fast-travel-rules"><p>Discover the region first.</p><p>Travel outside combat.</p><p>Confirm your destination.</p></section>
+    {travel}<div className="fa-fast-travel-navigation"><Btn onClick={()=>go('07')}>World map</Btn><Btn onClick={back}>Back</Btn></div>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Destinations</h2>{choices.length?choices:<p>No region data loaded.</p>}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><RegionMap world={world} profile={profile}/></Panel><Panel rect={layout[2]}><h2>{selected?.name||'Choose a discovered region'}</h2>{details}{route}{travel}<Btn onClick={()=>go('07')}>World map</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -712,7 +737,7 @@ export default function SapphireAdventure(){
     case '22':content=<>{pane(0,<h2>Crafting</h2>)}{pane(1,<><h2>Recovery Tonic</h2><p>Requires 2 Sapphire Ore · Owned {inv.sapphireOre||0}</p></>)}{pane(2,<Btn disabled={!serviceAvailable||inv.sapphireOre<2} onClick={()=>requestConfirm('Craft Recovery Tonic?',()=>transact(craftTonic,'Recovery Tonic crafted'))}>Craft</Btn>)}</>;break;
     case '23':content=<>{pane(1,<h2>{candidate?.label||'Encounter entrance'}</h2>)}{pane(2,<><p>{candidate?.category} encounter. Preview the enemy formation and its combat tactics.</p><Btn disabled={!candidate} onClick={()=>go('36')}>Encounter Details</Btn><Btn onClick={back}>Leave</Btn></>)}</>;break;
     case '24':content=<>{pane(0,nav(['29']))}{pane(1,<>{world?.encounters?.length?world.encounters.map(e=><Btn key={e.id} primary={seenEnemy?.id===e.id} onClick={()=>setEnemyId(e.id)}>{e.label} · {e.completed?'Defeated':'Discovered'}</Btn>):<p>No enemies discovered.</p>}</>)}{pane(2,seenEnemy?<><h2>{seenEnemy.label}</h2>{enemyFormation(seenEnemy,1).map(e=><div key={e.id}><EnemyPortrait enemy={e}/><StatRows stats={{HP:e.maxHp,Attack:e.atk,Defense:e.def,Speed:e.spd}}/><p>{tacticFor(e.strategy,e.archetype)}</p></div>)}<small>Base stats; formation scales with party size.</small></>:<p>Explore to discover enemy entries.</p>)}</>;break;
-    case '25':content=<>{pane(0,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><Btn key={r.id} primary={destination?.id===r.id} onClick={()=>setDestination(r)}>{r.name}</Btn>)}</>)}{pane(1,<RegionMap world={world} profile={profile}/>)}{pane(2,<><h2>{destination?.name||'Choose discovered region'}</h2><Btn disabled={!destination||Boolean(encounter)} onClick={()=>requestConfirm('Travel to '+destination.name+'?',()=>{if(transact(p=>travelTo(p,destination),'Arrived at '+destination.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}})}>Travel</Btn></>)}</>;break;
+    case '25':content=<FastTravel profile={profile} world={world} encounter={encounter} destination={destination} onSelect={setDestination} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{const profileId=current.current.profile?.id;if(!profileId||!region)return;requestConfirm('Travel to '+region.name+'?',()=>{if(transact(p=>{if(p.id!==profileId)throw Error('Active character changed. Select a destination again.');const liveRegion=current.current.world?.regions.find(r=>r.id===region.id);if(!liveRegion||!Number.isFinite(liveRegion.minX)||!Number.isFinite(liveRegion.maxX)||liveRegion.maxX<=liveRegion.minX)throw Error('Destination is no longer available.');return travelTo(p,liveRegion);},'Arrived at '+region.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}});}}/>;break;
     case '26':content=<Recruitment profile={profile} encounter={encounter} selected={selectedCompanion} member={member} onSelect={setCompanionId} onRecruit={m=>requestConfirm('Recruit '+m.name+'?',()=>transact(p=>recruitCompanion(p,m.id),m.name+' joined'))} original={original} layout={screen.layout} go={go} back={back}/>;break;
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
     case '28':content=<>{pane(0,nav(['24','29']))}{pane(1,<StatRows stats={{'Regions discovered':profile?.world.visitedRegions.length||0,'Encounters defeated':profile?.world.completedEncounters.length||0,'Hidden discoveries':profile?.world.discoveries.length||0}}/>)}{pane(2,<p>Milestone tracking is live. Achievement rewards have not been defined.</p>)}</>;break;

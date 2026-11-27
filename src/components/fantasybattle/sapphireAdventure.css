@@ -719,3 +719,31 @@
 .fa-journal-no-selection{position:absolute;left:44%;top:24%;width:35%;height:57%;display:grid;place-items:center;text-align:center;background:#142448ee;padding:1em;border-radius:12px}
 .fa-original-journal .fa-journal-map,.fa-original-journal .fa-journal-action,.fa-original-journal .fa-journal-back{position:absolute;top:90%;height:5.7%;border-radius:15px;padding-left:3%;font-size:.92em}
 .fa-journal-map{left:22.6%;width:15.7%}.fa-journal-action{left:40.5%;width:21%}.fa-journal-back{left:64%;width:17%}
+
+/* 25 — original fast travel plate with real discovered destinations and live map. */
+.fa-ui.page[data-staged-original="true"][data-screen="25"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="25"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="25"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-fast-travel{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.18vw,2.1vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-fast-travel h2,.fa-original-fast-travel h3,.fa-original-fast-travel p{margin:.2em 0}
+.fa-original-fast-travel .fa-button{pointer-events:auto;min-height:0;min-width:0;padding:.2em .5em;border:0;background:transparent;box-shadow:none;color:inherit;font:inherit;line-height:1.12}
+.fa-original-fast-travel .fa-button:hover:not(:disabled),.fa-original-fast-travel .fa-button[aria-pressed=true]{background:#193d82c0;box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-fast-travel .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:1px}
+.fa-fast-travel-title{position:absolute;left:42%;top:2%;width:22%;height:7%;display:grid;place-items:center;font-size:2em}
+.fa-fast-travel-list-title{position:absolute;left:6%;top:14%;width:16%;height:5%;text-align:center;font-size:1.2em}
+.fa-fast-travel-list{position:absolute;left:2.2%;top:21%;width:23.1%;height:64.2%;overflow:auto;pointer-events:auto;padding:.4em;background:#142448f2;border-radius:12px;display:flex;flex-direction:column;gap:.35em}
+.fa-original-fast-travel .fa-fast-travel-list .fa-button{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;flex:0 0 auto;min-height:2.6em;width:100%;text-align:left;background:#152a50;border:1px solid #d6b87f;border-radius:7px}
+.fa-fast-travel-list .fa-button small{font-size:.75em;color:#c5ddff}
+.fa-fast-travel-list .fa-button:disabled{opacity:.55;cursor:not-allowed}
+.fa-fast-travel-map{position:absolute;left:28%;top:25%;width:43.6%;height:53%;overflow:auto;pointer-events:auto;background:#101f3be8;border:1px solid #d6b87f;border-radius:12px;padding:1em}
+.fa-fast-travel-map .fa-map{width:100%}.fa-fast-travel-map .fa-map svg{max-height:22vh}
+.fa-fast-travel-art-label{position:absolute;left:74%;top:24%;width:23.7%;text-align:center;background:#142448c7;font-size:.72em;padding:.25em}
+.fa-fast-travel-name{position:absolute;left:79%;top:28.5%;width:18%;height:5%;display:grid;place-items:center;text-align:center;overflow-wrap:anywhere;font-size:1.05em}
+.fa-fast-travel-details,.fa-fast-travel-route,.fa-fast-travel-rules{position:absolute;left:75%;width:21.4%;overflow:auto;pointer-events:auto;color:#152448;text-shadow:none;background:#f3eadce8;border-radius:4px;padding:.2em .5em;font-size:.86em}
+.fa-fast-travel-details{top:34%;height:9%}.fa-fast-travel-route{top:48.5%;height:11%}.fa-fast-travel-rules{top:65%;height:10%}
+.fa-fast-travel-route-heading,.fa-fast-travel-rules-heading{position:absolute;left:76.4%;width:20%;font-size:.94em}
+.fa-fast-travel-route-heading{top:45%}.fa-fast-travel-rules-heading{top:61%}
+.fa-original-fast-travel .fa-fast-travel-confirm{position:absolute;left:72.5%;top:81.1%;width:21.8%;height:7.4%;padding-left:7%;font-size:1.45em;font-weight:bold;border-radius:18px}
+.fa-original-fast-travel .fa-fast-travel-confirm:disabled{background:#14244890;opacity:.7;cursor:not-allowed}
+.fa-fast-travel-navigation{position:absolute;left:74%;top:92%;width:22%;height:5%;display:grid;grid-template-columns:1.5fr 1fr;gap:4%}
+.fa-original-fast-travel .fa-fast-travel-navigation .fa-button{background:#142448e8;border:1px solid #d6b87f;border-radius:8px}
