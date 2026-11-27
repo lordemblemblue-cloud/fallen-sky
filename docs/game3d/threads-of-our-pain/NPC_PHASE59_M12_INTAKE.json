@@ -1,0 +1,328 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M12",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M12.md",
+    "M11.md",
+    "R31_CONTINUITY_ADDENDUM.md",
+    "R52_M07-M13_VOICE_PASS.md",
+    "R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R117_M11_M12_REFUGE_AND_FAMILY_MEMORY_CONSTRUCTION_PROMPTS.md",
+    "D14_S17.md",
+    "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "M12_HEARD",
+      "reality": "PRESERVED",
+      "anchor": "M12_SONG_WINDOW",
+      "requires": [
+        "M11_COMPLETE"
+      ],
+      "evidence": "Actual heard/observed motif or accessible rhythm cue; passing by does not complete introduction"
+    },
+    {
+      "id": "FAMILY15_INTRO",
+      "reality": "PRESERVED",
+      "anchor": "PORCH",
+      "requires": [
+        "M12_HEARD"
+      ],
+      "evidence": "Actual conversation with distinct Wolfveil household; public access"
+    },
+    {
+      "id": "EMBLEM15_OBSERVED",
+      "reality": "PRESERVED",
+      "anchor": "APRON_EMBLEM",
+      "requires": [
+        "FAMILY15_INTRO"
+      ],
+      "evidence": "Observe embroidered emblem; permission for sketch or text description"
+    },
+    {
+      "id": "REGISTER_COMPARED",
+      "reality": "PRESERVED",
+      "anchor": "REGISTER_COUNTER",
+      "requires": [
+        "FAMILY15_INTRO"
+      ],
+      "evidence": "Inspect public household register and compare names with M11 notes; absence limited to this register"
+    },
+    {
+      "id": "MIGRATE18_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "REST_SAFE18",
+      "requires": [
+        "EMBLEM15_OBSERVED",
+        "REGISTER_COMPARED"
+      ],
+      "evidence": "Authored visit with actual safe destination and retained prior M11 state"
+    },
+    {
+      "id": "FAMILY18_REVISIT",
+      "reality": "ORIGINAL",
+      "anchor": "FAMILY_BAY",
+      "requires": [
+        "MIGRATE18_SAFE"
+      ],
+      "evidence": "Meet actual original family; verify working vent and previously delivered medicine and secured corridor"
+    },
+    {
+      "id": "EMBLEM18_OBSERVED",
+      "reality": "ORIGINAL",
+      "anchor": "NECKLACE18",
+      "requires": [
+        "FAMILY18_REVISIT"
+      ],
+      "evidence": "Observe retained necklace; no physical transfer"
+    },
+    {
+      "id": "MELODY18_CONFIRMED",
+      "reality": "ORIGINAL",
+      "anchor": "FAMILY_BAY",
+      "requires": [
+        "FAMILY18_REVISIT"
+      ],
+      "evidence": "Confirm same motif with distinct performance and accessible cue"
+    },
+    {
+      "id": "RETURN15_SAFE",
+      "reality": "PRESERVED",
+      "anchor": "SAFE15",
+      "requires": [
+        "EMBLEM18_OBSERVED",
+        "MELODY18_CONFIRMED"
+      ],
+      "evidence": "Authored safe return; preserve independent family and character state"
+    },
+    {
+      "id": "M12_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "LYRA_M13_LEAD",
+      "requires": [
+        "RETURN15_SAFE"
+      ],
+      "evidence": "Actual reflection with Lyra; all hypotheses retain Hollow Mountain lead"
+    }
+  ],
+  "families": {
+    "preserved": [
+      {
+        "name": "Lessa",
+        "role": "grandmother",
+        "runtimeId": null
+      },
+      {
+        "name": "Neri",
+        "role": "adult daughter",
+        "runtimeId": null
+      },
+      {
+        "name": "Calen",
+        "role": "grandson",
+        "runtimeId": null
+      }
+    ],
+    "original": [
+      {
+        "name": "Mira",
+        "role": "mother",
+        "runtimeId": null
+      },
+      {
+        "name": "Renn",
+        "role": "father",
+        "runtimeId": null
+      },
+      {
+        "name": "Tovin",
+        "role": "son",
+        "runtimeId": null
+      }
+    ],
+    "provisionalNames": true,
+    "separateRigsVoicesBiographies": true,
+    "sharedIdentityConfirmed": false
+  },
+  "otherActors": [
+    {
+      "role": "Lyra the Seeker",
+      "proposedNpcId": "FS_NPC_006",
+      "runtimeId": null
+    },
+    {
+      "role": "public register clerk",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_020",
+      "name": "Luma Everlight",
+      "relationship": "Separate proposed refugee child; S17 coordinator candidate, not Calen or Tovin or automatically S17 child"
+    },
+    {
+      "id": "FS_NPC_026",
+      "name": "Seren Silverchord",
+      "relationship": "Music thematic association; not automatically family singer; S39 independent"
+    },
+    {
+      "id": "FS_NPC_017",
+      "name": "Elowen Greenveil",
+      "relationship": "Settlement thematic association only; no assigned physical presence"
+    }
+  ],
+  "assets": {
+    "motif": "M11_M12_LULLABY",
+    "contour": "rising phrase then descending three notes",
+    "sameCompositionDifferentPerformance": true,
+    "performanceIds": null,
+    "recordingAvailable": false,
+    "captionAndRhythmAssist": true,
+    "emblem": "M11_M12_FAMILY_EMBLEM",
+    "original": "NECKLACE18",
+    "preserved": "APRON_EMBLEM",
+    "differentMaterials": true,
+    "designVerified": false,
+    "distinctFrom": [
+      "M07_MARK_MESH",
+      "M07_CREST",
+      "D26",
+      "D30",
+      "D14_TOY",
+      "D24_KIT"
+    ],
+    "physicalTransfer": false
+  },
+  "evidence": {
+    "registerScope": "THIS_PUBLIC_HOUSEHOLD_ONLY",
+    "observations": [
+      "matching motif",
+      "matching emblem design",
+      "distinct names and faces",
+      "reported no mine history"
+    ],
+    "hypotheses": [
+      "shared tradition",
+      "coincidence",
+      "unknown historical connection"
+    ],
+    "absenceProvesNonexistence": false,
+    "privateRecordsRequired": false,
+    "assistedComparison": true,
+    "incorrectMatchPenalty": false
+  },
+  "choices": {
+    "intro": [
+      "replay_song",
+      "mention_mine",
+      "ask_cloth"
+    ],
+    "emblem": [
+      "copy_with_permission",
+      "describe_in_words"
+    ],
+    "final": [
+      "remember_without_recognition",
+      "song_may_have_traveled",
+      "seek_more_evidence"
+    ],
+    "optionalGestures": [
+      "move_stool",
+      "bring_cup",
+      "hold_board",
+      "song_replay"
+    ],
+    "requireMeal": false,
+    "requirePrivateHomeEntry": false
+  },
+  "revisit": {
+    "retainM11": [
+      "VENT_RESTORED",
+      "MEDICINE_DELIVERED",
+      "CORRIDOR_SECURE"
+    ],
+    "preserveTrust": true,
+    "noCurePromise": true,
+    "noCoherentYoungerFamilyMemory": true,
+    "noRepeatedMedicine": true,
+    "loadFailure": "RESTORE_SOURCE_CHECKPOINT"
+  },
+  "optionalIndependent": [
+    "S17",
+    "D14",
+    "S39"
+  ],
+  "s17": {
+    "originalToyOwner": "CHILD",
+    "requiresActualAssistedRepair": true,
+    "requiresReturnAndAcknowledgment": true,
+    "carpenterOnlyNotPlayerCredit": true,
+    "exactPhase": "UNRESOLVED",
+    "autoCompleteFromM12": false
+  },
+  "d14": {
+    "heroOwnsSeparateModel": true,
+    "olderModelRetained": true,
+    "childOriginalRetained": true,
+    "pairedFocusAndClaimAndSecondVista": true,
+    "cosmeticOnce": true,
+    "noM12Grant": true
+  },
+  "routes": {
+    "preserved": [
+      "M06_MARKET",
+      "M12_STREET",
+      "SONG_WINDOW",
+      "PORCH",
+      "EMBLEM15",
+      "BENCH",
+      "REGISTER_COUNTER",
+      "SAFE15"
+    ],
+    "original": [
+      "M11_GATE",
+      "WARD_AISLE",
+      "FAMILY_BAY",
+      "NECKLACE18",
+      "REST_SAFE18"
+    ],
+    "return": [
+      "SAFE15",
+      "PORCH_RETURN",
+      "LYRA_M13_LEAD",
+      "HOLLOW_MOUNTAIN_TRAIL"
+    ],
+    "transforms": null
+  },
+  "completion": {
+    "next": "M13_READY",
+    "autoAccept": false,
+    "ordinaryMainXpProposed": true,
+    "rewardGrant": false,
+    "newPower": false,
+    "noDefinitiveReincarnation": true
+  },
+  "prohibitions": [
+    "manual migration",
+    "cloned family identities",
+    "confirmed genealogy",
+    "cross-world object transfer",
+    "private home gate",
+    "mandatory S17",
+    "paired focus gate",
+    "Celestial Sight",
+    "guaranteed cure",
+    "runtime activation"
+  ]
+}
