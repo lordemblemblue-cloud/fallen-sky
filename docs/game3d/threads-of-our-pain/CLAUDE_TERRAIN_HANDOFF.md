@@ -29,3 +29,7 @@ For each location, return the source revision, terrain branch/PR, actual blockou
 
 ## Workflow
 The hourly story task updates Markdown briefs with scene dialogue and staging and preserves cumulative Word documents separately. Read the latest committed handoff branch if the docs PR is not merged; use main once merged. Update the index as new briefs arrive; maintain stable D01–D50, M01–M20 and S01–S55 IDs. Expansion order is not the same as discovery ID (D01, D25, D36 expanded first; D31 is next). Dialogue first; blockout suggestions accompany it. Do not interpret missing detailed briefs as permission to invent finalized narrative.
+
+## R62 character and quest dependency constraints
+
+Read [R62 character and quest audit](R62_CHARACTER_QUEST_AUDIT.md) before staging recurring actors, the M11/M12/M16 family arc, diplomatic hall or witness scenes. Distinct NPC IDs and knowledge flags per reality; original melody may be shared but faces and histories are not cloned. Mandatory path independent of optional quests; partial/declined/completed variants must reflect actual quest state. Keep evidence provenance and consent, rewards idempotent, and no duplicated older equipment. Return actual actor IDs, camera/route anchors, local ordering annotations, test outcomes and measured performance; do not claim build or final ending approval from narrative specifications.
