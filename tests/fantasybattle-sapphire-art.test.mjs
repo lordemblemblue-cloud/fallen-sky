@@ -18,13 +18,13 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','11','12','13','18','19','20','23','25','26','27','30','32','35','36','40','42','43','44','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','18','19','20','23','25','26','27','30','32','35','36','40','42','43','44','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
  }
  assert.match(ORIGINAL_SAVE_PLAQUE,allowed);
- for(const id of ['10','invalid','__proto__','constructor'])assert.equal(stagedOriginalFor(id),null);
+ for(const id of ['invalid','__proto__','constructor'])assert.equal(stagedOriginalFor(id),null);
 });
 
  test('original menu plates use wide-only staging and never register sample save data',()=>{assert.equal(stagedOriginalFor('01').wideOnly,true);assert.equal(stagedOriginalFor('02').wideOnly,true);assert.equal(stagedOriginalFor('35').wideOnly,undefined);});
@@ -226,4 +226,16 @@ test('original combat HUD preserves the live stage and legal action controls',()
  assert.ok(page.includes('stageRef.current?.chooseAction(id)'));
  const css=readFileSync(new URL('../src/components/fantasybattle/sapphireAdventure.css',import.meta.url),'utf8');
  assert.ok(css.includes('.fa-ui.hud[data-staged-original="true"][data-screen="09"]{background:transparent;pointer-events:none}'));
+});
+
+test('original exploration HUD uses live world input and releases held movement',()=>{
+ assert.equal(stagedOriginalFor('10').wideOnly,true);
+ assert.equal(stagedOriginalFor('10').transparent,true);
+ assert.ok(templateUrl('10').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function OriginalExplorationHud('),page.indexOf('function SaveToast('));
+ for(const marker of ['activeRoster(profile)','memberFor(profile,m.id).hp','memberStats(profile,m.id).maxHp','RegionMap world={world} profile={profile}','world?.nearby','profile?.quests.grove','onPointerCancel','onLostPointerCapture','held.current.clear()', "window.addEventListener('blur',release)", "send.current('move',{key,value:false})", "post('interact')","post('jump')"])assert.ok(section.includes(marker),marker);
+ assert.match(page,/case '10':content=original\?<OriginalExplorationHud/);
+ const css=readFileSync(new URL('../src/components/fantasybattle/sapphireAdventure.css',import.meta.url),'utf8');
+ assert.ok(css.includes('.fa-ui.hud[data-staged-original="true"][data-screen="10"]{background:transparent;pointer-events:none}'));
 });

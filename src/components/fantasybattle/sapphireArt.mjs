@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '10':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/572b4a4c7d43c1651f8f347ba1fd962a_fantasy-battle-10-runtime.webp',source:'Original Fantasy Battle modular template batch 16 — 10.webp (transparent HUD)',mode:'full',wideOnly:true,transparent:true}),
  '09':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/d75b4237b6f59126ada8f220e01aed09_fantasy-battle-09-runtime.webp',source:'Original Fantasy Battle modular template batch 17 — 09.webp (transparent HUD)',mode:'full',wideOnly:true,transparent:true}),
  '36':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/80f9da3c1b678508c6935a5a5d362610_fantasy-battle-36-runtime.webp',source:'Original Fantasy Battle modular template batch 15 — 36.webp',mode:'full',wideOnly:true}),
  '23':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/c3b60ab190dfe7324c2acaee32faa98f_fantasy-battle-23-runtime.webp',source:'Warden of Tides: Dungeon Entrance.png — original modular template batch 12',mode:'full',wideOnly:true}),

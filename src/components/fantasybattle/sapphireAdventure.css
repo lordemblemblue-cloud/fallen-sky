@@ -937,3 +937,40 @@
 .fa-original-combat-nav{position:absolute;left:1.8%;top:12%;display:flex;gap:.35em;pointer-events:auto}
 .fa-original-combat .fa-original-combat-nav .fa-button{background:#142448e6;border:1px solid #d6b87f;padding:.3em .5em;font-size:.85em}
 @media(pointer:coarse){.fa-original-combat .fa-original-action{min-height:44px}.fa-original-combat .fa-original-combat-nav .fa-button{min-height:44px}}
+
+/* 10 — original alpha HUD. The center never captures world input. */
+.fa-ui.hud[data-staged-original="true"][data-screen="10"]{background:transparent;pointer-events:none}
+.fa-ui.hud[data-staged-original="true"][data-screen="10"] .fa-template{display:block;background-size:100% 100%;pointer-events:none}
+.fa-original-explore{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.1vw,1.95vh),18px);text-shadow:0 1px 3px #081329}
+.fa-original-explore h2{margin:0;font-size:1em}
+.fa-original-explore .fa-button,.fa-explore-objective,.fa-explore-minimap,.fa-explore-notice{pointer-events:auto;min-width:0;min-height:0;font:inherit;color:inherit;background:transparent;box-shadow:none;border:0;border-radius:6px;text-shadow:inherit}
+.fa-original-explore .fa-button:focus-visible,.fa-explore-objective:focus-visible,.fa-explore-minimap:focus-visible,.fa-explore-notice:focus-visible{outline:2px solid #78c9ed;outline-offset:1px}
+.fa-original-explore .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 1px #efd594;background:#14244880}
+.fa-original-explore .fa-button:disabled{opacity:.55}
+.fa-explore-quest-title{position:absolute;left:5.6%;top:11.4%;width:18.1%;height:5.1%;display:grid;place-items:center}
+.fa-explore-objective{position:absolute;left:2.8%;top:17.5%;width:21.2%;height:9.1%;text-align:left;padding:.35em;overflow:auto;font-size:.9em}
+.fa-explore-region{position:absolute;left:38.8%;top:5.7%;width:23.3%;height:7.3%;display:grid;place-items:center;text-align:center;font-weight:bold;overflow-wrap:anywhere;font-size:1.1em}
+.fa-explore-minimap{position:absolute;left:84.4%;top:4.1%;width:12%;height:21.1%;border-radius:50%;overflow:hidden;background:#142448b8}
+.fa-explore-minimap>div{display:grid;place-items:center;height:100%;transform-origin:center}
+.fa-explore-minimap .fa-map{width:100%;padding:.25em;overflow:hidden}.fa-explore-minimap .fa-map svg{width:100%;height:auto}.fa-explore-minimap .fa-map small{font-size:.65em;overflow-wrap:anywhere}
+.fa-original-explore .fa-explore-map-menu,.fa-original-explore .fa-explore-map-journal{position:absolute;top:3.7%;width:2.8%;height:4.8%;padding:0;border-radius:50%;font-size:.8em}.fa-explore-map-menu{left:83.1%}.fa-explore-map-journal{left:95.4%}
+.fa-explore-zoom{position:absolute;left:96.7%;top:16.4%;width:2.1%;height:6.8%;display:grid;grid-template-rows:1fr 1fr;pointer-events:auto}.fa-explore-zoom .fa-button{padding:0;line-height:1}
+.fa-explore-party{position:absolute;left:1.7%;top:30.4%;width:17.4%;height:39.2%;display:grid;grid-template-rows:repeat(4,minmax(0,1fr))}
+.fa-explore-member{display:grid;grid-template-columns:29% 1fr;gap:4%;align-items:center;min-height:0;overflow:hidden}
+.fa-explore-portrait{width:100%;height:84%;border-radius:50%;overflow:hidden;display:grid;place-items:center}
+.fa-explore-portrait .fa-archer-portrait,.fa-explore-profile-icon .fa-archer-portrait{width:100%;height:100%;max-height:none;object-fit:contain}
+.fa-explore-member-data{min-width:0;padding:.1em .25em;display:flex;flex-direction:column;justify-content:center;gap:.1em}
+.fa-explore-member-data strong{font-size:.83em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fa-explore-member-data small{font-size:.71em;white-space:nowrap}
+.fa-original-explore progress{width:100%;display:block;height:6px;accent-color:#86d9b2}
+.fa-explore-progress{position:absolute;left:2.7%;top:75.2%;width:19.5%;height:8.7%;display:grid;grid-template-columns:26% 1fr;align-items:center;gap:2%;overflow:hidden}
+.fa-explore-profile-icon{height:90%;border-radius:50%;overflow:hidden;display:grid;place-items:center}
+.fa-explore-progress>div:last-child{min-width:0;padding:.1em .3em}.fa-explore-progress strong{font-size:.85em}.fa-explore-progress small{font-size:.72em}.fa-explore-progress progress{accent-color:#8bd7ff}
+.fa-original-explore .fa-explore-interact{position:absolute;left:77.8%;top:58.8%;width:12%;height:4%;padding:0;font-size:.78em;overflow:hidden}
+.fa-original-explore .fa-explore-primary,.fa-original-explore .fa-explore-secondary,.fa-original-explore .fa-explore-item{position:absolute;display:grid;place-items:center;border-radius:50%;padding:0;background:#142448aa}
+.fa-original-explore .fa-explore-primary{left:87.1%;top:75.6%;width:5.5%;height:9.2%}.fa-original-explore .fa-explore-secondary{left:94%;top:76%;width:3.8%;height:6.1%;font-size:.76em}.fa-original-explore .fa-explore-item{left:91.4%;top:70%;width:2.9%;height:5.1%;font-size:1.2em}
+.fa-explore-nav,.fa-explore-move{position:absolute;top:93.4%;height:4%;display:flex;align-items:stretch;gap:.15em;pointer-events:auto}
+.fa-explore-nav{left:8.4%;width:38.8%}.fa-explore-move{left:54%;width:42.8%;touch-action:none}
+.fa-explore-nav .fa-button,.fa-explore-move .fa-button{flex:1;white-space:nowrap;padding:0 .1em;font-size:.8em;touch-action:none}
+.fa-explore-move .fa-button:last-child{flex:2}
+.fa-explore-notice{position:absolute;left:83.7%;top:28.4%;width:14%;max-height:9%;overflow:auto;background:#142448c9;padding:.3em;font-size:.75em}
+@media(pointer:coarse){.fa-original-explore .fa-explore-nav,.fa-original-explore .fa-explore-move{top:auto;bottom:1%;height:44px}.fa-original-explore .fa-explore-nav .fa-button,.fa-original-explore .fa-explore-move .fa-button{min-height:44px;background:#142448c9}.fa-original-explore .fa-explore-primary,.fa-original-explore .fa-explore-secondary,.fa-original-explore .fa-explore-item{min-width:44px;min-height:44px}}
