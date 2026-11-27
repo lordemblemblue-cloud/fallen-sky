@@ -30,3 +30,22 @@ Three new hero bows extend the existing catalog; the existing two bows retain th
 Purchasing ahead of level is permitted; equipping and comparison enforce eligibility. All bows share existing deterministic +0 to +5 enhancement rules: +2 attack each, one ore and 15 + 10 × current enhancement gold per step. The existing save model treats enhancement as a permanent unlock per weapon type, not per owned copy; it survives weapon switching and selling/rebuying. No automatic conversion to instance-based gear or new failure rates. Old saves may omit the three new inventory and enhancement keys; import preserves only registered IDs. Unknown enhancement keys and invalid ranks are rejected. Blacksmith confirmation compares the current effective enhancement (zero if absent) before debiting. New bows use the existing Sapphire bow icon as a temporary placeholder and existing rig geometry; no new art files or independent weapon animations.
 
 Balance is provisional. Companions retain their class weapons. Next: accessory slot(s) and stable graphical asset registration with fallback, separate from equipment stats. New weapon tests are added but not yet verified by CI; no merge/publish.
+
+## Third pass — accessories and reviewed item artwork
+
+Each recruited party member has one ring and one necklace slot in addition to armor and mantle. Existing equipment records need no migration. The six new items are available from existing merchants; their stats are provisional.
+
+| ID | Required level | Rarity | ATK | DEF | SPD | Buy |
+| --- | ---: | --- | ---: | ---: | ---: | ---: |
+| groveRing | 1 | Common | 1 | 0 | 1 | 30 |
+| pilgrimPendant | 2 | Rare | 0 | 3 | 0 | 55 |
+| moonveilRing | 3 | Elite | 2 | 0 | 2 | 75 |
+| moonveilPendant | 3 | Elite | 1 | 1 | 2 | 80 |
+| astralRing | 4 | Legendary | 3 | 1 | 1 | 120 |
+| astralPendant | 4 | Legendary | 2 | 3 | 1 | 125 |
+
+Existing gear ownership, level restrictions, comparison, sale protection and save validation apply. Accessories do not count toward armor/mantle set bonuses and are not sent to the current armor mesh renderer. The original UI is preserved, with live ring and necklace socket controls and a combined mantle/jewelry filter. Generic vector icons are temporary fallbacks.
+
+Claude/Gemini artwork contract: deliver a square transparent WebP icon, recommended 256 x 256 or 512 x 512, under public/fantasybattle/sapphire/items/<exactItemId>.webp. Use consistent light, camera angle, scale and transparent padding. No embedded text, labels, rarity frames or UI background. Register only reviewed files in ITEM_ARTWORK (core/itemArtwork.mjs) using the exact same-origin path /fantasybattle/sapphire/items/<exactItemId>.webp. The registry is deliberately empty until files are supplied. Shared ItemArt uses lazy loading, async decoding and vector fallback on image failure. Never accept URLs from saves, player input, or remote manifests; images cannot grant stats, items or equipment. Equipped accessory models and unique weapon geometry are separate future work.
+
+Next: audit inventory/loot acquisition, economy and encounter rewards, and supply a complete item asset manifest. CI and device layout validation remain pending.
