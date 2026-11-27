@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M14",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M14.md",
+    "R118_M13_M14_MEMORIAL_AND_COUNCIL_CONSTRUCTION_PROMPTS.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R92_M13-M15_SOURCE_GROUNDED_SCENE_REFINEMENTS.md",
+    "R66_QUEST_CONTINUITY_RECONCILIATION.md",
+    "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "M14_APPROACH",
+      "reality": "PRESERVED",
+      "anchor": "M06_FOUNTAIN",
+      "requires": [
+        "M13_COMPLETE"
+      ],
+      "evidence": "Reach actual square and hall, neutral summons retained"
+    },
+    {
+      "id": "M14_BRIEF",
+      "reality": "PRESERVED",
+      "anchor": "M14_SABLE",
+      "requires": [
+        "M14_APPROACH"
+      ],
+      "evidence": "Actual briefing, unnamed deceased envoy, introduce representatives or acknowledge only actual prior aid"
+    },
+    {
+      "id": "CORE_REPORTS",
+      "reality": "PRESERVED",
+      "anchor": "CORE_REPORTS",
+      "requires": [
+        "M14_BRIEF"
+      ],
+      "evidence": "All three distinct claims observed via questions or equivalent accessible summary"
+    },
+    {
+      "id": "WITNESS_RECORD",
+      "reality": "PRESERVED",
+      "anchor": "WITNESS_BENCH",
+      "requires": [
+        "CORE_REPORTS"
+      ],
+      "evidence": "Actual notice, porter testimony and authorized permit comparison or hall equivalent"
+    },
+    {
+      "id": "CAMP_AKITSU",
+      "reality": "PRESERVED",
+      "anchor": "CAMP_WEST",
+      "requires": [
+        "WITNESS_RECORD"
+      ],
+      "evidence": "Actual independent AKITSU report or equivalent hall record"
+    },
+    {
+      "id": "CAMP_TAMERI",
+      "reality": "PRESERVED",
+      "anchor": "CAMP_EAST",
+      "requires": [
+        "WITNESS_RECORD"
+      ],
+      "evidence": "Actual independent TAMERI report or equivalent hall record"
+    },
+    {
+      "id": "CAMP_REMORIA",
+      "reality": "PRESERVED",
+      "anchor": "CAMP_NORTH",
+      "requires": [
+        "WITNESS_RECORD"
+      ],
+      "evidence": "Actual independent REMORIA report or equivalent hall record"
+    },
+    {
+      "id": "M14_MIGRATE18",
+      "reality": "ORIGINAL",
+      "anchor": "M14_SAFE18",
+      "requires": [
+        "WITNESS_RECORD"
+      ],
+      "evidence": "Authored transfer after safe floor/controller/rig preflight"
+    },
+    {
+      "id": "ORIGINAL_ROAD_SECURED",
+      "reality": "ORIGINAL",
+      "anchor": "SHELTER_QUEUE",
+      "requires": [
+        "M14_MIGRATE18"
+      ],
+      "evidence": "Actual civilian arrivals after valid defense, guard or protected service route"
+    },
+    {
+      "id": "ORIGINAL_ROAD_DONE",
+      "reality": "PRESERVED",
+      "anchor": "M14_SAFE_RETURN",
+      "requires": [
+        "ORIGINAL_ROAD_SECURED"
+      ],
+      "evidence": "Safe authored return; retain completed arrival receipts"
+    },
+    {
+      "id": "COUNCIL_READY",
+      "reality": "PRESERVED",
+      "anchor": "HALL_RETURN",
+      "requires": [
+        "CAMP_AKITSU",
+        "CAMP_TAMERI",
+        "CAMP_REMORIA",
+        "ORIGINAL_ROAD_DONE"
+      ],
+      "evidence": "All three distinct camp reports plus actual original retreat"
+    },
+    {
+      "id": "COUNCIL_REPORT",
+      "reality": "PRESERVED",
+      "anchor": "REPORT_TABLE",
+      "requires": [
+        "COUNCIL_READY"
+      ],
+      "evidence": "Actual chosen report disposition, no inferred guilt or allegiance change"
+    },
+    {
+      "id": "M14_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "M15_GATE_FIELDS",
+      "requires": [
+        "COUNCIL_REPORT"
+      ],
+      "evidence": "Receive mobilization report and directions; M15 eligibility only"
+    }
+  ],
+  "actors": [
+    {
+      "role": "Sable Vey",
+      "reality": "PRESERVED",
+      "proposedNpcId": "FS_NPC_011",
+      "runtimeId": null
+    },
+    {
+      "role": "Tome",
+      "reality": "PRESERVED",
+      "proposedNpcId": "FS_NPC_008",
+      "runtimeId": null
+    },
+    {
+      "role": "Henut",
+      "reality": "PRESERVED",
+      "proposedNpcId": "FS_NPC_009",
+      "runtimeId": null
+    },
+    {
+      "role": "Livilla",
+      "reality": "PRESERVED",
+      "proposedNpcId": "FS_NPC_010",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "bread seller",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "porter",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "recruit",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "dock worker",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "seamstress",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "messenger",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "carrier",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "civilian families",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "envoy": {
+    "named": false,
+    "lifeState": "DECEASED_BEFORE_BRIEFING",
+    "liveActor": false,
+    "incidentOffscreen": true,
+    "familyPrivacy": true
+  },
+  "reports": {
+    "sources": [
+      "AKITSU",
+      "TAMERI",
+      "REMORIA"
+    ],
+    "allDistinctRequired": true,
+    "anyOrder": true,
+    "accessibleSummary": true,
+    "classes": [
+      "reported_claim",
+      "physical_observation",
+      "testimony",
+      "interpretation"
+    ],
+    "attribution": "UNCONFIRMED",
+    "noSuspectFlag": true,
+    "optionalEvidenceRequiresActualReceipt": true
+  },
+  "campReports": {
+    "sources": [
+      "AKITSU",
+      "TAMERI",
+      "REMORIA"
+    ],
+    "allDistinctRequired": true,
+    "hallEquivalent": true,
+    "optionalAidNoNewReward": true,
+    "affiliationIndependent": true
+  },
+  "migration": {
+    "afterWitness": true,
+    "beforeOrAfterCampReports": true,
+    "authoredOnly": true,
+    "preflightCollisionControllerRigs": true,
+    "rollbackOnFailure": true,
+    "noCampInteractionWhileOriginal": true,
+    "oneActiveReality": true
+  },
+  "originalRetreat": {
+    "cause": "EXTERNAL_INVASION",
+    "civilWar": false,
+    "assassination": false,
+    "imperialCheckpoints": false,
+    "routes": [
+      "exterior_defense",
+      "guard_coordination",
+      "protected_service_path"
+    ],
+    "actualArrivalRequired": true,
+    "forcedCivilianDeath": false,
+    "retry": "GUARDED_NODE_KEEP_COMPLETED_ARRIVALS",
+    "shelterCombat": false
+  },
+  "choices": {
+    "report": [
+      "public_no_verified_culprit",
+      "private_all_three_representatives",
+      "request_neutral_civilian_access"
+    ],
+    "allLeadToM15": true,
+    "guaranteedCompliance": false,
+    "diplomaticImmunity": false,
+    "forcedFaction": false
+  },
+  "optionalIndependent": [
+    "S06",
+    "S26",
+    "S27",
+    "S28",
+    "S29",
+    "S30",
+    "S31",
+    "S32",
+    "S33",
+    "S34",
+    "S35",
+    "S36",
+    "S37",
+    "S38",
+    "S39"
+  ],
+  "s06": {
+    "liveParleyClosesAtM14": true,
+    "authoredRetrospectiveAllowed": true,
+    "actualPriorAidOnly": true,
+    "envoyNeverRespawned": true
+  },
+  "s29": {
+    "proposedR66AdapterApprovalPending": true,
+    "distinctEligibleSources": 2,
+    "sourceIds": [
+      "S26",
+      "S27",
+      "S28"
+    ],
+    "s27VerifiedEvidenceMayPrecedeRepairs": true,
+    "s27CompletionRequiresBothRepairs": true,
+    "thirdAddendumNoRepeatReward": true,
+    "originalWitnessIndependent": true
+  },
+  "knowledge": {
+    "goddessManipulation": "DEVELOPER_ONLY",
+    "publicCulprit": "UNCONFIRMED",
+    "hesperGuilt": "UNCONFIRMED",
+    "nationalityImpliesGuilt": false
+  },
+  "routes": {
+    "preserved": [
+      "M13_EXIT",
+      "M06_FOUNTAIN",
+      "HALL_ENTRY",
+      "REPORT_TABLE",
+      "ROAD_NOTICE",
+      "WITNESS_BENCH",
+      "TRADE_BEND",
+      "CAMP_WEST/EAST/NORTH or HALL_EQUIVALENTS",
+      "HALL_RETURN",
+      "M15_GATE_FIELDS"
+    ],
+    "original": [
+      "M14_SAFE18",
+      "BASIN18",
+      "GUARD18",
+      "SERVICE_PATH or DEFENSE_LANE",
+      "SHELTER_QUEUE",
+      "M14_SAFE_RETURN"
+    ],
+    "transforms": null
+  },
+  "completion": {
+    "next": "M15_READY",
+    "autoAccept": false,
+    "rewardGrant": false,
+    "ordinaryMainXpProposed": true,
+    "neutralContactsProposed": true,
+    "newPower": false
+  },
+  "prohibitions": [
+    "confirmed culprit",
+    "envoy resurrection",
+    "forced faction",
+    "incident reenactment",
+    "personal loot",
+    "optional completion grant",
+    "cross-world evidence transfer",
+    "Celestial Sight",
+    "mandatory focus",
+    "mandatory glide",
+    "runtime activation"
+  ]
+}
