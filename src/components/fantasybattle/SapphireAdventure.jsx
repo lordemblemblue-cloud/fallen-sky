@@ -13,6 +13,7 @@ import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } 
 import {isCurrentEncounter,currentSaveStamp} from './core/battleLifecycle.mjs';
 import {encryptBackup,importTransfer,MAX_ENCRYPTED_BYTES} from './core/encryptedBackup.mjs';
 import { ItemArt, SkillArt } from './SapphireIcons.jsx';
+import { GROVE_STORY, groveStoryState } from './core/groveStory.mjs';
 function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" alt="" className={'fa-painted-illustration '+variant} src={'/fantasybattle/sapphire/illustrations/'+name+'.webp'} decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>;}
 
 
@@ -266,7 +267,7 @@ function Recruitment({profile,encounter,selected,member,onSelect,onRecruit,origi
   const skills=actionsForClass(selected.combatClass).filter(id=>selected.combatClass||id!=='chargedShot');
   const recruit=<Btn primary className="fa-recruit-confirm" disabled={!profile||member.recruited||Boolean(encounter)||!eligible} onClick={()=>onRecruit(selected)}>{member.recruited?'Recruited':'Recruit companion'}</Btn>;
   const list=ROSTER.map(m=><Btn key={m.id} primary={selected.id===m.id} aria-pressed={selected.id===m.id} onClick={()=>onSelect(m.id)}><ArcherPortrait companion={m} small/><span>{m.name}</span><small>{status(m)}</small></Btn>);
-  const requirements=<><p>{eligible?'Completed':'Required'}: {requirement}</p><p>{profile?'Active character ready':'Create or load a character first'}</p>{encounter&&<p>Recruitment is locked during combat.</p>}<p>{member.recruited?'Already recruited':eligible?'Ready to recruit':'Defeat the required encounter to unlock'}</p></>;
+  const requirements=<><p>{eligible?'Completed':'Required'}: {requirement}</p><p>{profile?'Active character ready':'Create or load a character first'}</p>{encounter&&<p>Recruitment is locked during combat.</p>}<p>{member.recruited?'Already recruited':eligible?'Ready to recruit':'Defeat the required encounter to unlock'}</p>{eligible&&selected.id==='groveArcher'&&!member.recruited&&<p>{GROVE_STORY.recruit}</p>}</>;
   const abilities=skills.map(id=><div key={id} className="fa-recruit-skill"><SkillArt id={id}/><strong>{ACTIONS[id].name}</strong><small>{ACTIONS[id].summary}</small></div>);
   const attributes=<StatRows stats={{HP:stats.maxHp,Attack:stats.atk,Defense:stats.def,Speed:stats.spd}}/>;
   if(original)return <div className="fa-original-recruit">
@@ -377,11 +378,11 @@ function QuestJournal({profile,encounter,original,layout,go,back,onClaim}){
     <h3 className="fa-journal-list-title">Quest log</h3><section className="fa-journal-list" aria-label="Quest list">{questEntry}</section>
     <div className="fa-journal-empty">No additional quests available in this build.</div>
     {visible?<><h3 className="fa-journal-name">Whispering Grove Spirit</h3><div className="fa-journal-status">{status}</div><h3 className="fa-journal-objective-title">Objective</h3><section className="fa-journal-objective">{objective}</section>
-    <h3 className="fa-journal-description-title">Quest details</h3><section className="fa-journal-description"><p>Locate the encounter in Whispering Grove and defeat the spirit. Progress is recorded in the active character's saved profile.</p>{encounter&&<p>Quest actions are locked during combat.</p>}</section>
+    <h3 className="fa-journal-description-title">Quest details</h3><section className="fa-journal-description"><p>{GROVE_STORY.journal}</p>{encounter&&<p>Quest actions are locked during combat.</p>}</section>
     <h3 className="fa-journal-reward-title">Rewards</h3><section className="fa-journal-rewards">{reward}</section></>:<section className="fa-journal-no-selection"><p>Select a filter with an available quest to view its objectives.</p></section>}
     <Btn className="fa-journal-map" onClick={()=>go('07')}>World map</Btn>{visible?action:<Btn className="fa-journal-action" disabled>No quest selected</Btn>}<Btn className="fa-journal-back" onClick={back}>Back</Btn>
   </div>;
-  return <><Panel rect={layout[0]}>{filterButtons}<Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Quest log</h2>{questEntry}</Panel><Panel rect={layout[2]}>{visible?<><h2>Whispering Grove Spirit</h2><p>{status}</p>{objective}{reward}{action}</>:<p>No quest selected.</p>}</Panel></>;
+  return <><Panel rect={layout[0]}>{filterButtons}<Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Quest log</h2>{questEntry}</Panel><Panel rect={layout[2]}>{visible?<><h2>Whispering Grove Spirit</h2><p>{status}</p><p>{GROVE_STORY.journal}</p>{objective}{reward}{action}</>:<p>No quest selected.</p>}</Panel></>;
 }
 
 // Travel choices use live streamed bounds and saved discoveries. The painting
@@ -443,7 +444,7 @@ function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,
   const options=group==='services'?[['16','Merchant',true],['17','Blacksmith',true],['22','Crafting',true]]:[['33','Rest and recover',true],['43','View quest offer',questAvailable],['26','Companion recruitment',true]];
   const choices=options.map(([id,label,enabled])=><Btn key={id} disabled={!available||!enabled} onClick={()=>go(id)}>{label}{id==='43'&&!questAvailable?' · Unavailable':''}</Btn>);
   const navigation=<><Btn primary={group==='services'} aria-pressed={group==='services'} onClick={()=>setGroup('services')}>Services</Btn><Btn primary={group==='preparation'} aria-pressed={group==='preparation'} onClick={()=>setGroup('preparation')}>Preparation</Btn><Btn disabled={!profile} onClick={()=>go('30')}>Relationships</Btn><Btn disabled={!profile} onClick={()=>go('08')}>Quest journal</Btn><Btn onClick={back}>Leave</Btn></>;
-  const message=!available?'Approach a gold service marker in the world to interact.':group==='services'?'Choose a service to trade, enhance equipment or craft supplies.':'Rest, review available quests or recruit companions before your next encounter.';
+  const message=!available?'Approach a gold service marker in the world to interact.':group==='services'?'Choose a service to trade, enhance equipment or craft supplies.':(groveStoryState(profile)?.serviceNote||'Rest, review available quests or recruit companions before your next encounter.');
   if(original)return <div className="fa-original-dialogue">
     <h2 className="fa-dialogue-title">Conversation</h2>
     <div className="fa-dialogue-subtitle">World interaction</div>
@@ -462,7 +463,7 @@ function QuestOffer({profile,encounter,original,layout,onAccept,back}){
   const defeated=Boolean(profile?.world.completedEncounters.includes('wilds_grove_01'));
   const available=Boolean(profile&&state==='available'&&!encounter);
   const reason=!profile?'Load a character first.':encounter?'Quest acceptance is unavailable during combat.':state==='claimed'?'This quest has already been completed.':state==='complete'?'This quest is ready to complete in the journal.':state==='active'?'This quest is already active.':defeated?'You have already defeated the Grove Spirit. Accept to record the completed objective.':'Accept to begin tracking this quest.';
-  const description=<><p>Defeat the Grove Spirit in the first exploration region, Whispering Grove.</p><p>{reason}</p></>;
+  const description=<><p>{GROVE_STORY.offer}</p><p>{reason}</p></>;
   const objective=<><p>Defeat the Grove Spirit · {defeated?1:0}/1</p><progress aria-label="Quest objective progress" max={1} value={defeated?1:0}/></>;
   const rewards=<><p>Experience, gold and loot are awarded on the first eligible victory.</p><p>Accepting or claiming this journal entry does not grant additional rewards.</p></>;
   const controls=<><Btn primary className="fa-offer-accept" disabled={!available} onClick={onAccept}>Accept Quest</Btn><Btn className="fa-offer-decline" onClick={back}>{state==='available'?'Decline':'Back'}</Btn></>;
@@ -482,7 +483,7 @@ function QuestCompletion({profile,original,layout,onContinue,onJournal}){
   const completed=state==='claimed'&&defeated;
   const heading=completed?'Quest Complete':'Quest Progress';
   const objective=<><p>Grove Spirit defeated: {defeated?'Yes':'No'}</p><p>Journal completion: {completed?'Recorded':state==='complete'?'Ready to complete':'Not recorded'}</p><progress aria-label="Quest objective progress" max={1} value={defeated?1:0}/></>;
-  const reward=<><p>{completed?'Battle rewards were awarded when the encounter was first defeated.':'Rewards are handled by the battle system.'}</p><p>No additional experience, gold or loot is granted by this screen.</p><p>{completed?'Quest completion is recorded in your active profile.':'Return to the journal to review the quest.'}</p></>;
+  const reward=<><p>{completed?'Battle rewards were awarded when the encounter was first defeated.':'Rewards are handled by the battle system.'}</p><p>No additional experience, gold or loot is granted by this screen.</p><p>{completed?GROVE_STORY.completion:'Return to the journal to review the quest.'}</p></>;
   const controls=<><Btn primary className="fa-complete-continue" onClick={onContinue}>Continue</Btn><Btn className="fa-complete-journal" onClick={onJournal}>Quest Journal</Btn></>;
   if(original)return <div className="fa-original-completion">
     <h2 className="fa-complete-title">{heading}</h2><h3 className="fa-complete-name">Whispering Grove Spirit</h3>
@@ -502,7 +503,7 @@ function DungeonEntrance({profile,world,candidate,encounter,running,original,lay
   const completed=Boolean(profile&&candidate&&profile.world.completedEncounters.includes(candidate.id));
   const category=candidate?.category||'—';
   const title=candidate?.label||'No encounter selected';
-  const description=ready?'Review the enemy formation and tactics before entering battle.':encounter?'An encounter is already active.':'Approach an encounter marker in the world.';
+  const description=ready?(candidate.id==='wilds_grove_01'?GROVE_STORY.warning:'Review the enemy formation and tactics before entering battle.'):encounter?'An encounter is already active.':'Approach an encounter marker in the world.';
   const roster=<>{enemies.length?enemies.map(e=><div className="fa-entrance-enemy" key={e.id}><EnemyPortrait enemy={e}/><strong>{e.name}</strong><small>HP {e.maxHp}</small></div>):<p>No enemy formation available.</p>}</>;
   const stats=<StatRows stats={{'Encounter type':category,'Enemy HP':lead?.maxHp??'—','Enemy attack':lead?.atk??'—','Enemy defense':lead?.def??'—'}}/>;
   const details=<><p>{description}</p>{completed&&<p>Previously defeated. First-victory rewards cannot be earned again.</p>}</>;
@@ -991,7 +992,7 @@ function WorldCodex({profile,world,original,layout,go,back}){
     regions:regions.map(r=>({id:r.id,name:r.name,summary:'Discovered region recorded in your exploration progress.',details:[['Discovery','Visited'],['World range',Number.isFinite(r.minX)&&Number.isFinite(r.maxX)?r.minX+' – '+r.maxX:'Unavailable'],['Current region',world?.region===r.name?'Yes':'Not confirmed']],note:'This entry is derived from the live world map and saved discoveries.'})),
     factions:[],
     creatures:defeated.map(e=>({id:e.id,name:e.label,summary:'Encounter completed and recorded in your saved progress.',details:[['Category',e.category||'Encounter'],['Status','Defeated']],note:'See the Bestiary for current encounter statistics and combat tactics.'})),
-    history:profile&&['active','complete','claimed'].includes(profile.quests.grove)?[{id:'grove',name:'Whispering Grove Spirit',summary:'A recorded quest in your journey.',details:[['Quest status',({active:'Active',complete:'Ready to complete',claimed:'Completed'})[profile.quests.grove]],['Encounter',completed.includes('wilds_grove_01')?'Defeated':'Not yet defeated']],note:'See the Quest Journal for the current objective.'}]:[],
+    history:profile&&['active','complete','claimed'].includes(profile.quests.grove)?[{id:'grove',name:'Whispering Grove Spirit',summary:groveStoryState(profile)?.history||'A recorded quest in your journey.',details:[['Quest status',({active:'Active',complete:'Ready to complete',claimed:'Completed'})[profile.quests.grove]],['Encounter',completed.includes('wilds_grove_01')?'Defeated':'Not yet defeated']],note:'See the Quest Journal for the current objective.'}]:[],
     people:companions.map(m=>({id:m.id,name:m.name,summary:'A recruited companion recorded in your party.',details:[['Recruitment','Recruited'],['Saved health',memberFor(profile,m.id).hp+' / '+m.maxHp]],note:'Manage active companions in Party Formation.'})),
     artifacts:Object.entries(ITEMS).filter(([id,i])=>inv[id]>0&&(i.kind==='gear'||i.kind==='weapon')).map(([id,i])=>({id,name:i.name,summary:'An owned equipment record from your inventory.',details:[['Type',i.slot||i.kind],['Owned',inv[id]],['Sell value',i.sell||0]],note:'Use Inventory or Equipment Comparison for item management.'})),
     mythology:[]
