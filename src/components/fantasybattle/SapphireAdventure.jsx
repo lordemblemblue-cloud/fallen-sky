@@ -9,7 +9,7 @@ import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalo
 import { ITEMS, COMPANION, ROSTER, memberFor, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, craftTonic, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
-import { artFor, artUrl, templateUrl } from './sapphireArt.mjs';
+import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
 import {isCurrentEncounter,currentSaveStamp} from './core/battleLifecycle.mjs';
 import {encryptBackup,importTransfer,MAX_ENCRYPTED_BYTES} from './core/encryptedBackup.mjs';
 import { ItemArt, SkillArt } from './SapphireIcons.jsx';
@@ -41,6 +41,30 @@ function Panel({rect,children,className=''}) {
 }
 function Btn({children,onClick,disabled=false,primary=false,className='',...props}){
   return <button type="button" className={'fa-button'+(primary?' primary':'')+(className?' '+className:'')} disabled={disabled} onClick={onClick} {...props}>{children}</button>;
+}
+// Preserve working controls while the individual original image loads; failed
+// requests leave the existing interface available instead of a blank screen.
+function useStagedOriginal(id){
+  const entry=stagedOriginalFor(id);
+  const url=entry?.url;
+  const [loaded,setLoaded]=useState(null);
+  useEffect(()=>{
+    if(!url)return;
+    let active=true;
+    const img=new Image();
+    img.onload=()=>{if(active)setLoaded(url);};
+    img.onerror=()=>{if(active)setLoaded(null);};
+    img.src=url;
+    return()=>{active=false;img.onload=null;img.onerror=null;};
+  },[url]);
+  return url&&loaded===url?entry:null;
+}
+function SaveToast({status}){
+  const [ready,setReady]=useState(false);
+  return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
+    <img src={ORIGINAL_SAVE_PLAQUE} alt="" aria-hidden="true" decoding="async" onLoad={()=>setReady(true)} onError={()=>setReady(false)}/>
+    <span>{status}</span>
+  </aside>;
 }
 function StatRows({stats}){return <dl className="fa-stats">{Object.entries(stats).map(([k,v])=><div key={k}><dt>{k}</dt><dd>{typeof v==='number'?fmt(v):v}</dd></div>)}</dl>;}
 function RegionMap({world,profile,small=false}){
@@ -263,18 +287,20 @@ export default function SapphireAdventure(){
     case '47':content=pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
-  const template=templateUrl(id);
-  const artwork=artFor(id,running);
+  const original=useStagedOriginal(id);
+  const template=original?.url||templateUrl(id);
+  const artwork=original?{mode:'original-full',asset:null}:artFor(id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
     {running?<iframe className="fa-world" ref={frame} src="/fantasy-battle-world" title="Sapphire Wilds 3D world" tabIndex={id==='10'?0:-1} style={{pointerEvents:id==='10'?'auto':'none'}}/>:<div className="fa-title-art"/>}
     {encounter&&arenaReady&&profile&&<BattleSurface key={encounter.token} encounter={encounter} profile={profile} paused={id!=='09'} muted={settings.muted} reducedMotion={settings.reducedMotion} quality={settings.quality} stageRef={stageRef} onHud={handleBattleHud} onError={(message,token)=>{if(isCurrentEncounter(current.current.encounter,token))fail(message);}}/>}
     {artwork.mode==='cinematic'&&<div className={'fa-cinematic-art'+(artwork.asset==='title-original'?' title-original':'')} aria-hidden="true" style={{'--fa-scene-art':'url("'+artworkUrl+'")'}}/>}
-    <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-art-mode={artwork.mode}>
+    <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
       <div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>
       {!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
+      {original&&id==='35'&&<span className="fa-original-subtitle" aria-hidden="true">Fantasy Battle</span>}
       {content}
     </div>
-    {(notice||saveStatus)&&<aside className="fa-notice" role="status">{saveStatus||notice}</aside>}
+    {saveStatus?<SaveToast status={saveStatus}/>:notice&&<aside className="fa-notice" role="status">{notice}</aside>}
   </main>;
 }
