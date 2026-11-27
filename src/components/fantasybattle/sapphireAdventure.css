@@ -27,3 +27,34 @@
 @media(pointer:fine){.fa-touch{display:none}}
 @media(max-aspect-ratio:4/3){.fa-ui.page{overflow:auto}.fa-ui.page .fa-template{display:none}.fa-ui.page .fa-header{position:relative;top:auto;left:auto;right:auto;padding:12px}.fa-ui.page .fa-panel{position:relative!important;inset:auto!important;width:auto!important;height:auto!important;min-height:0;margin:10px;padding:12px;background:linear-gradient(115deg,#080d1ae8,#193d82c4);border:1px solid #d1b784}.fa-ui.page .fa-panel:empty{display:none}.fa-ui.hud{font-size:10px}.fa-ui.hud .fa-panel{padding:4px}.fa-notice{max-width:70%}}
 @media(max-height:480px){.fa-panel{padding:5px;gap:3px}.fa-button{min-height:23px;padding:.25em .5em}.fa-header h1{font-size:18px}.fa-header{padding-bottom:2px}.fa-combat-actions .fa-button small{display:none}.fa-panel h2{font-size:15px}}
+
+/* Art direction reinforcement: painted scenes, real HTML controls, static ornaments. */
+.fa-cinematic-art{position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(90deg,#080d1a80,#18274d22 60%,#080d1a40),var(--fa-scene-art) center/cover no-repeat,url('/hub/fantasy-battle-backdrop.webp') center/cover no-repeat,#18274d}
+.fa-cinematic-art.title-original{background:linear-gradient(90deg,#101b35 0%,#193d82e8 24%,#18274d8a 32%,transparent 45%),var(--fa-scene-art) right center/66% 100% no-repeat,url('/hub/fantasy-battle-backdrop.webp') center/cover no-repeat,#18274d}
+.fa-title-art{background:radial-gradient(ellipse at 70% 35%,#448ce0,#193d82 45%,#080d1a 85%)}
+.fa-ui.page[data-art-mode="cinematic"]{background:linear-gradient(110deg,#080d1a38,transparent 60%)}
+.fa-ui.page[data-art-mode="overlay"]{background:#080d1a63}
+.fa-ui[data-screen="01"] .fa-panel{justify-content:center;text-align:center;gap:clamp(5px,1.2vh,13px);padding:clamp(9px,1.6vw,28px)}
+.fa-ui[data-screen="01"] h1{font-size:clamp(22px,3.2vw,53px);line-height:1.05;font-variant:small-caps}
+.fa-title-mark{color:#fff0c4;font-size:clamp(22px,3.3vh,40px);line-height:1;text-shadow:0 0 12px #78c9ed}
+.fa-title-subtitle{font-style:italic;color:#d7e6f8;font-size:.9em}
+.fa-title-divider{height:1px;background:linear-gradient(90deg,transparent,#ebd6a6,transparent);margin:0 8% 1vh}
+.fa-button{border-radius:18px 5px 18px 5px;position:relative;background:linear-gradient(115deg,#10182bf2 3%,#193d82ee 45%,#2859b8ce 72%,#78c9ed8a);box-shadow:inset 0 0 0 2px #ebd6a61d,0 2px 5px #080d1a66}
+.fa-button.primary,.fa-button:hover:not(:disabled){background:linear-gradient(115deg,#193d82,#2859b8 50%,#78c9ed);box-shadow:0 0 10px #78c9ed80,inset 0 0 0 2px #fff0c466}
+.fa-button:active:not(:disabled){transform:translateY(1px)}
+.fa-button:disabled{opacity:.58;filter:saturate(.5)}
+.fa-item-art,.fa-skill-art{width:clamp(23px,3.1vw,45px);height:auto;flex-shrink:0;display:inline-block;vertical-align:middle;margin-right:.2em}
+.fa-panel .fa-button:has(.fa-item-art){flex-direction:row;justify-content:flex-start;text-align:left}
+.fa-combat-actions .fa-skill-art{width:clamp(16px,2vw,32px);margin:0}
+.fa-loot-row{display:flex;align-items:center;gap:.6em;padding:.3em;border-bottom:1px solid #d1b78455}
+.fa-skill>.fa-skill-art{float:left;margin:0 .6em .3em 0}
+.fa-skill{display:flow-root}
+.fa-header{border-bottom-color:transparent;text-shadow:0 2px 6px #080d1a}
+.fa-header h1{font-variant:small-caps;font-weight:500}
+.fa-panel progress::-webkit-progress-value{background:linear-gradient(90deg,#193d82 0%,#448ce0 55%,#b9f0ff 100%)}
+.fa-panel progress::-moz-progress-bar{background:linear-gradient(90deg,#193d82,#448ce0,#b9f0ff)}
+.fa-ui[data-screen="09"] .fa-combat-actions .fa-button{flex-direction:row;flex-wrap:wrap;gap:3px}
+.fa-ui[data-screen="09"] .fa-combat-actions .fa-button small{flex-basis:100%}
+@media(max-aspect-ratio:4/3){.fa-cinematic-art.title-original{background-size:cover;background-position:center}.fa-ui[data-screen="01"] .fa-panel{max-width:400px;margin:12px auto;justify-content:flex-start}.fa-item-art,.fa-skill-art{width:28px}}
+@media(max-height:480px){.fa-ui[data-screen="01"] .fa-panel{justify-content:flex-start}.fa-title-mark{display:none}.fa-ui[data-screen="09"] .fa-combat-actions .fa-skill-art{display:none}}
+@media(prefers-reduced-motion:reduce){.fa-root *{transition:none!important;animation:none!important}}
