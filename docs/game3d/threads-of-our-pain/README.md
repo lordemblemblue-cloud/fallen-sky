@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R104 — completed supplemental opportunity review:** [What survives our absence](R104_S51-S55_FINAL_OPPORTUNITY_AND_DECISION_REGISTER.md). S51–S55 source re-audit, five proposed scene packets and Claude deltas; consolidated closure/ownership/consent decision register. Supplemental coverage 105/105 optional IDs and 20/20 main IDs; exact original phases and approval/runtime gates remain open. Next R105 pacing and regional quest density. Draft only.
+
 > **R103 — fifth twenty opportunity window predicates:** [Beyond the forgotten horizon](R103_D41-D50_S41-S50_OPPORTUNITY_WINDOW_AUDIT.md). D41–D50/S41–S50 source re-audit, twenty proposed dialogue packets and terrain deltas; all 50 paired discoveries require post-claim vista, S41 consent, S43 D01 receipt reuse, D49 flight prerequisite and D50 precommit history. Supplemental audit 100/105. Next S51–S55 and consolidation. Draft only.
 
 > **R102 — fourth twenty opportunity window predicates:** [Those who never stopped waiting](R102_D31-D40_S31-S40_OPPORTUNITY_WINDOW_AUDIT.md). D31–D40/S31–S40 source re-audit, twenty proposed dialogue packets and terrain deltas; D31/S46 rested guardian, D36 required second vista, D37 delivery variants, S36 consent and S40 privacy. Supplemental audit 80/105; exact original closure TBD. Next D41–D50/S41–S50. Draft only.
