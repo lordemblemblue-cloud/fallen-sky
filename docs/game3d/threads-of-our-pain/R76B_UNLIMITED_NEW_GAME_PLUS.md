@@ -1,6 +1,8 @@
 # R76B — Unlimited New Game Plus and long-term progression
 27 November 2026 | Owner direction, design documentation only. Read with R76/R76A; this revision resolves the earlier open cycle-cap question.
 
+> **R76E — NG+ enemy scaling and XP:** [Late-game opening baseline, escalating encounters and double enemy experience](R76E_NEW_GAME_PLUS_ENEMY_SCALING.md). Opening enemies approach original late-game strength, midpoint approaches original endgame, and late encounters escalate further. Enemy XP 2x; compare 1.5x–2x tuning candidates without compounding blindly. Exact stat curves and gold/material rewards remain open.
+
 > **R76C — character level caps:** [Base 155 / proposed NG+ 310](R76C_LEVEL_CAP_PROGRESSION.md). Base cap 155 confirmed; proposed additional 155 levels in NG+. Recommended carryover without resetting earned levels; permanent ceiling and reset semantics pending confirmation.
 
 ## Owner-confirmed requirements
@@ -12,7 +14,7 @@
 ## Proposed engineering and balance rules (not final numbers)
 Use a persistent character progression/ownership record and cycle-scoped campaign state and quest receipts. On starting NG+, atomically create the next cycle with validated progression, equipped/stored gear, upgrades and unlocks; do not sum inventories or duplicate unique relics. Repeatable experience, materials and eligible rewards must be earned from gameplay in the new cycle. Exact currency/consumable carryover, repeat reward tables and quest-item reset rules remain subject to design.
 
-Increase enemy challenge with a tunable cycle-indexed curve, including bosses. Recommend health, damage and appropriate encounter/AI tuning instead of simply multiplying every stat without limit. Avoid numerical overflow, impossible fights, reward inflation and performance degradation. Unlimited cycles does not imply an unlimited player level or equipment upgrade cap; use existing approved progression limits until explicitly revised. At max level and max gear, continued campaigns remain playable and challenging. R76C establishes base cap 155 and proposed NG+ cap 310; permanent ceiling and reset semantics await clarification. XP curves, scaling functions, encounter changes, reward tables and maxed-character balance remain open.
+Increase enemy challenge with a tunable cycle-indexed curve, including bosses. Recommend health, damage and appropriate encounter/AI tuning instead of simply multiplying every stat without limit. Avoid numerical overflow, impossible fights, reward inflation and performance degradation. Unlimited cycles does not imply an unlimited player level or equipment upgrade cap; use existing approved progression limits until explicitly revised. At max level and max gear, continued campaigns remain playable and challenging. R76C establishes base cap 155 and proposed NG+ cap 310; permanent ceiling remains open; R76D confirms level retention. R76E specifies double enemy XP and the rebased difficulty progression; exact stat curves, other rewards and maxed-character balance remain open.
 
 Claude should preserve the authored world, phase-dependent characters and quest windows within each cycle. Reuse existing terrain and assets; do not accumulate active world copies per cycle. Engineering should keep cycle metadata and historical records lightweight, with durable recovery and authoritative reward validation.
 
