@@ -2,10 +2,24 @@
 // All labels, values, icons and controls remain independent from the art.
 import { UI_SCREENS } from './uiCatalog.mjs';
 export const ART_ROOT='/fantasybattle/sapphire';
+// Register one entry only after its individual original picture has been cleaned,
+// visually inspected, and committed. Never register a reconstructed SVG as source art.
+// Entry shape: { source: 'original filename', asset: '01.webp', mode: 'full' | 'overlay' }.
+// Overlay images must preserve alpha outside the actual panels. Full images include
+// their own scenery. Keep this registry empty rather than mislabeling placeholder art.
+export const ORIGINAL_TEMPLATES=Object.freeze({});
+export function originalTemplateFor(id){
+ if(!Object.hasOwn(UI_SCREENS,id)||!Object.hasOwn(ORIGINAL_TEMPLATES,id))return null;
+ const entry=ORIGINAL_TEMPLATES[id];
+ return {url:ART_ROOT+'/templates/'+entry.asset,mode:entry.mode,source:entry.source};
+}
+export const originalTemplateCoverage=()=>Object.keys(ORIGINAL_TEMPLATES).length;
+
 const full={ '01':'title-original','02':'sanctuary','03':'sanctuary','14':'celestial','15':'moonlit','19':'celestial','20':'sanctuary','31':'ruins','32':'celestial','35':'wilds','36':'ruins','38':'celestial','42':'wilds','44':'celestial','45':'celestial','48':'title-original' };
 const ambient={'05':'sanctuary','06':'moonlit','07':'wilds','08':'wilds','11':'sanctuary','12':'celestial','16':'wilds','17':'ruins','18':'sanctuary','21':'moonlit','22':'ruins','23':'ruins','24':'moonlit','25':'wilds','26':'sanctuary','27':'celestial','28':'celestial','29':'wilds','30':'sanctuary','33':'sanctuary','34':'wilds','43':'wilds','46':'sanctuary'};
 export function artFor(id,running=false){
  const s=UI_SCREENS[id]; if(!s)return {mode:'transparent',asset:null};
+ const original=originalTemplateFor(id);if(original)return {mode:original.mode==='full'?'original-full':'original-overlay',asset:null};
  if(full[id])return {mode:'cinematic',asset:full[id]};
  if(ambient[id]&&!running)return {mode:'cinematic',asset:ambient[id]};
  if(s.mode==='hud'||s.mode==='toast')return {mode:'transparent',asset:null};
@@ -37,4 +51,5 @@ export function makeSapphireTemplate(id){
 }
 
 const urlCache=new Map();
-export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!urlCache.has(id))urlCache.set(id,'data:image/svg+xml,'+encodeURIComponent(makeSapphireTemplate(id)));return urlCache.get(id);}
+// Legacy frames are provisional previews only; never regenerate or substitute an approved image.
+export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';const original=originalTemplateFor(id);if(original)return original.url;if(!urlCache.has(id))urlCache.set(id,'data:image/svg+xml,'+encodeURIComponent(makeSapphireTemplate(id)));return urlCache.get(id);}
