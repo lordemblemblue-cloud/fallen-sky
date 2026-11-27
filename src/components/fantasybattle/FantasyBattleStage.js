@@ -1,5 +1,5 @@
 /**
- * Fantasy Battle stage: the renderer, two archers built from the same rig, the effects, and the turn-based battle.
+ * Fantasy Battle stage: the renderer, archers built from the same rig, the effects, and the turn-based battle.
  *
  * Each Fighter wraps a puppetCore state, a SkillPlayer and a PuppetView and offers the puppet API:
  *   setLookTarget(x, y)          world point to look at (cursor or combat target)
@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady } from '@/lib/webgpuSceneRenderer.js';
 import { buildRig, createPuppetState, stepPuppet, socketPosition, setLookTarget as lookAt, triggerExpression as expressionOf } from './core/puppetCore.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
-import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, isLegal, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
+import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
 import { PuppetView, loadTextures, prepareTexture } from './render/puppetView.js';
 import { FxSystem, makeBackdropTexture } from './render/stageFx.js';
 import { SfxSynth } from './render/sfx.js';
@@ -486,7 +486,7 @@ export class FantasyBattleStage {
   /** Each living ally chooses independently before the deterministic round resolves. */
   async chooseAction(actionId) {
     const id=this.choosingUnit();
-    if(this.paused||this.mode!=='battle'||this.phase!=='choose'||!id||!this.legal().some(a=>a.id===actionId&&a.enabled))return false;
+    if(this.disposed||this.paused||this.mode!=='battle'||this.phase!=='choose'||!id||!this.legal().some(a=>a.id===actionId&&a.enabled))return false;
     this.sfx.ensure();
     this.pendingChoices[id]=actionId;
     const next=this.choosingUnit();
