@@ -13,3 +13,16 @@ const verifiedAssets=[["backgrounds/celestial.webp","6a0a9b62c24fafb9772e3689b20
 test('all ten shipped painted assets are valid WebP files and match approved blob hashes',()=>{for(const [name,expected] of verifiedAssets){const bytes=readFileSync(new URL('../public/fantasybattle/sapphire/'+name,import.meta.url));assert.equal(bytes.subarray(0,4).toString(),'RIFF');assert.equal(bytes.subarray(8,12).toString(),'WEBP');const hash=createHash('sha1').update('blob '+bytes.length).update(Buffer.from([0])).update(bytes).digest('hex');assert.equal(hash,expected,name);}});
 
 test('refined static frames are cached and all panels fit the normalized canvas',()=>{for(const [id,s] of Object.entries(UI_SCREENS)){const frame=makeSapphireTemplate(id),url=templateUrl(id);assert.equal(url,templateUrl(id));assert.equal(decodeURIComponent(url.split(',')[1]),frame);assert.match(frame,/id="edge"/);assert.match(frame,/id="sheen"/);assert.doesNotMatch(frame,/<filter|<animate|<text[ >]/i);for(const [x,y,w,h] of s.layout){assert.ok(x>=0&&y>=0&&w>0&&h>0);assert.ok(x+w<=1.000001&&y+h<=1.000001);}}assert.equal(templateUrl('invalid'),'');assert.ok(UI_SCREENS['09'].layout[3][3]>.3);});
+
+
+import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
+test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
+ const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['35','40']);
+ for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
+  assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
+  assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
+ }
+ assert.match(ORIGINAL_SAVE_PLAQUE,allowed);
+ for(const id of ['09','10','47','invalid','__proto__','constructor'])assert.equal(stagedOriginalFor(id),null);
+});
