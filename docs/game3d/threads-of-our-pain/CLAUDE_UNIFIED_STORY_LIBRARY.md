@@ -1,6 +1,8 @@
-# Claude unified story library — R76
+# Claude unified story library — R76A
 
-> **R76 — owner-approved requirements:** [Postgame quest continuation and equipment retention](R76_OWNER_POSTGAME_CONTINUATION.md). Both endings must preserve earned gear and enable unfinished quests to be completed for continuing progression. Exact historical access mechanism and other R75/R75A policies remain open. No runtime validation.
+> **R76A — owner clarification:** [Missable chapter quests and New Game Plus](R76A_MISSABLE_QUESTS_AND_NEW_GAME_PLUS.md). Persistent quests remain available; genuinely chapter-exclusive opportunities can close for the current cycle. NG+ at increased difficulty is the preferred recovery design; no magical rewind or automatic rewards. Exact classification and scaling pending.
+
+> **R76 — owner-approved requirements:** [Postgame quest continuation and equipment retention](R76_OWNER_POSTGAME_CONTINUATION.md). Both endings preserve earned gear and permit continuing quests subject to R76A chapter exclusivity. Exact historical access mechanism and other R75/R75A policies remain open. No runtime validation.
 
 > **R75A:** [Concurrent progression addendum](R75A_POSTGAME_PROGRESSION_ADDENDUM.md) supplements the primary R75 with consumed/sold item provenance, safe snapshot failure recovery and historical journal states. Dialogue variants are alternatives. No owner approval or runtime validation.
 
