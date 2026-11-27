@@ -1,5 +1,7 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
+> **R134 — opening cue and encounter presentation:** [Character, audio, animation and encounter handoff](R134_P01_CUE_CHARACTER_AND_ENCOUNTER_PRESENTATION_HANDOFF.md). Fourteen source-grounded beats, six actor contracts and eleven cross-referenced evidence rows; R106 voice alternatives, non-spoiler Woman in the Light, genuine M02 readiness, three M03 phases and actual defeat/aftermath. Later scope after accepted Low blockout; no generated assets or runtime evidence. Next R135 fixture receipt and reset scenarios.
+
 > **R133 — Low blockout asset and measurement worksheet:** [Opening forest construction components](R133_P01_LOW_BLOCKOUT_ASSET_AND_MEASUREMENT_WORKSHEET.md). Eleven landmark groups, 20 proposed logical asset modules, ten survey/evidence rows; source dimensions and shared clearing preserved, A01/A20 reuse, no new runtime IDs. T04 planning input only; no actual surveyed coordinates, implementation or runtime evidence. Next R134 cue and encounter presentation handoff.
 
 > **R132 — bounded P01 implementation handoff:** [Eight engineering tickets and acceptance return](R132_P01_BOUNDED_IMPLEMENTATION_TICKETS_AND_ACCEPTANCE_RETURN.md). T00–T07, ten review gates, runner/entry limitations and copyable evidence template. Initial scope stops at isolated Low blockout/controller evidence; no live game changes or implementation authority. Next owner review or R133 Low blockout measurement worksheet.
