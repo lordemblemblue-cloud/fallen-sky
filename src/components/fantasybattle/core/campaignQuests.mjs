@@ -50,7 +50,25 @@ export const SANCTUARY_QUEST=Object.freeze({
   Object.freeze({id:'wilds_sanctuary_boss',label:'Defeat the sanctuary Gatekeeper'})
  ])
 });
-export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST,HEIGHTS_QUEST,ELITE_TRIAL,SANCTUARY_QUEST]);
+export const ASTRAL_QUEST=Object.freeze({
+ id:'astral',title:'The Last Unsent Message',prerequisite:'sanctuary',
+ offer:'Follow the oldest shrine signal through Moonveil Gardens and the Astral Ruins. Clear the spirit, wraith and vanguard.',
+ description:'The observatory once relayed memories between shrines. The last message never reached its destination.',
+ completion:'The observatory is quiet. We found where the signal began, but who chose to leave the last message unsent?',
+ objectives:Object.freeze([
+  Object.freeze({id:'wilds_moonveil_01',label:'Defeat the Moonveil Spirit'}),
+  Object.freeze({id:'wilds_astral_01',label:'Defeat the Astral Wraith'}),
+  Object.freeze({id:'wilds_astral_elite',label:'Defeat the Astral Vanguard'})
+ ])
+});
+export const MOONVEIL_TRIAL=Object.freeze({
+ id:'moonveilKeeper',title:'The Keeper of Forgotten Rites',prerequisite:'sanctuary',optional:true,
+ offer:'An ancient keeper remains in Moonveil. Investigate the rites it once guarded.',
+ description:'The gardens once preserved memories so travelers could carry them home without repeating them forever.',
+ completion:'The keeper has fallen silent. The old rites were meant to release memories, not imprison them.',
+ objectives:Object.freeze([Object.freeze({id:'wilds_moonveil_elite',label:'Defeat the Moonveil Keeper'})])
+});
+export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST,HEIGHTS_QUEST,ELITE_TRIAL,SANCTUARY_QUEST,ASTRAL_QUEST,MOONVEIL_TRIAL]);
 const defeated=(p,id)=>p?.world?.completedEncounters?.includes(id)===true;
 const discovered=(p,id)=>p?.world?.discoveries?.includes(id)===true;
 // Only catalogued objective IDs are used; no dialogue or asset can grant progress.
@@ -113,4 +131,13 @@ export function campaignServiceNote(p){
  const entry=trackedCampaign(p);
  if(!entry)return null;
  return entry.progress.state==='complete'?'Return to the journal to record your progress.':entry.q.offer;
+}
+
+// Only the six currently planned main chapters count toward the arc, not optional quests.
+export function campaignArc(p){
+ const main=CAMPAIGN_QUESTS.filter(q=>!q.optional);
+ const grove=groveUnlocked(p);
+ const completed=Number(grove)+main.filter(q=>campaignQuest(p,q.id).state==='claimed').length;
+ const total=1+main.length;
+ return {completed,total,complete:completed===total};
 }
