@@ -1,0 +1,22 @@
+name: Fantasy Battle adventure checks
+on:
+  pull_request:
+    paths:
+      - 'src/components/fantasybattle/**'
+      - 'src/routes/fantasy-battle*.jsx'
+      - 'public/fantasybattle/**'
+      - 'tests/fantasybattle-*.test.mjs'
+      - '.github/workflows/fantasybattle-adventure.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  adventure-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/fantasybattle-adventure.test.mjs tests/fantasybattle-sapphire-art.test.mjs
