@@ -43,6 +43,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M03 | The Fractured Beast | [Expanded main quest and boss specification](M03.md) | Ready for proposed blockout; unverified |
 | D20 | The Watchman's Lantern | [Expanded discovery](D20_S24.md) | Ready for proposed blockout; unverified |
 | S24 | The Night Watch's Debt | [Expanded optional quest and terrain brief](D20_S24.md) | Ready for proposed blockout; unverified |
+| M04 | The Forgotten War | [Expanded main quest](M04.md) | Ready for proposed blockout; unverified |
+| D21 | The Gate of Water | [Expanded discovery](D21_S27.md) | Ready for proposed blockout; unverified |
+| S27 | Tameri's Water | [Expanded optional quest and terrain brief](D21_S27.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -105,3 +108,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R23
 
 [M03](M03.md) adds the full first boss encounter, three proposed combat phases, barrier defense, accessible telegraphs, retries and transition to M04 without premature older-life reveal. [D20/S24](D20_S24.md) preserves the sanctuary pass, flame alignment, hidden lookout, spare lantern, Night-watch cloak, rusted token and independent guard relief quest with recovery intervals. 23/50 discoveries, 13/55 optional quests, 3/20 main quests expanded; all 75 outlines retained. Master v1.9 R23 saved to Library, 158 pages; all 2,024 previous paragraphs preserved and 149 prior page images byte-identical. Nine new pages reviewed at overview scale. Next M04 — The Forgotten War, D21 — The Gate of Water / S27 — Tameri's Water (catalog verified); S25/S26 remain separate. Pending D02/D03/D05/D06/M07 reconciliation; S13/S19 separate. Claude return surveyed anchors, encounter clearances, actual layout, traversal and performance checks. Terrain/combat unimplemented and unverified by this task; no code, merge, deployment or credits.
+
+## Revision R24
+
+[M04](M04.md) expands the original city's outskirts, first playable age-eighteen experience, three weapon roles, civilian evacuation and retreat corridor. M05 retains the barrier crossing and original body's death. [D21/S27](D21_S27.md) preserves canal and pump alignment, dry maintenance tunnel, armor lining, independent water repairs and evidence for S29 without presuming political guilt. 24/50 discoveries, 14/55 optional quests, 4/20 main quests expanded; all 75 outlines retained. Master v2.0 R24 saved to Library: 167 pages, 2,105 previous paragraphs preserved, 158 previous rendered pages byte-identical. Next M05 — The Silver Path, D22 — The Stitch in the Wind / S28 — Remoria's Missing Banner (Remnant bracer). Pending D02/D03/D05/D06/M07 reconciliation; S13/S19/S25/S26 separate. Claude return surveyed anchors, route tests, encounter clearances, actual layout, and performance checks. No terrain build, game code, merge, deployment or credits.
