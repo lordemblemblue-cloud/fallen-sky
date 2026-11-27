@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R76E — NG+ enemy scaling and XP:** [Late-game opening baseline, escalating encounters and double enemy experience](R76E_NEW_GAME_PLUS_ENEMY_SCALING.md). Opening enemies approach original late-game strength, midpoint approaches original endgame, and late encounters escalate further. Enemy XP 2x; compare 1.5x–2x tuning candidates without compounding blindly. Exact stat curves and gold/material rewards remain open.
+
 > **R76D — owner-confirmed NG+ level display:** [Retained level and highlighted blue plus indicator](R76D_NEW_GAME_PLUS_LEVEL_DISPLAY.md). Earned level never resets; show actual level with a blue plus suffix, e.g. 155+. Proposed 310 ceiling remains per R76C.
 
 > **R76C — character level caps:** [Base 155 / proposed NG+ 310](R76C_LEVEL_CAP_PROGRESSION.md). Base cap 155 confirmed; proposed additional 155 levels in NG+. Carryover without resetting earned levels confirmed by R76D; permanent ceiling pending confirmation.
