@@ -58,3 +58,8 @@
 @media(max-aspect-ratio:4/3){.fa-cinematic-art.title-original{background-size:cover;background-position:center}.fa-ui[data-screen="01"] .fa-panel{max-width:400px;margin:12px auto;justify-content:flex-start}.fa-item-art,.fa-skill-art{width:28px}}
 @media(max-height:480px){.fa-ui[data-screen="01"] .fa-panel{justify-content:flex-start}.fa-title-mark{display:none}.fa-ui[data-screen="09"] .fa-combat-actions .fa-skill-art{display:none}}
 @media(prefers-reduced-motion:reduce){.fa-root *{transition:none!important;animation:none!important}}
+
+.fa-painted-illustration{display:block;max-width:100%;width:100%;min-height:0;flex:1;object-fit:contain;object-position:center;mask-image:linear-gradient(180deg,transparent,#000 5%,#000 91%,transparent);pointer-events:none}
+.fa-painted-illustration[hidden]{display:none}
+.fa-event-side-art{position:absolute;left:0;top:24%;width:19%;height:74%;object-fit:contain;object-position:bottom left;mask-image:linear-gradient(90deg,#000 75%,transparent)}
+@media(max-aspect-ratio:4/3){.fa-event-side-art{display:none}.fa-painted-illustration{max-height:220px}}
