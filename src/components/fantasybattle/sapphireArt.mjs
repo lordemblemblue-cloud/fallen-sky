@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '11':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/54a46941731d8e937e7d0d707c625275_fantasy-battle-11-runtime.webp',source:'Fantasy Battle original modular template batch 17 — Party Formation',mode:'full',wideOnly:true}),
  '45':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/0f182968be4f244f18522e6a0c5f7e5e_fantasy-battle-45-runtime.webp',source:'Moonlit Crescent Skill Unlocked.png — original template batch 07',mode:'full',wideOnly:true}),
  '32':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/06144fad8ee3f92ba85ebab077dd28ea_fantasy-battle-32-runtime.webp',source:'Aoi’s Sapphire Level-Up Ceremony.png — original template batch 08',mode:'full',wideOnly:true}),
  '12':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/2d8c26651d4dbb6d379744abbf28b5fa_fantasy-battle-12-runtime.webp',source:'Fantasy Battle original modular templates batch 18 — Skillbook',mode:'full',wideOnly:true}),

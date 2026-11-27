@@ -528,3 +528,46 @@
 .fa-original-unlock .fa-unlock-book{left:64%;top:84.1%;width:17%;height:5.5%;border:1px solid #d6b87f;border-radius:12px;background:#142448e8;font-size:.85em}
 .fa-original-unlock .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 2px #efd594}
 .fa-original-unlock .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:2px}
+
+/* 11 — direct original party formation artwork, live roster overlays only. */
+.fa-ui.page[data-staged-original="true"][data-screen="11"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="11"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="11"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-party{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.18vw,2.1vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-party h2,.fa-original-party h3,.fa-original-party p{margin:.2em 0}
+.fa-original-party .fa-button{pointer-events:auto;min-height:0;min-width:0;padding:.12em .3em;border:0;box-shadow:none;background:transparent;color:inherit;font:inherit;line-height:1.12}
+.fa-original-party .fa-button:hover:not(:disabled),.fa-original-party .fa-button[aria-pressed=true]{background:#193d8290;box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-party .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:1px}
+.fa-party-title{position:absolute;left:3%;top:9%;width:17%;height:12%;text-align:center;font-size:1.9em;line-height:1.1}
+.fa-party-nav{position:absolute;left:4%;top:26.8%;width:15.6%;height:49.2%;display:grid;grid-template-rows:repeat(8,1fr);gap:2.6%}
+.fa-party-nav .fa-button,.fa-party-nav>span{display:grid;place-items:center;text-align:center;padding-left:20%;border-radius:14px;font-size:.9em}
+.fa-party-nav>span{color:#fff0c1;font-weight:bold}
+.fa-party-heading{position:absolute;left:32%;top:6.4%;width:40%;height:4.5%;display:grid;place-items:center;text-align:center;font-size:1.15em}
+.fa-party-front-label,.fa-party-back-label{position:absolute;left:40%;width:26%;height:3%;text-align:center;font-weight:bold}
+.fa-party-front-label{top:13.7%}.fa-party-back-label{top:36.8%}
+.fa-original-party .fa-party-slot{position:absolute;width:13%;height:17%;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.1em;border-radius:16px;overflow:hidden;text-align:center}
+.fa-party-slot.slot-0{left:34.4%;top:17.5%}.fa-party-slot.slot-1{left:51.5%;top:17.5%}.fa-party-slot.slot-2{left:33%;top:41%}.fa-party-slot.slot-3{left:52%;top:41%}
+.fa-party-slot .fa-archer-portrait{height:63%;width:auto;max-width:95%;object-fit:contain}
+.fa-party-slot>span,.fa-party-slot>small{display:block;max-width:95%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.75em;background:#142448d9;border-radius:4px;padding:0 .2em}
+.fa-party-slot>small{font-size:.65em}
+.fa-party-reserve-title{position:absolute;left:28.4%;top:58.8%;width:30%;font-size:.88em}
+.fa-party-reserve{position:absolute;left:28.8%;top:62%;width:39%;height:9.4%;display:flex;align-items:center;gap:4%;pointer-events:auto}
+.fa-original-party .fa-party-reserve .fa-button{width:13.3%;height:95%;overflow:hidden;background:#142448a0;border-radius:9px;display:flex;flex-direction:column;align-items:center;gap:1px}
+.fa-party-reserve .fa-archer-portrait{height:72%;max-width:100%;width:auto;object-fit:contain}.fa-party-reserve small{font-size:.65em}
+.fa-party-formation-info,.fa-party-rules-info{position:absolute;top:75%;height:15%;overflow:auto;pointer-events:auto;font-size:.82em;padding:.45em}
+.fa-party-formation-info{left:24%;width:19%}.fa-party-rules-info{left:46%;width:25%}
+.fa-party-formation-info strong,.fa-party-rules-info strong{color:#fff0c1}
+.fa-party-selected-portrait{position:absolute;left:74.4%;top:15%;width:10.4%;height:15.6%;display:grid;place-items:center;overflow:hidden}
+.fa-party-selected-portrait .fa-archer-portrait{height:95%;width:auto;max-width:95%;object-fit:contain}
+.fa-party-selected-name,.fa-party-selected-role{position:absolute;left:86%;width:11.5%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fa-party-selected-name{top:17.2%;font-weight:bold}.fa-party-selected-role{top:23.8%;font-size:.75em}
+.fa-party-detail-heading{position:absolute;left:75%;top:32.1%;width:22.5%;text-align:center;font-weight:bold}
+.fa-party-detail{position:absolute;left:75.2%;top:36.5%;width:22.7%;height:12%;overflow:auto;pointer-events:auto;font-size:.78em;padding:.2em .35em}
+.fa-party-detail .fa-stats{font-size:.88em}.fa-original-party .fa-party-detail .fa-button{background:#193d82;border:1px solid #d6b87f;border-radius:6px;padding:.25em .45em;margin:.2em}
+.fa-party-skill-title{position:absolute;left:78%;top:50.1%;width:18%;font-weight:bold}
+.fa-party-skills{position:absolute;left:75.5%;top:53.5%;width:22.2%;height:12.3%;display:flex;gap:.3em;overflow:auto;pointer-events:auto}
+.fa-party-skills>div{flex:0 0 31%;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.2em}
+.fa-party-skills .fa-skill-art{width:80%;height:auto;max-height:62%}.fa-party-skills small{font-size:.65em}
+.fa-party-selected-status{position:absolute;left:75.5%;top:68.1%;width:22%;height:10%;font-size:.85em;text-align:left;padding:.2em .4em}
+.fa-original-party .fa-party-recruit,.fa-original-party .fa-party-done{position:absolute;top:83.7%;height:5%;border-radius:15px}
+.fa-original-party .fa-party-recruit{left:73.5%;width:10.4%;padding-left:2%}.fa-original-party .fa-party-done{left:85.5%;width:13.3%;padding-left:2%;color:#142448;text-shadow:none}
