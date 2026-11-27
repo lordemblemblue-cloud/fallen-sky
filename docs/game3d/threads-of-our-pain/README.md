@@ -37,6 +37,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | D18 | Steps of the Other Side | [Expanded script](D18_S22.md) | Ready for proposed blockout; unverified |
 | S22 | The Cavern of Returning Steps | [Expanded quest and terrain brief](D18_S22.md) | Ready for proposed blockout; unverified |
 | M01 | The Journey Home | [Expanded main quest](M01.md) | Ready for proposed blockout; unverified |
+| M02 | The Broken Seal | [Expanded main quest](M02.md) | Ready for proposed blockout; unverified |
+| D19 | The Missing Emblem | [Expanded script](D19_S23.md) | Ready for proposed blockout; unverified |
+| S23 | Names in Stone | [Expanded optional quest and terrain brief](D19_S23.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -91,3 +94,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R21
 
 [D18/S22](D18_S22.md) expands Inverted Cavern and Air Recovery with readable gravity and safe alternative paths. [M01](M01.md) expands the ordinary Wolfveil homeward journey and lunar fracture, without revealing the older self. Master v1.7 R21 saved to Library. 21 discoveries, 11 optional quests, 1 main quest expanded; all 75 outlines retained. Next D19/S23 and M02. D02/D03/D05/D06/M07 pending reconciliation; S13/S19 separate. Claude return surveyed anchors, traversal and performance tests. No terrain build, game code, merge or deployment.
+
+## Revision R22
+
+[M02](M02.md) preserves the Goddess's protective warning, lunar fragment and independently moving wolf shadow; full transformation and combat remain M03, older life stays hidden. [D19/S23](D19_S23.md) retains Hollow Mountain, paired emblem, personal chisel, inscription evidence and independent memorial worksite quest; missing text and cause of damage remain unresolved. 22/50 discoveries, 12/55 optional quests, 2/20 main quests expanded; all 75 outlines preserved. Master v1.8 R22 saved in Library, 1,932 prior paragraphs retained. Next M03 and D20/S24. D02/D03/D05/D06/M07 pending reconciliation; S13/S19 separate. Claude return surveyed anchors, actual layout, traversal and performance checks. Terrain unbuilt; no code, merge, deployment or credits.
