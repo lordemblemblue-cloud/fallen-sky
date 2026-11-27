@@ -292,9 +292,9 @@ test('original merchant displays catalog and guards confirmed transactions',()=>
  assert.ok(templateUrl('16').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function MerchantShop('),page.indexOf('function SaveToast('));
- for(const marker of ['Object.entries(ITEMS)','profile.gold>=price','owned>equipped','gearCount(profile,id)','owned<100000','disabled={!allowed}','onTrade(mode,id)','serviceAvailable'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['Object.entries(ITEMS)','tradeQuote(profile,mode,id,quantity)','gearCount(profile,id)','ready&&quote.ok','disabled={!allowed}','onTrade(mode,id,quantity)','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.slice(page.indexOf("case '16':"),page.indexOf("case '17':"));
- for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','buyItem(p,id)','sellItem(p,id)','transact(p=>'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==serviceId','buyItem(live,id,quantity)','sellItem(live,id,quantity)','transact(live=>','live.id!==profileId','if(used)return'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original blacksmith previews only supported enhancement and rechecks confirmed equipment',()=>{
@@ -312,9 +312,9 @@ test('original crafting uses the actual tonic recipe and guards its confirmation
  assert.ok(templateUrl('22').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function CraftingShop('),page.indexOf('function SaveToast('));
- for(const marker of ['ore>=2','tonics<100000','ITEMS.recoveryTonic.heal','Gold cost: 0','disabled={!allowed}','No recipes available','serviceAvailable'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['Object.values(RECIPES)','craftQuote(profile,r.id,quantity)','ready&&q.ok','requiredOre','requiredGold','disabled={!allowed}','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '22':"));
- for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.inventory.recoveryTonic>=100000','craftTonic(p)'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==serviceId','live.id!==profileId','if(used)return','craftItem(live,id,quantity)'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original sanctuary previews saved party recovery and guards the rest transaction',()=>{
