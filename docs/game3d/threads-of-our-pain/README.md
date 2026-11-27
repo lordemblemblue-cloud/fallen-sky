@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R105 — campaign pacing and regional content register:** [Making the world feel alive](R105_CAMPAIGN_PACING_AND_REGIONAL_CONTENT_REGISTER.md). Verified planning partition of 105 unique optional IDs into ten content families, eight campaign pacing bands and seven proposed connective scene packets. Not actual spatial density or new unlocks; survey and chronology pending. Next R106 voice/cinematic QA M01–M10. Draft only.
+
 > **R104 — completed supplemental opportunity review:** [What survives our absence](R104_S51-S55_FINAL_OPPORTUNITY_AND_DECISION_REGISTER.md). S51–S55 source re-audit, five proposed scene packets and Claude deltas; consolidated closure/ownership/consent decision register. Supplemental coverage 105/105 optional IDs and 20/20 main IDs; exact original phases and approval/runtime gates remain open. Next R105 pacing and regional quest density. Draft only.
 
 > **R103 — fifth twenty opportunity window predicates:** [Beyond the forgotten horizon](R103_D41-D50_S41-S50_OPPORTUNITY_WINDOW_AUDIT.md). D41–D50/S41–S50 source re-audit, twenty proposed dialogue packets and terrain deltas; all 50 paired discoveries require post-claim vista, S41 consent, S43 D01 receipt reuse, D49 flight prerequisite and D50 precommit history. Supplemental audit 100/105. Next S51–S55 and consolidation. Draft only.
