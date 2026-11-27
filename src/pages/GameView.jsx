@@ -217,13 +217,23 @@ export default function GameView() {
     // A scene constructor can fail before the avatar loader fires. Never leave
     // the owner staring at an indefinite blank/blocked Game 3D entry.
     // While the world builds its shaders it reports progress (game3dWorldCompileProgress): only 30 s without any
-    // counts as stuck.
+    // counts as stuck. A gate hop remounts the world as a new scene: once that new scene exists it is loading, not
+    // stuck, so after 30 s without progress it is rechecked every 15 s and gets up to 150 s from the hop in all (slow
+    // devices take longer than 30 s to build an area and compile its WebGPU shaders). A first entry keeps 30 s without
+    // progress (its scene was already built behind character selection). Load errors still show at once.
+    const startScene=window.__gw3dScene,startedAt=performance.now();
     const giveUp=()=>{
       setWorldEntryError('Game 3D did not finish loading. Retry, or return to character selection and check the browser console.');
       setWorldEntryStatus(current=>current==='loading'?'error':current);
     };
-    let timer=window.setTimeout(giveUp,30000);
-    const progress=()=>{window.clearTimeout(timer);timer=window.setTimeout(giveUp,30000);};
+    let timer=0;
+    const check=()=>{
+      const scene=window.__gw3dScene;
+      if(scene&&scene!==startScene&&performance.now()-startedAt<150000){timer=window.setTimeout(check,15000);return;}
+      giveUp();
+    };
+    timer=window.setTimeout(check,30000);
+    const progress=()=>{window.clearTimeout(timer);timer=window.setTimeout(check,30000);};
     window.addEventListener('game3dWorldCompileProgress',progress);
     return ()=>{window.clearTimeout(timer);window.removeEventListener('game3dWorldCompileProgress',progress);};
   },[worldEntryStatus]);

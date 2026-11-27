@@ -3,11 +3,16 @@ import { createCloneAdaptiveGraphics } from './AdaptiveGraphics.mjs';
 import CloneHardwarePanel from './CloneHardwarePanel.jsx';
 import { createGame3DSceneWarmup } from './SceneWarmup.mjs';
 import { installRafPump } from './Game3DRafPump.mjs';
+import { installGame3DModelCache } from './Game3DModelCache.mjs';
 
 // Draw-cost probe, dev server only: ?perfPump=1 must replace requestAnimationFrame before the world's loop first asks
 // for a frame, i.e. when this module is evaluated (Game3DRafPump.mjs). A production build drops this.
 if (import.meta.env?.DEV && typeof window !== 'undefined' && /[?&]perfPump=1(&|$)/.test(window.location.search))
   installRafPump(window);
+
+// Model files stay in memory once downloaded (Game3DModelCache.mjs): a gate hop remounts the world as the next
+// area's scene and loads the same models again; they come from memory instead of the network. Bytes only, capped.
+if (typeof window !== 'undefined') window.__game3dModelCache = installGame3DModelCache();
 
 // GameView is outside /game3d/, so its browser client requires a root
 // service-worker scope to cache its /game3d/ requests. Never replace another

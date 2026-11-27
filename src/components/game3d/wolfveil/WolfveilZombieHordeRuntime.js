@@ -5,6 +5,9 @@
 // Max 30 concurrent rigged models from 150 deterministic planned encounters.
 import * as THREE from 'three';
 import {clone as cloneSkinnedEnemy} from 'three/examples/jsm/utils/SkeletonUtils.js';
+import {consolidateModelMaterialGroups} from '../render/consolidateMaterialGroups.mjs';
+import {shrinkModelTextures} from '../npc/sharedNpcModel.mjs';
+import {game3dHiPolyRequested} from '../render/lowPolyWorld.mjs';
 import {getAXEEnemyStats} from '../axe/balance/AXEPowerBudget';
 import {
   planWolfveilZombieCamps,safeZombieGround,WOLFVEIL_ZOMBIE_MAX_ACTIVE,
@@ -55,6 +58,12 @@ export function createWolfveilZombieHordeRuntime({
       if(disposed)return;
       if(!root){state.failed||='Missing owner-supplied zombie FBX';return;}
       source=root;
+      // Low-poly world: the zombie's 205 draw groups (2 materials) become 2, and its 2048 px textures 1024 px, once
+      // on the shared source before any clone is drawn (?hiPoly=1 keeps the file as loaded).
+      if(!game3dHiPolyRequested()){
+        state.drawGroups=consolidateModelMaterialGroups(root);
+        state.texturesShrunk=shrinkModelTextures(root,1024);
+      }
       // The uploaded 16MB Attack file includes the actual mesh, rig and its
       // default attack motion; smaller FBXs are motions only.
       clips.attack ||= root.animations?.[0]||null;
