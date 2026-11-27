@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R99 — first twenty opportunity window predicates:** [The opportunities hidden within history](R99_D01-D10_S01-S10_OPPORTUNITY_WINDOW_AUDIT.md). D01–D10/S01–S10 source re-audit, twenty dialogue alternatives and terrain deltas; D02 second vista, S09 provisional report and S10 drain/lantern reconciliation. Exact original phase closure TBD; new audit series 20/105. Next D11–D20/S11–S20. Draft only.
+
 > **R98 — M19 causality and knowledge audit:** [When two histories touch](R98_M19_CAUSALITY_AND_CHARACTER_KNOWLEDGE.md). Distinguishes shared life force, physical overlap and forced convergence; four proposed dialogue refinements and seven actor/group knowledge rules. Original chronology remains unresolved; no new causal law or implementation. Next D01–D10/S01–S10 opportunity window audit.
 
 > **R97 — original-life chronology dependency audit:** [The chronology of two lives](R97_ORIGINAL_LIFE_CHRONOLOGY_DEPENDENCY_AUDIT.md). Source-based event dependencies and five dialogue repair proposals; candidate pre-death local ordering is not approved and does not yet resolve M19 causality. Preserve M05 physical death and actual M10 overlap. Next M19 causality and knowledge ledger, then optional opportunity windows.
