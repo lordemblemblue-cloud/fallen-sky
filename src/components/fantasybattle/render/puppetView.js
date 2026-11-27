@@ -168,7 +168,7 @@ export class PuppetView {
     if(this.meleeWeapons.length){
       this.string.visible=false;this.arrow.visible=false;this.lastArrow=null;
       for(const [i,{mesh,socket}] of this.meleeWeapons.entries()){
-        const [x,y]=socketPosition(rig,state,socket);mesh.position.set(x,y,0);mesh.rotation.z=this.combatClass==='warden'&&i===1?0:((state.params.meleeAngle??-35)+(i===1?22:0))*Math.PI/180;mesh.material.opacity=this.opacity;
+        const [x,y]=socketPosition(rig,state,socket);mesh.position.set(x,y,0);mesh.rotation.z=(this.combatClass==='warden'&&i===1?(state.params.shieldAngle??0):i===0?-35+(state.params.meleeMain??0):-13+(state.params.meleeOff??0))*Math.PI/180;mesh.material.opacity=this.opacity;
       }
     }else this.updateString(state, rank);
     if (this.debug.wireframe && this.wire) this.updateWire(state);

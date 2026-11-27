@@ -1,5 +1,6 @@
 // Original layered SVG prototype art. No network services or new dependencies.
 export const COMPANION_VISUALS=Object.freeze({"groveArcher":{"kind":"grove","height":1,"width":150,"head":104,"parts":{"back":{"size":[180,240],"pivot":[90,10]},"torso":{"size":[150,192],"pivot":[75,170]},"lower":{"size":[170,248],"pivot":[85,15]},"leg":{"size":[55,132],"pivot":[27,13]},"boot":{"size":[75,62],"pivot":[32,47]},"upper":{"size":[70,101],"pivot":[34,12]},"forearm":{"size":[53,84],"pivot":[26,9]},"hand":{"size":[44,49],"pivot":[22,11]},"neck":{"size":[58,55],"pivot":[29,22]},"face_neutral":{"size":[100,110],"pivot":[50,70]},"face_focused":{"size":[100,110],"pivot":[50,70]},"face_shout":{"size":[100,110],"pivot":[50,70]},"face_hurt":{"size":[100,110],"pivot":[50,70]},"face_closed":{"size":[100,110],"pivot":[50,70]}}},"pilgrimWarden":{"kind":"warden","height":1.08,"width":196,"head":116,"parts":{"back":{"size":[180,240],"pivot":[90,10]},"torso":{"size":[196,192],"pivot":[98,170]},"lower":{"size":[216,248],"pivot":[108,15]},"leg":{"size":[55,132],"pivot":[27,13]},"boot":{"size":[75,62],"pivot":[32,47]},"upper":{"size":[70,101],"pivot":[34,12]},"forearm":{"size":[53,84],"pivot":[26,9]},"hand":{"size":[44,49],"pivot":[22,11]},"neck":{"size":[58,55],"pivot":[29,22]},"face_neutral":{"size":[100,110],"pivot":[50,70]},"face_focused":{"size":[100,110],"pivot":[50,70]},"face_shout":{"size":[100,110],"pivot":[50,70]},"face_hurt":{"size":[100,110],"pivot":[50,70]},"face_closed":{"size":[100,110],"pivot":[50,70]}}},"mistScout":{"kind":"scout","height":0.91,"width":142,"head":100,"parts":{"back":{"size":[180,240],"pivot":[90,10]},"torso":{"size":[142,192],"pivot":[71,170]},"lower":{"size":[162,248],"pivot":[81,15]},"leg":{"size":[55,132],"pivot":[27,13]},"boot":{"size":[75,62],"pivot":[32,47]},"upper":{"size":[70,101],"pivot":[34,12]},"forearm":{"size":[53,84],"pivot":[26,9]},"hand":{"size":[44,49],"pivot":[22,11]},"neck":{"size":[58,55],"pivot":[29,22]},"face_neutral":{"size":[100,110],"pivot":[50,70]},"face_focused":{"size":[100,110],"pivot":[50,70]},"face_shout":{"size":[100,110],"pivot":[50,70]},"face_hurt":{"size":[100,110],"pivot":[50,70]},"face_closed":{"size":[100,110],"pivot":[50,70]}}}});
+import {MELEE_STANCES} from './meleeSkills.mjs';
 export function visualFor(id){return Object.hasOwn(COMPANION_VISUALS,id)?COMPANION_VISUALS[id]:null;}
 export const companionAsset=(id,part)=>'/fantasybattle/companions/'+id+'/'+part+'.svg';
 export function makeCompanionRig(id,base,manifest){
@@ -14,11 +15,14 @@ export function makeCompanionRig(id,base,manifest){
  data.bones=data.bones.map(b=>({...b,pos:[b.pos[0]*w,b.pos[1]*scale]}));
  const bone=id=>data.bones.find(b=>b.id===id).pos;
  const p=(x,y)=>[x*w,y*scale];
+ // Lower-leg and boot articulation, under the existing skirt silhouette.
+ for(const [side,x] of [['Front',-30],['Back',27]]){data.bones.push({id:'leg'+side,parent:'root',pos:p(x,137)},{id:'foot'+side,parent:'leg'+side,pos:p(x,0)});}
+ if(MELEE_STANCES[v.kind])data.stances=JSON.parse(JSON.stringify(MELEE_STANCES[v.kind]));
  const orig=(id)=>{const l=base.layers.find(l=>l.id===id);return {...l,...(l.pos?{pos:p(...l.pos)}:{})};};
  data.layers=[
   layer('hairBack','back',v.kind==='grove'?'head':'spine',v.kind==='grove'?p(-17,590):p(0,465),1,{grid:[4,8],spring:{stiffness:55,damping:8,limit:10}}),
-  layer('legBack','leg','root',p(27,137),3),layer('legFront','leg','root',p(-30,137),4),
-  layer('sandalBack','boot','root',p(26,0),5),layer('sandalFront','boot','root',p(-31,0),6),
+  layer('legBack','leg','legBack',p(27,137),3),layer('legFront','leg','legFront',p(-30,137),4),
+  layer('sandalBack','boot','footBack',p(26,0),5),layer('sandalFront','boot','footFront',p(-31,0),6),
   layer('drawUpperArm','upper','drawArm',bone('drawArm'),10,{grid:[2,3]}),
   layer('bowUpperArm','upper','bowArm',bone('bowArm'),11,{grid:[2,3]}),
   layer('neck','neck','neck',bone('neck'),20),

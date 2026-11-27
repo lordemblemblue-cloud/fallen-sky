@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady } from '@/lib/webgpuSceneRenderer.js';
 import { buildRig, createPuppetState, stepPuppet, socketPosition, setLookTarget as lookAt, triggerExpression as expressionOf } from './core/puppetCore.mjs';
 import { makeCompanionRig, requiredCompanionParts, visualFor } from './core/companionVisuals.mjs';
-import { MELEE_SKILLS, isMeleeSkill, approachWeight } from './core/meleeSkills.mjs';
+import { MELEE_SKILLS, isMeleeSkill, approachWeight, classAnimationLibrary, guardPose } from './core/meleeSkills.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
 import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
 import { PuppetView, loadTextures, prepareTexture } from './render/puppetView.js';
@@ -53,7 +53,7 @@ export class Fighter {
     this.scale = scale;
     this.facing = facing;
     this.state = createPuppetState(rig, { seed });
-    this.skills = new SkillPlayer(combatClass?[...skillDoc.skills,...MELEE_SKILLS]:skillDoc.skills);
+    this.skills = new SkillPlayer(combatClass?[...skillDoc.skills,...MELEE_SKILLS,...classAnimationLibrary(combatClass)]:skillDoc.skills);
     this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase, combatClass, gearVisuals, weaponId });
     this.view.group.position.set(x, y, 0);
     this.view.group.scale.set(facing*scale, scale, 1);
@@ -99,13 +99,14 @@ export class Fighter {
     const run=this.skills.current;
     const target=run?.options?.target;
     if(target&&isMeleeSkill(run.id)){
-      const w=approachWeight(run.t,run.compiled.totalDuration);
-      this.x=this.homeX+(target.homeX-this.facing*125-this.homeX)*w;
+      const w=approachWeight(run.t,run.compiled.totalDuration,run.id);
+      this.x=this.homeX+(target.homeX-this.facing*(100+35*target.scale)-this.homeX)*w;
       this.y=this.homeY+(target.homeY-this.homeY)*w;
     }else{this.x=this.homeX;this.y=this.homeY;}
     this.view.group.position.set(this.x,this.y,0);
     this.shadow?.position.set(this.x,this.y+6,0);
-    stepPuppet(this.rig, this.state, dt, this.skills.evaluate());
+    const animation=this.skills.evaluate()||(this.stage.activeGuards?.has(this.id)?guardPose(this.combatClass):null);
+    stepPuppet(this.rig, this.state, dt, animation);
     this.view.flash = Math.max(0, this.view.flash - dt * 3.5);
     this.view.update(this.state);
     return out;
@@ -480,6 +481,7 @@ export class FantasyBattleStage {
     this.pendingChoices={};
     this.activeActor = null;
     this.roundGuards = new Set();
+    this.activeGuards = new Set();
     for (const f of Object.values(this.fighters)) {
       f.skills.stop();
       f.view.opacity = 1;
@@ -547,6 +549,7 @@ export class FantasyBattleStage {
   }
 
   async playRound(round) {
+    this.activeGuards = new Set();
     this.roundGuards = new Set(round.steps.filter((s) => ACTIONS[s.action].kind === 'guard' && !s.skipped).map((s) => s.actor));
     for (const step of round.steps) {
       if (this.disposed) return;
@@ -558,7 +561,7 @@ export class FantasyBattleStage {
       this.display[step.actor].focus = step.focus[1];
       const hits = step.hits.filter((h) => h.hit).length;
       if (ACTIONS[step.action].kind === 'attack') this.log(`${actor.name}: ${ACTIONS[step.action].name}, ${hits}/${step.hits.length} hit${step.hits.length > 1 ? 's' : ''}.`);
-      else this.log(`${actor.name} guards.`);
+      else {this.activeGuards.add(actor.id);this.log(`${actor.name} guards.`);}
       // A previously hit actor may still be in hit-react recovery; start the committed action now.
       actor.skills.stop();
       actor.playSkill(ACTIONS[step.action].skill, null, { hits: step.hits.map((h) => ({ ...h })), target, step });
@@ -577,6 +580,7 @@ export class FantasyBattleStage {
     }
     for (const id of this.roundGuards) this.fx.clearWard(id);
     this.roundGuards = new Set();
+    this.activeGuards = new Set();
     this.activeActor = null;
   }
 
