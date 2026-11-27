@@ -149,7 +149,7 @@ export function campaignPrompt(p){
 export function campaignServiceNote(p){
  const entry=trackedCampaign(p);
  if(!entry)return campaignArc(p).complete?'The observatory is quiet. Explore the remaining optional encounters.':null;
- return entry.progress.state==='complete'?'Return to the journal to record your progress.':entry.q.offer;
+ return entry.progress.state==='complete'?(entry.q.returnService?'Return to the Grove rest point and report your findings.':'Return to the journal to record your progress.'):entry.q.offer;
 }
 
 // Only the six currently planned main chapters count toward the arc, not optional quests.
