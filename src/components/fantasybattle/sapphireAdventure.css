@@ -469,3 +469,40 @@
 .fa-skillbook-requirement{position:absolute;left:75%;top:60.2%;width:20%;height:4.2%;display:grid;place-items:center;font-size:.9em}
 .fa-skillbook-materials{position:absolute;left:74%;top:65.4%;width:21.5%;height:13.3%;background:#142448e8;padding:.4em;border-radius:8px;overflow:auto;pointer-events:auto;font-size:.86em}
 .fa-original-skillbook .fa-skillbook-done{position:absolute;left:76.7%;top:84.1%;width:16.7%;height:5%;border-radius:14px;color:#132448;text-shadow:none;background:transparent;font-weight:bold}
+
+/* 32 — original level-up ceremony: actual four attributes, draft preview and confirmation. */
+.fa-ui.page[data-staged-original="true"][data-screen="32"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="32"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="32"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-attributes{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.25vw,2.22vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-attributes h2,.fa-original-attributes h3,.fa-original-attributes p{margin:.15em 0}
+.fa-attr-title{position:absolute;left:40%;top:7%;width:24%;text-align:center;font-size:2em}
+.fa-attr-level{position:absolute;left:37%;top:22%;width:26%;text-align:center;font-weight:bold}
+.fa-attr-profile{position:absolute;left:4%;top:66%;width:22%;height:19%;text-align:center;color:#142448;text-shadow:0 1px 2px #fff;overflow:auto;pointer-events:auto}
+.fa-attr-profile strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#fff6df;text-shadow:0 1px 3px #081329}
+.fa-attr-profile progress{width:96%;height:8px;accent-color:#5c9eed}
+.fa-attr-allocation-heading{position:absolute;left:32%;top:29.5%;width:21%;text-align:center;font-size:1.05em}
+.fa-attr-budget{position:absolute;left:32%;top:35%;width:37%;text-align:center;color:#fff0c1}
+.fa-original-attributes .fa-attr-row{position:absolute;left:34%;width:35.8%;height:6.2%;display:grid;grid-template-columns:1fr 28% 9% 9%;gap:1.2%;align-items:center}
+.fa-original-attributes .fa-attr-strength{top:40.5%}.fa-original-attributes .fa-attr-defense{top:48.2%}.fa-original-attributes .fa-attr-speed{top:55.9%}.fa-original-attributes .fa-attr-vitality{top:71.2%}
+.fa-attr-row-label small{display:block;font-size:.7em}
+.fa-original-attributes .fa-attr-row-label{color:#142448;text-shadow:0 1px 2px #fff}
+.fa-attr-row-value{font-variant-numeric:tabular-nums;text-align:center}
+.fa-original-attributes .fa-button{pointer-events:auto;min-height:0;min-width:0;padding:0;border:0;box-shadow:none;background:transparent;color:inherit;font:inherit}
+.fa-original-attributes .fa-attr-minus,.fa-original-attributes .fa-attr-plus{height:86%;background:#f1e9d7;color:#152448;text-shadow:none;border:1px solid #d7b975;border-radius:5px;font-size:1.2em;font-weight:bold}
+.fa-original-attributes .fa-attr-plus{background:#f6d991}
+.fa-original-attributes .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:2px}
+.fa-original-attributes .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-attributes .fa-button:disabled{opacity:.4;cursor:not-allowed}
+.fa-attr-unused{position:absolute;left:35%;top:65%;width:33%;text-align:center;color:#142448;text-shadow:0 1px 2px #fff;font-size:.8em}
+.fa-attr-stat-heading{position:absolute;left:74%;top:13%;width:14%;font-size:1.1em;text-align:center}
+.fa-attr-comparison{position:absolute;left:77%;top:18%;width:20%;height:29%;overflow:auto;pointer-events:auto}
+.fa-attr-stat{display:flex;justify-content:space-between;gap:.4em;padding:.3em 0;font-variant-numeric:tabular-nums}
+.fa-attr-skills-heading{position:absolute;left:74%;top:51.4%;width:14%;font-size:1.1em;text-align:center}
+.fa-attr-skills{position:absolute;left:75%;top:56%;width:23%;height:18%;overflow:auto;pointer-events:auto}
+.fa-attr-skills>div{display:flex;align-items:center;gap:.5em;margin:.3em 0}
+.fa-attr-skills .fa-skill-art{width:2.2em;height:2.2em}
+.fa-original-attributes .fa-attr-reset,.fa-original-attributes .fa-attr-confirm,.fa-original-attributes .fa-attr-cancel{position:absolute;top:86.6%;height:5%;border-radius:15px;padding-left:2.3%}
+.fa-original-attributes .fa-attr-reset{left:27%;width:12%}.fa-original-attributes .fa-attr-confirm{left:42%;width:22%}.fa-original-attributes .fa-attr-cancel{left:66%;width:11%}
+.fa-panel .fa-attr-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;align-items:center;gap:.3em}
+.fa-panel .fa-attr-row .fa-button{min-width:28px}

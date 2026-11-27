@@ -127,6 +127,44 @@ function Skillbook({profile,level,original,layout,go,back}){
   return <><Panel rect={layout[0]}><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('32')}>Attributes</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Archer abilities</h2>{choices}</Panel><Panel rect={layout[2]}><h2>Progression</h2>{details}<p>Skills unlock automatically when the required level is reached.</p></Panel></>;
 }
 
+// Allocation is a local draft until confirmation; leaving the page discards it.
+function Attributes({profile,level,locked,original,layout,onConfirm,back,unlockedIds}){
+  const [draft,setDraft]=useState([]);
+  const submitted=useRef(false);
+  const budget=profile?pointsFor(profile):0;
+  const preview=profile?draft.slice(0,budget).reduce((p,k)=>allocate(p,k),profile):null;
+  const remaining=Math.max(0,budget-draft.length);
+  const before=heroStats(profile),after=heroStats(preview);
+  const rows=[['strength','Strength','Attack +2'],['defense','Defense','Defense +2'],['speed','Speed','Speed +1'],['vitality','Vitality','Maximum HP +10']];
+  const change=(key,delta)=>setDraft(old=>{
+    if(locked||!profile)return old;
+    if(delta>0)return old.length<budget?[...old,key]:old;
+    const i=old.lastIndexOf(key);return i<0?old:old.filter((_,j)=>j!==i);
+  });
+  const confirm=()=>{if(submitted.current||locked||!profile)return;submitted.current=true;if(!onConfirm(profile,draft))submitted.current=false;};
+  const row=([key,label,benefit])=><div key={key} className={'fa-attr-row fa-attr-'+key}>
+    <div className="fa-attr-row-label"><strong>{label}</strong><small>{benefit}</small></div>
+    <span className="fa-attr-row-value">{profile?.attributes[key]??'—'} → {preview?.attributes[key]??'—'}</span>
+    <Btn className="fa-attr-minus" disabled={locked||!draft.includes(key)} aria-label={'Remove one pending '+label+' point'} onClick={()=>change(key,-1)}><span>−</span></Btn>
+    <Btn className="fa-attr-plus" disabled={locked||remaining===0} aria-label={'Add one '+label+' point'} onClick={()=>change(key,1)}><span>+</span></Btn>
+  </div>;
+  const comparison=[['Current HP',profile?.hp,preview?.hp],['Maximum HP',before.maxHp,after.maxHp],['Attack',before.atk,after.atk],['Defense',before.def,after.def],['Speed',before.spd,after.spd]];
+  const stats=<>{comparison.map(([label,a,b])=><div key={label} className="fa-attr-stat"><span>{label}</span><span>{profile?a:'—'} → {profile?b:'—'}</span></div>)}</>;
+  const skills=unlockedIds.filter(id=>ACTION_ORDER.includes(id)&&availableActions(level).includes(id));
+  const actions=<><Btn className="fa-attr-reset" disabled={locked||!draft.length} onClick={()=>setDraft([])}>Reset</Btn><Btn primary className="fa-attr-confirm" disabled={locked||!profile} onClick={confirm}>Confirm allocation</Btn><Btn className="fa-attr-cancel" onClick={back}>Back</Btn></>;
+  if(original)return <div className="fa-original-attributes">
+    <h2 className="fa-attr-title">Attributes</h2><div className="fa-attr-level">Level {profile?level:'—'}</div>
+    <div className="fa-attr-profile"><strong>{profile?.name||'No active character'}</strong><p>Archer · Level {profile?level:'—'}</p><p>Experience {profile?profile.xp%100:'—'} / 100</p><progress aria-label="Experience toward next level" max={100} value={profile?profile.xp%100:0}/></div>
+    <h3 className="fa-attr-allocation-heading">Allocate attribute points</h3><div className="fa-attr-budget" aria-live="polite">{remaining} available · {draft.length} pending</div>
+    {rows.map(row)}
+    <div className="fa-attr-unused">No additional attribute available</div>
+    <h3 className="fa-attr-stat-heading">Stat preview</h3><section className="fa-attr-comparison" aria-label="Current and projected statistics">{stats}</section>
+    <h3 className="fa-attr-skills-heading">New skills</h3><section className="fa-attr-skills" aria-label="Newly unlocked abilities">{skills.length?skills.map(id=><div key={id}><SkillArt id={id}/><span>{ACTIONS[id].name}</span></div>):<p>No new abilities from this level.</p>}</section>
+    {actions}
+  </div>;
+  return <><Panel rect={layout[0]}><h2>{profile?.name||'No character'}</h2><p>Level {level}</p><p>{remaining} available · {draft.length} pending</p></Panel><Panel rect={layout[1]}><h2>Stat preview</h2>{stats}{skills.map(id=><p key={id}>{ACTIONS[id].name} unlocked</p>)}</Panel><Panel rect={layout[2]}><h2>Allocate points</h2>{rows.map(row)}{actions}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -492,7 +530,7 @@ export default function SapphireAdventure(){
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
     case '30':content=<>{pane(0,<><h2>Companions</h2>{ROSTER.filter(m=>memberFor(profile,m.id).recruited).map(m=><Btn key={m.id} primary={companionId===m.id} onClick={()=>setCompanionId(m.id)}>{m.name}</Btn>)}</>)}{pane(1,<><ArcherPortrait companion={selectedCompanion}/><h2>{member.recruited?selectedCompanion.name:'Not recruited'}</h2></>)}{pane(2,<><h2>Bond</h2><progress value={member.bond} max={100}/><p>{member.bond}/100 · {!member.recruited?'Not recruited':member.bond>=75?'Trusted':member.bond>=25?'Familiar':'New companion'}</p><p>Gain 5 bond per new victory together. Practice and repeat rewards do not count.</p><small>Story events and bond abilities are not yet authored.</small></>)}{pane(3,<Btn onClick={()=>go('26')}>Recruitment</Btn>)}</>;break;
     case '31':content=pane(0,<><h2>Treasure Discovered</h2><p>{discovery}</p>{lootList}<p>These items were recorded once in your inventory.</p><Btn primary onClick={()=>go('38')}>View Items</Btn><Btn onClick={back}>Continue</Btn></>);break;
-    case '32':content=<>{pane(0,<><p>{profile?.name}</p><h2>Level {level}</h2><p>{profile?pointsFor(profile):0} available points</p></>)}{pane(1,statPanel)}{pane(2,<>{STAT_KEYS.map(k=><div className="fa-allocation" key={k}><span>{k}: {profile?.attributes[k]||0}</span><Btn disabled={!profile||pointsFor(profile)<1||Boolean(encounter&&hud?.phase!=='over')} onClick={()=>{const p=allocate(current.current.profile,k);replaceProfile(p);}}>+</Btn></div>)}<Btn primary disabled={Boolean(encounter&&hud?.phase!=='over')} onClick={()=>{autosave(current.current.profile);finishLevel();}}>Confirm Allocation</Btn></>)}</>;break;
+    case '32':content=<Attributes key={profile?.id||'guest'} profile={profile} level={level} locked={!profile||Boolean(encounter&&hud?.phase!=='over')} original={original} layout={screen.layout} unlockedIds={result?.unlocked||[]} back={back} onConfirm={(base,draft)=>{const live=current.current.profile;if(!live||live!==base||(current.current.encounter&&hud?.phase!=='over')||!Array.isArray(draft)||draft.length>pointsFor(live)||draft.some(k=>!STAT_KEYS.includes(k)))return false;const next=draft.reduce((p,k)=>allocate(p,k),live);replaceProfile(next);autosave(next);finishLevel();return true;}}/>;break;
     case '33':content=<>{pane(0,<><h2>Rest Point</h2><p>{service?.label||'Not at a sanctuary'}</p></>)}{pane(1,statPanel)}{pane(2,<><p>Restore the leader and all recruited companions at a registered service point.</p><Btn disabled={!serviceAvailable||(profile.hp>=stats.maxHp&&!partyNeedsRest(profile))} onClick={()=>requestConfirm('Rest and recover?',()=>transact(p=>heal(p,{sanctuary:true}),'Health restored'))}>Rest</Btn><Btn onClick={()=>go('18')}>Save</Btn></>)}{pane(3,<Btn onClick={()=>root('10')}>Leave</Btn>)}</>;break;
     case '34':{const lessons=['Explore with WASD or the on-screen movement controls. Hold Shift or Run to sprint; Space or Jump to jump. Approach a marker and press E.','Choose a legal combat action. Quick Shot and Guard generate Focus; stronger skills spend it.','Open Character with C, Skillbook with K, Map with M, Journal with L, Equipment with I; Escape returns one level.'];content=<>{pane(0,<>{lessons.map((_,i)=><Btn key={i} primary={lesson===i} onClick={()=>setLesson(i)}>Lesson {i+1}</Btn>)}</>)}{pane(1,<><h2>Lesson {lesson+1}</h2><p>{lessons[lesson]}</p></>)}{pane(2,<Btn disabled={!running||Boolean(encounter)} onClick={()=>startBattle({id:'practice',label:'Practice Archer',category:'Normal',practice:true})}>Practice Battle</Btn>)}{pane(3,buttons(<Btn onClick={()=>setLesson(Math.max(0,lesson-1))}>Previous</Btn>,<Btn onClick={()=>setLesson(Math.min(lessons.length-1,lesson+1))}>Next</Btn>))}</>;break;}
     case '35':content=pane(0,<><h2>{encounter?'Preparing the battleground…':'Loading the world…'}</h2><progress aria-label="Loading world"/><p>{encounter?'Waiting for the regional battleground and combat renderer.':'Waiting for the 3D renderer and saved world position.'}</p><Btn onClick={leaveTitle}>Cancel</Btn></>);break;
