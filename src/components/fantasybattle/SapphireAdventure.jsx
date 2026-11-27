@@ -379,6 +379,31 @@ function FastTravel({profile,world,encounter,destination,onSelect,onTravel,origi
   return <><Panel rect={layout[0]}><h2>Destinations</h2>{choices.length?choices:<p>No region data loaded.</p>}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><RegionMap world={world} profile={profile}/></Panel><Panel rect={layout[2]}><h2>{selected?.name||'Choose a discovered region'}</h2>{details}{route}{travel}<Btn onClick={()=>go('07')}>World map</Btn></Panel></>;
 }
 
+// A discovery notification reports saved exploration; it never grants rewards.
+function RegionDiscovery({discovery,world,profile,original,layout,onContinue,onMap}){
+  const regions=world?.regions||[];
+  const visited=profile?.world.visitedRegions||[];
+  const found=discovery?.kind==='region'&&visited.includes(discovery.id);
+  const landmark=discovery?.kind==='landmark'&&Boolean(profile?.world.discoveries.includes(discovery.id));
+  const valid=found||landmark;
+  const heading=found?'Region Discovered':landmark?'Landmark Discovered':'Exploration';
+  const label=valid?discovery.label:'No new discovery';
+  const message=found?'This region is now recorded in your exploration progress.':landmark?'This landmark is recorded in your exploration progress.':'Continue exploring to discover new locations.';
+  const count=regions.filter(r=>visited.includes(r.id)).length;
+  const info=<><p>{message}</p><p>{count} / {regions.length} reported regions discovered.</p><p>{found?'Discovered regions can be selected in Fast Travel.':'Open the World Map to view actual region data.'}</p></>;
+  const controls=<><Btn primary className="fa-discovery-continue" onClick={onContinue}>Continue exploring</Btn><Btn className="fa-discovery-map" onClick={onMap}>World Map</Btn></>;
+  if(original)return <div className="fa-original-discovery">
+    <h2 className="fa-discovery-title">{heading}</h2>
+    <section className="fa-discovery-regions" aria-label="Region discovery status">{regions.map(r=><div key={r.id} className={found&&r.id===discovery.id?'current':''}><span>{r.name}</span><small>{visited.includes(r.id)?'Discovered':'Unexplored'}</small></div>)}</section>
+    <h3 className="fa-discovery-name">{label}</h3>
+    <section className="fa-discovery-info" aria-live="polite">{info}</section>
+    <div className="fa-discovery-summary">Exploration progress</div>
+    <section className="fa-discovery-record" aria-label="Exploration progress"><span>{count} / {regions.length} regions</span><span>{profile?.world.discoveries.length||0} landmarks</span></section>
+    {controls}
+  </div>;
+  return <><Panel rect={layout[0]}><h2>{heading}</h2><RegionMap world={world} profile={profile} small/></Panel><Panel rect={layout[1]}><h3>{label}</h3>{info}{controls}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -524,13 +549,13 @@ export default function SapphireAdventure(){
     if(e.type==='world'&&p&&startReady.current&&!s.encounter&&!failedLoad.current){
       const updated=updateWorld(p,e.world);setWorld(e.world);replaceProfile(updated);
       const newRegion=updated.world.visitedRegions.find(x=>!p.world.visitedRegions.includes(x));
-      if(newRegion&&s.id==='10'){const item=e.world.regions.find(x=>x.id===newRegion);if(p.world.visitedRegions.length){setDiscovery(item?.name||e.world.region);go('42');notify('New region: '+(item?.name||e.world.region));}autosave(updated);}
+      if(newRegion&&s.id==='10'){const item=e.world.regions.find(x=>x.id===newRegion);if(p.world.visitedRegions.length){setDiscovery({kind:'region',id:newRegion,label:item?.name||e.world.region});go('42');notify('New region: '+(item?.name||e.world.region));}autosave(updated);}
       return;
     }
     if(e.type==='encounter'&&p&&s.id==='10'&&!s.encounter){
       const updated=updateWorld(p,e.world);replaceProfile(updated);setWorld(e.world);if(e.encounter.category==='Normal')startBattle(e.encounter);else{setCandidate(e.encounter);go('23');}return;
     }
-    if(e.type==='discovery'&&p&&!s.encounter){const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery(e.label);setLoot(awarded.loot);notify(e.label);autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
+    if(e.type==='discovery'&&p&&!s.encounter){const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:e.label});setLoot(awarded.loot);notify(e.label);autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
     if(e.type==='service'&&p&&s.id==='10'&&!s.encounter){setService(e.service);setWorld(e.world);replaceProfile(updateWorld(p,e.world));go('13');return;}
     if(e.type==='battleReady'&&isCurrentEncounter(s.encounter,e.token)&&!failedLoad.current){setArenaReady(true);root('09');return;}
     if(e.type==='error')fail(e.message||'World error');
@@ -743,7 +768,7 @@ export default function SapphireAdventure(){
     case '28':content=<>{pane(0,nav(['24','29']))}{pane(1,<StatRows stats={{'Regions discovered':profile?.world.visitedRegions.length||0,'Encounters defeated':profile?.world.completedEncounters.length||0,'Hidden discoveries':profile?.world.discoveries.length||0}}/>)}{pane(2,<p>Milestone tracking is live. Achievement rewards have not been defined.</p>)}</>;break;
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
     case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '31':content=pane(0,<><h2>Treasure Discovered</h2><p>{discovery}</p>{lootList}<p>These items were recorded once in your inventory.</p><Btn primary onClick={()=>go('38')}>View Items</Btn><Btn onClick={back}>Continue</Btn></>);break;
+    case '31':content=pane(0,<><h2>Treasure Discovered</h2><p>{discovery?.label}</p>{lootList}<p>These items were recorded once in your inventory.</p><Btn primary onClick={()=>go('38')}>View Items</Btn><Btn onClick={back}>Continue</Btn></>);break;
     case '32':content=<Attributes key={profile?.id||'guest'} profile={profile} level={level} locked={!profile||Boolean(encounter&&hud?.phase!=='over')} original={original} layout={screen.layout} unlockedIds={result?.unlocked||[]} back={back} onConfirm={(base,draft)=>{const live=current.current.profile;if(!live||live!==base||(current.current.encounter&&hud?.phase!=='over')||!Array.isArray(draft)||draft.length>pointsFor(live)||draft.some(k=>!STAT_KEYS.includes(k)))return false;const next=draft.reduce((p,k)=>allocate(p,k),live);replaceProfile(next);autosave(next);finishLevel();return true;}}/>;break;
     case '33':content=<>{pane(0,<><h2>Rest Point</h2><p>{service?.label||'Not at a sanctuary'}</p></>)}{pane(1,statPanel)}{pane(2,<><p>Restore the leader and all recruited companions at a registered service point.</p><Btn disabled={!serviceAvailable||(profile.hp>=stats.maxHp&&!partyNeedsRest(profile))} onClick={()=>requestConfirm('Rest and recover?',()=>transact(p=>heal(p,{sanctuary:true}),'Health restored'))}>Rest</Btn><Btn onClick={()=>go('18')}>Save</Btn></>)}{pane(3,<Btn onClick={()=>root('10')}>Leave</Btn>)}</>;break;
     case '34':{const lessons=['Explore with WASD or the on-screen movement controls. Hold Shift or Run to sprint; Space or Jump to jump. Approach a marker and press E.','Choose a legal combat action. Quick Shot and Guard generate Focus; stronger skills spend it.','Open Character with C, Skillbook with K, Map with M, Journal with L, Equipment with I; Escape returns one level.'];content=<>{pane(0,<>{lessons.map((_,i)=><Btn key={i} primary={lesson===i} onClick={()=>setLesson(i)}>Lesson {i+1}</Btn>)}</>)}{pane(1,<><h2>Lesson {lesson+1}</h2><p>{lessons[lesson]}</p></>)}{pane(2,<Btn disabled={!running||Boolean(encounter)} onClick={()=>startBattle({id:'practice',label:'Practice Archer',category:'Normal',practice:true})}>Practice Battle</Btn>)}{pane(3,buttons(<Btn onClick={()=>setLesson(Math.max(0,lesson-1))}>Previous</Btn>,<Btn onClick={()=>setLesson(Math.min(lessons.length-1,lesson+1))}>Next</Btn>))}</>;break;}
@@ -754,7 +779,7 @@ export default function SapphireAdventure(){
     case '39':content=<>{pane(0,listItems((item,k)=>item.kind==='weapon'&&inv[k]>0))}{pane(1,<><h2>Equipped</h2><p>{ITEMS[profile?.equipped]?.name}</p>{compare&&<StatRows stats={compare.current}/>}</>)}{pane(2,<><h2>Selected</h2><p>{selectedItem?.name}</p>{compare&&<StatRows stats={compare.candidate}/>}</>)}{pane(3,<><p>Attack difference: {compare?compare.candidate.atk-compare.current.atk:'—'}</p><Btn primary disabled={!compare||Boolean(encounter)} onClick={()=>{if(transact(p=>equipItem(p,itemId),'Weapon equipped'))back();}}>Equip</Btn></>)}</>;break;
     case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>{const f=pending?.action;setPending(null);back();f?.();}}>Confirm</Btn>,<Btn onClick={()=>{setPending(null);back();}}>Cancel</Btn>)}</>);break;
     case '41':content=pane(0,<p role="status">{saveStatus||'No save operation in progress.'}</p>);break;
-    case '42':content=<>{pane(1,<><h2>Discovered</h2><p>{discovery}</p><Btn primary onClick={back}>Continue</Btn><Btn onClick={()=>go('07')}>Map</Btn></>)}</>;break;
+    case '42':content=<RegionDiscovery discovery={discovery} world={world} profile={profile} original={original} layout={screen.layout} onContinue={back} onMap={()=>{back();go('07');}}/>;break;
     case '43':content=<>{pane(0,<PaintedIllustration name="quest-offer"/>)}{pane(1,<><h2>Whispering Grove Spirit</h2><p>Defeat the Grove Spirit in the first exploration region.</p><p>Battle experience is awarded on victory, not again for claiming the quest.</p><Btn primary disabled={!profile||profile.quests.grove!=='available'} onClick={()=>{const p=acceptGroveQuest(profile);replaceProfile(p);autosave(p);root('10');go('08');}}>Accept Quest</Btn><Btn onClick={back}>Decline</Btn></>)}</>;break;
     case '44':content=<><PaintedIllustration name="quest-complete" variant="fa-event-side-art"/>{pane(0,<><h2>Quest Complete</h2><p>Whispering Grove Spirit · Completed</p><Btn primary onClick={()=>root('10')}>Continue</Btn></>)}</>;break;
     case '45':content=<SkillUnlocked key={profile?.id||'guest'} profile={profile} result={result} level={level} original={original} layout={screen.layout} onContinue={()=>{if(current.current.profile)resumeWorld();else back();}} onSkillbook={()=>{if(current.current.profile){resumeWorld();go('12');}else back();}}/>;break;
