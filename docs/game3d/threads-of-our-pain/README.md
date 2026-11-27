@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R66 quest continuity:** [Discovery completion and evidence reconciliation](R66_QUEST_CONTINUITY_RECONCILIATION.md) records second-vista completion, S27/S29 evidence eligibility, S39/S55 lane proposals and D31/S46/S43 state safeguards. Read before implementing affected IDs; proposed mechanics remain unverified.
+
 > **R65 current finale script:** [M19/M20 revised finale](R65_M19-M20_REVISED_FINALE.md) supersedes conflicting R39/R40/R54 branch scripts. Read with R64A. Retain existing approach, rescue and confrontation; sacrifice restores the age-eighteen existence with ancient former-world losses; refusal fuses the landscape and damage, with continued play and a roughly twenty-year reconstruction coda. Exact postgame mechanics and final script sign-off pending.
 
 > **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed and targeted source-reviewed; exact phase windows and conflict reconciliation pending. No game implementation or final script sign-off.
