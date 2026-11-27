@@ -1,6 +1,6 @@
 # The Threads of Our Pain — story-to-world index
 
-> **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed, 12 targeted source reviews, 93 still pending. No game implementation or final script sign-off.
+> **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed, 47 targeted source reviews, 58 still pending. No game implementation or final script sign-off.
 
 **Current R61 handoff:** [125-ID source navigation](R61_STABLE_ID_INDEX.md) and [three-reality continuity ledger](R61_CONTINUITY_LEDGER.md). The historical table and revision logs below are retained, but their coverage counters and backfill status are superseded by the R61 section.
 
@@ -254,3 +254,7 @@ Recovered all thirteen missing revision text ranges R35–R47 from the actual R6
 ## Revision R63 — ending consequences and postgame access
 
 [R63 ending and postgame decision package](R63_ENDING_POSTGAME_CONTRACT.md) reconciles R39–R41, R42/S55, R46/D50, R54, R61 and R62. It proposes survivor-preserving consequences for Separation and Rebirth, explicit branch approval gates, an immutable outcome record, isolated pre-finale snapshot access, equipment/account distinctions and a phase-limited opportunity manifest specification. M05 physical death remains fixed; R39's continuation wording and R40's post-separation active older avatar remain blocked pending chronology approval. The younger fate on Rebirth, populations, exact seal, casting, postgame access and cross-save rewards require owner approval. No ending is locked, no manuscript or game code changes, terrain construction, merge or deployment. Next R64: verify historical source paths and build the opportunity manifest against actual scripts, retaining TBD where dates are unestablished.
+
+## R64C — availability review, second pass
+
+[Updated opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): 47/105 targeted source reviews, including 21 discoveries and 26 optional adventures. Reviewed 35 additional IDs from 22 briefs; 58 remain indexed only. S10 explicitly requires paired D08 entrance, S11 shares D09 clapper/outlet access (alternate route unresolved), S24 requires genuine watch completion. D18 original alignment is after M06; most exact first/last local phase windows remain TBD. Preserve actual observations and reward receipts rather than recreating historical encounters in either new ending. Claude must survey phase-specific geometry and actor lifetimes; tests not executed. No game code, terrain, merge or deployment.
