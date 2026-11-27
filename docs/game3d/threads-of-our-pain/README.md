@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R98 — M19 causality and knowledge audit:** [When two histories touch](R98_M19_CAUSALITY_AND_CHARACTER_KNOWLEDGE.md). Distinguishes shared life force, physical overlap and forced convergence; four proposed dialogue refinements and seven actor/group knowledge rules. Original chronology remains unresolved; no new causal law or implementation. Next D01–D10/S01–S10 opportunity window audit.
+
 > **R97 — original-life chronology dependency audit:** [The chronology of two lives](R97_ORIGINAL_LIFE_CHRONOLOGY_DEPENDENCY_AUDIT.md). Source-based event dependencies and five dialogue repair proposals; candidate pre-death local ordering is not approved and does not yet resolve M19 causality. Preserve M05 physical death and actual M10 overlap. Next M19 causality and knowledge ledger, then optional opportunity windows.
 
 > **R96 — midcampaign continuity reconciliation:** [The stranger with my face](R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md). Six source-grounded M07–M12 editorial packets; R92–R96 now cover all 20 main IDs. Preserve M09/M10 physical overlap, distinct families, no Celestial Sight; next scene-level original chronology dependency audit. Draft, no implementation or owner approval.
