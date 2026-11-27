@@ -304,7 +304,7 @@ test('original blacksmith previews only supported enhancement and rechecks confi
  const section=page.slice(page.indexOf('function BlacksmithShop('),page.indexOf('function SaveToast('));
  for(const marker of ['profile?.equipped','15+level*10','level<5','gold>=cost','ore>=1','disabled={!allowed}','onEnhance(id,level,cost)','Not available in this build','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '17':"));
- for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.equipped!==weapon','p.enhancements[weapon]!==level','enhanceWeapon(p)'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.equipped!==weapon','enhancementLevel(p,weapon)!==level','enhanceWeapon(p)'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original crafting uses the actual tonic recipe and guards its confirmation',()=>{
@@ -416,4 +416,284 @@ test('original first-time setup uses actual guest settings and routes drafts and
  for(const forbidden of ['localStorage','writeSlot(','createProfile(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '48':"));
  for(const marker of ["s.id==='48'&&!s.running&&!s.encounter","go('19')",'reloadSlots()','mostRecent(fresh.slots)','fresh.error||!latest',"go('02')",'onSettings={applySettings}'])assert.ok(handler.includes(marker),marker);
+});
+
+
+import {GROVE_STORY,groveStoryState} from '../src/components/fantasybattle/core/groveStory.mjs';
+test('Grove narrative tracks existing quest and encounter state without writes or future spoilers',()=>{
+ assert.equal(groveStoryState(null),null);
+ const profile=(state,ids=[])=>({quests:{grove:state},world:{completedEncounters:ids}});
+ assert.equal(groveStoryState(profile('unknown')),null);
+ assert.equal(groveStoryState(profile('available')).history,null);
+ assert.equal(groveStoryState(profile('available')).serviceNote,GROVE_STORY.opening);
+ assert.match(groveStoryState(profile('active')).history,/light has gone out/);
+ assert.equal(groveStoryState(profile('active',['wilds_waterfall_01'])).defeated,false);
+ for(const state of ['available','active','complete','claimed']){
+  const p=profile(state,['wilds_grove_01']),before=JSON.stringify(p),story=groveStoryState(p);
+  assert.equal(story.defeated,true);
+  assert.equal(story.serviceNote===GROVE_STORY.completion,state==='claimed');
+  assert.equal(JSON.stringify(p),before);
+ }
+ assert.notEqual(groveStoryState(profile('claimed')).serviceNote,GROVE_STORY.completion);
+});
+test('Chapter 1 narrative uses original and fallback interfaces without replacing quest authority',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['GROVE_STORY.journal','GROVE_STORY.offer','GROVE_STORY.completion','GROVE_STORY.warning','GROVE_STORY.recruit','groveStoryState(profile)?.serviceNote','groveStoryState(profile)?.history',"candidate.id==='wilds_grove_01'","eligible&&selected.id==='groveArcher'&&!member.recruited","acceptGroveQuest(p)","claimGroveQuest(p)"])assert.ok(page.includes(marker),marker);
+});
+
+
+import {roadQuest,changeRoadQuest,validCampaign,campaignQuest,changeCampaignQuest,CAMPAIGN_QUESTS,campaignPrompt,campaignServiceNote,trackedCampaign,campaignArc} from '../src/components/fantasybattle/core/campaignQuests.mjs';
+import {createProfile as newRoadProfile, isProfile as isRoadProfile, exportBackup as exportRoadBackup, parseBackup as parseRoadBackup, rewardVictory as roadVictory} from '../src/components/fantasybattle/core/adventureState.mjs';
+test('Pilgrim Road progression is bounded, backward compatible and derives objectives from recorded victories',()=>{
+ const legacy=newRoadProfile('Road test');
+ assert.ok(isRoadProfile(legacy));assert.equal(roadQuest(legacy).state,'locked');
+ assert.throws(()=>changeRoadQuest(legacy,'accept'));
+ const unlocked={...legacy,quests:{grove:'claimed'},world:{...legacy.world,completedEncounters:['wilds_grove_01']}};
+ assert.equal(roadQuest(unlocked).state,'available');
+ const active=changeRoadQuest(unlocked,'accept');
+ assert.equal(roadQuest(active).state,'active');
+ assert.throws(()=>changeRoadQuest(active,'accept'));assert.throws(()=>changeRoadQuest(active,'claim'));
+ const first=roadVictory(active,{id:'wilds_pilgrimage_01',category:'Normal'}).profile;
+ assert.equal(roadQuest(first).count,1);
+ const both=roadVictory(first,{id:'wilds_pilgrimage_02',category:'Normal'}).profile;
+ assert.equal(roadQuest(both).state,'complete');
+ const claimed=changeRoadQuest(both,'claim');
+ assert.equal(roadQuest(claimed).state,'claimed');assert.ok(isRoadProfile(claimed));
+ assert.deepEqual(claimed.inventory,both.inventory);assert.equal(claimed.gold,both.gold);assert.equal(claimed.xp,both.xp);
+ assert.throws(()=>changeRoadQuest(claimed,'claim'));
+ assert.deepEqual(parseRoadBackup(exportRoadBackup(claimed)).quests,claimed.quests);
+ assert.equal(roadQuest(parseRoadBackup(exportRoadBackup(legacy))).state,'locked');
+ assert.equal(roadQuest(changeRoadQuest({...both,quests:{grove:'claimed'}},'accept')).state,'complete');
+ assert.equal(validCampaign({...active,quests:{...active.quests,campaign:{version:1,pilgrimRoad:'claimed'}}}),false);
+ for(const bad of [{version:2,pilgrimRoad:'active'},{version:1,pilgrimRoad:'active',extra:true},null,[]])assert.equal(isRoadProfile({...active,quests:{...active.quests,campaign:bad}}),false);
+});
+test('Chapter 2 uses original journal and existing transaction guard',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['CAMPAIGN_QUESTS.map','campaignQuest(profile,q.id)','campaignEntry','fa-journal-expanded','onCampaignAction','transact(p=>changeCampaignQuest(p,questId,action)','q.title+\' objectives\''])assert.ok(page.includes(marker),marker);
+});
+
+test('Waterfall chapter and optional cave quest preserve existing road saves and independent completion',()=>{
+ const base=newRoadProfile('Waterfall test');
+ const road={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02']}};
+ assert.ok(isRoadProfile(road));assert.equal(campaignQuest(road,'waterfall').state,'available');
+ assert.equal(campaignQuest(road,'caveEcho').state,'locked');
+ assert.throws(()=>changeCampaignQuest(road,'caveEcho','accept'));assert.throws(()=>changeCampaignQuest(road,'__proto__','accept'));
+ const active=changeCampaignQuest(road,'waterfall','accept');
+ assert.equal(campaignQuest(active,'waterfall').state,'active');assert.throws(()=>changeCampaignQuest(active,'waterfall','claim'));
+ const caveFirst=roadVictory(active,{id:'wilds_cave_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(caveFirst,'waterfall').count,0);assert.equal(campaignQuest(caveFirst,'caveEcho').state,'locked');
+ const done=roadVictory(caveFirst,{id:'wilds_waterfall_01',category:'Normal'}).profile;
+ const claimed=changeCampaignQuest(done,'waterfall','claim');
+ assert.equal(campaignQuest(claimed,'waterfall').state,'claimed');assert.equal(campaignQuest(claimed,'caveEcho').state,'available');
+ const optional=changeCampaignQuest(claimed,'caveEcho','accept');
+ assert.equal(campaignQuest(optional,'caveEcho').state,'complete');
+ const final=changeCampaignQuest(optional,'caveEcho','claim');
+ assert.equal(campaignQuest(final,'caveEcho').state,'claimed');assert.ok(isRoadProfile(final));assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.deepEqual(final.inventory,done.inventory);assert.equal(final.xp,done.xp);assert.equal(final.gold,done.gold);
+ assert.throws(()=>changeCampaignQuest(final,'caveEcho','claim'));
+ assert.equal(isRoadProfile({...road,quests:{...road.quests,campaign:{version:1,pilgrimRoad:'claimed',caveEcho:'active'}}}),false);
+ assert.equal(CAMPAIGN_QUESTS.find(q=>q.id==='caveEcho').optional,true);
+});
+test('Chapter 3 uses catalog journal and spoiler-gated codex without new map or asset dependencies',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['CAMPAIGN_QUESTS.flatMap','Side quest · ', "selected.id==='mistScout'","candidate.id==='wilds_waterfall_01'","candidate.id==='wilds_cave_01'","['active','complete','claimed'].includes(progress.state)"])assert.ok(page.includes(marker),marker);
+});
+
+test('Heights campaign and independent elite trial maintain main-story priority and preserve saves',()=>{
+ const base=newRoadProfile('Heights test');
+ const prior={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed',waterfall:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02','wilds_waterfall_01']}};
+ assert.ok(isRoadProfile(prior));
+ assert.equal(campaignQuest(prior,'heights').state,'available');
+ assert.equal(campaignQuest(prior,'heightsTrial').state,'available');
+ assert.equal(campaignQuest(prior,'caveEcho').state,'available');
+ assert.equal(trackedCampaign(prior).q.id,'heights');
+ assert.match(campaignPrompt(prior),/New quest: The Heights/);
+ assert.match(campaignServiceNote(prior),/relay/);
+ const active=changeCampaignQuest(prior,'heights','accept');
+ const trial=changeCampaignQuest(active,'heightsTrial','accept');
+ assert.equal(trackedCampaign(trial).q.id,'heights');
+ const first=roadVictory(trial,{id:'wilds_heights_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(first,'heights').count,1);
+ assert.match(campaignPrompt(first),/second Heights/);
+ assert.throws(()=>changeCampaignQuest(first,'heights','claim'));
+ const second=roadVictory(first,{id:'wilds_heights_02',category:'Normal'}).profile;
+ assert.equal(campaignQuest(second,'heights').state,'complete');
+ assert.match(campaignPrompt(second),/Complete in journal/);
+ const cleared=changeCampaignQuest(second,'heights','claim');
+ assert.equal(campaignQuest(cleared,'heightsTrial').state,'active');
+ assert.equal(campaignQuest(cleared,'caveEcho').state,'available');
+ assert.deepEqual(cleared.inventory,second.inventory);
+ assert.equal(cleared.xp,second.xp);assert.equal(cleared.gold,second.gold);
+ assert.throws(()=>changeCampaignQuest(cleared,'heights','claim'));
+ const elite=roadVictory(cleared,{id:'wilds_heights_elite',category:'Elite'}).profile;
+ const final=changeCampaignQuest(elite,'heightsTrial','claim');
+ assert.equal(campaignQuest(final,'heightsTrial').state,'claimed');
+ assert.equal(campaignQuest(final,'heights').state,'claimed');
+ assert.equal(trackedCampaign(final).q.id,'sanctuary');
+ assert.ok(isRoadProfile(final));
+ assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.equal(isRoadProfile({...prior,quests:{...prior.quests,campaign:{...prior.quests.campaign,heightsTrial:'claimed'}}}),false);
+ const early=roadVictory(prior,{id:'wilds_heights_elite',category:'Elite'}).profile;
+ assert.equal(campaignQuest(changeCampaignQuest(early,'heightsTrial','accept'),'heightsTrial').state,'complete');
+ assert.equal(campaignQuest(early,'heights').count,0);
+});
+test('Heights warnings and campaign tracking use the existing UI surfaces',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ["candidate.id==='wilds_heights_01'","candidate.id==='wilds_heights_02'","candidate.id==='wilds_heights_elite'",'campaignServiceNote(profile)','campaignPrompt(profile)','onCampaignAction'])assert.ok(page.includes(marker),marker);
+});
+
+test('Sanctuary main quest requires both recorded encounters, not optional trials or recruitment',()=>{
+ const base=newRoadProfile('Sanctuary test');
+ const prior={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed',waterfall:'claimed',heights:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02','wilds_waterfall_01','wilds_heights_01','wilds_heights_02']}};
+ assert.ok(isRoadProfile(prior));
+ assert.equal(campaignQuest(prior,'sanctuary').state,'available');
+ assert.equal(trackedCampaign(prior).q.id,'sanctuary');
+ const active=changeCampaignQuest(prior,'sanctuary','accept');
+ assert.match(campaignPrompt(active),/sanctuary guard/);
+ const guard=roadVictory(active,{id:'wilds_sanctuary_guard',category:'Normal'}).profile;
+ assert.equal(campaignQuest(guard,'sanctuary').count,1);
+ assert.match(campaignPrompt(guard),/Gatekeeper/);
+ assert.throws(()=>changeCampaignQuest(guard,'sanctuary','claim'));
+ const boss=roadVictory(guard,{id:'wilds_sanctuary_boss',category:'Boss'}).profile;
+ assert.equal(campaignQuest(boss,'sanctuary').state,'complete');
+ const final=changeCampaignQuest(boss,'sanctuary','claim');
+ assert.equal(campaignQuest(final,'sanctuary').state,'claimed');
+ assert.equal(campaignQuest(final,'heightsTrial').state,'available');
+ assert.equal(campaignQuest(final,'caveEcho').state,'available');
+ assert.deepEqual(final.inventory,boss.inventory);assert.equal(final.gold,boss.gold);assert.equal(final.xp,boss.xp);
+ assert.ok(isRoadProfile(final));assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.throws(()=>changeCampaignQuest(final,'sanctuary','claim'));
+ const bossFirst=roadVictory(prior,{id:'wilds_sanctuary_boss',category:'Boss'}).profile;
+ assert.equal(campaignQuest(changeCampaignQuest(bossFirst,'sanctuary','accept'),'sanctuary').count,1);
+ assert.equal(isRoadProfile({...guard,quests:{...guard.quests,campaign:{...guard.quests.campaign,sanctuary:'claimed'}}}),false);
+});
+test('Sanctuary narrative and actual boss phase intent are rendered without a second reward path',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ["candidate.id==='wilds_sanctuary_guard'","candidate.id==='wilds_sanctuary_boss'","sanctuaryIntro","sanctuaryCleared","!encounter.practice","profile.world.completedEncounters.includes('wilds_sanctuary_boss')","i.phaseName","tacticFor(e.strategy,e.archetype)"])assert.ok(page.includes(marker),marker);
+});
+
+test('Final Astral quest completes the six-chapter arc without requiring optional trials',()=>{
+ const base=newRoadProfile('Astral test');
+ assert.deepEqual(campaignArc(base),{completed:0,total:6,complete:false});
+ const prior={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed',waterfall:'claimed',heights:'claimed',sanctuary:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02','wilds_waterfall_01','wilds_heights_01','wilds_heights_02','wilds_sanctuary_guard','wilds_sanctuary_boss']}};
+ assert.ok(isRoadProfile(prior));assert.deepEqual(campaignArc(prior),{completed:5,total:6,complete:false});
+ assert.equal(campaignQuest(prior,'astral').state,'available');
+ assert.equal(campaignQuest(prior,'moonveilKeeper').state,'available');
+ const active=changeCampaignQuest(prior,'astral','accept');
+ const first=roadVictory(active,{id:'wilds_moonveil_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(first,'astral').count,1);
+ const second=roadVictory(first,{id:'wilds_astral_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(second,'astral').count,2);assert.throws(()=>changeCampaignQuest(second,'astral','claim'));
+ const third=roadVictory(second,{id:'wilds_astral_elite',category:'Elite'}).profile;
+ assert.equal(campaignQuest(third,'astral').state,'complete');assert.equal(campaignArc(third).complete,false);
+ const final=changeCampaignQuest(third,'astral','claim');
+ assert.deepEqual(campaignArc(final),{completed:6,total:6,complete:true});
+ assert.match(campaignPrompt(final),/arc complete/);
+ assert.equal(campaignQuest(final,'moonveilKeeper').state,'available');
+ assert.deepEqual(final.inventory,third.inventory);assert.equal(final.gold,third.gold);assert.equal(final.xp,third.xp);
+ assert.ok(isRoadProfile(final));assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.throws(()=>changeCampaignQuest(final,'astral','claim'));
+ const trial=changeCampaignQuest(final,'moonveilKeeper','accept');
+ assert.equal(trackedCampaign(trial).q.id,'moonveilKeeper');assert.equal(campaignArc(trial).complete,true);
+ const elite=roadVictory(trial,{id:'wilds_moonveil_elite',category:'Elite'}).profile;
+ const all=changeCampaignQuest(elite,'moonveilKeeper','claim');
+ assert.equal(campaignArc(all).completed,6);assert.equal(campaignQuest(all,'moonveilKeeper').state,'claimed');
+ assert.ok(isRoadProfile(all));assert.deepEqual(parseRoadBackup(exportRoadBackup(all)).quests,all.quests);
+ assert.equal(isRoadProfile({...second,quests:{...second.quests,campaign:{...second.quests.campaign,astral:'claimed'}}}),false);
+});
+test('Final chapter UI displays arc progress and verified encounter narrative',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['campaignArc(profile)','arcLabel',"candidate.id==='wilds_moonveil_01'","candidate.id==='wilds_moonveil_elite'","candidate.id==='wilds_astral_01'","candidate.id==='wilds_astral_elite'","astralCleared","profile.world.completedEncounters.includes('wilds_astral_elite')"])assert.ok(page.includes(marker),marker);
+});
+
+import {GEAR,GEAR_SETS,gearEligible,activeGearSet,gearMetadata} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+import {equipGear as equipTestGear,memberStats as testMemberStats,gearComparison as testGearComparison,buyItem as testBuy,sellItem as testSell,recruitCompanion as testRecruit} from '../src/components/fantasybattle/core/adventureState.mjs';
+test('expanded gear respects party level, individual ownership and two-piece bonus',()=>{
+ const base=newRoadProfile('Gear test');
+ assert.ok(isRoadProfile(base));assert.equal(GEAR.groveVest.requiredLevel,1);
+ const owned={...base,gold:1000,inventory:{...base.inventory,pilgrimCuirass:1,pilgrimCloak:1}};
+ assert.ok(isRoadProfile(owned));assert.equal(gearEligible(owned,'pilgrimCuirass'),false);
+ assert.equal(testGearComparison(owned,'hero','pilgrimCuirass'),null);
+ assert.throws(()=>equipTestGear(owned,'hero','armor','pilgrimCuirass'));
+ const level2={...owned,xp:100};
+ const one=equipTestGear(level2,'hero','armor','pilgrimCuirass');
+ assert.equal(activeGearSet(one,'hero'),null);
+ const before=testMemberStats(one,'hero'),preview=testGearComparison(one,'hero','pilgrimCloak');
+ const two=equipTestGear(one,'hero','mantle','pilgrimCloak');
+ assert.deepEqual(preview.candidate,testMemberStats(two,'hero'));
+ assert.equal(preview.candidate.def-before.def,GEAR.pilgrimCloak.def+GEAR_SETS.pilgrim.def);
+ assert.equal(activeGearSet(two,'hero').name,'Pilgrim Watch');
+ assert.equal(activeGearSet(two,'groveArcher'),null);
+ assert.throws(()=>testSell(two,'pilgrimCloak'));
+ const recruited=testRecruit({...two,world:{...two.world,completedEncounters:['wilds_grove_01']}},'groveArcher');
+ assert.throws(()=>equipTestGear(recruited,'groveArcher','armor','pilgrimCuirass'));
+ const removed=equipTestGear(recruited,'hero','mantle',null);
+ assert.equal(activeGearSet(removed,'hero'),null);
+ assert.equal(testMemberStats(two,'hero').def-testMemberStats(removed,'hero').def,GEAR.pilgrimCloak.def+GEAR_SETS.pilgrim.def);
+ assert.ok(isRoadProfile(two));assert.equal(isRoadProfile({...two,xp:0}),false);
+ assert.deepEqual(parseRoadBackup(exportRoadBackup(two)).gear,two.gear);
+ assert.equal(testBuy(baseWithGold(base),'astralMantle').inventory.astralMantle,1);
+ assert.match(gearMetadata('astralMantle'),/Legendary · Level 4/);
+ assert.equal(gearMetadata('__proto__'),null);
+});
+function baseWithGold(p){return {...p,gold:500};}
+
+import {WEAPONS,weaponEligible,enhancementLevel} from '../src/components/fantasybattle/core/weaponCatalog.mjs';
+import {equipItem as equipTestWeapon,enhanceWeapon as enhanceTestWeapon,comparison as testWeaponComparison} from '../src/components/fantasybattle/core/adventureState.mjs';
+test('expanded bows preserve old saves and independent enhancements with level and cost guards',()=>{
+ const legacy=newRoadProfile('Bow test');
+ assert.ok(isRoadProfile(legacy));assert.equal(enhancementLevel(legacy,'astralBow'),0);
+ const stock={...legacy,gold:1000,inventory:{...legacy.inventory,sapphireOre:10}};
+ const owned=testBuy(stock,'pilgrimBow');
+ assert.ok(isRoadProfile(owned));assert.equal(weaponEligible(owned,'pilgrimBow'),false);
+ assert.equal(testWeaponComparison(owned,'pilgrimBow'),null);
+ assert.throws(()=>equipTestWeapon(owned,'pilgrimBow'));
+ const ready={...owned,xp:100};
+ const equipped=equipTestWeapon(ready,'pilgrimBow');
+ assert.equal(testWeaponComparison(ready,'pilgrimBow').candidate.atk,testMemberStats(equipped,'hero').atk);
+ const upgraded=enhanceTestWeapon(equipped);
+ assert.equal(upgraded.gold,equipped.gold-15);assert.equal(upgraded.inventory.sapphireOre,equipped.inventory.sapphireOre-1);
+ assert.equal(enhancementLevel(upgraded,'pilgrimBow'),1);assert.equal(enhancementLevel(upgraded,'starterBow'),0);
+ assert.equal(testMemberStats(upgraded,'hero').atk,testMemberStats(equipped,'hero').atk+2);
+ assert.equal(enhancementLevel(equipTestWeapon(upgraded,'starterBow'),'pilgrimBow'),1);
+ assert.throws(()=>testSell(upgraded,'pilgrimBow'));
+ assert.ok(isRoadProfile(upgraded));assert.deepEqual(parseRoadBackup(exportRoadBackup(upgraded)).enhancements,upgraded.enhancements);
+ assert.equal(isRoadProfile({...upgraded,xp:0}),false);
+ assert.equal(isRoadProfile({...upgraded,enhancements:{...upgraded.enhancements,pilgrimBow:6}}),false);
+ assert.equal(isRoadProfile({...upgraded,enhancements:{...upgraded.enhancements,unknownBow:1}}),false);
+ let capped=upgraded;for(let i=1;i<5;i++)capped=enhanceTestWeapon(capped);
+ assert.equal(enhancementLevel(capped,'pilgrimBow'),5);assert.throws(()=>enhanceTestWeapon(capped));
+ assert.equal(WEAPONS.astralBow.requiredLevel,4);
+});
+
+import {GEAR_SLOTS,gearSlotLabel,equippedVisuals} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+import {ITEM_ART_IDS,ITEM_ARTWORK,itemArtworkFor,validItemArtwork} from '../src/components/fantasybattle/core/itemArtwork.mjs';
+test('accessories use independent slots and stats without altering armor visuals or legacy saves',()=>{
+ const base=newRoadProfile('Jewelry test');
+ const stock={...base,xp:300,gold:1000,inventory:{...base.inventory,groveRing:1,astralPendant:1,groveVest:1}};
+ const armor=equipTestGear(stock,'hero','armor','groveVest');
+ const ring=equipTestGear(armor,'hero','ring','groveRing');
+ const both=equipTestGear(ring,'hero','necklace','astralPendant');
+ assert.deepEqual(GEAR_SLOTS,['armor','mantle','ring','necklace']);
+ assert.equal(gearSlotLabel('ring'),'Ring');
+ assert.deepEqual(equippedVisuals(both,'hero'),['groveVest']);
+ assert.equal(testMemberStats(both,'hero').atk-testMemberStats(armor,'hero').atk,3);
+ assert.equal(testMemberStats(both,'hero').def-testMemberStats(armor,'hero').def,3);
+ assert.equal(testMemberStats(both,'hero').spd-testMemberStats(armor,'hero').spd,2);
+ assert.throws(()=>equipTestGear(stock,'hero','necklace','groveRing'));
+ assert.throws(()=>equipTestGear({...stock,xp:0},'hero','necklace','astralPendant'));
+ assert.throws(()=>testSell(both,'groveRing'));
+ assert.ok(isRoadProfile(both));assert.deepEqual(parseRoadBackup(exportRoadBackup(both)).gear,both.gear);
+ const removed=equipTestGear(both,'hero','ring',null);
+ assert.equal(removed.gear.hero.ring,undefined);assert.ok(isRoadProfile(removed));
+});
+test('reviewed item art registry rejects external URLs, unknown IDs and path traversal',()=>{
+ assert.equal(new Set(ITEM_ART_IDS).size,ITEM_ART_IDS.length);assert.ok(validItemArtwork(ITEM_ARTWORK));
+ const path='/fantasybattle/sapphire/items/groveRing.webp';
+ assert.ok(validItemArtwork({groveRing:path}));assert.equal(itemArtworkFor('groveRing',{groveRing:path}),path);
+ assert.equal(itemArtworkFor('groveRing'),null);
+ for(const bad of ['https://example.com/groveRing.webp','/fantasybattle/sapphire/items/../groveRing.webp','data:image/svg+xml,evil','/fantasybattle/sapphire/items/astralPendant.webp']){
+  assert.equal(validItemArtwork({groveRing:bad}),false);assert.equal(itemArtworkFor('groveRing',{groveRing:bad}),null);
+ }
+ assert.equal(validItemArtwork({unknown:path}),false);assert.equal(itemArtworkFor('unknown',{unknown:path}),null);
 });

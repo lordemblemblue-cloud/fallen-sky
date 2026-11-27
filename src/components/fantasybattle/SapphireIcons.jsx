@@ -24,17 +24,20 @@ const paths={
  celestialWard:<><path d="M32 5L56 15v20L32 59 8 35V15Z" fill="#352344" stroke="#ffe1aa" strokeWidth="3"/><circle cx="32" cy="30" r="13" fill="none" stroke="#ffe1aa"/><path d="M32 15L38 30 32 45 26 30Z" fill="#ffe1aa"/></>,
  guard:<><path d="M32 6l22 9v19q0 14-22 24Q10 48 10 34V15Z" fill="url(#gem)" stroke="#eacb8f" strokeWidth="2.5"/><path d="M32 14l12 7v13q0 9-12 17-12-8-12-17V21z" stroke="#cbf7ff" strokeWidth="1.5" fill="none"/><path d="M32 22l4 10-4 10-4-10z" fill="#fff1c4"/></>
 };
-import {useId} from 'react';
+import {useId,useState} from 'react';
 import {GEAR} from './core/equipmentCatalog.mjs';
-function GearArt({item}){const color='#'+item.color.toString(16).padStart(6,'0'),trim='#'+item.trim.toString(16).padStart(6,'0');return item.slot==='armor'?<><path d={item.style==='plate'?'M5 17L19 6 32 13 45 6 59 17 49 35 47 57H17L15 35Z':'M10 18L22 7 32 19 42 7 54 18 46 34 47 57H17L18 34Z'} fill={color} stroke={trim} strokeWidth="2.5"/><path d="M22 12L32 29 42 12M32 29V54M18 47H46" stroke={trim} strokeWidth="2" fill="none"/></>:<><path d={item.style==='dusk'?'M21 8H43L55 49 32 59 9 49Z':'M20 8H44L58 55 32 48 6 55Z'} fill={color} stroke={trim} strokeWidth="2.5"/><path d="M22 11L32 23 42 11M32 23V47" stroke={trim} strokeWidth="2" fill="none"/><circle cx="32" cy="23" r="4" fill={trim}/></>;}
+import {WEAPONS} from './core/weaponCatalog.mjs';
+import {itemArtworkFor} from './core/itemArtwork.mjs';
+function GearArt({item}){const color='#'+item.color.toString(16).padStart(6,'0'),trim='#'+item.trim.toString(16).padStart(6,'0');return item.slot==='ring'?<><ellipse cx="32" cy="39" rx="15" ry="16" fill="none" stroke={trim} strokeWidth="6"/><path d="M32 9L43 20 32 31 21 20Z" fill={color} stroke={trim} strokeWidth="2"/></>:item.slot==='necklace'?<><path d="M10 9Q10 36 32 43Q54 36 54 9" stroke={trim} strokeWidth="3" fill="none"/><path d="M32 34L44 45 32 59 20 45Z" fill={color} stroke={trim} strokeWidth="2"/></>:item.slot==='armor'?<><path d={item.style==='plate'?'M5 17L19 6 32 13 45 6 59 17 49 35 47 57H17L15 35Z':'M10 18L22 7 32 19 42 7 54 18 46 34 47 57H17L18 34Z'} fill={color} stroke={trim} strokeWidth="2.5"/><path d="M22 12L32 29 42 12M32 29V54M18 47H46" stroke={trim} strokeWidth="2" fill="none"/></>:<><path d={item.style==='dusk'?'M21 8H43L55 49 32 59 9 49Z':'M20 8H44L58 55 32 48 6 55Z'} fill={color} stroke={trim} strokeWidth="2.5"/><path d="M22 11L32 23 42 11M32 23V47" stroke={trim} strokeWidth="2" fill="none"/><circle cx="32" cy="23" r="4" fill={trim}/></>;}
 function Icon({id,className}){
  const uid=useId().replace(/[^a-zA-Z0-9_-]/g,'');
  // Repeated icons must not share an SVG gradient id; set a local CSS variable
  // instead of attempting to mutate global SVG definitions.
- const art=Object.hasOwn(GEAR,id)?<GearArt item={GEAR[id]}/>:paths[id];if(!art)return null;
+ const art=Object.hasOwn(GEAR,id)?<GearArt item={GEAR[id]}/>:Object.hasOwn(paths,id)?paths[id]:Object.hasOwn(WEAPONS,id)?paths.sapphireBow:null;if(!art)return null;
  return <svg className={className} viewBox="0 0 64 64" aria-hidden="true" style={{'--icon-id':uid}}><rect x="1.5" y="1.5" width="61" height="61" rx="10" fill="#0a1730" stroke="#d6b87f" strokeOpacity=".75"/><defs><linearGradient id={'gem'+uid} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#193d82"/><stop offset=".5" stopColor="#448ce0"/><stop offset="1" stopColor="#d5f9ff"/></linearGradient></defs><g fill={'url(#gem'+uid+')'}>{replaceGem(art,uid)}</g></svg>;
 }
 import {Children,cloneElement,isValidElement} from 'react';
 function replaceGem(node,uid){if(!isValidElement(node))return node;const props={};if(node.props.fill==='url(#gem)')props.fill='url(#gem'+uid+')';if(node.props.children)props.children=Children.map(node.props.children,c=>replaceGem(c,uid));return cloneElement(node,props);}
-export function ItemArt({id}){return <Icon id={id} className="fa-item-art"/>;}
+function RegisteredItemArt({id,src}){const [failed,setFailed]=useState(false);return failed?<Icon id={id} className="fa-item-art"/>:<img src={src} className="fa-item-art fa-registered-item-art" alt="" aria-hidden="true" loading="lazy" decoding="async" width={64} height={64} onError={()=>setFailed(true)}/>;}
+export function ItemArt({id}){const src=itemArtworkFor(id);return src?<RegisteredItemArt key={id+src} id={id} src={src}/>:<Icon id={id} className="fa-item-art"/>;}
 export function SkillArt({id}){return <Icon id={id} className="fa-skill-art"/>;}
