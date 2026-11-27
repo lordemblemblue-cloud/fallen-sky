@@ -692,6 +692,36 @@ function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,
   return <><Panel rect={layout[0]}><h2>Merchant</h2><p>Gold: {profile?.gold||0}</p>{tabs}{filters}<input aria-label="Search merchant items" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{detail}<p>{reason}</p>{trade}</Panel></>;
 }
 
+// Enhancement is a preview of the existing bow upgrade, never a new forging economy.
+function BlacksmithShop({profile,serviceAvailable,original,layout,onEnhance,back,go}){
+  const id=profile?.equipped,item=id&&ITEMS[id],level=profile?.enhancements?.[id]??0;
+  const gold=profile?.gold||0,ore=profile?.inventory?.sapphireOre||0,cost=15+level*10;
+  const ready=Boolean(profile&&item?.kind==='weapon'&&serviceAvailable);
+  const allowed=ready&&level<5&&gold>=cost&&ore>=1;
+  const stats=heroStats(profile),next=level<5?level+1:level;
+  const reason=!ready?'Visit a service marker to enhance your equipped bow.':level>=5?'Maximum enhancement reached.':gold<cost?'Not enough gold.':ore<1?'Requires one Sapphire Ore.':'Ready to enhance one level.';
+  const input=<><ItemArt id={id}/><strong>{item?.name||'No weapon'}</strong><small>+{level}</small></>;
+  const catalyst=<><ItemArt id="sapphireOre"/><strong>Sapphire Ore</strong><small>{ore} owned · 1 required</small></>;
+  const result=<><ItemArt id={id}/><strong>{item?.name||'No weapon'}</strong><small>+{next} {level>=5?'(Max)':'preview'}</small></>;
+  const details=<><strong>{item?.name||'No equipped weapon'}</strong><p>Enhancement +{level} / 5</p><p>Character attack: {stats.atk} → {stats.atk+(level<5&&item?2:0)}</p><p>Defense: {stats.def} · Speed: {stats.spd}</p></>;
+  const requirements=<><p>Gold: {gold} / {level<5?cost:'—'}</p><p>Sapphire Ore: {ore} / {level<5?1:'—'}</p><p>{level<5?'One enhancement per confirmation.':'No further enhancement available.'}</p></>;
+  const trade=<Btn primary className="fa-smith-confirm" disabled={!allowed} onClick={()=>onEnhance(id,level,cost)}>Enhance</Btn>;
+  if(original)return <div className="fa-original-smith">
+    <h2 className="fa-smith-title">Weapon Enhancement</h2><p className="fa-smith-subtitle">Strengthen your equipped bow</p>
+    <nav className="fa-smith-operations" aria-label="Blacksmith operations"><Btn primary aria-current="page" onClick={()=>document.getElementById('fa-smith-item-info')?.focus()}>Enhance</Btn>{['Combine','Ascend','Socket','Enchant'].map(label=><Btn key={label} disabled title="Not available in this build">{label}</Btn>)}<Btn onClick={()=>go('22')} disabled={!ready}>Crafting</Btn></nav>
+    <div className="fa-smith-input">{input}</div><div className="fa-smith-catalyst">{catalyst}</div><div className="fa-smith-result">{result}</div>
+    <div className="fa-smith-effect">Attack {stats.atk} → {stats.atk+(level<5&&item?2:0)}</div><div className="fa-smith-effect-other">Defense unchanged · Speed unchanged</div><div className="fa-smith-quantity">Quantity: 1</div>
+    <nav className="fa-smith-tabs" aria-label="Enhancement details">{[['Item Info','fa-smith-item-info'],['Materials','fa-smith-materials'],['Upgrade','fa-smith-upgrade']].map(([label,target])=><Btn key={target} onClick={()=>document.getElementById(target)?.focus()}>{label}</Btn>)}</nav>
+    <div className="fa-smith-side-icon"><ItemArt id={id}/></div><section id="fa-smith-item-info" tabIndex={-1} className="fa-smith-item-info">{details}</section>
+    <div className="fa-smith-stats"><p>Current ATK: {stats.atk}</p><p>Next ATK: {stats.atk+(level<5&&item?2:0)}</p></div>
+    <section id="fa-smith-upgrade" tabIndex={-1} className="fa-smith-upgrade"><strong>Enhancement effect</strong><p>{level<5?'+2 attack per enhancement':'Maximum +5 reached'}</p></section>
+    <div className="fa-smith-status" role="status">{reason}</div><div className="fa-smith-status-note">No random failure in the current enhancement rules.</div>
+    <section id="fa-smith-materials" tabIndex={-1} className="fa-smith-materials">{requirements}</section><div className="fa-smith-cost">{level<5?cost+' gold':'Max'}</div>
+    <Btn className="fa-smith-back" onClick={back}>Back</Btn>{trade}<Btn className="fa-smith-craft" disabled={!ready} onClick={()=>go('22')}>Crafting</Btn>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Blacksmith</h2>{requirements}<p>{reason}</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{input}{catalyst}{result}{details}</Panel><Panel rect={layout[2]}>{trade}<Btn disabled={!ready} onClick={()=>go('22')}>Crafting</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1044,7 +1074,7 @@ export default function SapphireAdventure(){
     </div>:<>{pane(0,<><h2>Save</h2><p>Save your current exploration position.</p></>)}{pane(1,<>{SLOT_IDS.map(s=>{const r=slots.slots.find(x=>x.id===s);return <Btn key={s} onClick={()=>setSelected(s)} primary={selected===s}>Slot {s} · {r?.status==='valid'?r.profile.name:r?'Damaged':'Empty'}</Btn>;})}</>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}{encounter&&<p>Manual saves are disabled during combat.</p>}</>)}</>;break;
     case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id)=>{const item=ITEMS[id];if(!Object.hasOwn(ITEMS,id)||!['buy','sell'].includes(mode)||!item[mode])return;requestConfirm((mode==='buy'?'Buy ':'Sell ')+item.name+' for '+item[mode]+' gold?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to trade.');return mode==='buy'?buyItem(p,id):sellItem(p,id);},mode==='buy'?'Item purchased':'Item sold'));}}/>;break;
-    case '17':content=<>{pane(0,<><h2>Blacksmith</h2><p>Gold: {profile?.gold||0} · Ore: {inv.sapphireOre||0}</p>{!serviceAvailable&&<p>Visit a service marker.</p>}</>)}{pane(1,<><h2>{ITEMS[profile?.equipped]?.name}</h2><p>Enhancement +{profile?.enhancements?.[profile?.equipped]||0} / 5</p><p>Cost: {15+(profile?.enhancements?.[profile?.equipped]||0)*10} gold and 1 ore.</p></>)}{pane(2,<><p>Attack after enhancement: {stats.atk+2}</p><Btn disabled={!serviceAvailable||!inv.sapphireOre||(profile?.enhancements?.[profile?.equipped]||0)>=5} onClick={()=>requestConfirm('Enhance equipped bow?',()=>transact(enhanceWeapon,'Weapon enhanced'))}>Enhance</Btn></>)}</>;break;
+    case '17':content=<BlacksmithShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} go={go} onEnhance={(weapon,level,cost)=>{if(!Object.hasOwn(ITEMS,weapon)||ITEMS[weapon].kind!=='weapon')return;requestConfirm('Enhance '+ITEMS[weapon].name+' to +'+(level+1)+' for '+cost+' gold and 1 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to enhance.');if(p.equipped!==weapon||p.enhancements[weapon]!==level||cost!==15+level*10)throw Error('Equipment changed. Review the new enhancement preview.');return enhanceWeapon(p);},'Weapon enhanced'));}}/>;break;
     case '21':content=<>{pane(0,nav(['06','22']))}{pane(1,listItems((item,k)=>item.kind!=='weapon'&&inv[k]>0))}{pane(2,<><h2>{selectedItem?.name}</h2><p>Owned: {inv[itemId]||0}</p>{itemId==='recoveryTonic'&&<Btn disabled={!inv.recoveryTonic||Boolean(encounter)} onClick={()=>go('46')}>Use Tonic</Btn>}</>)}</>;break;
     case '22':content=<>{pane(0,<h2>Crafting</h2>)}{pane(1,<><h2>Recovery Tonic</h2><p>Requires 2 Sapphire Ore · Owned {inv.sapphireOre||0}</p></>)}{pane(2,<Btn disabled={!serviceAvailable||inv.sapphireOre<2} onClick={()=>requestConfirm('Craft Recovery Tonic?',()=>transact(craftTonic,'Recovery Tonic crafted'))}>Craft</Btn>)}</>;break;
     case '23':content=<DungeonEntrance profile={profile} world={world} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onDetails={()=>{const s=current.current;if(s.profile&&s.running&&s.candidate?.id===candidate?.id&&candidate&&!s.encounter)go('36');}}/>;break;
