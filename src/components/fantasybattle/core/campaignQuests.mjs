@@ -81,3 +81,26 @@ export function changeCampaignQuest(p,id,action){
  return {...p,quests:{...p.quests,campaign:{...p.quests.campaign,version:1,[id]:action==='accept'?'active':'claimed'}}};
 }
 export const changeRoadQuest=(p,action)=>changeCampaignQuest(p,ROAD_QUEST.id,action);
+
+// Main story always takes priority over optional trials in the exploration HUD.
+export function trackedCampaign(p){
+ if(!p)return null;
+ const entries=CAMPAIGN_QUESTS.map(q=>({q,progress:campaignQuest(p,q.id)}));
+ return entries.find(e=>!e.q.optional&&['active','complete'].includes(e.progress.state))
+  ||entries.find(e=>!e.q.optional&&e.progress.state==='available')
+  ||entries.find(e=>e.q.optional&&['active','complete'].includes(e.progress.state))
+  ||null;
+}
+export function campaignPrompt(p){
+ const entry=trackedCampaign(p);
+ if(!entry)return null;
+ const {q,progress}=entry;
+ if(progress.state==='available')return 'New quest: '+q.title;
+ if(progress.state==='complete')return 'Complete in journal: '+q.title;
+ return q.title+' · '+(progress.objectives.find(o=>!o.done)?.label||'Review journal');
+}
+export function campaignServiceNote(p){
+ const entry=trackedCampaign(p);
+ if(!entry)return null;
+ return entry.progress.state==='complete'?'Return to the journal to record your progress.':entry.q.offer;
+}
