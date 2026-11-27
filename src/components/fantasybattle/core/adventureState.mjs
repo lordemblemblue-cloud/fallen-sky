@@ -89,13 +89,19 @@ export function isProfile(p){
 }
 // Legacy records have no revision. A complete serialized record also catches same-time edits.
 export const slotStamp=record=>record===undefined?null:JSON.stringify(record);
+const validSaveRecord=s=>Boolean(s&&Number.isFinite(s.savedAt)&&isProfile(s.profile));
+const checkpoint=s=>({savedAt:s.savedAt,profile:copy(s.profile)});
+export const POSITION_SAVE_INTERVAL=10000;
+export function positionSaveDue(last,position,now){
+ return Boolean(last&&Number.isFinite(now)&&now-last.at>=POSITION_SAVE_INTERVAL&&Array.isArray(position)&&position.length===3&&position.every(Number.isFinite)&&Math.hypot(position[0]-last.position[0],position[2]-last.position[2])>=1);
+}
 export function readSlots(storage){
   let raw;try{raw=storage.getItem(SAVE_KEY);}catch(error){return {slots:[],error:String(error?.message||error)};}
   if(!raw)return {slots:[],error:null};
   if(raw.length>3*MAX_BACKUP_BYTES*2)return {slots:[],error:'Save data exceeds the local size limit. No save has been removed.'};
   let data;try{data=JSON.parse(raw);}catch{return {slots:[],error:'Save data is damaged. No save has been removed.'};}
   if(!data||typeof data!=='object'||Array.isArray(data))return {slots:[],error:'Save format is invalid.'};
-  return {slots:SLOT_IDS.filter(id=>Object.hasOwn(data,id)).map(id=>{const s=data[id];return isProfile(s?.profile)&&Number.isFinite(s?.savedAt)?{id,status:'valid',savedAt:s.savedAt,profile:s.profile,stamp:slotStamp(s)}:{id,status:'corrupt',stamp:slotStamp(s)};}),error:null};
+  return {slots:SLOT_IDS.filter(id=>Object.hasOwn(data,id)).map(id=>{const s=data[id],recovery=validSaveRecord(s?.previous)?checkpoint(s.previous):null;return validSaveRecord(s)?{id,status:'valid',savedAt:s.savedAt,profile:s.profile,stamp:slotStamp(s),recovery}:{id,status:'corrupt',stamp:slotStamp(s),recovery};}),error:null};
 }
 export function writeSlot(storage,id,profile,{overwrite=false,expectedStamp}={}){
   if(!SLOT_IDS.includes(id)||!isProfile(profile))throw Error('Invalid save slot or profile.');
@@ -107,11 +113,21 @@ export function writeSlot(storage,id,profile,{overwrite=false,expectedStamp}={})
   if(Object.hasOwn(data,id)&&!overwrite)throw Error('Confirm overwrite first.');
   const prior=Object.hasOwn(data,id)?data[id]:null;
   const previousTime=Number.isFinite(prior?.savedAt)?prior.savedAt:0;
-  const record={savedAt:Math.max(Date.now(),previousTime+1),profile:copy(profile)};
+  const previous=validSaveRecord(prior)?checkpoint(prior):validSaveRecord(prior?.previous)?checkpoint(prior.previous):null;
+  const record={savedAt:Math.max(Date.now(),previousTime+1),profile:copy(profile),...(previous?{previous}:{})};
   const next=JSON.stringify({...data,[id]:record});
   if(next.length>3*MAX_BACKUP_BYTES*2)throw Error('Save data exceeds the local size limit.');
   storage.setItem(SAVE_KEY,next);
   return record;
+}
+// Recovery is explicit, revision-checked and never automatically replaces a save.
+export function recoverSlot(storage,id,expectedStamp){
+ if(typeof expectedStamp!=='string')throw Error('Select a recovery checkpoint first.');
+ const state=readSlots(storage);
+ if(state.error)throw Error(state.error);
+ const slot=state.slots.find(s=>s.id===id);
+ if(!slot?.recovery||slot.stamp!==expectedStamp)throw Error('Recovery checkpoint changed or is unavailable.');
+ return writeSlot(storage,id,slot.recovery.profile,{overwrite:true,expectedStamp});
 }
 export function mostRecent(slots){return slots.filter(s=>s.status==='valid').sort((a,b)=>b.savedAt-a.savedAt)[0]||null;}
 export function readSettings(storage){
