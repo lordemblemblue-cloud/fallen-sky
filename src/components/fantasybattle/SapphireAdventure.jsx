@@ -829,6 +829,43 @@ function EquipmentComparison({profile,encounter,initialItem,initialWearer,origin
  return <><Panel rect={layout[0]}>{pick}{search}{filters}{cards}{paging}</Panel><Panel rect={layout[1]}><h2>Equipped</h2><p>{ITEMS[currentId]?.name||'Empty slot'}</p>{stats(before)}</Panel><Panel rect={layout[2]}><h2>Selected</h2><p>{item?.name||'Select gear'}</p>{stats(after)}</Panel><Panel rect={layout[3]}>{deltas}<p>{reason}</p>{equip}<Btn onClick={back}>Back</Btn></Panel></>;
 }
 
+// Inventory is a read-only catalog of owned items; use and equip delegate to their guarded screens.
+function ItemInventory({profile,encounter,serviceAvailable,original,layout,initialItem,onSelect,go,back}){
+  const [selectedId,setSelected]=useState(initialItem),[filter,setFilter]=useState('all'),[sort,setSort]=useState('name'),[query,setQuery]=useState(''),[pageIndex,setPage]=useState(0);
+  const inv=profile?.inventory||{}, categories=[['all','All items'],['consumable','Consumables'],['material','Materials'],['weapon','Weapons'],['armor','Armor'],['mantle','Mantles']];
+  const owned=Object.entries(ITEMS).filter(([key])=>(inv[key]||0)>0);
+  const matches=owned.filter(([key,i])=>(filter==='all'||i.kind===filter||i.slot===filter)&&i.name.toLowerCase().includes(query.trim().toLowerCase())).sort((a,b)=>sort==='count'?inv[b[0]]-inv[a[0]]||a[1].name.localeCompare(b[1].name):a[1].name.localeCompare(b[1].name));
+  const pages=Math.max(1,Math.ceil(matches.length/20)),index=Math.min(pageIndex,pages-1),visible=matches.slice(index*20,index*20+20),selected=visible.find(([key])=>key===selectedId)||visible[0],id=selected?.[0],item=selected?.[1];
+  const reset=()=>{setPage(0);setSelected(null);};
+  const choose=key=>{setSelected(key);onSelect(key);};
+  const changeFilter=key=>{setFilter(key);reset();};
+  const filters=categories.map(([key,label])=><Btn key={key} aria-pressed={filter===key} primary={filter===key} onClick={()=>changeFilter(key)}>{label}</Btn>);
+  const cards=visible.map(([key,i])=><Btn key={key} className="fa-item-inv-card" primary={key===id} aria-pressed={key===id} title={i.name+' ×'+inv[key]} aria-label={i.name+' ×'+inv[key]} onClick={()=>choose(key)}><ItemArt id={key}/><small>×{inv[key]}</small></Btn>);
+  const paging=<><Btn disabled={index===0} aria-label="Previous items" onClick={()=>setPage(index-1)}>‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} aria-label="Next items" onClick={()=>setPage(index+1)}>›</Btn></>;
+  const category=<select aria-label="Item category" value={filter} onChange={e=>changeFilter(e.target.value)}>{categories.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select>;
+  const sorting=<select aria-label="Sort items" value={sort} onChange={e=>{setSort(e.target.value);reset();}}><option value="name">Name</option><option value="count">Quantity</option></select>;
+  const search=<input aria-label="Search owned items" placeholder="Search items" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/>;
+  const equipment=item?.kind==='weapon'||item?.kind==='gear',tonic=id==='recoveryTonic',material=item?.kind==='material',hpMax=heroStats(profile).maxHp;
+  const enabled=Boolean(profile&&!encounter&&item&&(equipment||(tonic&&profile.hp<hpMax)||(material&&serviceAvailable)));
+  const reason=!item?'Select an owned item.':encounter?'Item use and equipment changes are disabled during battle.':tonic&&profile.hp>=hpMax?'Health is already full.':material&&!serviceAvailable?'Visit a service marker to craft.':equipment?'Inspect the equipment comparison before equipping.':tonic?'Review recovery before consuming one tonic.':material?'View available recipes.':'No available action.';
+  const use=()=>{if(!enabled)return;onSelect(id);go(tonic?'46':equipment?'39':'22');};
+  const details=item?<><p>Category: {item.kind==='gear'?item.slot:item.kind}</p><p>Owned: {inv[id]}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Sell value: {item.sell||0} gold</p></>:<p>No item selected.</p>;
+  const action=<Btn primary className="fa-item-inv-use" disabled={!enabled} onClick={use}>{tonic?'Use Tonic':equipment?'Compare':material?'Crafting':'Use Item'}</Btn>;
+  if(original)return <div className="fa-original-item-inv">
+    <h2 className="fa-item-inv-title">Inventory</h2>
+    <nav className="fa-item-inv-top" aria-label="Inventory navigation"><Btn onClick={()=>go('16')} aria-label="Merchant" disabled={!serviceAvailable}>Merchant</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={()=>go('08')}>Journal</Btn><Btn onClick={()=>go('03')}>Settings</Btn><Btn onClick={back} aria-label="Close inventory">×</Btn></nav>
+    <nav className="fa-item-inv-tabs" aria-label="Item categories">{filters}</nav>
+    <h3 className="fa-item-inv-filter-title">Categories</h3><nav className="fa-item-inv-filters" aria-label="Filter owned items">{filters}<Btn onClick={()=>go('06')}>Equipment</Btn></nav>
+    <div className="fa-item-inv-category">{category}</div><div className="fa-item-inv-sort">{sorting}</div><div className="fa-item-inv-search">{search}</div>
+    <section className="fa-item-inv-grid" aria-label="Owned items">{cards}{!visible.length&&<p>No matching owned items</p>}</section><div className="fa-item-inv-pages">{paging}</div>
+    <h3 className="fa-item-inv-detail-title">Selected Item</h3><div className="fa-item-inv-art">{id&&<ItemArt id={id}/>}</div><div className="fa-item-inv-name"><strong>{item?.name||'No item selected'}</strong><small>{item?'Owned ×'+inv[id]:''}</small></div>
+    <section className="fa-item-inv-details" aria-label="Item properties">{details}</section>
+    <div className="fa-item-inv-status" role="status">{reason}</div><div className="fa-item-inv-total">{owned.length} item types · {profile?.gold||0} gold</div>
+    {action}<Btn className="fa-item-inv-back" onClick={back}>Back</Btn>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Inventory</h2>{category}{sorting}{search}{filters}<Btn onClick={()=>go('06')}>Equipment</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching owned items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{details}<p>{reason}</p>{action}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1182,7 +1219,7 @@ export default function SapphireAdventure(){
     case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id)=>{const item=ITEMS[id];if(!Object.hasOwn(ITEMS,id)||!['buy','sell'].includes(mode)||!item[mode])return;requestConfirm((mode==='buy'?'Buy ':'Sell ')+item.name+' for '+item[mode]+' gold?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to trade.');return mode==='buy'?buyItem(p,id):sellItem(p,id);},mode==='buy'?'Item purchased':'Item sold'));}}/>;break;
     case '17':content=<BlacksmithShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} go={go} onEnhance={(weapon,level,cost)=>{if(!Object.hasOwn(ITEMS,weapon)||ITEMS[weapon].kind!=='weapon')return;requestConfirm('Enhance '+ITEMS[weapon].name+' to +'+(level+1)+' for '+cost+' gold and 1 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to enhance.');if(p.equipped!==weapon||p.enhancements[weapon]!==level||cost!==15+level*10)throw Error('Equipment changed. Review the new enhancement preview.');return enhanceWeapon(p);},'Weapon enhanced'));}}/>;break;
-    case '21':content=<>{pane(0,nav(['06','22']))}{pane(1,listItems((item,k)=>item.kind!=='weapon'&&inv[k]>0))}{pane(2,<><h2>{selectedItem?.name}</h2><p>Owned: {inv[itemId]||0}</p>{itemId==='recoveryTonic'&&<Btn disabled={!inv.recoveryTonic||Boolean(encounter)} onClick={()=>go('46')}>Use Tonic</Btn>}</>)}</>;break;
+    case '21':content=<ItemInventory key={profile?.id||'guest'} profile={profile} encounter={encounter} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} initialItem={itemId} onSelect={setItemId} go={go} back={back}/>;break;
     case '22':content=<CraftingShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onCraft={()=>requestConfirm('Craft 1 Recovery Tonic using 2 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to craft.');if(p.inventory.recoveryTonic>=100000)throw Error('Inventory limit reached.');return craftTonic(p);},'Recovery Tonic crafted'))}/>;break;
     case '23':content=<DungeonEntrance profile={profile} world={world} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onDetails={()=>{const s=current.current;if(s.profile&&s.running&&s.candidate?.id===candidate?.id&&candidate&&!s.encounter)go('36');}}/>;break;
     case '24':content=<>{pane(0,nav(['29']))}{pane(1,<>{world?.encounters?.length?world.encounters.map(e=><Btn key={e.id} primary={seenEnemy?.id===e.id} onClick={()=>setEnemyId(e.id)}>{e.label} · {e.completed?'Defeated':'Discovered'}</Btn>):<p>No enemies discovered.</p>}</>)}{pane(2,seenEnemy?<><h2>{seenEnemy.label}</h2>{enemyFormation(seenEnemy,1).map(e=><div key={e.id}><EnemyPortrait enemy={e}/><StatRows stats={{HP:e.maxHp,Attack:e.atk,Defense:e.def,Speed:e.spd}}/><p>{tacticFor(e.strategy,e.archetype)}</p></div>)}<small>Base stats; formation scales with party size.</small></>:<p>Explore to discover enemy entries.</p>)}</>;break;
