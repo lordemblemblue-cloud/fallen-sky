@@ -20,3 +20,29 @@ test('companion bond and HP follow unique victories and sanctuary recovery',()=>
 test('older profiles migrate and invalid companion data is rejected',()=>{const p=A.createProfile('Leader');delete p.party;assert.ok(A.isProfile(p));assert.equal(A.partyFor(p).active,false);assert.equal(A.parseBackup(A.exportBackup(p)).party.recruited,false);assert.equal(A.isProfile({...p,party:{...A.partyFor(p),recruited:true,active:true}}),false);});
 
 test('two allies act separately and enemy targets the living frontline',()=>{const hero={id:'hero',team:'player',maxHp:120,atk:12,def:10,spd:11},ally={id:'groveArcher',team:'player',maxHp:85,atk:9,def:9,spd:9},enemy={id:'rival',team:'enemy',maxHp:150,atk:11,def:10,spd:10};const choices={hero:'quickShot',groveArcher:'guard',rival:'quickShot'};const first=B.resolveRound(B.createBattle({seed:2,units:[ally,hero,enemy]}),choices);assert.equal(first.round.steps.find(s=>s.actor==='rival').target,'groveArcher');assert.equal(first.round.steps.length,3);const second=B.resolveRound(B.createBattle({seed:2,units:[hero,ally,enemy]}),choices);assert.equal(second.round.steps.find(s=>s.actor==='rival').target,'hero');const knocked=B.createBattle({seed:2,units:[ally,hero,enemy]});knocked.units[0].hp=0;knocked.units[0].ko=true;const next=B.resolveRound(knocked,{hero:'guard',rival:'quickShot'});assert.equal(next.round.steps.find(s=>s.actor==='rival').target,'hero');assert.equal(next.battle.phase,'choose');});
+
+import {enemyFormation,tacticFor} from '../src/components/fantasybattle/core/enemyCatalog.mjs';
+test('four-member roster unlocks independently, saves and restores without losing legacy companion',()=>{
+ let p=A.createProfile('Leader');
+ for(const m of A.ROSTER){assert.throws(()=>A.recruitCompanion(p,m.id));p=A.rewardVictory(p,{id:m.requiredEncounter}).profile;p=A.recruitCompanion(p,m.id);}
+ assert.equal(A.activeRoster(p).length,3);p=A.configureParty(p,{front:'pilgrimWarden'});assert.equal(p.party.front,'pilgrimWarden');
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);assert.ok(A.isProfile(p));
+ p=A.configureParty(p,{id:'pilgrimWarden',active:false});assert.equal(p.party.front,'hero');assert.equal(A.activeRoster(p).length,2);
+ assert.throws(()=>A.configureParty(p,{front:'pilgrimWarden'}));
+});
+test('independent companion damage, bonds and rest include reserve members',()=>{
+ let p=A.createProfile('Leader');for(const m of A.ROSTER){p=A.rewardVictory(p,{id:m.requiredEncounter}).profile;p=A.recruitCompanion(p,m.id);}
+ p=A.configureParty(p,{id:'mistScout',active:false});
+ const v=A.rewardVictory(p,{id:'new'},120,[{id:'groveArcher',hp:20},{id:'pilgrimWarden',hp:40},{id:'mistScout',hp:1}]).profile;
+ assert.equal(A.memberFor(v,'groveArcher').hp,20);assert.equal(A.memberFor(v,'pilgrimWarden').hp,40);assert.equal(A.memberFor(v,'mistScout').hp,75);
+ assert.equal(A.memberFor(v,'pilgrimWarden').bond,5);assert.equal(A.memberFor(v,'mistScout').bond,0);
+ const h=A.heal(v,{sanctuary:true});assert.equal(A.partyNeedsRest(h),false);assert.ok(A.isProfile(h));
+});
+test('boss party formation and legal deterministic tactics',()=>{
+ const enemies=enemyFormation({category:'Boss',label:'Gatekeeper'},4);assert.equal(enemies.length,3);
+ const hero={id:'hero',team:'player',maxHp:120,atk:12,def:10,spd:11};let b=B.createBattle({seed:5,units:[hero,...enemies]});
+ assert.equal(B.chooseAiAction(b,'rival','boss'),'guard');
+ b=B.resolveRound(b,{hero:'guard',...Object.fromEntries(enemies.map(e=>[e.id,B.chooseAiAction(b,e.id,e.strategy)]))}).battle;
+ assert.equal(B.chooseAiAction(b,'rival','boss'),'chargedShot');assert.ok(tacticFor('boss').includes('Radiant Shot'));
+ assert.equal(enemyFormation({category:'Normal'},1).length,1);
+});
