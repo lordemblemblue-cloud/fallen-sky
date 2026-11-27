@@ -111,3 +111,33 @@ test('encrypted transfer round trip, random salt, wrong passphrase, tampering an
 import {isCurrentEncounter,currentSaveStamp} from '../src/components/fantasybattle/core/battleLifecycle.mjs';
 test('stale battle completion and retry acknowledgements cannot apply to a different encounter',()=>{assert.ok(isCurrentEncounter({token:'new'},'new'));for(const token of ['old',null,undefined,''])assert.equal(isCurrentEncounter({token:'new'},token),false);assert.equal(isCurrentEncounter(null,'new'),false);});
 test('loading a stale character snapshot cannot adopt a newer save baseline',()=>{const s=storage(),p=A.createProfile('Snapshot');A.writeSlot(s,'1',p);const old=A.readSlots(s).slots[0];A.writeSlot(s,'1',{...p,gold:20},{overwrite:true,expectedStamp:old.stamp});const records=A.readSlots(s).slots;assert.equal(currentSaveStamp(records,'1',p),undefined);assert.equal(currentSaveStamp(records,'1',records[0].profile),records[0].stamp);assert.equal(currentSaveStamp(records,'2',p),null);});
+
+
+test('registered encounter gear drops are real inventory items, one-time and portable',()=>{
+ let p=A.createProfile('Loot hunter');
+ assert.equal(Object.keys(A.ENCOUNTER_GEAR_REWARDS).length,14);
+ for(const [id,item] of Object.entries(A.ENCOUNTER_GEAR_REWARDS)){
+  assert.ok(Object.hasOwn(A.ITEMS,item));
+  const before=p.inventory[item]??0;
+  const v=A.rewardVictory(p,{id,category:'Normal'});
+  assert.equal(v.profile.inventory[item],before+1);
+  assert.ok(v.loot.some(l=>l.id===item&&l.count===1));
+  assert.equal(A.rewardVictory(v.profile,{id}).profile,v.profile);
+  p=v.profile;
+ }
+ assert.ok(A.isProfile(p));
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+});
+test('practice and capped reward quantities cannot create invalid inventory or duplicate loot',()=>{
+ let p=A.createProfile('Loot cap');
+ const practice=A.rewardVictory(p,{id:'wilds_grove_01',practice:true});
+ assert.equal(practice.profile,p);assert.deepEqual(practice.loot,[]);
+ p={...p,xp:99999,gold:9999999,inventory:{...p.inventory,sapphireOre:99999,groveRing:100000,recoveryTonic:100000},world:{...p.world,discoveries:['d']}};
+ const v=A.rewardVictory(p,{id:'wilds_grove_01',category:'Boss'});
+ assert.equal(v.xp,1);assert.equal(v.gold,1);
+ assert.deepEqual(v.loot,[{id:'sapphireOre',count:1}]);
+ assert.ok(A.isProfile(v.profile));
+ const t=A.collectLoot(v.profile,'d');
+ assert.deepEqual(t.loot,[]);assert.ok(A.isProfile(t.profile));
+ assert.equal(A.collectLoot(t.profile,'d').profile,t.profile);
+});
