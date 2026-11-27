@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R130 — pinned-main P01 technical intake:** [Verified source inventory and isolation gates](R130_P01_PINNED_MAIN_TECHNICAL_INTAKE.md). 20 technical paths at main 9da8d909, platform enabled (24 m), renderer choice and recovery, existing movement/quest/checkpoint integration; checkpoint v1 only wolfveil/forest, dedicated isolated preview unverified. Partial P01.0 survey, no runtime/build evidence or live changes. Next R131 preview boundary and fixture contract.
+
 > **R129 — source-to-production readiness matrix:** [125-ID production matrix](R129_SOURCE_TO_PRODUCTION_READINESS_MATRIX.md). All 125 IDs mapped to primary sources, 15 construction packet references, optional classification/family and proposed intake waves; 105 optional source paths match R61. Eight P01 gates and decision/evidence queue. Documentary coverage only, actual survey/build/runtime status unverified. Next R130 read-only technical intake of current main.
 
 > **R128 — full detailed construction coverage:** [A place to come home to](R128_S51_S55_FINAL_OPTIONAL_CONSTRUCTION_AND_COVERAGE.md). S51–S55, 9 modular stages, 20 planned tests; all 125/125 narrative IDs covered by 15 construction packets, 311 stages (including one N/A worksheet step), 402 planned cases. S51 safe gate, S52 persistent agreement, S53/S55 proposed completion policies, S54 actual consent-scoped acknowledgment. No runtime verification; R111/R65/R84 gates remain. Next R129 production readiness matrix.
