@@ -1,5 +1,7 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
+> **R136 — P01 approval and evidence package:** [Bounded approval and evidence return](R136_P01_APPROVAL_AND_EVIDENCE_PACKAGE.md). Three review milestones, ten evidence rows, eight logical return artifacts and eight unresolved decisions; separates terrain/character visual ownership from story, UI and quest/gear integration. R135 preserved; no implementation or runtime evidence. Next bounded T00 authorization and runner verification, or separately scoped story/UI/backend contracts.
+
 > **R135 — opening quest receipts and encounter recovery:** [Source-to-fixture receipts and reset acceptance](R135_P01_SOURCE_TO_FIXTURE_RECEIPTS_AND_RESET_ACCEPTANCE.md). Sixteen receipt rows, twelve recovery situations and eighteen cross-referenced scenarios; actual cue observation, voluntary readiness, safe retry, stale-event rejection and once-only victory entitlement. Worksheet labels only; no runtime tests or implementation. Next R136 consolidated P01 approval/evidence package.
 
 > **R134 — opening cue and encounter presentation:** [Character, audio, animation and encounter handoff](R134_P01_CUE_CHARACTER_AND_ENCOUNTER_PRESENTATION_HANDOFF.md). Fourteen source-grounded beats, six actor contracts and eleven cross-referenced evidence rows; R106 voice alternatives, non-spoiler Woman in the Light, genuine M02 readiness, three M03 phases and actual defeat/aftermath. Later scope after accepted Low blockout; no generated assets or runtime evidence. Next R135 fixture receipt and reset scenarios.
