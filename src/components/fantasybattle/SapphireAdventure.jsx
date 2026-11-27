@@ -227,6 +227,35 @@ function PartyFormation({profile,encounter,original,layout,transact,go,back,stat
   return <><Panel rect={layout[0]}><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('30')}>Bonds</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Active party · {ordered.length}/4</h2>{[...ordered,...reserve].map(m=><Btn key={m.id} primary={selected.id===m.id} onClick={()=>setSelectedId(m.id)}>{portrait(m,true)}<strong>{m.name}</strong><small>{status(m)}</small></Btn>)}</Panel><Panel rect={layout[2]}>{detail}<p>One active frontline member. Changes save as they are applied.</p>{statPanel}</Panel></>;
 }
 
+// Original recruitment illustration is decorative, never the selected companion.
+function Recruitment({profile,encounter,selected,member,onSelect,onRecruit,original,layout,go,back}){
+  const eligible=Boolean(profile?.world.completedEncounters.includes(selected.requiredEncounter));
+  const requirement=({'wilds_grove_01':'Whispering Grove Spirit','wilds_pilgrimage_02':'Ruined Arch Warden','wilds_waterfall_01':'Waterfall Mist Spirit'})[selected.requiredEncounter];
+  const stats=memberStats(profile,selected.id);
+  const status=m=>memberFor(profile,m.id).recruited?'Recruited':profile?.world.completedEncounters.includes(m.requiredEncounter)?'Available':'Locked';
+  const skills=actionsForClass(selected.combatClass).filter(id=>selected.combatClass||id!=='chargedShot');
+  const recruit=<Btn primary className="fa-recruit-confirm" disabled={!profile||member.recruited||Boolean(encounter)||!eligible} onClick={()=>onRecruit(selected)}>{member.recruited?'Recruited':'Recruit companion'}</Btn>;
+  const list=ROSTER.map(m=><Btn key={m.id} primary={selected.id===m.id} aria-pressed={selected.id===m.id} onClick={()=>onSelect(m.id)}><ArcherPortrait companion={m} small/><span>{m.name}</span><small>{status(m)}</small></Btn>);
+  const requirements=<><p>{eligible?'Completed':'Required'}: {requirement}</p><p>{profile?'Active character ready':'Create or load a character first'}</p>{encounter&&<p>Recruitment is locked during combat.</p>}<p>{member.recruited?'Already recruited':eligible?'Ready to recruit':'Defeat the required encounter to unlock'}</p></>;
+  const abilities=skills.map(id=><div key={id} className="fa-recruit-skill"><SkillArt id={id}/><strong>{ACTIONS[id].name}</strong><small>{ACTIONS[id].summary}</small></div>);
+  const attributes=<StatRows stats={{HP:stats.maxHp,Attack:stats.atk,Defense:stats.def,Speed:stats.spd}}/>;
+  if(original)return <div className="fa-original-recruit">
+    <h2 className="fa-recruit-title">Companion Recruitment</h2>
+    <div className="fa-recruit-count">{ROSTER.filter(m=>memberFor(profile,m.id).recruited).length} / {ROSTER.length} recruited</div>
+    <h3 className="fa-recruit-list-title">Companions</h3>
+    <div className="fa-recruit-list" aria-label="Companion roster">{list}</div>
+    <div className="fa-recruit-empty">No additional companions available in this build.</div>
+    <div className="fa-recruit-art-label">Original recruitment illustration · decorative</div>
+    <div className="fa-recruit-live-portrait"><ArcherPortrait companion={selected}/></div>
+    <h3 className="fa-recruit-name">{selected.name}</h3><p className="fa-recruit-role">{selected.role} · {status(selected)}</p>
+    <section className="fa-recruit-stats" aria-label="Selected companion statistics">{attributes}</section>
+    <h3 className="fa-recruit-skill-heading">Combat abilities</h3><section className="fa-recruit-skills" aria-label="Companion combat abilities">{abilities}</section>
+    <h3 className="fa-recruit-req-heading">Recruitment requirements</h3><section className="fa-recruit-requirements" aria-label="Recruitment requirements" aria-live="polite">{requirements}</section>
+    {recruit}<Btn className="fa-recruit-party" onClick={()=>go('11')}>Party</Btn><Btn className="fa-recruit-back" onClick={back}>Back</Btn>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Companions</h2>{list}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><ArcherPortrait companion={selected}/><h2>{selected.name}</h2><p>{selected.role}</p>{abilities}</Panel><Panel rect={layout[2]}>{attributes}{requirements}{recruit}<Btn onClick={()=>go('11')}>Party</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -586,7 +615,7 @@ export default function SapphireAdventure(){
     case '23':content=<>{pane(1,<h2>{candidate?.label||'Encounter entrance'}</h2>)}{pane(2,<><p>{candidate?.category} encounter. Preview the enemy formation and its combat tactics.</p><Btn disabled={!candidate} onClick={()=>go('36')}>Encounter Details</Btn><Btn onClick={back}>Leave</Btn></>)}</>;break;
     case '24':content=<>{pane(0,nav(['29']))}{pane(1,<>{world?.encounters?.length?world.encounters.map(e=><Btn key={e.id} primary={seenEnemy?.id===e.id} onClick={()=>setEnemyId(e.id)}>{e.label} · {e.completed?'Defeated':'Discovered'}</Btn>):<p>No enemies discovered.</p>}</>)}{pane(2,seenEnemy?<><h2>{seenEnemy.label}</h2>{enemyFormation(seenEnemy,1).map(e=><div key={e.id}><EnemyPortrait enemy={e}/><StatRows stats={{HP:e.maxHp,Attack:e.atk,Defense:e.def,Speed:e.spd}}/><p>{tacticFor(e.strategy,e.archetype)}</p></div>)}<small>Base stats; formation scales with party size.</small></>:<p>Explore to discover enemy entries.</p>)}</>;break;
     case '25':content=<>{pane(0,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><Btn key={r.id} primary={destination?.id===r.id} onClick={()=>setDestination(r)}>{r.name}</Btn>)}</>)}{pane(1,<RegionMap world={world} profile={profile}/>)}{pane(2,<><h2>{destination?.name||'Choose discovered region'}</h2><Btn disabled={!destination||Boolean(encounter)} onClick={()=>requestConfirm('Travel to '+destination.name+'?',()=>{if(transact(p=>travelTo(p,destination),'Arrived at '+destination.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}})}>Travel</Btn></>)}</>;break;
-    case '26':content=<>{pane(0,<><h2>Companions</h2>{ROSTER.map(m=><Btn key={m.id} primary={m.id===companionId} onClick={()=>setCompanionId(m.id)}>{m.name}</Btn>)}</>)}{pane(1,<><ArcherPortrait companion={selectedCompanion}/><h2>{selectedCompanion.name}</h2><p>{selectedCompanion.role} · individual layered prototype rig</p>{actionsForClass(selectedCompanion.combatClass).filter(id=>selectedCompanion.combatClass||id!=='chargedShot').map(id=><div className="fa-skill" key={id}><SkillArt id={id}/><strong>{ACTIONS[id].name}</strong><small>{ACTIONS[id].summary}</small></div>)}</>)}{pane(2,<><StatRows stats={{HP:memberStats(profile,selectedCompanion.id).maxHp,Attack:memberStats(profile,selectedCompanion.id).atk,Defense:memberStats(profile,selectedCompanion.id).def,Speed:memberStats(profile,selectedCompanion.id).spd}}/><p>Unlock: {({'wilds_grove_01':'Whispering Grove Spirit','wilds_pilgrimage_02':'Ruined Arch Warden','wilds_waterfall_01':'Waterfall Mist Spirit'})[selectedCompanion.requiredEncounter]}</p><Btn primary disabled={!profile||member.recruited||Boolean(encounter)||!profile.world.completedEncounters.includes(selectedCompanion.requiredEncounter)} onClick={()=>requestConfirm('Recruit '+selectedCompanion.name+'?',()=>transact(p=>recruitCompanion(p,selectedCompanion.id),selectedCompanion.name+' joined'))}>{member.recruited?'Recruited':'Recruit'}</Btn><Btn onClick={()=>go('11')}>Party</Btn></>)}</>;break;
+    case '26':content=<Recruitment profile={profile} encounter={encounter} selected={selectedCompanion} member={member} onSelect={setCompanionId} onRecruit={m=>requestConfirm('Recruit '+m.name+'?',()=>transact(p=>recruitCompanion(p,m.id),m.name+' joined'))} original={original} layout={screen.layout} go={go} back={back}/>;break;
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
     case '28':content=<>{pane(0,nav(['24','29']))}{pane(1,<StatRows stats={{'Regions discovered':profile?.world.visitedRegions.length||0,'Encounters defeated':profile?.world.completedEncounters.length||0,'Hidden discoveries':profile?.world.discoveries.length||0}}/>)}{pane(2,<p>Milestone tracking is live. Achievement rewards have not been defined.</p>)}</>;break;
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;

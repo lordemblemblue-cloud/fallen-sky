@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','11','12','18','19','20','27','32','35','40','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','11','12','18','19','20','26','27','32','35','40','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -93,4 +93,15 @@ test('original party formation uses existing roster, party slots and validated m
  const section=page.slice(page.indexOf('function PartyFormation('),page.indexOf('function SaveToast('));
  for(const marker of ['fa-original-party','activeRoster(profile)','partyFor(profile)','memberFor(profile','configureParty(p,','Boolean(encounter)','memberStats(profile','length:4','No formation stat bonuses','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
  assert.match(page,/case '11':content=<PartyFormation/);
+});
+
+test('original recruitment uses actual roster and encounter-gated transaction',()=>{
+ assert.equal(stagedOriginalFor('26').wideOnly,true);
+ assert.ok(templateUrl('26').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function Recruitment('),page.indexOf('function SaveToast('));
+ for(const marker of ['fa-original-recruit','ROSTER.map','memberFor(profile','completedEncounters.includes(selected.requiredEncounter)','memberStats(profile,selected.id)','actionsForClass(selected.combatClass)','member.recruited||Boolean(encounter)||!eligible','onRecruit(selected)','decorative','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
+ const handler=page.slice(page.indexOf("case '26':"),page.indexOf("case '27':"));
+ assert.ok(handler.includes("requestConfirm("));
+ assert.ok(handler.includes("transact(p=>recruitCompanion(p,m.id)"));
 });
