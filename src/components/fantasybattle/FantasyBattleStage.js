@@ -185,11 +185,12 @@ export class FantasyBattleStage {
     this.fx = new FxSystem(this.scene, arrowTexture);
     const allies=this.units.filter(u=>u.team==='player'), enemies=this.units.filter(u=>u.team!=='player');
     const compact=Math.max(allies.length,enemies.length)>2;
+    const drawOrder=[...this.units].sort((a,b)=>{const ga=a.team==='player'?allies:enemies,gb=b.team==='player'?allies:enemies;return Number(gb.indexOf(b)>=2)-Number(ga.indexOf(a)>=2);});
     this.fighters=Object.fromEntries(this.units.map((u,i)=>{
       const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
       const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
       const y=compact&&idx>=2?185:0;
-      return [u.id,new Fighter(this,{id:u.id,name:u.name,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+(compact&&idx>=2?0:400)+i*40})];
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
     }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
