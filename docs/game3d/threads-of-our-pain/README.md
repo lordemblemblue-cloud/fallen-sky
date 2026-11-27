@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R94 — source-grounded M19–M20 finale delta:** [The world that survives](R94_M19-M20_SOURCE_GROUNDED_FINALE_REFINEMENTS.md). Six proposed editorial alternatives for the existing confrontation, restored reality and fused recovery, with R64A/R65 and R76/R84 precedence. M13–M20 source-reviewed in R92–R94; next reconcile M01–M12 chat-only drafts. No new quests or implementation.
+
 > **R93 — source-grounded M16–M18 editorial delta:** [Memory, convergence and unfinished lives](R93_M16-M18_SOURCE_GROUNDED_SCENE_REFINEMENTS.md). Six proposed dialogue alternatives with consent, chronology and terrain constraints; preserves primary scripts and R64A/R65 finale precedence. Next M19–M20. No new quests, implementation or owner approval.
 
 > **R92 — source-grounded M13–M15 editorial delta:** [Names, civilian access and the cost of division](R92_M13-M15_SOURCE_GROUNDED_SCENE_REFINEMENTS.md). Six proposed dialogue alternatives and terrain constraints for the existing Sanctuary, Three Arrows and Gate Fields chapters. Preserve earlier scripts, phase gates and rewards; no implementation or owner approval. Next M16–M18.
