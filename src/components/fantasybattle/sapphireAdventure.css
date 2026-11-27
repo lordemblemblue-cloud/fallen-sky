@@ -1375,3 +1375,32 @@
 .fa-bestiary-formation-member .fa-archer-portrait{max-height:60%;max-width:90%;height:auto;width:auto;object-fit:contain}
 .fa-bestiary-formation-member span{font-size:.62em;line-height:1.1;overflow:hidden;max-height:2.2em;overflow-wrap:anywhere}
 .fa-bestiary-disclaimer{position:absolute;left:69.5%;top:85.5%;width:27.5%;text-align:center;font-size:.73em}
+
+/* 28 — original achievement artwork with read-only saved milestone data. */
+.fa-ui.page[data-staged-original="true"][data-screen="28"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="28"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="28"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-achievements{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.2vw,2.13vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-achievements .fa-button{pointer-events:auto;min-width:0;min-height:0;border:0;box-shadow:none;background:transparent;color:inherit;font:inherit;text-shadow:inherit;border-radius:8px;padding:.12em}
+.fa-original-achievements .fa-button:hover:not(:disabled),.fa-original-achievements .fa-button[aria-pressed=true]{box-shadow:inset 0 0 0 2px #d6b87f;background:#2859b850}
+.fa-original-achievements .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:1px}
+.fa-original-achievements .fa-button:disabled{opacity:.5;cursor:not-allowed}
+.fa-achievement-nav{position:absolute;left:1.8%;top:18.1%;width:16.9%;height:64.9%;display:grid;grid-template-rows:1.25fr repeat(9,minmax(0,1fr));gap:1.4%}
+.fa-original-achievements .fa-achievement-nav .fa-button{padding-left:27%;font-size:.89em;font-weight:bold}
+.fa-original-achievements .fa-achievement-nav .fa-button:first-child{padding-left:0}
+.fa-achievement-overall{position:absolute;left:22.8%;top:18.2%;width:50.7%;height:4%;display:grid;grid-template-columns:25% 61% 14%;align-items:center;text-align:center}
+.fa-achievement-overall progress{width:91%;height:.65em;accent-color:#75bbf1}
+.fa-achievement-rows{position:absolute;left:20.7%;top:26.1%;width:53.8%;height:65.5%;display:grid;grid-template-rows:repeat(6,minmax(0,1fr));gap:2%}
+.fa-achievement-row{display:grid;grid-template-columns:22% 48% 10% 20%;align-items:center;min-height:0;overflow:hidden}
+.fa-achievement-name{font-size:.9em;color:#142448;text-shadow:none;padding:.25em;text-align:center;overflow-wrap:anywhere}
+.fa-achievement-task{display:flex;flex-direction:column;justify-content:center;gap:.3em;color:#142448;text-shadow:none;padding:.2em .65em;font-size:.87em;min-width:0;overflow-wrap:anywhere}
+.fa-achievement-task progress{height:.65em;width:95%;accent-color:#376bc9}
+.fa-achievement-value,.fa-achievement-state{text-align:center;font-size:.82em;padding:.1em}
+.fa-achievement-state.complete{color:#a4f5b9}
+.fa-achievement-pages{position:absolute;left:39%;top:94%;width:18%;height:4.5%;display:flex;justify-content:space-around;align-items:center;background:#142448ca;border-radius:10px;font-size:.85em}
+.fa-achievement-pages .fa-button{width:28%;height:100%}
+.fa-achievement-summary-title{position:absolute;left:80.4%;top:32.7%;width:17%;height:3.5%;margin:0;display:grid;place-items:center;font-size:1em;text-align:center}
+.fa-achievement-summary{position:absolute;left:81.8%;top:37%;width:16.3%;height:41.2%;display:grid;grid-template-rows:repeat(6,minmax(0,1fr));gap:2.5%}
+.fa-achievement-summary>div{display:flex;justify-content:space-between;align-items:center;gap:.25em;padding:.2em;font-size:.79em;overflow-wrap:anywhere}
+.fa-achievement-summary strong{flex-shrink:0}
+.fa-achievement-note{position:absolute;left:79.3%;top:80.8%;width:18.2%;height:7.4%;margin:0;display:grid;place-items:center;text-align:center;font-size:.78em;background:#142448bc;border-radius:8px}

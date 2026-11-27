@@ -908,6 +908,46 @@ function Bestiary({profile,world,original,layout,go,back}){
   return <><Panel rect={layout[0]}><h2>Bestiary</h2>{filters}{navigation}</Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching encounters.</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{selected?.label||'Select an encounter'}</h2><p>{status}</p>{lead&&<EnemyPortrait enemy={lead}/>}<section>{statsRows}</section><p>{tactic}</p><p>Base stats; formation scales with party size.</p>{formationRows}<small>No drop tables or elemental weaknesses are defined here.</small></Panel></>;
 }
 
+// Read-only milestones derived from saved progression; no claimable rewards or new save fields.
+function Achievements({profile,original,layout,go,back}){
+  const [category,setCategory]=useState('all'),[pageIndex,setPage]=useState(0);
+  const regions=profile?.world.visitedRegions.length||0,defeated=profile?.world.completedEncounters.length||0,discoveries=profile?.world.discoveries.length||0;
+  const recruited=profile?ROSTER.filter(m=>memberFor(profile,m.id).recruited).length:0;
+  const level=profile?levelFor(profile.xp):0,enhanced=Math.max(0,...Object.values(profile?.enhancements||{}));
+  const quest=profile?.quests.grove==='claimed'||profile?.quests.grove==='complete'?1:0;
+  const records=[
+    ['firstVictory','Combat','First Victory','Complete one encounter',defeated,1],
+    ['threeVictories','Combat','Battle Tested','Complete three distinct encounters',defeated,3],
+    ['groveQuest','Story','Grove Quest','Complete the Grove quest',quest,1],
+    ['firstRegion','Exploration','First Steps','Discover one region',regions,1],
+    ['threeRegions','Exploration','Pathfinder','Discover three regions',regions,3],
+    ['firstDiscovery','Exploration','Curious Traveler','Record one hidden discovery',discoveries,1],
+    ['firstCompanion','Characters','A New Ally','Recruit one companion',recruited,1],
+    ['secondLevel','Characters','Growing Stronger','Reach character level two',level,2],
+    ['firstEnhancement','Crafting & Gear','First Enhancement','Enhance a weapon to +1',enhanced,1],
+    ['maxEnhancement','Crafting & Gear','Masterwork','Enhance a weapon to +5',enhanced,5]
+  ];
+  const done=records.filter(r=>r[4]>=r[5]).length;
+  const filtered=records.filter(r=>category==='all'||r[1]===category),pages=Math.max(1,Math.ceil(filtered.length/6)),index=Math.min(pageIndex,pages-1);
+  const visible=filtered.slice(index*6,index*6+6);
+  const filters=[['all','All milestones'],['Combat','Combat'],['Story','Story'],['Exploration','Exploration'],['Characters','Characters'],['Crafting & Gear','Crafting & Gear']].map(([key,label])=><Btn key={key} primary={category===key} aria-pressed={category===key} onClick={()=>{setCategory(key);setPage(0);}}>{label}</Btn>);
+  const navigation=<><Btn onClick={()=>go('24')}>Bestiary</Btn><Btn onClick={()=>go('29')}>World Codex</Btn><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={back}>Back</Btn></>;
+  const rows=visible.map(([id,group,title,description,value,target])=><div className="fa-achievement-row" key={id}><strong className="fa-achievement-name">{title}</strong><div className="fa-achievement-task"><span>{description}</span><progress aria-label={title+' progress'} value={Math.min(value,target)} max={target}/></div><strong className="fa-achievement-value">{Math.min(value,target)}/{target}</strong><span className={'fa-achievement-state '+(value>=target?'complete':'')}>{value>=target?'Complete':'In progress'}</span></div>);
+  const pager=<><Btn disabled={index===0} onClick={()=>setPage(index-1)} aria-label="Previous milestones">‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} onClick={()=>setPage(index+1)} aria-label="Next milestones">›</Btn></>;
+  const summary=[['Regions visited',regions],['Encounters cleared',defeated],['Hidden discoveries',discoveries],['Recruited companions',recruited],['Character level',level||'—'],['Best enhancement','+'+enhanced]];
+  const summaries=summary.map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>);
+  const overview=<><strong>{done} / {records.length}</strong><progress aria-label="Overall milestone completion" value={done} max={records.length}/><span>{Math.round(done/records.length*100)}%</span></>;
+  if(original)return <div className="fa-original-achievements">
+    <h2 className="fa-art-sr">Achievements</h2><nav className="fa-achievement-nav" aria-label="Milestone categories and navigation">{filters}{navigation}</nav>
+    <div className="fa-achievement-overall">{overview}</div>
+    <section className="fa-achievement-rows" aria-label="Milestone progress">{rows}{!profile&&<p className="fa-art-sr">No active character. Start or load a game to track milestones.</p>}</section>
+    <div className="fa-achievement-pages">{pager}</div>
+    <h3 className="fa-achievement-summary-title">Saved progression</h3><section className="fa-achievement-summary" aria-label="Saved progression">{summaries}</section>
+    <p className="fa-achievement-note">Milestone tracking only. No claimable rewards.</p>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Achievements</h2>{filters}{navigation}</Panel><Panel rect={layout[1]}>{overview}{rows}{pager}</Panel><Panel rect={layout[2]}><h2>Saved progression</h2>{summaries}<p>Milestone tracking only. No claimable rewards.</p></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1267,7 +1307,7 @@ export default function SapphireAdventure(){
     case '25':content=<FastTravel profile={profile} world={world} encounter={encounter} destination={destination} onSelect={setDestination} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{const profileId=current.current.profile?.id;if(!profileId||!region)return;requestConfirm('Travel to '+region.name+'?',()=>{if(transact(p=>{if(p.id!==profileId)throw Error('Active character changed. Select a destination again.');const liveRegion=current.current.world?.regions.find(r=>r.id===region.id);if(!liveRegion||!Number.isFinite(liveRegion.minX)||!Number.isFinite(liveRegion.maxX)||liveRegion.maxX<=liveRegion.minX)throw Error('Destination is no longer available.');return travelTo(p,liveRegion);},'Arrived at '+region.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}});}}/>;break;
     case '26':content=<Recruitment profile={profile} encounter={encounter} selected={selectedCompanion} member={member} onSelect={setCompanionId} onRecruit={m=>requestConfirm('Recruit '+m.name+'?',()=>transact(p=>recruitCompanion(p,m.id),m.name+' joined'))} original={original} layout={screen.layout} go={go} back={back}/>;break;
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
-    case '28':content=<>{pane(0,nav(['24','29']))}{pane(1,<StatRows stats={{'Regions discovered':profile?.world.visitedRegions.length||0,'Encounters defeated':profile?.world.completedEncounters.length||0,'Hidden discoveries':profile?.world.discoveries.length||0}}/>)}{pane(2,<p>Milestone tracking is live. Achievement rewards have not been defined.</p>)}</>;break;
+    case '28':content=<Achievements key={profile?.id||'guest'} profile={profile} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
     case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '31':content=<TreasureReveal profile={profile} discovery={discovery} loot={loot} encounter={encounter} original={original} layout={screen.layout} onItems={()=>go('38')} onContinue={back}/>;break;
