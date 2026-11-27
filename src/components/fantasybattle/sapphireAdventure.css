@@ -1254,3 +1254,42 @@
 .fa-original-recovery .fa-button:disabled{opacity:.55;cursor:not-allowed}
 .fa-original-recovery .fa-recovery-confirm{left:39%;top:82.4%;width:22%;height:7.2%;font-size:1.2em}
 .fa-original-recovery .fa-recovery-back{left:83%;top:91.8%;width:9%;height:5%;background:#142448c9;font-size:.84em}
+
+/* 39 — source-derived original comparison artwork with live owned equipment. */
+.fa-ui.page[data-staged-original="true"][data-screen="39"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="39"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="39"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-compare{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.2vw,2.13vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-compare h2,.fa-original-compare h3,.fa-original-compare p{margin:.1em 0}
+.fa-original-compare .fa-button{pointer-events:auto;min-width:0;min-height:0;border:0;box-shadow:none;background:transparent;color:inherit;font:inherit;text-shadow:inherit;border-radius:8px;padding:.2em}
+.fa-original-compare .fa-button:hover:not(:disabled),.fa-original-compare .fa-button[aria-pressed=true]{box-shadow:inset 0 0 0 2px #d6b87f;background:#2859b850}
+.fa-original-compare .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:1px}
+.fa-original-compare .fa-button:disabled{opacity:.5;cursor:not-allowed}
+.fa-compare-title{position:absolute;left:42%;top:14%;width:25.5%;height:5%;display:grid;place-items:center;text-align:center;font-size:1.2em}
+.fa-compare-gold{position:absolute;left:77.4%;top:2%;width:5.6%;height:3.5%;text-align:center;font-size:.85em}
+.fa-compare-wearer,.fa-compare-search{position:absolute;left:14.5%;width:9.8%;pointer-events:auto}
+.fa-compare-wearer{top:21%;height:3.7%}.fa-compare-search{left:12.7%;top:26.6%;width:11.5%;height:3.6%}
+.fa-compare-wearer select,.fa-compare-search input{width:100%;height:100%;min-width:0;background:#142448dd;color:inherit;border:0;font:inherit;font-size:.8em;padding:.1em}
+.fa-compare-filters{position:absolute;left:3%;top:33.2%;width:9.6%;height:23%;display:grid;grid-template-rows:repeat(4,minmax(0,1fr))}
+.fa-original-compare .fa-compare-filters .fa-button{padding-left:25%;font-size:.78em}
+.fa-compare-grid{position:absolute;left:13.8%;top:32.5%;width:11.1%;height:56%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));gap:1%;pointer-events:auto;overflow:auto}
+.fa-original-compare .fa-compare-card{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;gap:.1em}
+.fa-compare-card .fa-item-art{max-width:90%;max-height:70%;width:auto;height:auto;object-fit:contain}
+.fa-compare-card small{font-size:.7em}
+.fa-compare-pages{position:absolute;left:14%;top:90%;width:11%;display:flex;justify-content:space-between;align-items:center;background:#142448c9;border-radius:6px;font-size:.8em}
+.fa-compare-current-label,.fa-compare-candidate-label{position:absolute;top:24.4%;height:3%;width:9%;text-align:center;font-size:.8em}
+.fa-compare-current-label{left:36%}.fa-compare-candidate-label{left:62%;color:#142448;text-shadow:none}
+.fa-compare-current-icon,.fa-compare-candidate-icon{position:absolute;top:29%;height:11.5%;width:7%;display:grid;place-items:center;overflow:hidden}
+.fa-compare-current-icon{left:29.5%}.fa-compare-candidate-icon{left:55%}
+.fa-compare-current-icon .fa-item-art,.fa-compare-candidate-icon .fa-item-art{max-width:95%;max-height:95%;width:auto;height:auto;object-fit:contain}
+.fa-compare-current-name,.fa-compare-candidate-name{position:absolute;top:29%;width:15%;height:11%;display:flex;flex-direction:column;justify-content:center;overflow-wrap:anywhere;text-align:center;font-size:.9em}
+.fa-compare-current-name{left:37%}.fa-compare-candidate-name{left:63.4%}
+.fa-compare-current-stats,.fa-compare-candidate-stats,.fa-compare-deltas{position:absolute;display:grid;grid-template-rows:repeat(4,minmax(0,1fr));font-size:.88em}
+.fa-compare-current-stats{left:32%;top:42.8%;width:19%;height:17.8%}.fa-compare-candidate-stats{left:57%;top:42.8%;width:20%;height:17.8%}
+.fa-compare-current-stats>div,.fa-compare-candidate-stats>div,.fa-compare-deltas>div{display:flex;justify-content:space-between;align-items:center;gap:.2em}
+.fa-compare-current-detail,.fa-compare-candidate-detail{position:absolute;top:63%;width:22%;height:18%;overflow:auto;pointer-events:auto;padding:.3em;font-size:.88em}
+.fa-compare-current-detail{left:29%}.fa-compare-candidate-detail{left:55%}
+.fa-compare-delta-title{position:absolute;left:85%;top:35%;width:12%;height:3%;font-size:.8em}
+.fa-compare-deltas{left:84.5%;top:40%;width:13%;height:17%;font-size:.76em}.fa-compare-deltas .up{color:#a4f5b9}.fa-compare-deltas .down{color:#ffadb0}
+.fa-original-compare .fa-compare-equip,.fa-original-compare .fa-compare-back,.fa-original-compare .fa-compare-inventory,.fa-original-compare .fa-compare-items{position:absolute;top:88.1%;height:5%;font-weight:bold;border-radius:12px;font-size:.85em}
+.fa-original-compare .fa-compare-equip{left:26.5%;width:14%}.fa-original-compare .fa-compare-back{left:42.5%;width:10.3%}.fa-original-compare .fa-compare-inventory{left:54.7%;width:11%}.fa-original-compare .fa-compare-items{left:67.8%;width:10.8%}

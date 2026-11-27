@@ -789,6 +789,46 @@ function ConsumableRecovery({profile,encounter,original,layout,onRecover,back}){
   return <><Panel rect={layout[0]}><h2>Current health</h2>{preview}</Panel><Panel rect={layout[1]}><h2>Recovery Tonic</h2><ItemArt id="recoveryTonic"/>{rows.map(([label,value])=><p key={label}>{label}: {value}</p>)}</Panel><Panel rect={layout[2]}><p>{reason}</p>{confirm}<Btn onClick={back}>Back</Btn></Panel></>;
 }
 
+// Compare only owned gear using the same equipment validation as the equip transaction.
+function EquipmentComparison({profile,encounter,initialItem,initialWearer,original,layout,onEquip,back,go}){
+ const [wearerId,setWearer]=useState(initialWearer||'hero'),[selectedId,setSelected]=useState(initialItem),[filter,setFilter]=useState('all'),[query,setQuery]=useState(''),[pageIndex,setPage]=useState(0);
+ const members=profile?[{id:'hero',name:profile.name},...ROSTER.filter(m=>memberFor(profile,m.id).recruited)]:[];
+ const wearer=members.some(m=>m.id===wearerId)?wearerId:'hero',inv=profile?.inventory||{};
+ const matches=Object.entries(ITEMS).filter(([id,i])=>inv[id]>0&&(i.kind==='gear'||(i.kind==='weapon'&&wearer==='hero'))&&(filter==='all'||i.kind===filter||i.slot===filter)&&i.name.toLowerCase().includes(query.trim().toLowerCase()));
+ const pages=Math.max(1,Math.ceil(matches.length/12)),index=Math.min(pageIndex,pages-1),visible=matches.slice(index*12,index*12+12);
+ const selected=visible.find(([id])=>id===selectedId)||visible[0],id=selected?.[0],item=selected?.[1];
+ const slot=item?.kind==='gear'?item.slot:'weapon';
+ const currentId=profile?(slot==='weapon'?(wearer==='hero'?profile.equipped:null):gearFor(profile,wearer)[slot]):null;
+ const result=profile&&item?(item.kind==='gear'?gearComparison(profile,wearer,id):comparison(profile,id)):null;
+ const before=profile?memberStats(profile,wearer):null,after=result?.candidate;
+ const allowed=Boolean(profile&&!encounter&&result&&id!==currentId);
+ const reason=!profile?'No active character.':encounter?'Equipment changes are disabled during battle.':!item?'Select owned equipment.':id===currentId?'Already equipped.':!result?'No available copy for this wearer.':'Equip the selected item.';
+ const fields=[['Attack','atk'],['Defense','def'],['Speed','spd'],['Max HP','maxHp']];
+ const stats=(values)=>fields.map(([label,key])=><div key={key}><span>{label}</span><strong>{values?.[key]??'—'}</strong></div>);
+ const reset=()=>{setPage(0);setSelected(null);};
+ const cards=visible.map(([key,i])=><Btn key={key} className="fa-compare-card" primary={key===id} aria-pressed={key===id} title={i.name+' · Owned '+inv[key]} aria-label={i.name+' · Owned '+inv[key]} onClick={()=>setSelected(key)}><ItemArt id={key}/><small>×{inv[key]}</small></Btn>);
+ const filters=[['all','All'],['weapon','Weapons'],['armor','Armor'],['mantle','Mantles']].map(([key,label])=><Btn key={key} aria-pressed={filter===key} onClick={()=>{setFilter(key);reset();}}>{label}</Btn>);
+ const pick=<select aria-label="Equipment wearer" value={wearer} onChange={e=>{setWearer(e.target.value);reset();}}>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select>;
+ const search=<input aria-label="Search owned equipment" placeholder="Search" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/>;
+ const paging=<><Btn disabled={!index} onClick={()=>setPage(index-1)} aria-label="Previous equipment">‹</Btn><span>{index+1}/{pages}</span><Btn disabled={index>=pages-1} onClick={()=>setPage(index+1)} aria-label="Next equipment">›</Btn></>;
+ const deltas=fields.map(([label,key])=>{const delta=after&&before?after[key]-before[key]:null;return <div key={key}><span>{label}</span><strong className={delta>0?'up':delta<0?'down':''}>{delta==null?'—':delta>0?'+'+delta:delta}</strong></div>;});
+ const equip=<Btn primary className="fa-compare-equip" disabled={!allowed} onClick={()=>onEquip(wearer,id,currentId)}>Equip</Btn>;
+ if(original)return <div className="fa-original-compare">
+  <h2 className="fa-compare-title">Equipment Comparison</h2><div className="fa-compare-gold">{profile?.gold||0}</div>
+  <div className="fa-compare-wearer">{pick}</div><div className="fa-compare-search">{search}</div><nav className="fa-compare-filters" aria-label="Equipment filters">{filters}</nav>
+  <section className="fa-compare-grid" aria-label="Owned equipment">{cards}{!visible.length&&<p>No matching gear</p>}</section><div className="fa-compare-pages">{paging}</div>
+  <h3 className="fa-compare-current-label">Equipped</h3><h3 className="fa-compare-candidate-label">Selected</h3>
+  <div className="fa-compare-current-icon">{currentId&&<ItemArt id={currentId}/>}</div><div className="fa-compare-current-name"><strong>{ITEMS[currentId]?.name||'Empty slot'}</strong>{slot==='weapon'&&currentId&&<small>Enhancement +{profile?.enhancements?.[currentId]||0}</small>}</div>
+  <div className="fa-compare-candidate-icon">{id&&<ItemArt id={id}/>}</div><div className="fa-compare-candidate-name"><strong>{item?.name||'Select gear'}</strong>{slot==='weapon'&&id&&<small>Enhancement +{profile?.enhancements?.[id]||0}</small>}</div>
+  <section className="fa-compare-current-stats" aria-label="Current character statistics">{stats(before)}</section><section className="fa-compare-candidate-stats" aria-label="Projected character statistics">{stats(after)}</section>
+  <div className="fa-compare-current-detail"><p>Wearer: {members.find(m=>m.id===wearer)?.name||'—'}</p><p>Slot: {slot}</p><p>Current equipment remains equipped until confirmed.</p></div>
+  <div className="fa-compare-candidate-detail"><p>Owned: {inv[id]||0}</p>{item?.kind==='gear'&&<p>Equipped copies: {profile?gearCount(profile,id):0}</p>}<p>{reason}</p></div>
+  <h3 className="fa-compare-delta-title">Stat changes</h3><section className="fa-compare-deltas" aria-label="Stat differences">{deltas}</section>
+  {equip}<Btn className="fa-compare-back" onClick={back}>Back</Btn><Btn className="fa-compare-inventory" onClick={()=>go('06')}>Equipment</Btn><Btn className="fa-compare-items" onClick={()=>go('21')}>Items</Btn>
+ </div>;
+ return <><Panel rect={layout[0]}>{pick}{search}{filters}{cards}{paging}</Panel><Panel rect={layout[1]}><h2>Equipped</h2><p>{ITEMS[currentId]?.name||'Empty slot'}</p>{stats(before)}</Panel><Panel rect={layout[2]}><h2>Selected</h2><p>{item?.name||'Select gear'}</p>{stats(after)}</Panel><Panel rect={layout[3]}>{deltas}<p>{reason}</p>{equip}<Btn onClick={back}>Back</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1160,7 +1200,7 @@ export default function SapphireAdventure(){
     case '36':content=<BossIntroduction key={candidate?.id||'none'} profile={profile} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onEnter={()=>{const s=current.current;if(s.profile&&s.running&&!s.encounter&&s.candidate&&s.candidate.id===candidate?.id&&s.id==='36')startBattle(s.candidate);}}/>;break;
     case '37':content=<>{pane(0,<h2>Local gameplay events</h2>)}{pane(1,<>{notifications.length?notifications.map((n,i)=><p key={n.time+'-'+i}>{n.message}</p>):<p>No notifications.</p>}</>)}{pane(2,<p>Notifications are generated by actual game events.</p>)}</>;break;
     case '38':content=<ItemAcquisition profile={profile} encounter={encounter} result={result} hud={hud} discovery={discovery} loot={loot} origin={stack[stack.length-2]} original={original} layout={screen.layout} onInventory={()=>{if(current.current.profile&&!current.current.encounter)go('06');}} onContinue={back}/>;break;
-    case '39':content=<>{pane(0,listItems((item,k)=>item.kind==='weapon'&&inv[k]>0))}{pane(1,<><h2>Equipped</h2><p>{ITEMS[profile?.equipped]?.name}</p>{compare&&<StatRows stats={compare.current}/>}</>)}{pane(2,<><h2>Selected</h2><p>{selectedItem?.name}</p>{compare&&<StatRows stats={compare.candidate}/>}</>)}{pane(3,<><p>Attack difference: {compare?compare.candidate.atk-compare.current.atk:'—'}</p><Btn primary disabled={!compare||Boolean(encounter)} onClick={()=>{if(transact(p=>equipItem(p,itemId),'Weapon equipped'))back();}}>Equip</Btn></>)}</>;break;
+    case '39':content=<EquipmentComparison key={profile?.id||'guest'} profile={profile} encounter={encounter} initialItem={itemId} initialWearer={wearer} original={original} layout={screen.layout} go={go} back={back} onEquip={(member,key,expected)=>{const s=current.current;if(s.id!=='39'||!s.profile||s.encounter||!Object.hasOwn(ITEMS,key))return;const item=ITEMS[key];const ok=transact(p=>{if(!p.inventory[key])throw Error('You do not own this item.');if(member!=='hero'&&!ROSTER.some(m=>m.id===member&&memberFor(p,m.id).recruited))throw Error('Wearer unavailable.');if(item.kind==='weapon'&&member==='hero'){if(p.equipped!==expected||p.equipped===key)throw Error('Equipped weapon changed. Review comparison.');return equipItem(p,key);}if(item.kind==='gear'){const equipped=gearFor(p,member)[item.slot];if(equipped!==expected||equipped===key)throw Error('Equipped gear changed. Review comparison.');return equipGear(p,member,item.slot,key);}throw Error('Unsupported equipment.');},'Equipment updated');if(ok)back();}}/>;break;
     case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>{const f=pending?.action;setPending(null);back();f?.();}}>Confirm</Btn>,<Btn onClick={()=>{setPending(null);back();}}>Cancel</Btn>)}</>);break;
     case '41':content=pane(0,<p role="status">{saveStatus||'No save operation in progress.'}</p>);break;
     case '42':content=<RegionDiscovery discovery={discovery} world={world} profile={profile} original={original} layout={screen.layout} onContinue={back} onMap={()=>{back();go('07');}}/>;break;

@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','22','23','25','26','27','30','31','32','33','35','36','38','40','42','43','44','45','46','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','22','23','25','26','27','30','31','32','33','35','36','38','39','40','42','43','44','45','46','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -335,4 +335,14 @@ test('original consumable recovery uses live health and rejects repeated or stal
  for(const marker of ['ITEMS.recoveryTonic.heal','Math.min(max,hp+potency)','owned>0&&amount>0','!encounter','locked.current','onRecover(hp,owned)','disabled={!allowed}','Health is already full.'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '46':"));
  for(const marker of ["s.id!=='46'",'p.hp!==hp','p.inventory.recoveryTonic!==owned','return heal(p)','if(ok)back()'])assert.ok(handler.includes(marker),marker);
+});
+
+test('original comparison uses actual equipment and guards changes for the chosen wearer',()=>{
+ assert.equal(stagedOriginalFor('39').wideOnly,true);
+ assert.ok(templateUrl('39').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function EquipmentComparison('),page.indexOf('function SaveToast('));
+ for(const marker of ['inv[id]>0','gearComparison(profile,wearer,id)','comparison(profile,id)','after[key]-before[key]','id!==currentId','disabled={!allowed}','onEquip(wearer,id,currentId)'])assert.ok(section.includes(marker),marker);
+ const handler=page.split('\n').find(line=>line.trim().startsWith("case '39':"));
+ for(const marker of ["s.id!=='39'",'p.equipped!==expected','equipped!==expected','equipItem(p,key)','equipGear(p,member,item.slot,key)'])assert.ok(handler.includes(marker),marker);
 });
