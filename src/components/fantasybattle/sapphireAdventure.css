@@ -831,3 +831,31 @@
 .fa-original-completion .fa-complete-journal{left:70%;top:82%;width:16%;height:6%;background:#f4eee6e6;border:1px solid #d6b87f;color:#152448;font-size:.85em}
 .fa-original-completion .fa-button:hover{box-shadow:inset 0 0 0 2px #d6b87f}
 .fa-original-completion .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:2px}
+
+/* 23 — original modular Dungeon Entrance art with real enemy preview. */
+.fa-ui.page[data-staged-original="true"][data-screen="23"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="23"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="23"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-entrance{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.2vw,2.13vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-entrance h2,.fa-original-entrance h3,.fa-original-entrance p{margin:.2em 0}
+.fa-entrance-title{position:absolute;left:41%;top:2%;width:24%;height:7%;display:grid;place-items:center;text-align:center;font-size:1.65em}
+.fa-entrance-list{position:absolute;left:1.5%;top:17.2%;width:22%;height:59%;display:flex;flex-direction:column;gap:.6em;padding:.55em;background:#142448f5;border-radius:10px;overflow:auto;pointer-events:auto}
+.fa-entrance-selection{border:1px solid #d6b87f;border-radius:8px;padding:.6em;background:#193d82;overflow-wrap:anywhere;font-weight:bold}
+.fa-entrance-preview{position:absolute;left:25.3%;top:11%;width:44.5%;height:41%;display:flex;align-items:stretch;justify-content:center;gap:1em;overflow:auto;pointer-events:auto;background:radial-gradient(ellipse,#2859b855,#142448);padding:.7em;border-radius:8px}
+.fa-entrance-enemy{display:flex;flex:1;min-width:0;flex-direction:column;align-items:center;justify-content:center;gap:.35em;text-align:center;overflow:hidden}
+.fa-entrance-enemy .fa-archer-portrait{max-width:100%;max-height:77%;width:auto;height:auto;object-fit:contain}
+.fa-entrance-name{position:absolute;left:40.9%;top:53.2%;width:20.5%;height:4.6%;display:grid;place-items:center;text-align:center;font-size:1.05em;overflow-wrap:anywhere}
+.fa-entrance-category{position:absolute;left:41%;top:58%;width:20%;height:3.5%;display:grid;place-items:center;text-align:center;font-size:.85em}
+.fa-entrance-description{position:absolute;left:32%;top:63%;width:35%;height:5.5%;text-align:center;overflow:auto;pointer-events:auto;font-size:.84em}
+.fa-entrance-mode{position:absolute;left:30.5%;top:74.4%;width:39.5%;height:7.5%;display:grid;place-items:center;text-align:center;background:#142448f7;border-radius:8px;font-size:.9em}
+.fa-entrance-stats-title,.fa-entrance-rewards-title{position:absolute;left:74%;width:22%;text-align:center;font-size:1.05em}
+.fa-entrance-stats-title{top:14.5%}.fa-entrance-rewards-title{top:41.3%}
+.fa-entrance-stats,.fa-entrance-rewards{position:absolute;left:73%;width:24%;overflow:auto;pointer-events:auto;padding:.35em .5em;background:#142448f7;border-radius:7px}
+.fa-entrance-stats{top:20.1%;height:18.6%}.fa-entrance-rewards{top:46.6%;height:23%;line-height:1.25;font-size:.9em}
+.fa-original-entrance .fa-button{position:absolute;pointer-events:auto;min-width:0;min-height:0;border:0;box-shadow:none;font:inherit;color:inherit;background:transparent}
+.fa-original-entrance .fa-entrance-confirm{left:32%;top:84.8%;width:37%;height:10%;font-size:1.3em;font-weight:bold;padding-left:6%;border-radius:18px}
+.fa-original-entrance .fa-entrance-confirm:disabled{opacity:.6;cursor:not-allowed;background:#14244880}
+.fa-original-entrance .fa-entrance-leave{left:92%;top:1%;width:7%;height:7%;background:#142448d9;border-radius:6px}
+.fa-original-entrance .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 2px #d6b87f}
+.fa-original-entrance .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:2px}
+.fa-panel .fa-entrance-enemy .fa-archer-portrait{max-height:140px}

@@ -463,6 +463,35 @@ function QuestCompletion({profile,original,layout,onContinue,onJournal}){
   return <><PaintedIllustration name="quest-complete" variant="fa-event-side-art"/><Panel rect={layout[0]}><h2>{heading}</h2><h3>Whispering Grove Spirit</h3>{objective}{reward}{controls}</Panel></>;
 }
 
+// Original entrance frames are decorative. Preview the same formation BattleSurface uses.
+function DungeonEntrance({profile,world,candidate,encounter,running,original,layout,onDetails,back}){
+  const ready=Boolean(profile&&running&&candidate&&!encounter);
+  const partySize=profile?1+activeRoster(profile).length:0;
+  const enemies=ready?enemyFormation(candidate,partySize):[];
+  const lead=enemies[0];
+  const completed=Boolean(profile&&candidate&&profile.world.completedEncounters.includes(candidate.id));
+  const category=candidate?.category||'—';
+  const title=candidate?.label||'No encounter selected';
+  const description=ready?'Review the enemy formation and tactics before entering battle.':encounter?'An encounter is already active.':'Approach an encounter marker in the world.';
+  const roster=<>{enemies.length?enemies.map(e=><div className="fa-entrance-enemy" key={e.id}><EnemyPortrait enemy={e}/><strong>{e.name}</strong><small>HP {e.maxHp}</small></div>):<p>No enemy formation available.</p>}</>;
+  const stats=<StatRows stats={{'Encounter type':category,'Enemy HP':lead?.maxHp??'—','Enemy attack':lead?.atk??'—','Enemy defense':lead?.def??'—'}}/>;
+  const details=<><p>{description}</p>{completed&&<p>Previously defeated. First-victory rewards cannot be earned again.</p>}</>;
+  const rewards=<p>{completed?'First-victory rewards already recorded.':ready?'First victory may award XP, gold and loot. No reward is granted at entry.':'No rewards available to preview.'}</p>;
+  const controls=<><Btn primary className="fa-entrance-confirm" disabled={!ready} onClick={onDetails}>Encounter Details</Btn><Btn className="fa-entrance-leave" onClick={back}>Leave</Btn></>;
+  if(original)return <div className="fa-original-entrance">
+    <h2 className="fa-entrance-title">Dungeon Entrance</h2>
+    <section className="fa-entrance-list" aria-label="Current encounter"><strong>Current encounter</strong><div className="fa-entrance-selection">{title}</div><p>{world?.region||'World not loaded'}</p><p>{ready?'Available for preview':'Not available'}</p><small>Enter from a world encounter marker.</small></section>
+    <section className="fa-entrance-preview" aria-label="Actual enemy formation">{roster}</section>
+    <h3 className="fa-entrance-name">{title}</h3><div className="fa-entrance-category">{category} · Party {partySize}/4</div>
+    <section className="fa-entrance-description">{details}</section>
+    <div className="fa-entrance-mode">Encounter difficulty: {category} · Fixed by world encounter</div>
+    <h3 className="fa-entrance-stats-title">Enemy information</h3><section className="fa-entrance-stats">{stats}</section>
+    <h3 className="fa-entrance-rewards-title">Rewards</h3><section className="fa-entrance-rewards">{rewards}{lead&&<p>{tacticFor(lead.strategy,lead.archetype)}</p>}</section>
+    {controls}
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Current encounter</h2><p>{title}</p><p>{world?.region||'World not loaded'}</p><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{roster}</Panel><Panel rect={layout[2]}><h2>{title}</h2>{stats}{details}{rewards}{controls}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -819,7 +848,7 @@ export default function SapphireAdventure(){
     case '17':content=<>{pane(0,<><h2>Blacksmith</h2><p>Gold: {profile?.gold||0} · Ore: {inv.sapphireOre||0}</p>{!serviceAvailable&&<p>Visit a service marker.</p>}</>)}{pane(1,<><h2>{ITEMS[profile?.equipped]?.name}</h2><p>Enhancement +{profile?.enhancements?.[profile?.equipped]||0} / 5</p><p>Cost: {15+(profile?.enhancements?.[profile?.equipped]||0)*10} gold and 1 ore.</p></>)}{pane(2,<><p>Attack after enhancement: {stats.atk+2}</p><Btn disabled={!serviceAvailable||!inv.sapphireOre||(profile?.enhancements?.[profile?.equipped]||0)>=5} onClick={()=>requestConfirm('Enhance equipped bow?',()=>transact(enhanceWeapon,'Weapon enhanced'))}>Enhance</Btn></>)}</>;break;
     case '21':content=<>{pane(0,nav(['06','22']))}{pane(1,listItems((item,k)=>item.kind!=='weapon'&&inv[k]>0))}{pane(2,<><h2>{selectedItem?.name}</h2><p>Owned: {inv[itemId]||0}</p>{itemId==='recoveryTonic'&&<Btn disabled={!inv.recoveryTonic||Boolean(encounter)} onClick={()=>go('46')}>Use Tonic</Btn>}</>)}</>;break;
     case '22':content=<>{pane(0,<h2>Crafting</h2>)}{pane(1,<><h2>Recovery Tonic</h2><p>Requires 2 Sapphire Ore · Owned {inv.sapphireOre||0}</p></>)}{pane(2,<Btn disabled={!serviceAvailable||inv.sapphireOre<2} onClick={()=>requestConfirm('Craft Recovery Tonic?',()=>transact(craftTonic,'Recovery Tonic crafted'))}>Craft</Btn>)}</>;break;
-    case '23':content=<>{pane(1,<h2>{candidate?.label||'Encounter entrance'}</h2>)}{pane(2,<><p>{candidate?.category} encounter. Preview the enemy formation and its combat tactics.</p><Btn disabled={!candidate} onClick={()=>go('36')}>Encounter Details</Btn><Btn onClick={back}>Leave</Btn></>)}</>;break;
+    case '23':content=<DungeonEntrance profile={profile} world={world} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onDetails={()=>{const s=current.current;if(s.profile&&s.running&&s.candidate?.id===candidate?.id&&candidate&&!s.encounter)go('36');}}/>;break;
     case '24':content=<>{pane(0,nav(['29']))}{pane(1,<>{world?.encounters?.length?world.encounters.map(e=><Btn key={e.id} primary={seenEnemy?.id===e.id} onClick={()=>setEnemyId(e.id)}>{e.label} · {e.completed?'Defeated':'Discovered'}</Btn>):<p>No enemies discovered.</p>}</>)}{pane(2,seenEnemy?<><h2>{seenEnemy.label}</h2>{enemyFormation(seenEnemy,1).map(e=><div key={e.id}><EnemyPortrait enemy={e}/><StatRows stats={{HP:e.maxHp,Attack:e.atk,Defense:e.def,Speed:e.spd}}/><p>{tacticFor(e.strategy,e.archetype)}</p></div>)}<small>Base stats; formation scales with party size.</small></>:<p>Explore to discover enemy entries.</p>)}</>;break;
     case '25':content=<FastTravel profile={profile} world={world} encounter={encounter} destination={destination} onSelect={setDestination} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{const profileId=current.current.profile?.id;if(!profileId||!region)return;requestConfirm('Travel to '+region.name+'?',()=>{if(transact(p=>{if(p.id!==profileId)throw Error('Active character changed. Select a destination again.');const liveRegion=current.current.world?.regions.find(r=>r.id===region.id);if(!liveRegion||!Number.isFinite(liveRegion.minX)||!Number.isFinite(liveRegion.maxX)||liveRegion.maxX<=liveRegion.minX)throw Error('Destination is no longer available.');return travelTo(p,liveRegion);},'Arrived at '+region.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}});}}/>;break;
     case '26':content=<Recruitment profile={profile} encounter={encounter} selected={selectedCompanion} member={member} onSelect={setCompanionId} onRecruit={m=>requestConfirm('Recruit '+m.name+'?',()=>transact(p=>recruitCompanion(p,m.id),m.name+' joined'))} original={original} layout={screen.layout} go={go} back={back}/>;break;
