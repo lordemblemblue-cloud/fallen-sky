@@ -2,6 +2,13 @@
 
 Written 2026-11-27 by the session that built the War of Three Roads (branch `claude/three-empire-war-20261121`).
 
+## Answered so far
+
+- **Request 1, answered by the owner on 2026-11-27: "Keep it switched off."** The War of Three Roads stays in the game exactly as it is, off unless `?threeRoads=1` is added to the address or the admin test menu is used. It is not retired and not reworked, and nothing more of it is built.
+- That settles requests 2, 3 and 5 as well: chapters 3 to 6 stay unplayable, the unwritten quests stay unwritten, and nothing is spent.
+- **Request 4 is still open**: whether the systems and assets under this story may be used for The Threads of Our Pain.
+- The same day the owner said the old map is not being used and the map is being recreated. Every spot in this story is tied to the old map.
+
 ## In short
 
 - The owner's main campaign, **The Threads of Our Pain**, is in `main` under `docs/game3d/threads-of-our-pain/` (172 files, last changed 2026-11-27). Since 2026-11-26 the repository's `AGENTS.md` and that folder's `CLAUDE_TERRAIN_HANDOFF.md` say it "supersedes conflicting War of Three Roads story/map assumptions".

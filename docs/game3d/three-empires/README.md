@@ -24,7 +24,7 @@ A piece of the Wolf Star fell into this valley. Three empires found a road here 
 
 ## Where it stands
 
-**2026-11-27: on hold.** The owner's main campaign, The Threads of Our Pain, is now in `main` (`docs/game3d/threads-of-our-pain/`), and since 2026-11-26 the repository's `AGENTS.md` says it supersedes conflicting War of Three Roads story and map assumptions. The two stories disagree in eight places. Nothing more of this story is being built, and chapters 3 to 6 stay unplayable, until the owner answers [OWNER_REQUESTS.md](OWNER_REQUESTS.md). What follows is the record of what was built before that.
+**2026-11-27: on hold.** The owner's main campaign, The Threads of Our Pain, is now in `main` (`docs/game3d/threads-of-our-pain/`), and since 2026-11-26 the repository's `AGENTS.md` says it supersedes conflicting War of Three Roads story and map assumptions. The two stories disagree in eight places. The owner's answer the same day: **"Keep it switched off."** The story stays in the game as it is, off by default; nothing more of it is built and chapters 3 to 6 stay unplayable. The owner also said the old map is being replaced. The comparison and the one question still open are in [OWNER_REQUESTS.md](OWNER_REQUESTS.md). What follows is the record of what was built before that.
 
 **2026-11-21: the owner answered "Yes, build it"** to the story. Building has started, band by band (see the build order in the quest plan and `BUILD_RULES.md`). Everything new is behind the switch `?threeRoads=1` until a band is ready.
 
