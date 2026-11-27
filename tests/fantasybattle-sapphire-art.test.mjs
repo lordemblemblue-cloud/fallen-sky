@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','38','39','40','42','43','44','45','46','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','42','43','44','45','46','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -395,4 +395,14 @@ test('original interactive tutorial describes current combat actions and only la
  for(const marker of ['ACTIONS.quickShot.summary','ACTIONS.chargedShot.summary','ACTIONS.volley.summary','ACTIONS.guard.summary','profile&&running&&!encounter','disabled={!allowed}','onLesson(index-1)','onLesson(index+1)','no progression rewards','Elemental affinity rules are not implemented'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '34':"));
  for(const marker of ["s.id==='34'","s.profile&&s.running&&!s.encounter","startBattle({id:'practice'","practice:true"])assert.ok(handler.includes(marker),marker);
+});
+
+test('original notifications show only local session events and categorize actual producers',()=>{
+ assert.equal(stagedOriginalFor('37').wideOnly,true);
+ assert.ok(templateUrl('37').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('const NOTICE_CATEGORIES='),page.indexOf('function SaveToast('));
+ for(const marker of ['notifications.filter','Math.ceil(matches.length/5)','No matching notifications','Local session events','new Date(n.time).toLocaleTimeString'])assert.ok(section.includes(marker),marker);
+ for(const marker of ["category='system'",'[{message,category,time:Date.now()},...old].slice(0,40)',"notify(success,'activity')","gold','combat')","e.world.region),'exploration')","awarded.loot.length?'rewards':'exploration'","case '37':content=<GlobalNotifications"])assert.ok(page.includes(marker),marker);
+ for(const forbidden of ['transact(','autosave(','rewardVictory(','localStorage'])assert.ok(!section.includes(forbidden),forbidden);
 });

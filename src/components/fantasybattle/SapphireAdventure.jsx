@@ -1027,6 +1027,18 @@ function InteractiveTutorial({profile,running,encounter,lesson,onLesson,original
  return <><Panel rect={layout[0]}><h2>Tutorial</h2>{links}<Btn onClick={back}>Close</Btn></Panel><Panel rect={layout[1]}><h2>{entry.name}</h2><p>{entry.intro}</p>{steps}</Panel><Panel rect={layout[2]}><h3>Controls</h3>{controls}<h3>Quick Tips</h3>{tips}<p>{reason}</p>{practice}</Panel><Panel rect={layout[3]}>{previous}<span>{index+1} / {TUTORIAL_LESSONS.length}</span>{next}</Panel></>;
 }
 
+// Local session history: no server feed, simulated multiplayer activity or persisted messages.
+const NOTICE_CATEGORIES=[['all','All Notifications','✦'],['exploration','Exploration','◇'],['combat','Combat','⚔'],['activity','Player Activity','●'],['system','System','⚙'],['rewards','Rewards','✧']];
+function GlobalNotifications({notifications,original,layout,back}){
+ const [filter,setFilter]=useState('all'),[pageIndex,setPage]=useState(0);
+ const matches=notifications.filter(n=>filter==='all'||(n.category||'system')===filter),pages=Math.max(1,Math.ceil(matches.length/5)),index=Math.min(pageIndex,pages-1),visible=matches.slice(index*5,index*5+5);
+ const nav=NOTICE_CATEGORIES.map(([key,label])=><Btn key={key} primary={key===filter} aria-pressed={key===filter} onClick={()=>{setFilter(key);setPage(0);}}>{label}</Btn>);
+ const rows=visible.map((n,i)=>{const category=NOTICE_CATEGORIES.find(c=>c[0]===(n.category||'system'))||NOTICE_CATEGORIES[4];return <article key={n.time+'-'+i} className="fa-notification-row"><span className="fa-notification-icon" aria-hidden="true">{category[2]}</span><div className="fa-notification-message"><strong>{category[1]}</strong><p>{n.message}</p></div><time dateTime={new Date(n.time).toISOString()}>{new Date(n.time).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</time></article>;});
+ const paging=<><Btn disabled={index===0} aria-label="Previous notifications" onClick={()=>setPage(index-1)}>‹</Btn><span>{index+1}/{pages}</span><Btn disabled={index>=pages-1} aria-label="Next notifications" onClick={()=>setPage(index+1)}>›</Btn></>;
+ if(original)return <div className="fa-original-notifications"><h2 className="fa-art-sr">Global Notifications</h2><p className="fa-notification-scope">Local session events</p><nav className="fa-notification-nav" aria-label="Event categories">{nav}</nav><div className="fa-notification-count">{matches.length} events · latest 40 retained</div><section className="fa-notification-list" aria-label="Recent gameplay events">{rows}{!visible.length&&<p className="fa-notification-empty">No matching notifications.</p>}</section><div className="fa-notification-pages">{paging}</div><Btn className="fa-notification-back" onClick={back}>Back</Btn></div>;
+ return <><Panel rect={layout[0]}><h2>Global Notifications</h2><p>Local session events</p>{nav}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{rows}{!visible.length&&<p>No matching notifications.</p>}{paging}</Panel><Panel rect={layout[2]}><p>{matches.length} events · latest 40 retained.</p><p>Only events from this local session are shown. No online feed is connected.</p></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1094,9 +1106,9 @@ export default function SapphireAdventure(){
   const back=()=>setStack(old=>old.length>1?old.slice(0,-1):old);
   const root=target=>setStack([target]);
   const post=(type,data)=>frame.current?.contentWindow?.postMessage({channel:'fantasy-host',type,data},location.origin);
-  const notify=message=>{setNotifications(old=>[{message,time:Date.now()},...old].slice(0,40));setNotice(message);};
+  const notify=(message,category='system')=>{setNotifications(old=>[{message,category,time:Date.now()},...old].slice(0,40));setNotice(message);};
   const fail=message=>{clearTimeout(timeoutRef.current);clearTimeout(battleTimer.current);failedLoad.current=true;setError(message);go('47');};
-  const transact=(operation,success)=>{const p=current.current.profile;if(!p||current.current.encounter){notify('This action is available only outside battle.');return false;}try{const next=operation(p);replaceProfile(next);autosave(next);notify(success);return true;}catch(e){notify(e.message);return false;}};
+  const transact=(operation,success)=>{const p=current.current.profile;if(!p||current.current.encounter){notify('This action is available only outside battle.');return false;}try{const next=operation(p);replaceProfile(next);autosave(next);notify(success,'activity');return true;}catch(e){notify(e.message);return false;}};
   const reloadSlots=()=>{const s=readSlots(localStorage);setSlots(s);return s;};
   useEffect(()=>{reloadSlots();setSettings(readSettings(localStorage));const changed=e=>{if(e.key===SAVE_KEY||e.key===null){reloadSlots();}};window.addEventListener('storage',changed);return()=>{window.removeEventListener('storage',changed);clearTimeout(saveTimer.current);clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);clearTimeout(battleTimer.current);};},[]);
   useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),4000);return()=>clearTimeout(t);},[notice]);
@@ -1152,7 +1164,7 @@ export default function SapphireAdventure(){
     if(state.phase!=='over'||!e||!p||processed.current===e.token)return;
     processed.current=e.token;
     const won=state.winner==='player';
-    if(won&&!e.practice){const r=rewardVictory(p,e,state.units.find(u=>u.id==='hero')?.hp,state.units);replaceProfile(r.profile);setResult(r);setLoot(r.loot);notify('Victory · +'+r.xp+' XP · +'+r.gold+' gold');autosave(r.profile);}
+    if(won&&!e.practice){const r=rewardVictory(p,e,state.units.find(u=>u.id==='hero')?.hp,state.units);replaceProfile(r.profile);setResult(r);setLoot(r.loot);notify('Victory · +'+r.xp+' XP · +'+r.gold+' gold','combat');autosave(r.profile);}
     else{setResult({profile:p,xp:0,gold:0,loot:[],leveled:false,unlocked:[]});setLoot([]);}
     root(won?'14':'15');
   };
@@ -1172,13 +1184,13 @@ export default function SapphireAdventure(){
     if(e.type==='world'&&p&&startReady.current&&!s.encounter&&!failedLoad.current){
       const updated=updateWorld(p,e.world);setWorld(e.world);replaceProfile(updated);
       const newRegion=updated.world.visitedRegions.find(x=>!p.world.visitedRegions.includes(x));
-      if(newRegion&&s.id==='10'){const item=e.world.regions.find(x=>x.id===newRegion);if(p.world.visitedRegions.length){setDiscovery({kind:'region',id:newRegion,label:item?.name||e.world.region});go('42');notify('New region: '+(item?.name||e.world.region));}autosave(updated);}
+      if(newRegion&&s.id==='10'){const item=e.world.regions.find(x=>x.id===newRegion);if(p.world.visitedRegions.length){setDiscovery({kind:'region',id:newRegion,label:item?.name||e.world.region});go('42');notify('New region: '+(item?.name||e.world.region),'exploration');}autosave(updated);}
       return;
     }
     if(e.type==='encounter'&&p&&s.id==='10'&&!s.encounter){
       const updated=updateWorld(p,e.world);replaceProfile(updated);setWorld(e.world);if(e.encounter.category==='Normal')startBattle(e.encounter);else{setCandidate(e.encounter);go('23');}return;
     }
-    if(e.type==='discovery'&&p&&!s.encounter){const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:e.label});setLoot(awarded.loot);notify(e.label);autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
+    if(e.type==='discovery'&&p&&!s.encounter){const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:e.label});setLoot(awarded.loot);notify(e.label,awarded.loot.length?'rewards':'exploration');autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
     if(e.type==='service'&&p&&s.id==='10'&&!s.encounter){setService(e.service);setWorld(e.world);replaceProfile(updateWorld(p,e.world));go('13');return;}
     if(e.type==='battleReady'&&isCurrentEncounter(s.encounter,e.token)&&!failedLoad.current){setArenaReady(true);root('09');return;}
     if(e.type==='error')fail(e.message||'World error');
@@ -1395,7 +1407,7 @@ export default function SapphireAdventure(){
     case '34':content=<InteractiveTutorial profile={profile} running={running} encounter={encounter} lesson={lesson} onLesson={setLesson} original={original} layout={screen.layout} back={back} onPractice={()=>{const s=current.current;if(s.id==='34'&&s.profile&&s.running&&!s.encounter)startBattle({id:'practice',label:'Practice Archer',category:'Normal',practice:true});}}/>;break;
     case '35':content=pane(0,<><h2>{encounter?'Preparing the battleground…':'Loading the world…'}</h2><progress aria-label="Loading world"/><p>{encounter?'Waiting for the regional battleground and combat renderer.':'Waiting for the 3D renderer and saved world position.'}</p><Btn onClick={leaveTitle}>Cancel</Btn></>);break;
     case '36':content=<BossIntroduction key={candidate?.id||'none'} profile={profile} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onEnter={()=>{const s=current.current;if(s.profile&&s.running&&!s.encounter&&s.candidate&&s.candidate.id===candidate?.id&&s.id==='36')startBattle(s.candidate);}}/>;break;
-    case '37':content=<>{pane(0,<h2>Local gameplay events</h2>)}{pane(1,<>{notifications.length?notifications.map((n,i)=><p key={n.time+'-'+i}>{n.message}</p>):<p>No notifications.</p>}</>)}{pane(2,<p>Notifications are generated by actual game events.</p>)}</>;break;
+    case '37':content=<GlobalNotifications notifications={notifications} original={original} layout={screen.layout} back={back}/>;break;
     case '38':content=<ItemAcquisition profile={profile} encounter={encounter} result={result} hud={hud} discovery={discovery} loot={loot} origin={stack[stack.length-2]} original={original} layout={screen.layout} onInventory={()=>{if(current.current.profile&&!current.current.encounter)go('06');}} onContinue={back}/>;break;
     case '39':content=<EquipmentComparison key={profile?.id||'guest'} profile={profile} encounter={encounter} initialItem={itemId} initialWearer={wearer} original={original} layout={screen.layout} go={go} back={back} onEquip={(member,key,expected)=>{const s=current.current;if(s.id!=='39'||!s.profile||s.encounter||!Object.hasOwn(ITEMS,key))return;const item=ITEMS[key];const ok=transact(p=>{if(!p.inventory[key])throw Error('You do not own this item.');if(member!=='hero'&&!ROSTER.some(m=>m.id===member&&memberFor(p,m.id).recruited))throw Error('Wearer unavailable.');if(item.kind==='weapon'&&member==='hero'){if(p.equipped!==expected||p.equipped===key)throw Error('Equipped weapon changed. Review comparison.');return equipItem(p,key);}if(item.kind==='gear'){const equipped=gearFor(p,member)[item.slot];if(equipped!==expected||equipped===key)throw Error('Equipped gear changed. Review comparison.');return equipGear(p,member,item.slot,key);}throw Error('Unsupported equipment.');},'Equipment updated');if(ok)back();}}/>;break;
     case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>{const f=pending?.action;setPending(null);back();f?.();}}>Confirm</Btn>,<Btn onClick={()=>{setPending(null);back();}}>Cancel</Btn>)}</>);break;

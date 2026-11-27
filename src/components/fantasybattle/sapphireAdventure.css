@@ -1466,3 +1466,28 @@
 .fa-original-tutorial .fa-tutorial-prev{left:34.7%;padding-left:12px}.fa-original-tutorial .fa-tutorial-next{left:63.4%}
 .fa-tutorial-progress{position:absolute;left:50.6%;top:91.9%;width:6.9%;height:4%;display:grid;place-items:center;font-size:.83em}
 .fa-original-tutorial .fa-tutorial-close{position:absolute;left:88.3%;top:92%;width:8%;height:5%;background:#142448dc;font-size:.82em}
+
+/* 37 — original notification frame with actual local event history. */
+.fa-ui.page[data-staged-original="true"][data-screen="37"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="37"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="37"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-notifications{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.2vw,2.13vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-notifications .fa-button{pointer-events:auto;min-width:0;min-height:0;border:0;box-shadow:none;background:transparent;color:inherit;font:inherit;text-shadow:inherit;border-radius:8px;padding:.2em}
+.fa-original-notifications .fa-button:hover:not(:disabled),.fa-original-notifications .fa-button[aria-pressed=true]{box-shadow:inset 0 0 0 2px #d6b87f;background:#2859b88c}
+.fa-original-notifications .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:1px}
+.fa-original-notifications .fa-button:disabled{opacity:.5;cursor:not-allowed}
+.fa-notification-scope{position:absolute;left:41%;top:18%;width:19%;height:3.2%;display:grid;place-items:center;margin:0;font-size:.82em;text-align:center}
+.fa-notification-nav{position:absolute;left:7.5%;top:28.4%;width:15.3%;height:41.7%;display:grid;grid-template-rows:repeat(6,minmax(0,1fr));gap:1%}
+.fa-original-notifications .fa-notification-nav .fa-button{font-size:.84em;text-align:center;padding-left:24%;font-weight:bold}
+.fa-original-notifications .fa-notification-nav .fa-button:first-child{padding-left:0}
+.fa-notification-count{position:absolute;left:7.7%;top:72%;width:14%;text-align:center;font-size:.75em}
+.fa-notification-list{position:absolute;left:27.3%;top:27%;width:64.1%;height:56.8%;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:3.3%;pointer-events:auto}
+.fa-notification-row{display:grid;grid-template-columns:11% minmax(0,1fr) 18%;gap:1%;align-items:center;overflow:hidden;min-height:0}
+.fa-notification-icon{font-size:2em;color:#e7d3a5;text-align:center}
+.fa-notification-message{min-width:0;max-height:100%;overflow:auto;padding:.2em .4em}
+.fa-notification-message strong{font-size:.76em;color:#d6c7a4}
+.fa-notification-message p{margin:.2em 0;font-size:1em;line-height:1.15;overflow-wrap:anywhere}
+.fa-notification-row time{text-align:center;font-size:.78em}
+.fa-notification-empty{grid-row:1;display:grid;place-items:center;margin:0;font-size:.95em}
+.fa-notification-pages{position:absolute;left:46%;top:87%;width:17%;height:5%;display:flex;justify-content:space-between;align-items:center;background:#142448d9;border-radius:8px;font-size:.85em}
+.fa-original-notifications .fa-notification-back{position:absolute;left:8%;top:79%;width:13.5%;height:4.6%;background:#142448c9;font-weight:bold}
