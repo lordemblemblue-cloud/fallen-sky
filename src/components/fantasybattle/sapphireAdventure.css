@@ -70,3 +70,13 @@
 .fa-large-swatch{height:clamp(50px,12vh,120px);border-radius:12px 4px;border:1px solid #ebd6a6;background-image:linear-gradient(125deg,#080d1a66,transparent,#fff8ec66)}
 .fa-ui[data-screen="27"] .fa-button{flex-direction:row}
 @media(max-aspect-ratio:4/3){.fa-archer-portrait{max-height:220px}}
+
+/* Party cards retain the translucent Sapphire Sumi frame and live battlefield. */
+.fa-party-card{display:flow-root;padding:.6em;border:1px solid #d1b78466;border-radius:8px;background:linear-gradient(120deg,#080d1a66,#2859b844)}
+.fa-party-card .fa-button{width:100%;margin-top:.3em}
+.fa-party-hud-row{display:flow-root;padding:.18em .35em;border-left:2px solid transparent}
+.fa-party-hud-row.choosing{border-left-color:#78c9ed;background:#2859b855}
+.fa-party-hud-row progress{display:block;width:100%;height:5px;margin:2px 0}
+.fa-party-hud-row small{display:block;line-height:1.15}
+.fa-ui[data-screen="09"] .fa-party-hud-row .fa-archer-portrait.small{max-height:32px;width:auto}
+.fa-combat-actions{flex:1;min-height:0}
