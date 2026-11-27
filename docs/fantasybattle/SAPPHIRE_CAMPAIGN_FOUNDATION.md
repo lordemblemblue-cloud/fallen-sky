@@ -79,3 +79,7 @@ Use the existing additional regions wilds_sec_6 and wilds_sec_7. Moonveil Spirit
 5. QA: new game and old saves, defeat/retry, defeat-before-acceptance, duplicate claim, repeated dialogue, combat lock, absent images, missing anchor, desktop and mobile. Run Fantasy Battle tests, lint, build and shared Game 3D/WebGPU/security validation before release.
 
 No publication, new privileges, login changes, artwork replacement, or map/character production is part of this story-only proposal.
+
+## Chapter 1 runtime slice (2026-11-27)
+
+The original and fallback quest offer, journal, completion, service preparation conversation, encounter entrance, recruitment and codex now consume the shared Grove narrative. Service preparation displays a relayed story note at an existing available service; it does not create a physical Trail Keeper NPC or change service locations. The warning is shown only for the existing Grove encounter; recruitment dialogue is shown only when the Grove Archer is eligible and not already recruited. Completion prose requires both claimed status and recorded victory. No save schema, reward, combat, placement or artwork changes. Regression assertions cover progress gating and unchanged quest authority. Pending: full CI, lint and actual desktop/mobile text fit; opening cinematic and physical NPC anchors still await later implementation. Next: Chapter 2 quest catalog and save-compatible progression design.
