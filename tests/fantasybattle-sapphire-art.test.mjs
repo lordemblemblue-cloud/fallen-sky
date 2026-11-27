@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','30','31','32','33','35','36','38','39','40','42','43','44','45','46','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','35','36','38','39','40','42','43','44','45','46','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -375,4 +375,14 @@ test('original achievements derive read-only milestone progress from saved recor
  for(const marker of ['world.visitedRegions.length','world.completedEncounters.length','world.discoveries.length','memberFor(profile,m.id).recruited','levelFor(profile.xp)','Object.values(profile?.enhancements||{})',"profile?.quests.grove==='claimed'",'records.filter(r=>r[4]>=r[5])','Math.ceil(filtered.length/6)','No claimable rewards'])assert.ok(section.includes(marker),marker);
  for(const forbidden of ['rewardVictory(','transact(','autosave(','claimGroveQuest('])assert.ok(!section.includes(forbidden),forbidden);
  assert.match(page,/case '28':content=<Achievements/);
+});
+
+test('original world codex only reports known saved records and does not invent lore',()=>{
+ assert.equal(stagedOriginalFor('29').wideOnly,true);
+ assert.ok(templateUrl('29').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function WorldCodex('),page.indexOf('function SaveToast('));
+ for(const marker of ['visited.includes(r.id)','completed.includes(e.id)','memberFor(profile,m.id).recruited','profile.quests.grove','inv[id]>0','Math.ceil(matches.length/8)','factions:[]','mythology:[]','No new lore has been inferred','not a live location view'])assert.ok(section.includes(marker),marker);
+ for(const forbidden of ['rewardVictory(','transact(','autosave(','claimGroveQuest('])assert.ok(!section.includes(forbidden),forbidden);
+ assert.match(page,/case '29':content=<WorldCodex/);
 });

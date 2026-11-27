@@ -948,6 +948,51 @@ function Achievements({profile,original,layout,go,back}){
   return <><Panel rect={layout[0]}><h2>Achievements</h2>{filters}{navigation}</Panel><Panel rect={layout[1]}>{overview}{rows}{pager}</Panel><Panel rect={layout[2]}><h2>Saved progression</h2>{summaries}<p>Milestone tracking only. No claimable rewards.</p></Panel></>;
 }
 
+// Codex is a read-only archive of known world and saved character records; artwork is illustrative.
+function WorldCodex({profile,world,original,layout,go,back}){
+  const [category,setCategory]=useState('regions'),[query,setQuery]=useState(''),[selectedId,setSelected]=useState(null),[pageIndex,setPage]=useState(0);
+  const visited=profile?.world.visitedRegions||[],completed=profile?.world.completedEncounters||[];
+  const regions=(world?.regions||[]).filter(r=>visited.includes(r.id));
+  const defeated=(world?.encounters||[]).filter(e=>completed.includes(e.id));
+  const companions=profile?ROSTER.filter(m=>memberFor(profile,m.id).recruited):[];
+  const inv=profile?.inventory||{};
+  const categories=[['regions','Regions'],['factions','Factions'],['creatures','Creatures'],['history','History'],['people','People'],['artifacts','Artifacts'],['mythology','Mythology']];
+  const entries={
+    regions:regions.map(r=>({id:r.id,name:r.name,summary:'Discovered region recorded in your exploration progress.',details:[['Discovery','Visited'],['World range',Number.isFinite(r.minX)&&Number.isFinite(r.maxX)?r.minX+' – '+r.maxX:'Unavailable'],['Current region',world?.region===r.name?'Yes':'Not confirmed']],note:'This entry is derived from the live world map and saved discoveries.'})),
+    factions:[],
+    creatures:defeated.map(e=>({id:e.id,name:e.label,summary:'Encounter completed and recorded in your saved progress.',details:[['Category',e.category||'Encounter'],['Status','Defeated']],note:'See the Bestiary for current encounter statistics and combat tactics.'})),
+    history:profile&&['active','complete','claimed'].includes(profile.quests.grove)?[{id:'grove',name:'Whispering Grove Spirit',summary:'A recorded quest in your journey.',details:[['Quest status',({active:'Active',complete:'Ready to complete',claimed:'Completed'})[profile.quests.grove]],['Encounter',completed.includes('wilds_grove_01')?'Defeated':'Not yet defeated']],note:'See the Quest Journal for the current objective.'}]:[],
+    people:companions.map(m=>({id:m.id,name:m.name,summary:'A recruited companion recorded in your party.',details:[['Recruitment','Recruited'],['Saved health',memberFor(profile,m.id).hp+' / '+m.maxHp]],note:'Manage active companions in Party Formation.'})),
+    artifacts:Object.entries(ITEMS).filter(([id,i])=>inv[id]>0&&(i.kind==='gear'||i.kind==='weapon')).map(([id,i])=>({id,name:i.name,summary:'An owned equipment record from your inventory.',details:[['Type',i.slot||i.kind],['Owned',inv[id]],['Sell value',i.sell||0]],note:'Use Inventory or Equipment Comparison for item management.'})),
+    mythology:[]
+  };
+  const matches=entries[category].filter(e=>e.name.toLowerCase().includes(query.trim().toLowerCase()));
+  const pages=Math.max(1,Math.ceil(matches.length/8)),index=Math.min(pageIndex,pages-1),visible=matches.slice(index*8,index*8+8);
+  const selected=visible.find(e=>e.id===selectedId)||visible[0];
+  const selectCategory=key=>{setCategory(key);setQuery('');setPage(0);setSelected(null);};
+  const tabs=categories.map(([key,label])=><Btn key={key} primary={category===key} aria-pressed={category===key} onClick={()=>selectCategory(key)}><span className={original&&key!=='regions'?'fa-art-sr':''}>{label}</span></Btn>);
+  const search=<input aria-label="Search codex records" placeholder="Search records..." value={query} onChange={e=>{setQuery(e.target.value);setPage(0);setSelected(null);}}/>;
+  const list=visible.map(e=><Btn key={e.id} primary={selected?.id===e.id} aria-pressed={selected?.id===e.id} onClick={()=>setSelected(e.id)}>{e.name}</Btn>);
+  const pager=<><Btn aria-label="Previous records" disabled={index===0} onClick={()=>setPage(index-1)}>‹</Btn><span>{index+1}/{pages}</span><Btn aria-label="Next records" disabled={index>=pages-1} onClick={()=>setPage(index+1)}>›</Btn></>;
+  const summary=selected?.summary||(!profile?'Start or load a character to see your records.':category==='factions'||category==='mythology'?'No authored entries available in this category.':query?'No records match your search.':'No records available in this category yet.');
+  const details=selected?.details.map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>);
+  const note=selected?.note||'Story and lore entries will appear when authored. No new lore has been inferred.';
+  const navigation=[['07','World Map'],['24','Bestiary'],['08','Quest Journal']];
+  const related=navigation.map(([id,label])=><Btn key={id} onClick={()=>go(id)}>{label}</Btn>);
+  if(original)return <div className="fa-original-codex">
+    <h2 className="fa-art-sr">World Codex</h2><Btn className="fa-codex-back" aria-label="Back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
+    <nav className="fa-codex-tabs" aria-label="Codex categories">{tabs}</nav>
+    <div className="fa-codex-search">{search}</div><section className="fa-codex-list" aria-label="Known records">{list}{!visible.length&&<p>No records</p>}</section>
+    <div className="fa-codex-pager">{pager}</div>
+    <div className="fa-codex-title"><strong>{selected?.name||categories.find(c=>c[0]===category)?.[1]}</strong><small>{matches.length} known records</small></div>
+    <span className="fa-codex-art-label">Original world illustration · not a live location view</span>
+    <div className="fa-codex-overview">{summary}</div><section className="fa-codex-details" aria-label="Record details">{details}</section>
+    <div className="fa-codex-note">{note}</div><div className="fa-codex-counts"><span>{visited.length} visited</span><span>{completed.length} cleared</span></div>
+    <nav className="fa-codex-related" aria-label="Related game screens">{related}</nav>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>World Codex</h2>{tabs}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{search}{list}{!visible.length&&<p>No records</p>}{pager}</Panel><Panel rect={layout[2]}><h2>{selected?.name||'No record selected'}</h2><p>{summary}</p>{details}<p>{note}</p>{related}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1308,7 +1353,7 @@ export default function SapphireAdventure(){
     case '26':content=<Recruitment profile={profile} encounter={encounter} selected={selectedCompanion} member={member} onSelect={setCompanionId} onRecruit={m=>requestConfirm('Recruit '+m.name+'?',()=>transact(p=>recruitCompanion(p,m.id),m.name+' joined'))} original={original} layout={screen.layout} go={go} back={back}/>;break;
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
     case '28':content=<Achievements key={profile?.id||'guest'} profile={profile} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
+    case '29':content=<WorldCodex key={profile?.id||'guest'} profile={profile} world={world} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '31':content=<TreasureReveal profile={profile} discovery={discovery} loot={loot} encounter={encounter} original={original} layout={screen.layout} onItems={()=>go('38')} onContinue={back}/>;break;
     case '32':content=<Attributes key={profile?.id||'guest'} profile={profile} level={level} locked={!profile||Boolean(encounter&&hud?.phase!=='over')} original={original} layout={screen.layout} unlockedIds={result?.unlocked||[]} back={back} onConfirm={(base,draft)=>{const live=current.current.profile;if(!live||live!==base||(current.current.encounter&&hud?.phase!=='over')||!Array.isArray(draft)||draft.length>pointsFor(live)||draft.some(k=>!STAT_KEYS.includes(k)))return false;const next=draft.reduce((p,k)=>allocate(p,k),live);replaceProfile(next);autosave(next);finishLevel();return true;}}/>;break;
