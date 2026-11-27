@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R101 — third twenty opportunity window predicates:** [The burdens we carry](R101_D21-D30_S21-S30_OPPORTUNITY_WINDOW_AUDIT.md). D21–D30/S21–S30 source re-audit with twenty proposed dialogue packets and terrain deltas, D25 required second vista, S27/S29 verified evidence adapter pending approval, actual two-lane receipts and independent optional outcomes. Supplemental audit 60/105; exact original closure TBD. Next D31–D40/S31–S40. Draft only.
+
 > **R100 — second twenty opportunity window predicates:** [The things we leave behind](R100_D11-D20_S11-S20_OPPORTUNITY_WINDOW_AUDIT.md). D11–D20/S11–S20 source re-audit, twenty proposed dialogue alternatives and terrain deltas; independent original action receipts, S13 read-only evidence, S19 two lanes and D20 watch variants. Exact original phase cutoff TBD; supplemental audit 40/105. Next D21–D30/S21–S30. Draft only.
 
 > **R99 — first twenty opportunity window predicates:** [The opportunities hidden within history](R99_D01-D10_S01-S10_OPPORTUNITY_WINDOW_AUDIT.md). D01–D10/S01–S10 source re-audit, twenty dialogue alternatives and terrain deltas; D02 second vista, S09 provisional report and S10 drain/lantern reconciliation. Exact original phase closure TBD; new audit series 20/105. Next D11–D20/S11–S20. Draft only.
