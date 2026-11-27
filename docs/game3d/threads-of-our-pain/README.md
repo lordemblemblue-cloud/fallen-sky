@@ -49,6 +49,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M05 | The Silver Path | [Expanded main quest](M05.md) | Ready for proposed blockout; unverified |
 | D22 | The Stitch in the Wind | [Expanded discovery](D22_S28.md) | Ready for proposed blockout; unverified |
 | S28 | Remoria's Missing Banner | [Expanded optional quest and terrain brief](D22_S28.md) | Ready for proposed blockout; unverified |
+| M06 | A Life Forgotten | [Expanded main quest](M06.md) | Ready for proposed blockout; unverified |
+| D23 | The Road Without Flags | [Expanded discovery](D23_S30.md) | Ready for proposed blockout; unverified |
+| S30 | The Caravan Without Flags | [Expanded optional quest and terrain brief](D23_S30.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -119,3 +122,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R25
 
 [M05](M05.md) establishes the evacuation, original body's canonical death, shared life force, preserved reality, checkpoint and cinematic transition without exposing the cosmological explanation early. [D22/S28](D22_S28.md) preserves the banner-corner alignment, rescue pennants, concealed seamstress shelter, Remnant Bracer and independent investigation with S29 evidence; culprit remains unresolved. 25/50 discoveries, 15/55 optional quests, 5/20 main quests expanded; all 75 outlines retained. Master v2.1 R25 saved in Library; 176 pages, all 2,215 previous paragraphs preserved, 167 earlier page renders byte-identical, nine added pages reviewed at overview scale. Next M06 — A Life Forgotten, D23 — The Road Without Flags / S30 — The Caravan Without Flags (Escort stamina utility); S29 separately after prerequisite investigations. Pending D02/D03/D05/D06/M07 reconciliation; S13/S19/S25/S26 separate. Claude return surveyed anchors, layout, traversal and performance checks. No terrain build, code, merge, deployment or credits.
+
+## Revision R26
+
+[M06](M06.md) preserves the silver mark, Goddess dialogue, Wolfveil return, Lyra and optional Oath Tree; the open world unlocks without optional quests or premature cosmological explanation. [D23/S30](D23_S30.md) preserves wheel-circle alignment, supply tunnel, escort badge and independent mixed-caravan escort with M15 trust. 26/50 discoveries, 16/55 optional quests, 6/20 main quests expanded; all 75 outlines retained. Master v2.2 R26 saved in Library, 186 pages, 2,316 prior paragraphs preserved, all 176 earlier page images byte-identical; ten new pages reviewed at overview scale. Next M07 — The Mark of a Forgotten Age (reconcile earlier draft), D24 — The Physician's Hand / S33 — The Physician's Truce (Emergency recovery ability). S29 remains separate; S13/S19/S25/S26 separate. D02/D03/D05/D06 pending reconciliation. Claude return surveyed anchors, actual layout, cart clearances, traversal and performance tests. Terrain unbuilt; no code, merge, deployment or credits.
