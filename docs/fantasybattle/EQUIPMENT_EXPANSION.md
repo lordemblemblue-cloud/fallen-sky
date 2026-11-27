@@ -16,3 +16,17 @@ Two-piece bonuses per wearer: Pilgrim DEF +2; Moonveil ATK +2, SPD +1; Astral AT
 Next: expand weapon registry and enhancement persistence, plan accessory slots with renderer separation, then add explicitly allowlisted art references and fallbacks. Do not automatically copy Fallen Sky's separate balance/ascension rules to Fantasy Battle. Supply Claude/Gemini with stable item IDs, slot, theme, icon and optional equipped visual asset needs; asset delivery must never affect ownership, eligibility or statistics.
 
 Chapter 6 passed Fantasy Battle and Base44 security checks. New equipment tests added, CI and actual browser/mobile validation still pending. No merge or publish requested.
+
+## Second pass — weapon progression
+
+Three new hero bows extend the existing catalog; the existing two bows retain their original stats, costs and eligibility.
+
+| Weapon ID | Name | Level | Rarity | Base ATK | Buy | Sell |
+| --- | --- | ---: | --- | ---: | ---: | ---: |
+| pilgrimBow | Pilgrim Recurve | 2 | Rare | 6 | 100 | 40 |
+| moonveilBow | Moonveil Longbow | 3 | Elite | 9 | 155 | 62 |
+| astralBow | Astral Starbow | 4 | Legendary | 12 | 220 | 88 |
+
+Purchasing ahead of level is permitted; equipping and comparison enforce eligibility. All bows share existing deterministic +0 to +5 enhancement rules: +2 attack each, one ore and 15 + 10 × current enhancement gold per step. The existing save model treats enhancement as a permanent unlock per weapon type, not per owned copy; it survives weapon switching and selling/rebuying. No automatic conversion to instance-based gear or new failure rates. Old saves may omit the three new inventory and enhancement keys; import preserves only registered IDs. Unknown enhancement keys and invalid ranks are rejected. Blacksmith confirmation compares the current effective enhancement (zero if absent) before debiting. New bows use the existing Sapphire bow icon as a temporary placeholder and existing rig geometry; no new art files or independent weapon animations.
+
+Balance is provisional. Companions retain their class weapons. Next: accessory slot(s) and stable graphical asset registration with fallback, separate from equipment stats. New weapon tests are added but not yet verified by CI; no merge/publish.
