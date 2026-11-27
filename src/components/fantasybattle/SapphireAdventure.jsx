@@ -571,6 +571,29 @@ function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onF
   </div>;
 }
 
+// Victory is a read-only presentation of the actual resolved encounter.
+function BattleVictory({profile,encounter,result,hud,original,layout,onContinue,onItems,onDetails}){
+  const verified=Boolean(profile&&encounter&&result&&hud?.winner==='player');
+  const xp=verified?result.xp||0:0,gold=verified?result.gold||0:0;
+  const earned=verified?(result.loot||[]):[];
+  const units=verified?(hud.units||[]):[];
+  const allies=units.filter(u=>u.team==='player'),enemies=units.filter(u=>u.team==='enemy');
+  const currentLevel=profile?levelFor(profile.xp):0,previousLevel=profile?levelFor(Math.max(0,profile.xp-xp)):0;
+  const rows=allies.map(u=><div key={u.id} className="fa-victory-member"><div className="fa-victory-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-victory-member-data"><strong>{u.name}</strong><small>{u.id==='hero'?'Level '+previousLevel+(currentLevel>previousLevel?' → '+currentLevel+' · Level up':''):'Companion'} · {u.hp===0?'Down':'Survived'}</small><progress aria-label={u.name+' final health'} value={u.hp} max={u.maxHp}/><small>Final HP {u.hp}/{u.maxHp}{u.id==='hero'?' · +'+xp+' XP':''}</small></div></div>);
+  const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':xp===0?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(id=>ACTIONS[id]?.name||id).join(', ')}</p>}</>;
+  const summary=<><p>Result: {verified?'Victory':'Unavailable'}</p><p>Rounds: {verified?hud.round:'—'}</p><p>Enemies defeated: {enemies.filter(u=>u.hp===0).length}/{enemies.length}</p><p>Allies standing: {allies.filter(u=>u.hp>0).length}/{allies.length}</p><p>Experience: +{xp}</p><p>Gold: +{gold}</p><small>Duration, damage totals and battle ranks are not tracked in this build.</small></>;
+  const nextLabel=verified&&result.leveled?'Level Up':'Continue';
+  const controls=<><Btn disabled={!verified} onClick={onDetails}>Details</Btn><Btn primary disabled={!verified} onClick={onContinue}>{nextLabel}</Btn><Btn disabled={!earned.length} onClick={onItems}>View Items</Btn></>;
+  if(original)return <div className="fa-original-victory">
+    <div className="fa-victory-encounter">{encounter?.label||'Encounter result'}</div>
+    <div className="fa-victory-xp">Total XP gained: +{xp}</div><section className="fa-victory-party" aria-label="Party results">{rows}</section>
+    <div className="fa-victory-gold">Gold gained: +{gold}</div><section className="fa-victory-rewards" aria-label="Earned rewards">{rewards}</section>
+    <section id="fa-victory-details" tabIndex={-1} className="fa-victory-stats" aria-label="Battle statistics">{summary}</section>
+    <Btn className="fa-victory-details-button" disabled={!verified} onClick={()=>document.getElementById('fa-victory-details')?.focus()}>Details</Btn><Btn primary className="fa-victory-continue" disabled={!verified} onClick={onContinue}>{nextLabel}</Btn><Btn className="fa-victory-items" disabled={!earned.length} onClick={onItems}>View Items</Btn>
+  </div>;
+  return <Panel rect={layout[0]}><h2>Victory</h2><p>{encounter?.label}</p>{rows}{rewards}{summary}{controls}</Panel>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -697,7 +720,7 @@ export default function SapphireAdventure(){
     processed.current=e.token;
     const won=state.winner==='player';
     if(won&&!e.practice){const r=rewardVictory(p,e,state.units.find(u=>u.id==='hero')?.hp,state.units);replaceProfile(r.profile);setResult(r);setLoot(r.loot);notify('Victory · +'+r.xp+' XP · +'+r.gold+' gold');autosave(r.profile);}
-    else setResult({profile:p,xp:0,leveled:false,unlocked:[]});
+    else{setResult({profile:p,xp:0,gold:0,loot:[],leveled:false,unlocked:[]});setLoot([]);}
     root(won?'14':'15');
   };
   const victoryContinue=()=>{const r=current.current.result,p=current.current.profile;if(r?.leveled){go('32');return;}resumeWorld(p);};
@@ -893,7 +916,7 @@ export default function SapphireAdventure(){
     case '10':content=original?<OriginalExplorationHud profile={profile} world={world} notifications={notifications} post={post} go={go} onPause={openPause} onFocus={()=>frame.current?.focus()}/>:<>{pane(0,<><strong>{profile?.name}</strong><p>Level {level}</p><progress value={profile?.xp%100||0} max={100}/><small>{profile?.xp||0} total XP</small><progress value={profile?.hp||0} max={stats.maxHp}/><small>HP {profile?.hp||0}/{stats.maxHp} · Gold {profile?.gold||0}</small></>)}{pane(1,<button className="fa-map-button" onClick={()=>go('07')}><RegionMap world={world} profile={profile} small/></button>)}{pane(2,<><small>{world?.region}</small>{world?.nearby&&<Btn primary onClick={()=>post('interact')}>{world.nearby} · E</Btn>}{profile?.quests.grove==='active'&&<p>Quest: Defeat the Grove Spirit</p>}</>)}{pane(3,<div className="fa-hud-buttons"><Btn onClick={openPause}>Menu</Btn><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('08')}>Journal</Btn><Btn onClick={()=>go('12')}>Skills</Btn></div>)}<div className="fa-touch">{[['left','←'],['right','→'],['in','↑'],['out','↓'],['run','Run']].map(([k,label])=><Btn key={k} onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);post('move',{key:k,value:true});}} onPointerUp={()=>post('move',{key:k,value:false})} onPointerCancel={()=>post('move',{key:k,value:false})} onLostPointerCapture={()=>post('move',{key:k,value:false})}>{label}</Btn>)}<Btn onClick={()=>post('jump')}>Jump</Btn></div><div className="fa-hud-top"><Btn onClick={()=>frame.current?.focus()}>Focus world · WASD · Shift run</Btn></div></>;break;
     case '11':content=<PartyFormation key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} transact={transact} go={go} back={back} statPanel={statPanel}/>;break;
     case '12':content=<Skillbook key={profile?.id||'guest'} profile={profile} level={level} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '14':content=pane(0,<><h2>Victory</h2><p>{encounter?.label}</p><p>Experience earned: +{result?.xp||0} · Gold +{result?.gold||0}</p>{lootList}{loot.length>0&&<Btn onClick={()=>go('38')}>View Acquired Items</Btn>}{result?.leveled&&<p>Level {level} reached! {pointsFor(profile)} unspent points.</p>}<Btn primary onClick={victoryContinue}>{result?.leveled?'Level Up':'Continue'}</Btn></>);break;
+    case '14':content=<BattleVictory profile={profile} encounter={encounter} result={result} hud={hud} original={original} layout={screen.layout} onContinue={victoryContinue} onItems={()=>go('38')} onDetails={()=>go('37')}/>;break;
     case '15':content=pane(0,<><h2>Defeat</h2><p>No rewards were granted.</p><Btn primary onClick={retryBattle}>Retry</Btn><Btn onClick={()=>resumeWorld()}>Return to Exploration</Btn><Btn disabled={!validSlots.length} onClick={()=>go('02')}>Load Game</Btn><Btn onClick={()=>requestConfirm('Return to the title?',leaveTitle)}>Title</Btn></>);break;
     case '18':content=original?<div className="fa-original-save">
       <nav className="fa-art-side-nav fa-save-nav" aria-label="Save game navigation">
