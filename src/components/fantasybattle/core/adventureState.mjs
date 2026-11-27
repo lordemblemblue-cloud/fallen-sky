@@ -19,6 +19,39 @@ export function selectAppearance(p,id){
   if(!isProfile(p)||!Object.hasOwn(APPEARANCES,id))throw Error('Unknown appearance.');
   return {...p,appearance:id};
 }
+// First recruitable companion uses the existing bow rig until distinct art is authored.
+// All values below are prototype balancing, not a new character class or story canon.
+export const COMPANION=Object.freeze({id:'groveArcher',name:'Grove Archer',tint:0x9fe8ce,role:'Archer',maxHp:85,atk:9,def:9,spd:9,requiredEncounter:'wilds_grove_01'});
+export const partyFor=p=>p?.party||{recruited:false,active:false,front:'hero',hp:COMPANION.maxHp,bond:0};
+export function validParty(p){
+  if(p.party===undefined)return true;
+  const a=p.party;
+  return Boolean(a&&typeof a.recruited==='boolean'&&typeof a.active==='boolean'&&(!a.active||a.recruited)&&['hero',COMPANION.id].includes(a.front)&&(a.front==='hero'||a.active)&&integer(a.hp,1,COMPANION.maxHp)&&integer(a.bond,0,100)&&(!a.recruited?(!a.active&&a.bond===0&&a.hp===COMPANION.maxHp):p.world.completedEncounters.includes(COMPANION.requiredEncounter)));
+}
+export function recruitCompanion(p){
+  const a=partyFor(p);
+  if(a.recruited)throw Error('Companion already recruited.');
+  if(!p.world.completedEncounters.includes(COMPANION.requiredEncounter))throw Error('Defeat the Whispering Grove Spirit first.');
+  return {...p,party:{...a,recruited:true,active:true}};
+}
+export function configureParty(p,{active=partyFor(p).active,front=partyFor(p).front}={}){
+  const a=partyFor(p);
+  if(!a.recruited||typeof active!=='boolean'||!['hero',COMPANION.id].includes(front))throw Error('Invalid party formation.');
+  return {...p,party:{...a,active,front:active?front:'hero'}};
+}
+export function companionProgress(p,encounter,units){
+  const a=partyFor(p);
+  if(!a.active||encounter?.practice||p.world.completedEncounters.includes(encounter?.id))return a;
+  const u=units?.find(x=>x.id===COMPANION.id);
+  if(!u||!Number.isInteger(u.hp))return a;
+  return {...a,hp:Math.max(1,Math.min(COMPANION.maxHp,u.hp)),bond:Math.min(100,a.bond+5)};
+}
+export function recoverParty(p){
+  const a=partyFor(p);
+  if(!a.recruited)return p;
+  return {...p,party:{...a,hp:COMPANION.maxHp}};
+}
+
 export const SLOT_IDS=['1','2','3'];
 export const STAT_KEYS=['vitality','strength','defense','speed'];
 export const DEFAULT_SETTINGS=Object.freeze({quality:'performance',muted:false,reducedMotion:false});
@@ -32,10 +65,10 @@ export const pointsFor=p=>Math.max(0,levelFor(p.xp)-1-STAT_KEYS.reduce((n,k)=>n+
 export function createProfile(name){
   const clean=String(name??'').trim().slice(0,40);
   if(!clean)throw Error('Enter a character name.');
-  return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
+  return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=218&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer(p.inventory?.[k],0,100000))&&['starterBow','sapphireBow'].includes(p.equipped)&&p.inventory[p.equipped]>0&&['starterBow','sapphireBow'].every(k=>integer(p.enhancements?.[k],0,5))&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance));
+  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=218&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer(p.inventory?.[k],0,100000))&&['starterBow','sapphireBow'].includes(p.equipped)&&p.inventory[p.equipped]>0&&['starterBow','sapphireBow'].every(k=>integer(p.enhancements?.[k],0,5))&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validParty(p);
 }
 export function readSlots(storage){
   let raw;try{raw=storage.getItem(SAVE_KEY);}catch(error){return {slots:[],error:String(error?.message||error)};}
@@ -63,7 +96,7 @@ export function updateWorld(p,w){
   const region=w.regions?.find(r=>w.position[0]>=r.minX&&w.position[0]<=r.maxX);
   return {...p,world:{...p.world,position:[Math.max(1.5,Math.min(218,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))],discoveries:uniqueStrings(w.discoveries)?[...new Set([...p.world.discoveries,...w.discoveries])]:p.world.discoveries,visitedRegions:region?[...new Set([...p.world.visitedRegions,region.id])]:p.world.visitedRegions}};
 }
-export function rewardVictory(p,encounter,remainingHp=p?.hp){
+export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
   if(!p||!encounter?.id||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[]};
   // Explicit prototype balancing: one-time 25 XP for normal encounters, 50 elite, 100 boss.
   const xp=encounter.category==='Boss'?100:encounter.category==='Elite'?50:25;
@@ -72,7 +105,7 @@ export function rewardVictory(p,encounter,remainingHp=p?.hp){
   const oldLevel=levelFor(p.xp),newLevel=levelFor(p.xp+xp);
   const completedEncounters=[...p.world.completedEncounters,encounter.id];
   const quest=p.quests.grove==='active'&&completedEncounters.includes('wilds_grove_01')?'complete':p.quests.grove;
-  return {profile:{...p,xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre+ore},world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot:[{id:'sapphireOre',count:ore}],leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
+  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre+ore},world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot:[{id:'sapphireOre',count:ore}],leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
 }
 export function allocate(p,key){if(!STAT_KEYS.includes(key)||pointsFor(p)<1)return p;return {...p,hp:p.hp+(key==='vitality'?10:0),attributes:{...p.attributes,[key]:p.attributes[key]+1}};}
 export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return {maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+(p?.enhancements?.[p?.equipped]||0)*2,def:10+2*a.defense,spd:11+a.speed};}
@@ -105,8 +138,8 @@ export function craftTonic(p) {
   return {...p,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-2,recoveryTonic:p.inventory.recoveryTonic+1}};
 }
 export function heal(p,{sanctuary=false}={}) {
-  const max=heroStats(p).maxHp;if(p.hp>=max)throw Error('Health is already full.');
-  if(sanctuary)return {...p,hp:max};
+  const max=heroStats(p).maxHp;if(sanctuary){if(p.hp>=max&&(!partyFor(p).recruited||partyFor(p).hp>=COMPANION.maxHp))throw Error('Health is already full.');return recoverParty({...p,hp:max});}
+  if(p.hp>=max)throw Error('Health is already full.');
   if(!p.inventory.recoveryTonic)throw Error('No Recovery Tonics available.');
   return {...p,hp:Math.min(max,p.hp+ITEMS.recoveryTonic.heal),inventory:{...p.inventory,recoveryTonic:p.inventory.recoveryTonic-1}};
 }
@@ -133,7 +166,7 @@ export function parseBackup(raw){
   if(data?.format!=='fantasy-battle-guest-save'||data.version!==1||!isProfile(data.profile))throw Error('This is not a valid Fantasy Battle save backup.');
   // Pick supported fields to avoid preserving unknown or injected properties.
   const p=data.profile,w=p.world;
-  return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',xp:p.xp,hp:p.hp,gold:p.gold,
+  return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',party:{...partyFor(p)},xp:p.xp,hp:p.hp,gold:p.gold,
     inventory:Object.fromEntries(Object.keys(ITEMS).map(k=>[k,p.inventory[k]])),equipped:p.equipped,
     enhancements:{starterBow:p.enhancements.starterBow,sapphireBow:p.enhancements.sapphireBow},
     rewardedDiscoveries:[...p.rewardedDiscoveries],attributes:Object.fromEntries(STAT_KEYS.map(k=>[k,p.attributes[k]])),
