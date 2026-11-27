@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady } from '@/lib/webgpuSceneRenderer.js';
 import { buildRig, createPuppetState, stepPuppet, socketPosition, setLookTarget as lookAt, triggerExpression as expressionOf } from './core/puppetCore.mjs';
+import {makeEnemyRig,requiredEnemyParts} from './core/enemyVisuals.mjs';
 import { makeCompanionRig, requiredCompanionParts, visualFor } from './core/companionVisuals.mjs';
 import {createSecondaryMotion,sampleMotion,resetSecondaryMotion} from './core/secondaryMotion.mjs';
 import { MELEE_SKILLS, isMeleeSkill, approachWeight, classAnimationLibrary, guardPose } from './core/meleeSkills.mjs';
@@ -186,10 +187,12 @@ export class FantasyBattleStage {
     const companionIds=this.units.filter(u=>u.team==='player'&&visualFor(u.id)).map(u=>u.id);
     const loader=new THREE.TextureLoader();
     // All settled so a failed asset or a cancelled mount does not leak successful textures.
-    const loaded=await Promise.allSettled(requiredCompanionParts(companionIds).map(async a=>[a.key,prepareTexture(await loader.loadAsync(a.url))]));
-    if(this.disposed||loaded.some(a=>a.status==='rejected')){for(const a of loaded)if(a.status==='fulfilled')a.value[1].dispose();if(this.disposed)return;throw new Error('Companion artwork failed to load.');}
+    const enemyIds=[...new Set(this.units.filter(u=>u.team==='enemy'&&u.visualId).map(u=>u.visualId))];
+    const loaded=await Promise.allSettled([...requiredCompanionParts(companionIds),...requiredEnemyParts(enemyIds)].map(async a=>[a.key,prepareTexture(await loader.loadAsync(a.url))]));
+    if(this.disposed||loaded.some(a=>a.status==='rejected')){for(const a of loaded)if(a.status==='fulfilled')a.value[1].dispose();if(this.disposed)return;throw new Error('Character artwork failed to load.');}
     for(const a of loaded)this.textures.set(...a.value);
     this.companionRigs=new Map(companionIds.map(id=>{const v=makeCompanionRig(id,rigData,manifest);return [id,buildRig(v.data,v.manifest)];}));
+    this.enemyRigs=new Map(enemyIds.map(id=>{const v=makeEnemyRig(id,rigData,manifest);return [id,buildRig(v.data,v.manifest)];}));
     this.rendererInfo.api = renderer.isWebGPURenderer ? (renderer.backend?.isWebGPUBackend ? 'WebGPU' : 'WebGL2 (WebGPU renderer)') : 'WebGL';
     this.buildScene();
     this.restart();
@@ -213,7 +216,7 @@ export class FantasyBattleStage {
       const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
       const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
       const y=compact&&idx>=2?185:0;
-      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,gearVisuals:u.gearVisuals,weaponId:u.weaponId,rig:this.companionRigs?.get(u.id)||this.rig,textures:this.textures,arrowTexture,tint:this.companionRigs?.has(u.id)?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,gearVisuals:u.gearVisuals,weaponId:u.weaponId,rig:this.companionRigs?.get(u.id)||this.enemyRigs?.get(u.visualId)||this.rig,textures:this.textures,arrowTexture,tint:(this.companionRigs?.has(u.id)||this.enemyRigs?.has(u.visualId))?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
     }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
