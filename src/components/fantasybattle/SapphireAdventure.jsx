@@ -256,6 +256,45 @@ function Recruitment({profile,encounter,selected,member,onSelect,onRecruit,origi
   return <><Panel rect={layout[0]}><h2>Companions</h2>{list}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><ArcherPortrait companion={selected}/><h2>{selected.name}</h2><p>{selected.role}</p>{abilities}</Panel><Panel rect={layout[2]}>{attributes}{requirements}{recruit}<Btn onClick={()=>go('11')}>Party</Btn></Panel></>;
 }
 
+// Bond points are earned by the existing companionProgress victory transaction.
+function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back}){
+  const [filter,setFilter]=useState('all');
+  const visible=ROSTER.filter(m=>filter==='all'||(filter==='active'?memberFor(profile,m.id).active:memberFor(profile,m.id).recruited));
+  const selected=visible.find(m=>m.id===selectedId)||visible[0];
+  const state=selected?memberFor(profile,selected.id):null;
+  const recruited=Boolean(profile&&state?.recruited);
+  const bond=recruited?state.bond:0;
+  const tier=!recruited?'Not recruited':bond>=75?'Trusted':bond>=25?'Familiar':'New companion';
+  const next=bond<25?25:bond<75?75:100;
+  const nextText=!recruited?'Recruit the companion first.':bond===100?'Maximum bond reached.':(next-bond)+' points to '+(next===25?'Familiar':next===75?'Trusted':'maximum bond');
+  const status=m=>{const s=memberFor(profile,m.id);return !s.recruited?'Locked':s.active?'Active · '+s.bond+'/100':'Reserve · '+s.bond+'/100';};
+  const filterControl=<label className="fa-bond-filter"><span className="fa-art-sr">Filter companions</span><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All companions</option><option value="recruited">Recruited</option><option value="active">Active party</option></select></label>;
+  const choices=visible.map(m=><Btn key={m.id} primary={selected?.id===m.id} aria-pressed={selected?.id===m.id} onClick={()=>onSelect(m.id)}><ArcherPortrait companion={m} small/><strong>{m.name}</strong><small>{status(m)}</small></Btn>);
+  const portrait=selected?<ArcherPortrait companion={selected}/>:<p>No companions match this filter.</p>;
+  const progress=<progress aria-label="Earned companion bond" max={100} value={bond}/>;
+  const explanation=<p>Gain 5 bond per first-time victory while the recruited companion is active. Practice and repeat victories do not count.</p>;
+  const milestones=[[0,'New companion'],[25,'Familiar'],[75,'Trusted'],[100,'Maximum bond']];
+  const milestoneRows=milestones.map(([threshold,label])=><div key={threshold} className="fa-bond-milestone"><span>{label} · {threshold}</span><small>{recruited&&bond>=threshold?'Reached':'Not reached'}</small></div>);
+  const unavailable=<><p>No bond-based statistic bonuses or abilities are implemented.</p><small>Stories, gifts and dialogue are not available in this build.</small></>;
+  if(original)return <div className="fa-original-bonds">
+    <h2 className="fa-bond-title">Relationships &amp; Bonds</h2><span className="fa-bond-subtitle">Companion progression</span>
+    {filterControl}<section className="fa-bond-list" aria-label="Companions">{choices}{!visible.length&&<p>No matching companions</p>}</section>
+    <div className="fa-bond-list-note">{ROSTER.filter(m=>memberFor(profile,m.id).recruited).length} / {ROSTER.length} recruited</div>
+    <div className="fa-bond-portrait">{portrait}</div><div className="fa-bond-name">{selected?.name||'No companion'}</div><div className="fa-bond-role">{selected?.role||'—'}</div>
+    <div className="fa-bond-level">{recruited?bond:'—'}</div><h3 className="fa-bond-tier">{tier}</h3><div className="fa-bond-points">{recruited?bond+' / 100':'—'}</div>
+    <div className="fa-bond-progress">{progress}</div><div className="fa-bond-next">{nextText}</div>
+    <nav className="fa-bond-tabs" aria-label="Relationship categories"><span aria-current="page">Overview</span><Btn disabled>Stories</Btn><Btn disabled>Gifts</Btn><Btn disabled>Dialogue</Btn></nav>
+    <h3 className="fa-bond-status-heading">Relationship status</h3><div className="fa-bond-status">{tier}</div><section className="fa-bond-explanation">{explanation}</section>
+    <section className="fa-bond-earned"><strong>Earned bond</strong><p>{recruited?Math.floor(bond/5)+' bond increments':'Not recruited'}</p><small>Maximum 100</small></section>
+    <h3 className="fa-bond-effect-title">Bond effects</h3><section className="fa-bond-effects">{unavailable}</section>
+    <section className="fa-bond-advancement"><strong>Next milestone</strong><p>{nextText}</p></section>
+    <h3 className="fa-bond-rewards-title">Bond milestones</h3><section className="fa-bond-milestones" aria-label="Bond milestones">{milestoneRows}<p>Milestones are descriptive; no rewards are claimable.</p></section>
+    <Btn className="fa-bond-gift" disabled>Gifts unavailable</Btn><Btn className="fa-bond-talk" disabled>Dialogue unavailable</Btn>
+    <div className="fa-bond-navigation"><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></div>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Companions</h2>{filterControl}{choices}{!visible.length&&<p>No matching companions</p>}</Panel><Panel rect={layout[1]}>{portrait}<h2>{selected?.name||'No companion'}</h2><p>{tier}</p></Panel><Panel rect={layout[2]}><h2>Bond</h2>{progress}<p>{recruited?bond+'/100':'Not recruited'} · {tier}</p><p>{nextText}</p>{explanation}{milestoneRows}{unavailable}</Panel><Panel rect={layout[3]}><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -619,7 +658,7 @@ export default function SapphireAdventure(){
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
     case '28':content=<>{pane(0,nav(['24','29']))}{pane(1,<StatRows stats={{'Regions discovered':profile?.world.visitedRegions.length||0,'Encounters defeated':profile?.world.completedEncounters.length||0,'Hidden discoveries':profile?.world.discoveries.length||0}}/>)}{pane(2,<p>Milestone tracking is live. Achievement rewards have not been defined.</p>)}</>;break;
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
-    case '30':content=<>{pane(0,<><h2>Companions</h2>{ROSTER.filter(m=>memberFor(profile,m.id).recruited).map(m=><Btn key={m.id} primary={companionId===m.id} onClick={()=>setCompanionId(m.id)}>{m.name}</Btn>)}</>)}{pane(1,<><ArcherPortrait companion={selectedCompanion}/><h2>{member.recruited?selectedCompanion.name:'Not recruited'}</h2></>)}{pane(2,<><h2>Bond</h2><progress value={member.bond} max={100}/><p>{member.bond}/100 · {!member.recruited?'Not recruited':member.bond>=75?'Trusted':member.bond>=25?'Familiar':'New companion'}</p><p>Gain 5 bond per new victory together. Practice and repeat rewards do not count.</p><small>Story events and bond abilities are not yet authored.</small></>)}{pane(3,<Btn onClick={()=>go('26')}>Recruitment</Btn>)}</>;break;
+    case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '31':content=pane(0,<><h2>Treasure Discovered</h2><p>{discovery}</p>{lootList}<p>These items were recorded once in your inventory.</p><Btn primary onClick={()=>go('38')}>View Items</Btn><Btn onClick={back}>Continue</Btn></>);break;
     case '32':content=<Attributes key={profile?.id||'guest'} profile={profile} level={level} locked={!profile||Boolean(encounter&&hud?.phase!=='over')} original={original} layout={screen.layout} unlockedIds={result?.unlocked||[]} back={back} onConfirm={(base,draft)=>{const live=current.current.profile;if(!live||live!==base||(current.current.encounter&&hud?.phase!=='over')||!Array.isArray(draft)||draft.length>pointsFor(live)||draft.some(k=>!STAT_KEYS.includes(k)))return false;const next=draft.reduce((p,k)=>allocate(p,k),live);replaceProfile(next);autosave(next);finishLevel();return true;}}/>;break;
     case '33':content=<>{pane(0,<><h2>Rest Point</h2><p>{service?.label||'Not at a sanctuary'}</p></>)}{pane(1,statPanel)}{pane(2,<><p>Restore the leader and all recruited companions at a registered service point.</p><Btn disabled={!serviceAvailable||(profile.hp>=stats.maxHp&&!partyNeedsRest(profile))} onClick={()=>requestConfirm('Rest and recover?',()=>transact(p=>heal(p,{sanctuary:true}),'Health restored'))}>Rest</Btn><Btn onClick={()=>go('18')}>Save</Btn></>)}{pane(3,<Btn onClick={()=>root('10')}>Leave</Btn>)}</>;break;

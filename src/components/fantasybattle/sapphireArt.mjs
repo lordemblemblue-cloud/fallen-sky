@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '30':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/1bc94f4f4c30f8fde38b9ac3d52fd283_fantasy-battle-30-runtime.webp',source:'Fantasy RPG Relationships & Bonds UI.png — original modular template batch 15',mode:'full',wideOnly:true}),
  '26':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/4869206b950ade4be0dc82c5fe237c6e_fantasy-battle-26-runtime.webp',source:'Lyria’s Temple Cleric Recruitment.png — original template batch 11',mode:'full',wideOnly:true}),
  '11':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/54a46941731d8e937e7d0d707c625275_fantasy-battle-11-runtime.webp',source:'Fantasy Battle original modular template batch 17 — Party Formation',mode:'full',wideOnly:true}),
  '45':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/0f182968be4f244f18522e6a0c5f7e5e_fantasy-battle-45-runtime.webp',source:'Moonlit Crescent Skill Unlocked.png — original template batch 07',mode:'full',wideOnly:true}),
