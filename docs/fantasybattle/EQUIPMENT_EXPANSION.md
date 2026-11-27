@@ -53,3 +53,18 @@ Next: audit inventory/loot acquisition, economy and encounter rewards, and suppl
 ## Fourth pass — first-victory loot
 
 All 14 existing world encounters grant one deterministic equipment item alongside existing XP, gold and ore on their first recorded victory. See ENCOUNTER_GEAR_REWARDS in adventureState.mjs for stable item and encounter IDs. Existing equipment level gates, art fallbacks, merchant prices and combat balance are unchanged. Practice battles and repeated victories grant nothing. Older saves do not retroactively grant equipment for previously completed encounters; no migration or new save fields are required. Inventory grants and victory currencies are capped to existing save limits, with actual awarded amounts returned to the existing result UI. Discoveries retain their existing one-time tonic and ore rewards; new physical treasure placements await approved map anchors. This is provisional reward tuning, not a repeatable farming or server-authoritative economy. Regression tests added; CI and device validation required before merge. Next: merchant and crafting progression, treasure anchor registry and economy balance.
+
+## Fifth pass — merchant and crafting economy
+
+Merchant and crafting quantities are integers from 1 through 99. The same quote functions drive the UI and the transaction. Confirmations recheck the character, service marker, combat state and current resources; a single confirmation is consumed once. Buying and selling use existing catalog prices, protect equipped copies and enforce existing inventory/gold caps. All existing merchants retain their catalogs until regional stock is authored; no artificial stock or new currency.
+
+| Recipe ID | Party level | Sapphire Ore | Gold |
+| --- | ---: | ---: | ---: |
+| recoveryTonic | 1 | 2 | 0 |
+| groveVest | 1 | 3 | 22 |
+| sapphireBow | 1 | 4 | 50 |
+| pilgrimPendant | 2 | 4 | 30 |
+| moonveilRing | 3 | 5 | 45 |
+| astralPendant | 4 | 7 | 65 |
+
+Amounts are per output and provisional; the old tonic recipe is unchanged. Selling crafted items cannot produce more gold than selling the ingredients plus the crafting fee. No equipment is auto-equipped. Existing profile and backup schemas remain unchanged. Original merchant/crafting pictures remain the underlying UI templates; the existing potion illustration is decorative even for other recipes. Actual item art uses the existing registry and fallback. CI, lint and browser layout verification are still required. No new server endpoints, world/character artwork or publish action. Next: registered physical treasure anchors and location-specific discoveries, coordinating with the map team.
