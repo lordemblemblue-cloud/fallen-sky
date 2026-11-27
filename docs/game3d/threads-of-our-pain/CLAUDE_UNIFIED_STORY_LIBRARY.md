@@ -1,4 +1,6 @@
-# Claude unified story library — R70
+# Claude unified story library — R71
+
+> **R71:** [Original opportunity schedule — D21–D30 / S21–S30](R71_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 60/105, 45 pending. Preserve R66 evidence adapters, actual arrival and repair receipts, and second vista. Exact phase bounds and gameplay remain unverified.
 
 > **R70:** [Original opportunity schedule — D11–D20 / S11–S20](R70_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends R69 to 40/105 step-level reviews, 65 pending. Exact local phase bounds remain TBD; no automatic historical completion or new travel.
 
@@ -17,4 +19,4 @@ This is the repository-readable entry point for the entire story and subsequent 
 - [R67 opening character/phase register](R67_ACTOR_PHASE_REGISTER.md).
 - [R68 late character/phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md).
 
-Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue at R71, adding links here and in the stable story index.
+Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue at R72, adding links here and in the stable story index.
