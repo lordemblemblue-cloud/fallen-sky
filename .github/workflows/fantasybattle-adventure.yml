@@ -6,6 +6,7 @@ on:
       - 'src/routes/fantasy-battle*.jsx'
       - 'public/fantasybattle/**'
       - 'tests/fantasybattle-*.test.mjs'
+      - 'tests/games-hub-cross-scroll.test.mjs'
       - '.github/workflows/fantasybattle-adventure.yml'
   workflow_dispatch:
 permissions:
@@ -19,4 +20,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node --test tests/fantasybattle-adventure.test.mjs tests/fantasybattle-sapphire-art.test.mjs
+      - run: node --test tests/fantasybattle-adventure.test.mjs tests/fantasybattle-sapphire-art.test.mjs tests/games-hub-cross-scroll.test.mjs
+  production-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build
