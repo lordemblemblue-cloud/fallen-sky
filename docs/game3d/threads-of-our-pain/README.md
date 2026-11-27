@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R73:** [Original opportunity schedule — D41–D50 / S41–S50](R73_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends detailed review to 100/105, five pending. All discovery IDs reviewed; reconcile legacy optional vista flags with R66, preserve consent, actual receipts and safe access. Exact phases and runtime remain unverified.
+
 > **R72:** [Original opportunity schedule — D31–D40 / S31–S40](R72_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 80/105, 25 pending. Preserve guardian rest, consent, genuine original receipts, and occupied crossing safety. Exact phases and gameplay remain unverified.
 
 > **R71:** [Original opportunity schedule — D21–D30 / S21–S30](R71_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 60/105, 45 pending. Preserve R66 evidence adapters, actual arrival and repair receipts, and second vista. Exact phase bounds and gameplay remain unverified.
