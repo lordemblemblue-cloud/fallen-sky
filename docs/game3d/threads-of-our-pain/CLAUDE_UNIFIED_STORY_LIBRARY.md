@@ -1,4 +1,6 @@
-# Claude unified story library — R75A
+# Claude unified story library — R76
+
+> **R76 — owner-approved requirements:** [Postgame quest continuation and equipment retention](R76_OWNER_POSTGAME_CONTINUATION.md). Both endings must preserve earned gear and enable unfinished quests to be completed for continuing progression. Exact historical access mechanism and other R75/R75A policies remain open. No runtime validation.
 
 > **R75A:** [Concurrent progression addendum](R75A_POSTGAME_PROGRESSION_ADDENDUM.md) supplements the primary R75 with consumed/sold item provenance, safe snapshot failure recovery and historical journal states. Dialogue variants are alternatives. No owner approval or runtime validation.
 
@@ -16,7 +18,7 @@
 
 > **R69:** [Original opportunity schedule — first twenty IDs](R69_ORIGINAL_OPPORTUNITY_SCHEDULE.md) adds step-level conditions for D01–D10 and S01–S10. 20/105 reviewed at step level; 85 pending, exact original opening/closing phases TBD. No new travel or historical completion assumed.
 
-This is the repository-readable entry point for the entire story and subsequent continuation. No ChatGPT Library access is needed. Read root AGENTS.md and [terrain handoff](CLAUDE_TERRAIN_HANDOFF.md). R69 and earlier are merged via PR #400. Read the current incremental story handoff branch for R70 and newer until merged. Do not merge or deploy as part of this handoff.
+This is the repository-readable entry point for the entire story and subsequent continuation. No ChatGPT Library access is needed. Read root AGENTS.md and [terrain handoff](CLAUDE_TERRAIN_HANDOFF.md). R69 and earlier are merged via PR #400; R70–R75A are merged via PR #401. Read the R76 documentation branch until merged. Do not merge or deploy as part of this handoff.
 
 ## Original collection and continuation
 - [All 125 stable IDs and source paths](R61_STABLE_ID_INDEX.md) — original full scripts and recovered archives. Read the relevant source, not merely the catalog.
@@ -29,4 +31,4 @@ This is the repository-readable entry point for the entire story and subsequent 
 - [R67 opening character/phase register](R67_ACTOR_PHASE_REGISTER.md).
 - [R68 late character/phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md).
 
-Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue at R76, adding links here and in the stable story index.
+Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue with R76 unresolved decisions and R77 chronology; preserve the owner-approved continuation requirements above.
