@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '31':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/32997036482513c5bdeb66ec6afe47a7_fantasy-battle-31-runtime.webp',source:'Original Fantasy Battle template batch 09 — 31.webp',mode:'full',wideOnly:true}),
  '15':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/d46fb7d39e5a2b4cf2214092a7026269_fantasy-battle-15-runtime.webp',source:'Original Fantasy Adventure 48 UI Template Kit — 15-battle-defeat.jpg',mode:'full',wideOnly:true}),
  '14':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/5674616bb5c40b4ef551180cd911c591_fantasy-battle-14-runtime.webp',source:'Original Fantasy Adventure 48 UI Template Kit — 14-battle-victory.jpg',mode:'full',wideOnly:true}),
  '10':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/572b4a4c7d43c1651f8f347ba1fd962a_fantasy-battle-10-runtime.webp',source:'Original Fantasy Battle modular template batch 16 — 10.webp (transparent HUD)',mode:'full',wideOnly:true,transparent:true}),

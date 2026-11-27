@@ -617,6 +617,24 @@ function BattleDefeat({profile,encounter,result,hud,validSlots,original,layout,o
   return <Panel rect={layout[0]}><h2>{verified?'Defeat':'Battle Result'}</h2><p>{encounter?.label}</p><p>{description}</p>{allies.map(u=><div key={u.id}><strong>{u.name}</strong><p>HP {u.hp}/{u.maxHp}</p></div>)}{recovery}</Panel>;
 }
 
+// Reveal only the recorded discovery transaction; viewing it cannot award loot again.
+function TreasureReveal({profile,discovery,loot,encounter,original,layout,onItems,onContinue}){
+  const verified=Boolean(profile&&!encounter&&discovery?.kind==='landmark'&&profile.rewardedDiscoveries.includes(discovery.id));
+  const earned=verified?loot.filter(l=>ITEMS[l.id]&&Number.isInteger(l.count)&&l.count>0):[];
+  const total=earned.reduce((sum,l)=>sum+l.count,0);
+  const cards=earned.map(l=><div className="fa-treasure-card" key={l.id}><ItemArt id={l.id}/><strong>{ITEMS[l.id].name}</strong><span>+{l.count}</span><small>Owned: {profile.inventory[l.id]||0}</small></div>);
+  const description=earned.length?'Treasure recorded in your current inventory. No further claim is required.':'No newly awarded items to reveal.';
+  const controls=<><Btn primary className="fa-treasure-items" disabled={!earned.length} onClick={onItems}>View Items</Btn><Btn className="fa-treasure-continue" onClick={onContinue}>Continue</Btn></>;
+  if(original)return <div className="fa-original-treasure">
+    <h2 className="fa-treasure-title">Treasure Discovered</h2>
+    <h3 className="fa-treasure-name">{verified?discovery.label:'Discovery result'}</h3>
+    <section className="fa-treasure-cards" aria-label="Recorded treasure rewards">{cards}{!earned.length&&<p>No items awarded</p>}</section>
+    <section className="fa-treasure-record" aria-live="polite"><strong>{total} {total===1?'item':'items'} recorded</strong><span>{description}</span></section>
+    {controls}
+  </div>;
+  return <Panel rect={layout[0]}><h2>Treasure Discovered</h2><p>{verified?discovery.label:'Discovery result'}</p>{cards}<p>{description}</p>{controls}</Panel>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -981,7 +999,7 @@ export default function SapphireAdventure(){
     case '28':content=<>{pane(0,nav(['24','29']))}{pane(1,<StatRows stats={{'Regions discovered':profile?.world.visitedRegions.length||0,'Encounters defeated':profile?.world.completedEncounters.length||0,'Hidden discoveries':profile?.world.discoveries.length||0}}/>)}{pane(2,<p>Milestone tracking is live. Achievement rewards have not been defined.</p>)}</>;break;
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
     case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '31':content=pane(0,<><h2>Treasure Discovered</h2><p>{discovery?.label}</p>{lootList}<p>These items were recorded once in your inventory.</p><Btn primary onClick={()=>go('38')}>View Items</Btn><Btn onClick={back}>Continue</Btn></>);break;
+    case '31':content=<TreasureReveal profile={profile} discovery={discovery} loot={loot} encounter={encounter} original={original} layout={screen.layout} onItems={()=>go('38')} onContinue={back}/>;break;
     case '32':content=<Attributes key={profile?.id||'guest'} profile={profile} level={level} locked={!profile||Boolean(encounter&&hud?.phase!=='over')} original={original} layout={screen.layout} unlockedIds={result?.unlocked||[]} back={back} onConfirm={(base,draft)=>{const live=current.current.profile;if(!live||live!==base||(current.current.encounter&&hud?.phase!=='over')||!Array.isArray(draft)||draft.length>pointsFor(live)||draft.some(k=>!STAT_KEYS.includes(k)))return false;const next=draft.reduce((p,k)=>allocate(p,k),live);replaceProfile(next);autosave(next);finishLevel();return true;}}/>;break;
     case '33':content=<>{pane(0,<><h2>Rest Point</h2><p>{service?.label||'Not at a sanctuary'}</p></>)}{pane(1,statPanel)}{pane(2,<><p>Restore the leader and all recruited companions at a registered service point.</p><Btn disabled={!serviceAvailable||(profile.hp>=stats.maxHp&&!partyNeedsRest(profile))} onClick={()=>requestConfirm('Rest and recover?',()=>transact(p=>heal(p,{sanctuary:true}),'Health restored'))}>Rest</Btn><Btn onClick={()=>go('18')}>Save</Btn></>)}{pane(3,<Btn onClick={()=>root('10')}>Leave</Btn>)}</>;break;
     case '34':{const lessons=['Explore with WASD or the on-screen movement controls. Hold Shift or Run to sprint; Space or Jump to jump. Approach a marker and press E.','Choose a legal combat action. Quick Shot and Guard generate Focus; stronger skills spend it.','Open Character with C, Skillbook with K, Map with M, Journal with L, Equipment with I; Escape returns one level.'];content=<>{pane(0,<>{lessons.map((_,i)=><Btn key={i} primary={lesson===i} onClick={()=>setLesson(i)}>Lesson {i+1}</Btn>)}</>)}{pane(1,<><h2>Lesson {lesson+1}</h2><p>{lessons[lesson]}</p></>)}{pane(2,<Btn disabled={!running||Boolean(encounter)} onClick={()=>startBattle({id:'practice',label:'Practice Archer',category:'Normal',practice:true})}>Practice Battle</Btn>)}{pane(3,buttons(<Btn onClick={()=>setLesson(Math.max(0,lesson-1))}>Previous</Btn>,<Btn onClick={()=>setLesson(Math.min(lessons.length-1,lesson+1))}>Next</Btn>))}</>;break;}
