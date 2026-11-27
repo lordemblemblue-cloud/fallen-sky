@@ -1,11 +1,12 @@
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
+import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats} from './equipmentCatalog.mjs';
 export const SAVE_KEY='fantasyBattle.sapphire.saves.v1';
 export const SETTINGS_KEY='fantasyBattle.sapphire.settings.v1';
 export const ITEMS=Object.freeze({
   starterBow:{name:'Silver Archer Bow',kind:'weapon',atk:0,buy:0,sell:0},
   sapphireBow:{name:'Sapphire Longbow',kind:'weapon',atk:4,buy:90,sell:40},
   recoveryTonic:{name:'Recovery Tonic',kind:'consumable',heal:40,buy:20,sell:8},
-  sapphireOre:{name:'Sapphire Ore',kind:'material',buy:15,sell:6}
+  sapphireOre:{name:'Sapphire Ore',kind:'material',buy:15,sell:6},...GEAR
 });
 // Cosmetic palette multiplies the existing rig's texture colors; no stat bonuses.
 export const APPEARANCES=Object.freeze({
@@ -81,7 +82,7 @@ export function createProfile(name){
   return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=218&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer(p.inventory?.[k],0,100000))&&['starterBow','sapphireBow'].includes(p.equipped)&&p.inventory[p.equipped]>0&&['starterBow','sapphireBow'].every(k=>integer(p.enhancements?.[k],0,5))&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validParty(p);
+  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=218&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer(GEAR_IDS.includes(k)&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&['starterBow','sapphireBow'].includes(p.equipped)&&p.inventory[p.equipped]>0&&['starterBow','sapphireBow'].every(k=>integer(p.enhancements?.[k],0,5))&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);
 }
 export function readSlots(storage){
   let raw;try{raw=storage.getItem(SAVE_KEY);}catch(error){return {slots:[],error:String(error?.message||error)};}
@@ -121,7 +122,7 @@ export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
   return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre+ore},world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot:[{id:'sapphireOre',count:ore}],leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
 }
 export function allocate(p,key){if(!STAT_KEYS.includes(key)||pointsFor(p)<1)return p;return {...p,hp:p.hp+(key==='vitality'?10:0),attributes:{...p.attributes,[key]:p.attributes[key]+1}};}
-export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return {maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+(p?.enhancements?.[p?.equipped]||0)*2,def:10+2*a.defense,spd:11+a.speed};}
+export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+(p?.enhancements?.[p?.equipped]||0)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero');}
 export function acceptGroveQuest(p){return p.quests.grove!=='available'?p:{...p,quests:{...p.quests,grove:p.world.completedEncounters.includes('wilds_grove_01')?'complete':'active'}};}
 export function claimGroveQuest(p){return p.quests.grove!=='complete'?p:{...p,quests:{...p.quests,grove:'claimed'}};}
 
@@ -133,12 +134,15 @@ export function equipItem(p,id) {
   if(ITEMS[id]?.kind!=='weapon'||!p.inventory[id])throw Error('You do not own that weapon.');
   return {...p,equipped:id};
 }
+export function equipGear(p,wearer,slot,id){if(!isProfile(p))throw Error('Invalid profile.');const next=setGear(p,wearer,slot,id,k=>memberFor(p,k).recruited);if(!isProfile(next))throw Error('Invalid equipment allocation.');return next;}
+export function memberStats(p,id){if(id==='hero')return heroStats(p);const m=ROSTER.find(x=>x.id===id);if(!m)throw Error('Unknown party member.');return addGearStats({maxHp:m.maxHp,atk:m.atk,def:m.def,spd:m.spd},p,id);}
+export function gearComparison(p,wearer,id){if(!Object.hasOwn(GEAR,id))return null;try{return {current:memberStats(p,wearer),candidate:memberStats(equipGear(p,wearer,GEAR[id].slot,id),wearer)};}catch{return null;}}
 export function buyItem(p,id) {
-  const item=ITEMS[id];if(!item?.buy||p.gold<item.buy)throw Error('Insufficient gold or unavailable item.');
-  return {...p,gold:p.gold-item.buy,inventory:{...p.inventory,[id]:p.inventory[id]+1}};
+  const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;if(!item?.buy||p.gold<item.buy||(p.inventory[id]??0)>=100000)throw Error('Insufficient gold or unavailable item.');
+  return {...p,gold:p.gold-item.buy,inventory:{...p.inventory,[id]:(p.inventory[id]??0)+1}};
 }
 export function sellItem(p,id) {
-  const item=ITEMS[id];if(!item?.sell||!p.inventory[id]||(p.equipped===id&&p.inventory[id]===1))throw Error('Cannot sell this item.');
+  const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;if(!item?.sell||!p.inventory[id]||(p.equipped===id&&p.inventory[id]===1)||(item.kind==='gear'&&p.inventory[id]<=gearCount(p,id)))throw Error('Cannot sell this item.');
   return {...p,gold:p.gold+item.sell,inventory:{...p.inventory,[id]:p.inventory[id]-1}};
 }
 export function enhanceWeapon(p) {
@@ -180,7 +184,8 @@ export function parseBackup(raw){
   // Pick supported fields to avoid preserving unknown or injected properties.
   const p=data.profile,w=p.world;
   return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',party:cleanParty(p),xp:p.xp,hp:p.hp,gold:p.gold,
-    inventory:Object.fromEntries(Object.keys(ITEMS).map(k=>[k,p.inventory[k]])),equipped:p.equipped,
+    inventory:Object.fromEntries(Object.keys(ITEMS).filter(k=>Object.hasOwn(p.inventory,k)).map(k=>[k,p.inventory[k]])),equipped:p.equipped,
+    ...(p.gear===undefined?{}:{gear:Object.fromEntries(Object.keys(p.gear).map(id=>[id,{...gearFor(p,id)}]))}),
     enhancements:{starterBow:p.enhancements.starterBow,sapphireBow:p.enhancements.sapphireBow},
     rewardedDiscoveries:[...p.rewardedDiscoveries],attributes:Object.fromEntries(STAT_KEYS.map(k=>[k,p.attributes[k]])),
     world:{position:[...w.position],discoveries:[...w.discoveries],completedEncounters:[...w.completedEncounters],visitedRegions:[...w.visitedRegions]},

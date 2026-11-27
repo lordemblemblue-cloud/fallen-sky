@@ -42,7 +42,7 @@ function normalizeSkills(data) {
 }
 
 export class Fighter {
-  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase, combatClass }) {
+  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase, combatClass, gearVisuals, weaponId }) {
     this.stage = stage;
     this.id = id;
     this.name = name;
@@ -54,7 +54,7 @@ export class Fighter {
     this.facing = facing;
     this.state = createPuppetState(rig, { seed });
     this.skills = new SkillPlayer(combatClass?[...skillDoc.skills,...MELEE_SKILLS]:skillDoc.skills);
-    this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase, combatClass });
+    this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase, combatClass, gearVisuals, weaponId });
     this.view.group.position.set(x, y, 0);
     this.view.group.scale.set(facing*scale, scale, 1);
     this.lookWorld = null;
@@ -209,7 +209,7 @@ export class FantasyBattleStage {
       const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
       const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
       const y=compact&&idx>=2?185:0;
-      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,rig:this.companionRigs?.get(u.id)||this.rig,textures:this.textures,arrowTexture,tint:this.companionRigs?.has(u.id)?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,gearVisuals:u.gearVisuals,weaponId:u.weaponId,rig:this.companionRigs?.get(u.id)||this.rig,textures:this.textures,arrowTexture,tint:this.companionRigs?.has(u.id)?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
     }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));

@@ -18,11 +18,13 @@ const paths={
  guard:<><path d="M32 6l22 9v19q0 14-22 24Q10 48 10 34V15Z" fill="url(#gem)" stroke="#eacb8f" strokeWidth="2.5"/><path d="M32 14l12 7v13q0 9-12 17-12-8-12-17V21z" stroke="#cbf7ff" strokeWidth="1.5" fill="none"/><path d="M32 22l4 10-4 10-4-10z" fill="#fff1c4"/></>
 };
 import {useId} from 'react';
+import {GEAR} from './core/equipmentCatalog.mjs';
+function GearArt({item}){const color='#'+item.color.toString(16).padStart(6,'0'),trim='#'+item.trim.toString(16).padStart(6,'0');return item.slot==='armor'?<><path d={item.style==='plate'?'M5 17L19 6 32 13 45 6 59 17 49 35 47 57H17L15 35Z':'M10 18L22 7 32 19 42 7 54 18 46 34 47 57H17L18 34Z'} fill={color} stroke={trim} strokeWidth="2.5"/><path d="M22 12L32 29 42 12M32 29V54M18 47H46" stroke={trim} strokeWidth="2" fill="none"/></>:<><path d={item.style==='dusk'?'M21 8H43L55 49 32 59 9 49Z':'M20 8H44L58 55 32 48 6 55Z'} fill={color} stroke={trim} strokeWidth="2.5"/><path d="M22 11L32 23 42 11M32 23V47" stroke={trim} strokeWidth="2" fill="none"/><circle cx="32" cy="23" r="4" fill={trim}/></>;}
 function Icon({id,className}){
  const uid=useId().replace(/[^a-zA-Z0-9_-]/g,'');
  // Repeated icons must not share an SVG gradient id; set a local CSS variable
  // instead of attempting to mutate global SVG definitions.
- const art=paths[id];if(!art)return null;
+ const art=Object.hasOwn(GEAR,id)?<GearArt item={GEAR[id]}/>:paths[id];if(!art)return null;
  return <svg className={className} viewBox="0 0 64 64" aria-hidden="true" style={{'--icon-id':uid}}><rect x="1.5" y="1.5" width="61" height="61" rx="10" fill="#0a1730" stroke="#d6b87f" strokeOpacity=".75"/><defs><linearGradient id={'gem'+uid} x1="0" y1="1" x2="1" y2="0"><stop stopColor="#193d82"/><stop offset=".5" stopColor="#448ce0"/><stop offset="1" stopColor="#d5f9ff"/></linearGradient></defs><g fill={'url(#gem'+uid+')'}>{replaceGem(art,uid)}</g></svg>;
 }
 import {Children,cloneElement,isValidElement} from 'react';
