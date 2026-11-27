@@ -6,7 +6,7 @@ const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(
 test('empty saves and valid round trip',()=>{const s=storage();assert.equal(A.mostRecent(A.readSlots(s).slots),null);const p=A.createProfile('Archer');A.writeSlot(s,'1',p);assert.equal(A.mostRecent(A.readSlots(s).slots).profile.id,p.id);assert.throws(()=>A.writeSlot(s,'1',p));});
 test('corrupted saves never become loadable',()=>{const s=storage();s.setItem(A.SAVE_KEY,'{"1":{"profile":{},"savedAt":0}}');assert.equal(A.readSlots(s).slots[0].status,'corrupt');assert.equal(A.mostRecent(A.readSlots(s).slots),null);});
 test('quest, victory, duplicate reward, skill unlock, stats',()=>{let p=A.acceptGroveQuest(A.createProfile('Archer'));let v=A.rewardVictory(p,{id:'wilds_grove_01',category:'Normal'},80);assert.equal(v.xp,25);assert.equal(v.profile.quests.grove,'complete');assert.equal(A.rewardVictory(v.profile,{id:'wilds_grove_01'}).xp,0);p=A.claimGroveQuest(v.profile);assert.equal(A.claimGroveQuest(p),p);v=A.rewardVictory(p,{id:'boss',category:'Boss'});assert.equal(v.leveled,true);assert.ok(v.unlocked.includes('volley'));assert.equal(A.heroStats(A.allocate(v.profile,'strength')).atk,A.heroStats(v.profile).atk+2);});
-test('inventory transactions and one-time discovery loot',()=>{let p=A.createProfile('Archer');p={...p,gold:200,world:{...p.world,discoveries:['d']}};let l=A.collectLoot(p,'d');assert.equal(l.loot.length,2);assert.equal(A.collectLoot(l.profile,'d').loot.length,0);p=A.buyItem(l.profile,'sapphireBow');p=A.equipItem(p,'sapphireBow');assert.equal(A.heroStats(p).atk,16);assert.throws(()=>A.sellItem(p,'sapphireBow'));p=A.enhanceWeapon(p);assert.equal(A.heroStats(p).atk,18);p={...p,hp:50};p=A.heal(p);assert.equal(p.hp,90);assert.equal(A.heal(p,{sanctuary:true}).hp,120);assert.ok(A.isProfile(p));});
+test('inventory transactions and one-time discovery loot',()=>{let p=A.createProfile('Archer');p={...p,gold:200,world:{...p.world,discoveries:['disc_pilgrimage']}};let l=A.collectLoot(p,'disc_pilgrimage');assert.equal(l.loot.length,3);assert.equal(A.collectLoot(l.profile,'disc_pilgrimage').loot.length,0);p=A.buyItem(l.profile,'sapphireBow');p=A.equipItem(p,'sapphireBow');assert.equal(A.heroStats(p).atk,16);assert.throws(()=>A.sellItem(p,'sapphireBow'));p=A.enhanceWeapon(p);assert.equal(A.heroStats(p).atk,18);p={...p,hp:50};p=A.heal(p);assert.equal(p.hp,90);assert.equal(A.heal(p,{sanctuary:true}).hp,120);assert.ok(A.isProfile(p));});
 test('craft and travel gates',()=>{let p=A.createProfile('Archer');assert.throws(()=>A.craftTonic(p));assert.throws(()=>A.travelTo(p,{id:'r',minX:35,maxX:75}));p={...p,inventory:{...p.inventory,sapphireOre:2},world:{...p.world,visitedRegions:['r']}};p=A.craftTonic(p);assert.equal(p.inventory.recoveryTonic,2);assert.equal(p.inventory.sapphireOre,0);assert.equal(A.travelTo(p,{id:'r',minX:35,maxX:75}).world.position[0],41);});
 test('48 text-free templates',()=>{assert.equal(Object.keys(UI_SCREENS).length,48);for(const id of Object.keys(UI_SCREENS)){assert.ok(makeTemplate(id).includes('<svg'));assert.ok(!/<text[ >]/.test(makeTemplate(id)));}});
 
@@ -132,14 +132,14 @@ test('practice and capped reward quantities cannot create invalid inventory or d
  let p=A.createProfile('Loot cap');
  const practice=A.rewardVictory(p,{id:'wilds_grove_01',practice:true});
  assert.equal(practice.profile,p);assert.deepEqual(practice.loot,[]);
- p={...p,xp:99999,gold:9999999,inventory:{...p.inventory,sapphireOre:99999,groveRing:100000,recoveryTonic:100000},world:{...p.world,discoveries:['d']}};
+ p={...p,xp:99999,gold:9999999,inventory:{...p.inventory,sapphireOre:99999,groveRing:100000,groveVest:100000,recoveryTonic:100000},world:{...p.world,discoveries:['disc_pilgrimage']}};
  const v=A.rewardVictory(p,{id:'wilds_grove_01',category:'Boss'});
  assert.equal(v.xp,1);assert.equal(v.gold,1);
  assert.deepEqual(v.loot,[{id:'sapphireOre',count:1}]);
  assert.ok(A.isProfile(v.profile));
- const t=A.collectLoot(v.profile,'d');
+ const t=A.collectLoot(v.profile,'disc_pilgrimage');
  assert.deepEqual(t.loot,[]);assert.ok(A.isProfile(t.profile));
- assert.equal(A.collectLoot(t.profile,'d').profile,t.profile);
+ assert.equal(A.collectLoot(t.profile,'disc_pilgrimage').profile,t.profile);
 });
 
 test('bulk trade quotes and transactions agree, bound quantities and protect equipped copies',()=>{
@@ -173,4 +173,27 @@ test('six recipes are level-gated, atomic, save compatible and cannot yield a re
  assert.throws(()=>A.craftItem({...p,gold:0},'sapphireBow'));
  assert.throws(()=>A.craftItem({...p,inventory:{...p.inventory,sapphireOre:0}},'recoveryTonic'));
  assert.equal(p.inventory.sapphireOre,100);
+});
+
+import {TREASURES,TREASURE_IDS,treasureFor,treasureProgress} from '../src/components/fantasybattle/core/treasureCatalog.mjs';
+test('all five real discovery markers award distinct persistent treasure exactly once',()=>{
+ let p=A.createProfile('Explorer');
+ assert.deepEqual(treasureProgress(p),{found:0,collected:0,total:5});
+ assert.equal(A.collectLoot(p,'disc_pilgrimage').profile,p);
+ const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
+ for(const id of TREASURE_IDS){
+  assert.ok(world.includes(id),id);
+  const t=treasureFor(id);assert.ok(t.label);
+  p={...p,world:{...p.world,discoveries:[...p.world.discoveries,id]}};
+  const result=A.collectLoot(p,id);assert.deepEqual(result.loot,t.loot);
+  for(const row of result.loot){assert.ok(Object.hasOwn(A.ITEMS,row.id));assert.equal(result.profile.inventory[row.id],(p.inventory[row.id]??0)+row.count);}
+  p=result.profile;assert.ok(A.isProfile(p));
+  assert.equal(A.collectLoot(p,id).profile,p);
+ }
+ assert.equal(new Set(Object.values(TREASURES).map(t=>t.loot[2].id)).size,5);
+ assert.deepEqual(treasureProgress(p),{found:5,collected:5,total:5});
+ const loaded=A.parseBackup(A.exportBackup(p));assert.deepEqual(loaded,p);
+ assert.equal(A.collectLoot(loaded,'disc_astral').profile,loaded);
+ const forged={...p,world:{...p.world,discoveries:[...p.world.discoveries,'unknown','__proto__']}};
+ assert.equal(A.collectLoot(forged,'unknown').profile,forged);assert.equal(A.collectLoot(forged,'__proto__').profile,forged);
 });
