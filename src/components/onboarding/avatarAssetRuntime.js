@@ -127,7 +127,9 @@ export async function loadAvatarModel(config={},height=1.8,game3dModelUrl=null){
  customizations.set(model,customization);await customization.update(appearance);
  return model;
 }
-export function disposeAvatarModel(model){customizations.get(model)?.dispose();customizations.delete(model);const textures=new Set(),materials=new Set(),geometries=new Set();model?.traverse(n=>{if(n.geometry)geometries.add(n.geometry);if(n.material)(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>materials.add(m));n.skeleton?.dispose();});for(const m of materials){Object.values(m).forEach(t=>{if(t?.isTexture)textures.add(t);});m.dispose();}textures.forEach(t=>t.dispose());geometries.forEach(g=>g.dispose());}
+// keepGeometry(geometry): leave that geometry alive (a live mesh may be drawing with its morph texture: see
+// game3d/player/sharedMorphGeometry.mjs). Everything else of the model is freed.
+export function disposeAvatarModel(model,{keepGeometry=null}={}){customizations.get(model)?.dispose();customizations.delete(model);const textures=new Set(),materials=new Set(),geometries=new Set();model?.traverse(n=>{if(n.geometry)geometries.add(n.geometry);if(n.material)(Array.isArray(n.material)?n.material:[n.material]).forEach(m=>materials.add(m));n.skeleton?.dispose();});for(const m of materials){Object.values(m).forEach(t=>{if(t?.isTexture)textures.add(t);});m.dispose();}textures.forEach(t=>t.dispose());geometries.forEach(g=>{if(!keepGeometry?.(g))g.dispose();});}
 export function applyPlayerAppearance(model,appearance){
  if(model?.userData?.game3dFusedCreatorBody)applyFusedWorldProportions(model,appearance);
  else applyCompanionAppearance(model,appearance);

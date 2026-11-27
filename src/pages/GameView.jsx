@@ -216,11 +216,16 @@ export default function GameView() {
     if(worldEntryStatus!=='loading')return undefined;
     // A scene constructor can fail before the avatar loader fires. Never leave
     // the owner staring at an indefinite blank/blocked Game 3D entry.
-    const timer=window.setTimeout(()=>{
+    // While the world builds its shaders it reports progress (game3dWorldCompileProgress): only 30 s without any
+    // counts as stuck.
+    const giveUp=()=>{
       setWorldEntryError('Game 3D did not finish loading. Retry, or return to character selection and check the browser console.');
       setWorldEntryStatus(current=>current==='loading'?'error':current);
-    },30000);
-    return ()=>window.clearTimeout(timer);
+    };
+    let timer=window.setTimeout(giveUp,30000);
+    const progress=()=>{window.clearTimeout(timer);timer=window.setTimeout(giveUp,30000);};
+    window.addEventListener('game3dWorldCompileProgress',progress);
+    return ()=>{window.clearTimeout(timer);window.removeEventListener('game3dWorldCompileProgress',progress);};
   },[worldEntryStatus]);
 
   // One-time wipe: reset Halo + Title progression to zero so the player can
@@ -787,15 +792,20 @@ export default function GameView() {
                   window.clearTimeout(timer);
                   window.removeEventListener('game3dWorldAvatarReady',ready);
                   window.removeEventListener('game3dWorldAvatarLoadError',failed);
+                  window.removeEventListener('game3dWorldCompileProgress',progress);
                 };
                 const ready=event=>{
                   if(event?.detail?.modelUrl!==expected)return;
                   cleanup();resolve();
                 };
                 const failed=event=>{cleanup();reject(new Error(event?.detail?.message||'Character model could not load.'));};
+                const giveUp=()=>{cleanup();reject(new Error('Your character took too long to load. Retry world.'));};
+                // The world reports progress while it builds its shaders: only 30 s without any counts as stuck.
+                const progress=()=>{window.clearTimeout(timer);timer=window.setTimeout(giveUp,30000);};
                 window.addEventListener('game3dWorldAvatarReady',ready);
                 window.addEventListener('game3dWorldAvatarLoadError',failed);
-                timer=window.setTimeout(()=>{cleanup();reject(new Error('Your character took too long to load. Retry world.'));},30000);
+                window.addEventListener('game3dWorldCompileProgress',progress);
+                timer=window.setTimeout(giveUp,30000);
                 // Close the mount/listener race if the actor arrived meanwhile.
                 if(worldReadyRef.current && readyModelUrlRef.current===expected){cleanup();resolve();}
               });

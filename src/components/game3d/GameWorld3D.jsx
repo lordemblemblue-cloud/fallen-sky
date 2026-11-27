@@ -222,6 +222,7 @@ import { PlayerCameraSystem } from './player/PlayerCameraSystem'; import { OTS_A
 import { createGame3DWorldEntryCamera } from './player/Game3DWorldEntryCamera.mjs';
 import { createEntryBackdropHold } from './player/game3dEntryBackdropHold.mjs';
 import { nextWorldBuild } from './player/game3dWorldBuildKey.mjs';
+import { keepSharedMorphGeometry } from './player/sharedMorphGeometry.mjs';
 import {
   GAME3D_GAME2_CAMERA,applyGame3DGame2MouseLook,
   applyGame3DGame2ArrowLook,game3dGame2Zoom,
@@ -560,6 +561,11 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     catch { /* a settings problem must never stop the world from starting */ }
 
     let renderer;
+    // WebGPU builds the area's shaders in slices of about this many ms, with the browser getting a turn between them
+    // (webgpuSceneRenderer.js precompileSceneObjects sliceMs): one synchronous build froze cold loads for 22 s.
+    const WORLD_PRECOMPILE_SLICE_MS = 40;
+    // GameView's entry timers count 30 s without progress, not 30 s in all, while the shaders build.
+    const reportCompileProgress = (progress) => window.dispatchEvent(new CustomEvent('game3dWorldCompileProgress', { detail: progress }));
     // Draws the frame again after a resize (assigned next to handleResize below; until then a no-op)
     let redrawAfterResize = () => {};
     const rendererChoice = recoveryReason
@@ -597,6 +603,11 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
           if (window.__gw3dRenderer !== gpuRenderer) return;
           window.__gw3dGpuInfo = describeGame3DGpuAdapter(adapter, gpuHints, api);
           applyWorldGraphicsBudget();
+          // Build the area's shaders in slices behind the menus before the world's first frame: that frame built
+          // them all in one go (267 shaders, 22 s with the page frozen). Frames are held until this is done.
+          precompileSceneObjects(gpuRenderer, scene, camera, { target: inkLook.sceneTarget(),
+            sliceMs: WORLD_PRECOMPILE_SLICE_MS, onProgress: reportCompileProgress })
+            .then((result) => { window.__gw3dEarlyPrecompile = result; }, () => {});
         }, (error) => {
           console.error('GameWorld3D: WebGPURenderer could not start —', error);
           if (window.__gw3dRenderer === gpuRenderer) recoverRenderer('webgpu-init-failed');
@@ -2488,7 +2499,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         // one by one at each object's first draw (webgpuSceneRenderer.js precompileSceneObjects); then draw a few
         // frames behind it (the shadow map and the ink pass compile there) before the world is shown
         if (renderer.isWebGPURenderer) {
-          precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget() })
+          precompileSceneObjects(renderer, scene, camera, { target: inkLook.sceneTarget(),
+            sliceMs: WORLD_PRECOMPILE_SLICE_MS, onProgress: reportCompileProgress })
             .then((result) => { window.__gw3dPrecompile = result; }, () => {})
             .then(() => waitForSceneRenders(renderer, 6))
             .then(announce, announce);
@@ -2567,8 +2579,27 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       playerDeathAsh?.dispose(); playerDeathAsh = null;
       if (mixer) { mixer.stopAllAction(); if (old) mixer.uncacheRoot(old); }
       mixer = null; playerAnim = null; coreAnimationController = null;
-      if (old) { old.parent?.remove(old); disposeAvatarModel(old); }
+      // A live mesh with the same layout (a fused-body NPC) may be drawing with this body's morph textures: keep
+      // those geometries (sharedMorphGeometry.mjs; disposing them blacked out the world on WebGPU).
+      if (old) { old.parent?.remove(old); disposeAvatarModel(old, { keepGeometry: keepSharedMorphGeometry(scene) }); }
       model = null; modelRef.current = null; playerModelRef.current = null;
+    };
+    // A new character never inherits the old one's ride: dismount the way F does (the old body is set down beside
+    // the mount), so the world's riding state (isMountedRef, the companion and mount stores) is cleared. Left set, the
+    // swapped body stood still in the world: live, swapping while mounted gave a character that could not walk.
+    const dismountForSwap = (old) => {
+      if (!isMountedRef.current) return;
+      restoreMountedRider();
+      const compGroup = companionGroupRef.current;
+      if (old && compGroup) {
+        moveWorldActor(old, Math.cos(compGroup.rotation.y) * 1.2, -Math.sin(compGroup.rotation.y) * 1.2, false);
+        const groundY = sampleGroundY(old.position.x, old.position.z);
+        if (groundY !== null) old.position.y = groundY;
+      }
+      isMountedRef.current = false;
+      setIsMounted(false);
+      setMounted(false);
+      setAXEMountRiding(false);
     };
     // A new body on the character screens (GameWorldScene's swapPlayerAvatarRef): load it, then stand it where the
     // old actor stood, without rebuilding the world. It is announced like the first body (game3dWorldAvatarReady).
@@ -2581,6 +2612,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       loadAvatarModel(appearanceRef.current, 1.7, url).then((fbx) => {
         if (avatarLoadDisposed || seq !== avatarSwapSeq) { disposeAvatarModel(fbx); return; }
         const old = model;
+        dismountForSwap(old);
         const swap = { position: old.position.clone(), quaternion: old.quaternion.clone() };
         releasePlayerAvatar(old);
         avatarSwapPending = false;
