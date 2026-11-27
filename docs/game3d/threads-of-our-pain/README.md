@@ -46,6 +46,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M04 | The Forgotten War | [Expanded main quest](M04.md) | Ready for proposed blockout; unverified |
 | D21 | The Gate of Water | [Expanded discovery](D21_S27.md) | Ready for proposed blockout; unverified |
 | S27 | Tameri's Water | [Expanded optional quest and terrain brief](D21_S27.md) | Ready for proposed blockout; unverified |
+| M05 | The Silver Path | [Expanded main quest](M05.md) | Ready for proposed blockout; unverified |
+| D22 | The Stitch in the Wind | [Expanded discovery](D22_S28.md) | Ready for proposed blockout; unverified |
+| S28 | Remoria's Missing Banner | [Expanded optional quest and terrain brief](D22_S28.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -112,3 +115,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R24
 
 [M04](M04.md) expands the original city's outskirts, first playable age-eighteen experience, three weapon roles, civilian evacuation and retreat corridor. M05 retains the barrier crossing and original body's death. [D21/S27](D21_S27.md) preserves canal and pump alignment, dry maintenance tunnel, armor lining, independent water repairs and evidence for S29 without presuming political guilt. 24/50 discoveries, 14/55 optional quests, 4/20 main quests expanded; all 75 outlines retained. Master v2.0 R24 saved to Library: 167 pages, 2,105 previous paragraphs preserved, 158 previous rendered pages byte-identical. Next M05 — The Silver Path, D22 — The Stitch in the Wind / S28 — Remoria's Missing Banner (Remnant bracer). Pending D02/D03/D05/D06/M07 reconciliation; S13/S19/S25/S26 separate. Claude return surveyed anchors, route tests, encounter clearances, actual layout, and performance checks. No terrain build, game code, merge, deployment or credits.
+
+## Revision R25
+
+[M05](M05.md) establishes the evacuation, original body's canonical death, shared life force, preserved reality, checkpoint and cinematic transition without exposing the cosmological explanation early. [D22/S28](D22_S28.md) preserves the banner-corner alignment, rescue pennants, concealed seamstress shelter, Remnant Bracer and independent investigation with S29 evidence; culprit remains unresolved. 25/50 discoveries, 15/55 optional quests, 5/20 main quests expanded; all 75 outlines retained. Master v2.1 R25 saved in Library; 176 pages, all 2,215 previous paragraphs preserved, 167 earlier page renders byte-identical, nine added pages reviewed at overview scale. Next M06 — A Life Forgotten, D23 — The Road Without Flags / S30 — The Caravan Without Flags (Escort stamina utility); S29 separately after prerequisite investigations. Pending D02/D03/D05/D06/M07 reconciliation; S13/S19/S25/S26 separate. Claude return surveyed anchors, layout, traversal and performance checks. No terrain build, code, merge, deployment or credits.
