@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R71:** [Original opportunity schedule — D21–D30 / S21–S30](R71_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 60/105, 45 pending. Preserve R66 evidence adapters, actual arrival and repair receipts, and second vista. Exact phase bounds and gameplay remain unverified.
+
 > **R70:** [Original opportunity schedule — D11–D20 / S11–S20](R70_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends R69 to 40/105 step-level reviews, 65 pending. Exact local phase bounds remain TBD; no automatic historical completion or new travel.
 
 > **R69:** [Original opportunity schedule — first twenty IDs](R69_ORIGINAL_OPPORTUNITY_SCHEDULE.md) adds step-level conditions for D01–D10 and S01–S10. 20/105 reviewed at step level; 85 pending, exact original opening/closing phases TBD. No new travel or historical completion assumed.
