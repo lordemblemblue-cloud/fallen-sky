@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R113 — Wolfveil opening source-to-acceptance worksheet:** [Building Wolfveil](R113_WOLFVEIL_OPENING_SOURCE_TO_ACCEPTANCE_WORKSHEET.md). M01–M03 shared forest/clearing, 11 landmark rows, 16-stage preview worksheet and 14 planned tests; read-only main file references checked, no build or runtime verification. Next R114 M04–M05 evacuation/barrier construction prompts.
+
 > **R112 — production readiness and agent acceptance:** [From story to production](R112_PRODUCTION_READINESS_AND_AGENT_ACCEPTANCE_GATES.md). Freshly verified 125 unique voice-selection rows across R106–R110, eight proposed workstreams, six integration waves, eight P01 opening-slice gates and eight representative quest cases. Survey/design only pending authority and decisions; no build or release. Next R113 opening-slice source-to-acceptance worksheet.
 
 > **R111 — chronology and reality-law writer decision packet:** [The laws between realities](R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md). Candidate A1 preservation rather than first creation of the link; local/experienced/presentation order and causal edges distinguished; S42/S54 bounded exceptions, five dialogue clarifications and eight prioritized owner decisions. Not approved; chronology-dependent shipping blocked pending decision. Next R112 production readiness and decision gates.
