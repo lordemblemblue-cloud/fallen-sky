@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R75A:** [Concurrent progression addendum](R75A_POSTGAME_PROGRESSION_ADDENDUM.md) supplements the primary R75 with consumed/sold item provenance, safe snapshot failure recovery and historical journal states. Dialogue variants are alternatives. No owner approval or runtime validation.
+
 > **R75:** [Postgame progression and save decisions](R75_POSTGAME_PROGRESSION_DECISIONS.md) proposes preserving earned progression, isolated pre-finale replay and branch-safe play. Owner approval remains required; R74 completes all 105 detailed source reviews, not runtime validation.
 
 > **R74:** [Final five original-world opportunity reviews — S51–S55](R74_ORIGINAL_OPPORTUNITY_SCHEDULE.md) completes 105/105 source-level scheduling reviews. Exact phase windows, S53 inscription policy, S55 two-lane policy, postgame progression and runtime tests remain open. R65 ending precedence retained.
