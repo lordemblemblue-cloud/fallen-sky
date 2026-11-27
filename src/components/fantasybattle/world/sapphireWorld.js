@@ -1,4 +1,6 @@
 import worldMarkup from './worldMarkup.html?raw';
+import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
+import {makeExplorationAvatar} from './explorationAvatar.js';
 
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -848,7 +850,8 @@ import worldMarkup from './worldMarkup.html?raw';
         this.ribbons = []; this.swayObjects = []; this.waterfalls = []; this.clouds = [];
         this.cameraObstacles = []; this.raycaster = new THREE.Raycaster(); this.petals = null; this.petalData = [];
         this.player = null; this.playerPos = new THREE.Vector3(6, 0, 0); this.playerVelY = 0; this.grounded = true;
-        this.keys = { left: false, right: false, in: false, out: false };
+        this.keys = { left: false, right: false, in: false, out: false, run:false };
+        this.locomotion=createLocomotion();
         this.encounters = []; this.discoveries = []; this.foundDiscoveries = new Set(); this.retriggerCooldowns = new Map();
         this.activeEncounter = null; this.activeDiscovery = null; this.savedExploreState = null;
         this.transitionState = 'idle'; this.inputLocked = false; this.inBattleFromExplore = false;
@@ -858,7 +861,7 @@ import worldMarkup from './worldMarkup.html?raw';
         this.exportBusy = false; this.renderFailed = false; this.lastAdaptiveAt = 0; this.envMapRT = null;
       }
 
-      resetInput() { Object.keys(this.keys).forEach(k => { this.keys[k] = false; }); }
+      resetInput() { Object.keys(this.keys).forEach(k => { this.keys[k] = false; }); if(this.locomotion){resetLocomotion(this.locomotion,this.grounded);this.player?.userData.applyPose?.(this.locomotion);} }
       updateRenderScale() {
         const base = Math.min(window.devicePixelRatio || 1, this.baseDprCap || 1.25);
         this.renderer.setPixelRatio(base * this.adaptiveScale);
@@ -1223,14 +1226,11 @@ import worldMarkup from './worldMarkup.html?raw';
         this.collisions.addBox(60, 8, -4.5, 120, 24, 0.7, 'cliff_back_left');
         this.collisions.addBox(174.5, 12, -4.5, 91, 24, 0.7, 'cliff_back_right');
 
-        const avatar = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.95, 6, 12), new THREE.MeshStandardMaterial({ color: this.appearanceTint ?? 0xffffff, emissive: '#448ce0', emissiveIntensity: 0.25, roughness: 0.4 }));
-        body.position.y = 0.88; body.castShadow = true; avatar.add(body);
-        const lt = new THREE.PointLight('#fff0cc', 2.4, 15, 1.4); lt.position.set(0, 1.8, 1.2); avatar.add(lt);
+        const avatar = makeExplorationAvatar(this.appearanceTint ?? 0xffffff);
 
         if (this.savedExploreState) { this.playerPos.copy(this.savedExploreState.position); this.playerVelY = this.savedExploreState.velocityY; this.grounded = this.savedExploreState.grounded; }
         else { this.playerPos.set(6, this.sampleWildsHeight(6), 0); this.playerVelY = 0; this.grounded = true; }
-        avatar.position.copy(this.playerPos); this.player = avatar; root.add(avatar);
+        avatar.position.copy(this.playerPos); this.player = avatar; resetLocomotion(this.locomotion,this.grounded);avatar.userData.applyPose(this.locomotion);root.add(avatar);
         this.worldGroup.add(root);
         this.addCloudLayer(-6, 12, 110); this.addFallingPetals(160, 120, 110, 4);
         this.updateWildsStreaming(true);
@@ -1676,7 +1676,8 @@ import worldMarkup from './worldMarkup.html?raw';
           if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.right = true;
           if (e.code === 'KeyW' || e.code === 'ArrowUp') this.keys.in = true;
           if (e.code === 'KeyS' || e.code === 'ArrowDown') this.keys.out = true;
-          if (e.code === 'Space' && this.mode === 'wilds' && this.grounded) { this.playerVelY = 7.6; this.grounded = false; }
+          if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.keys.run = true;
+          if (!e.repeat && e.code === 'Space' && this.mode === 'wilds' && this.grounded) { this.playerVelY = 7.6; this.grounded = false; }
           if (!e.repeat && e.code === 'KeyE' && this.mode === 'wilds') {
             if (this.activeDiscovery) this.collectDiscovery(this.activeDiscovery);
             else if (this.activeEncounter) this.triggerEncounterTransition(this.activeEncounter);
@@ -1690,6 +1691,7 @@ import worldMarkup from './worldMarkup.html?raw';
           if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.right = false;
           if (e.code === 'KeyW' || e.code === 'ArrowUp') this.keys.in = false;
           if (e.code === 'KeyS' || e.code === 'ArrowDown') this.keys.out = false;
+          if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.keys.run = e.shiftKey;
         });
 
         for (const [id, key] of [['touch-left','left'],['touch-right','right'],['touch-in','in'],['touch-out','out']]) {
@@ -1737,19 +1739,23 @@ import worldMarkup from './worldMarkup.html?raw';
 
       updateExploration(dt, t) {
         if (this.mode !== 'wilds' || !this.player || this.inputLocked) return;
-        let dirX = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0), dirZ = (this.keys.out ? 1 : 0) - (this.keys.in ? 1 : 0);
-        const diagonal = dirX && dirZ ? Math.SQRT1_2 : 1;
+        const startX=this.playerPos.x,startZ=this.playerPos.z;
+        let landingImpact=0;
         const steps = Math.max(1, Math.ceil(dt / (1/120))), step = dt / steps;
         for (let i=0;i<steps;i++) {
-          this.playerPos.x = Math.max(1.5, Math.min(218, this.playerPos.x + dirX * 7.4 * step * diagonal));
-          this.playerPos.z = Math.max(-6.8, Math.min(3.4, this.playerPos.z + dirZ * 4.8 * step * diagonal));
+          const motion=advanceVelocity(this.locomotion,this.keys,this.grounded,step);
+          this.playerPos.x = Math.max(1.5, Math.min(218, this.playerPos.x + motion.x));
+          this.playerPos.z = Math.max(-6.8, Math.min(3.4, this.playerPos.z + motion.z));
           this.playerVelY -= 19.5 * step; this.playerPos.y += this.playerVelY * step;
+          const fallSpeed=this.playerVelY,wasGrounded=this.grounded;
           this.playerVelY = this.collisions.resolveCapsule(this.playerPos, this.playerVelY, 0.35, 1.75);
           this.playerPos.x = Math.max(1.5, Math.min(218,this.playerPos.x)); this.playerPos.z=Math.max(-6.8,Math.min(3.4,this.playerPos.z));
           const supY = this.collisions.sampleSupportHeight(this.playerPos.x, this.playerPos.z, this.playerPos.y, (x, z) => this.terrainVisualHeight(x, z), 0.55);
-          if (this.playerVelY <= 0 && this.playerPos.y <= supY) { this.playerPos.y = supY; this.playerVelY = 0; this.grounded = true; } else this.grounded = false;
+          if (this.playerVelY <= 0 && this.playerPos.y <= supY) { if(!wasGrounded)landingImpact=Math.max(landingImpact,-fallSpeed);this.playerPos.y = supY; this.playerVelY = 0; this.grounded = true; } else this.grounded = false;
         }
         this.player.position.copy(this.playerPos);
+        updateLocomotion(this.locomotion,{dx:this.playerPos.x-startX,dz:this.playerPos.z-startZ,vy:this.playerVelY,grounded:this.grounded,impact:landingImpact,running:this.keys.run},dt);
+        this.player.userData.applyPose(this.locomotion);
 
         const inCave = this.playerPos.x >= 109 && this.playerPos.x <= 141;
         const camZ = inCave ? 9.2 : 16.2, camY = inCave ? 2.6 : 4.7, lookX = inCave ? 1.8 : 2.6;
@@ -1896,11 +1902,11 @@ export async function mountSapphireWorld(root, onEvent) {
       app.savedExploreState={position:new THREE.Vector3(px,py,pz),velocityY:0,grounded:true,cameraPos:new THREE.Vector3(px+2,py+4.8,pz+16.5),cameraTarget:new THREE.Vector3(px+2.5,py+1.8,pz),encounterId:null};
       app.loadMode('wilds');app.inputLocked=true;send('restored',{world:snapshot()});},
     finish(id,won){if(won)app.completedEncounters.add(id);app.retriggerCooldowns.set(id,performance.now()+3500);app.activeEncounter=null;app.resetInput();app.inputLocked=false;},
-    appearance(tint){if(![0xffffff,0x98c8ff,0xffc9dc,0xc8b5ff].includes(tint))return;app.appearanceTint=tint;app.player?.children[0]?.material?.color?.set(tint);},
+    appearance(tint){if(![0xffffff,0x98c8ff,0xffc9dc,0xc8b5ff].includes(tint))return;app.appearanceTint=tint;app.player?.userData.setAppearance?.(tint);},
     quality(q){if(['performance','balanced','high','cinematic'].includes(q))app.applyQuality(q);},
     interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);else app.openService();},
     move(key,value){if(Object.hasOwn(app.keys,key))app.keys[key]=!app.inputLocked && Boolean(value);},
-    jump(){if(!app.inputLocked&&app.grounded){app.playerVelY=7.6;app.grounded=false;}},
+    jump(){if(!app.inputLocked&&app.mode==='wilds'&&app.grounded){app.playerVelY=7.6;app.grounded=false;}},
     stop(){clearInterval(timer);app.renderFailed=true;app.resetInput();app.renderer?.dispose();app.controls?.dispose();}
   };
 }
