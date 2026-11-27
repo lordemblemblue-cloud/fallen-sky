@@ -197,3 +197,35 @@ test('all five real discovery markers award distinct persistent treasure exactly
  const forged={...p,world:{...p.world,discoveries:[...p.world.discoveries,'unknown','__proto__']}};
  assert.equal(A.collectLoot(forged,'unknown').profile,forged);assert.equal(A.collectLoot(forged,'__proto__').profile,forged);
 });
+
+import {WORLD_SERVICES,serviceFor,withinService,nearestService,liveService,PLANNED_ANCHORS,validAnchorTransform} from '../src/components/fantasybattle/core/worldInteractions.mjs';
+test('service placement retains original coordinates and rejects out-of-range interactions',()=>{
+ assert.deepEqual(WORLD_SERVICES.map(s=>[s.id,s.x,s.z]),[['grove_service',9,-1.4],['sanctuary_service',191,-1.4],['moonveil_service',226,-1.4]]);
+ for(const s of WORLD_SERVICES){
+  const p=[s.x,12,s.z],w={mode:'wilds',position:p,nearbyService:s.id};
+  assert.equal(serviceFor(s.id),s);assert.equal(nearestService(p,()=>12),s);assert.ok(withinService(p,s,12));assert.ok(liveService(w,s.id));
+  assert.equal(withinService([s.x,14,s.z],s,12),false);
+  assert.equal(nearestService([s.x+3,12,s.z],()=>12),null);
+  assert.equal(liveService({...w,position:[s.x+3,12,s.z]},s.id),false);
+  assert.equal(liveService({...w,mode:'sanctuary'},s.id),false);
+  assert.equal(liveService({...w,nearbyService:'unknown'},s.id),false);
+ }
+ assert.equal(serviceFor('__proto__'),null);assert.equal(liveService(null,'grove_service'),false);
+ assert.equal(nearestService([NaN,12,0],()=>12),null);
+});
+test('planned anchors remain inactive and candidate transform review is bounded',()=>{
+ assert.equal(PLANNED_ANCHORS.length,24);
+ assert.equal(new Set(PLANNED_ANCHORS.map(a=>a.id)).size,24);
+ for(const a of PLANNED_ANCHORS){assert.equal(a.transform,null);assert.equal(a.status,'awaiting-approved-map');}
+ const t={position:[55,5,-2.2],facing:0,radius:2};
+ assert.ok(validAnchorTransform('fb.pilgrim.ledger',t));
+ for(const bad of [{...t,position:[190,5,0]},{...t,position:[55,NaN,0]},{...t,position:[55,5,10]},{...t,radius:0},{...t,radius:4},{...t,facing:Infinity}])assert.equal(validAnchorTransform('fb.pilgrim.ledger',bad),false);
+ assert.equal(validAnchorTransform('unknown',t),false);
+ const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
+ assert.ok(world.includes('app.servicePoints=WORLD_SERVICES'));
+ assert.ok(world.includes('else this.openService?.();'));
+ assert.ok(world.includes("'Interact [E]'"));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ assert.ok(page.includes('liveService(e.world,registered.id)'));assert.ok(page.includes('gearSlotLabel(item.slot)'));
+ assert.ok(!page.includes('item.gearSlotLabel(slot)'));
+});
