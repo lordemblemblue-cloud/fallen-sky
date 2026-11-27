@@ -3,7 +3,7 @@ const rows=[["Start Menu","title","New Game:48|Continue:10|Load Game:02|Settings
 export const UI_SCREENS=Object.freeze(Object.fromEntries(rows.map(([name,mode,actions,layout],i)=>{const id=String(i+1).padStart(2,'0');return [id,{id,name,mode,layout,actions:actions.split('|').map(a=>{const [label,target]=a.split(':');return {label,target};})}];})));
 export const PAUSE_LINKS=Object.freeze(['05','06','07','08','11','12','18','03','21','24','25','27','28','29','30','34','37']);
 export const HOTKEY_SCREENS=Object.freeze({KeyC:'05',KeyI:'06',KeyM:'07',KeyL:'08',KeyK:'12'});
-export const UNSUPPORTED=new Set(['13','16','17','22','23','25','26','27','30','31','33','38','39','46']);
+export const UNSUPPORTED=new Set(['26','27','30']);
 export function makeTemplate(id) {
   const s=UI_SCREENS[id]; if(!s)return '';
   const defs='<defs><linearGradient id="ink" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#080d1a" stop-opacity=".89"/><stop offset=".68" stop-color="#193d82" stop-opacity=".75"/><stop offset="1" stop-color="#448ce0" stop-opacity=".42"/></linearGradient><linearGradient id="gold"><stop stop-color="#aa926d" stop-opacity=".4"/><stop offset=".5" stop-color="#ebd6a6"/><stop offset="1" stop-color="#aa926d" stop-opacity=".4"/></linearGradient></defs>';
