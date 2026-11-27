@@ -153,3 +153,40 @@
 .fa-save-plaque span{position:relative;text-align:center;overflow-wrap:anywhere}
 .fa-save-plaque.is-ready span{position:absolute;left:31%;top:24%;width:54%;height:47%;display:grid;place-items:center;line-height:1.05}
 @media(max-aspect-ratio:4/3){.fa-save-plaque{width:clamp(165px,45vw,290px)}}
+
+
+/* Original main menu and load game plates (1199 x 675). Artwork is not
+   stretched; live controls align to the recovered source. Small viewports
+   retain the existing accessible layout until touch-specific art is tested. */
+.fa-ui.page[data-staged-original="true"]:is([data-screen="01"],[data-screen="02"]){inset:50% auto auto 50%;width:min(100vw,177.62963vh);height:min(100vh,56.29692vw);transform:translate(-50%,-50%);overflow:hidden;background:none}
+.fa-ui[data-staged-original="true"]:is([data-screen="01"],[data-screen="02"]) .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="02"] .fa-header,.fa-art-sr{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-menu,.fa-original-load{position:absolute;inset:0;pointer-events:none;color:#f8f1df;font-size:clamp(11px,min(1.55vw,2.75vh),23px);text-shadow:0 1px 4px #101d34}
+.fa-original-menu .fa-painted-button,.fa-original-load .fa-painted-button{position:absolute;display:flex;justify-content:center;align-items:center;pointer-events:auto;min-height:0;padding:0;border:0;background:transparent;box-shadow:none;color:#fff6df;border-radius:12px;transform:none;font-size:1em;text-shadow:0 1px 4px #142449}
+.fa-original-menu .fa-painted-button:hover:not(:disabled),.fa-original-load .fa-painted-button:hover:not(:disabled){background:#d0edff26;box-shadow:inset 0 0 0 1px #e7d8a980}
+.fa-original-menu .fa-painted-button:disabled,.fa-original-load .fa-painted-button:disabled{opacity:1;background:#0b1a355c;cursor:not-allowed}
+.fa-original-menu .fa-painted-button:focus-visible,.fa-original-load .fa-painted-button:focus-visible{outline:2px solid #b9efff;outline-offset:2px}
+.fa-menu-subtitle{position:absolute;left:8%;top:21.8%;width:20%;text-align:center;margin:0;font-style:italic;font-size:.9em}
+.fa-original-menu .fa-painted-button{left:6.4%;width:22.3%;height:6.2%}
+.fa-menu-start{top:32.1%}.fa-menu-continue{top:40.4%}.fa-menu-load{top:48.4%}.fa-menu-settings{top:56.3%}.fa-menu-exit{top:64.2%}
+.fa-original-menu .fa-menu-exit{padding-left:3%;font-size:.9em}
+.fa-menu-portrait{position:absolute;left:4.42%;top:78.67%;width:5.92%;height:10.52%;overflow:hidden;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.fa-menu-portrait .fa-archer-portrait,.fa-load-row-portrait .fa-archer-portrait{width:100%;height:100%;max-height:none;object-fit:cover;filter:none;flex:none}
+.fa-menu-save{position:absolute;left:11.4%;top:79.6%;width:8.5%;height:8.5%;display:flex;flex-direction:column;justify-content:center;gap:1px;overflow:hidden;font-size:.77em}
+.fa-menu-save strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fa-menu-save small{font-size:.85em}
+.fa-menu-error{position:absolute;left:4%;top:89.6%;width:26%;font-size:.72em;background:#132442ad;overflow-wrap:anywhere;max-height:8%;overflow:auto;pointer-events:auto}
+.fa-load-rows{position:absolute;left:5.25%;top:24.6%;width:25.65%;height:42.5%;display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:3.4%;pointer-events:auto}
+.fa-original-load .fa-load-row{position:relative;width:100%;height:100%;text-align:left;flex-direction:row;justify-content:flex-start;gap:5%;padding:0 3%;overflow:hidden}
+.fa-original-load .fa-load-row.primary{box-shadow:inset 0 0 0 1.5px #efd594,0 0 7px #e9cb9370}
+.fa-load-row-portrait{width:28%;height:93%;border-radius:50%;overflow:hidden;flex:none;display:flex;align-items:center}
+.fa-load-row-data{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:.8em}.fa-load-row-data strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fa-load-row-data small{font-size:.8em}
+.fa-load-preview{position:absolute;left:36.2%;top:17.4%;width:41.4%;height:25.7%;display:flex;justify-content:center;align-items:center;overflow:hidden;color:#e7eff8}
+.fa-load-preview .fa-archer-portrait{width:auto;max-width:90%;height:100%;max-height:none;object-fit:contain;flex:none}
+.fa-load-name{position:absolute;left:39.6%;top:45.4%;width:38%;height:5.5%;display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:.9em}
+.fa-load-name strong{max-width:76%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fa-load-metadata,.fa-load-backup{position:absolute;top:54%;height:19%;overflow:auto;pointer-events:auto;font-size:.77em;line-height:1.3}
+.fa-load-metadata{left:39%;width:19%}.fa-load-backup{left:60%;width:18%}
+.fa-load-metadata p{margin:.3em 0}.fa-load-backup label{display:block}.fa-load-backup input{width:100%;min-width:0;display:block;margin:.3em 0;background:#10213c9c;color:#fff;border:1px solid #c6b18c88;border-radius:4px;padding:.35em;font:inherit}.fa-load-backup .fa-button{width:100%;min-height:28px;font-size:.9em;padding:.3em}
+.fa-original-load .fa-load-confirm{left:37.3%;top:76.3%;width:16.1%;height:6%}
+.fa-original-load .fa-load-export{left:54.1%;top:76.3%;width:11.1%;height:6%;font-size:.85em}
+.fa-original-load .fa-load-back{left:66.1%;top:76.3%;width:11%;height:6%;font-size:.85em}
