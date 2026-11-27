@@ -442,7 +442,7 @@ test('Chapter 1 narrative uses original and fallback interfaces without replacin
 });
 
 
-import {roadQuest,changeRoadQuest,validCampaign} from '../src/components/fantasybattle/core/campaignQuests.mjs';
+import {roadQuest,changeRoadQuest,validCampaign,campaignQuest,changeCampaignQuest,CAMPAIGN_QUESTS} from '../src/components/fantasybattle/core/campaignQuests.mjs';
 import {createProfile as newRoadProfile, isProfile as isRoadProfile, exportBackup as exportRoadBackup, parseBackup as parseRoadBackup, rewardVictory as roadVictory} from '../src/components/fantasybattle/core/adventureState.mjs';
 test('Pilgrim Road progression is bounded, backward compatible and derives objectives from recorded victories',()=>{
  const legacy=newRoadProfile('Road test');
@@ -469,5 +469,32 @@ test('Pilgrim Road progression is bounded, backward compatible and derives objec
 });
 test('Chapter 2 uses original journal and existing transaction guard',()=>{
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
- for(const marker of ['roadQuest(profile)','roadVisible','roadSelected','fa-journal-expanded','onRoadAction','transact(p=>changeRoadQuest(p,action)','Pilgrim Road objectives'])assert.ok(page.includes(marker),marker);
+ for(const marker of ['CAMPAIGN_QUESTS.map','campaignQuest(profile,q.id)','campaignEntry','fa-journal-expanded','onCampaignAction','transact(p=>changeCampaignQuest(p,questId,action)','q.title+\' objectives\''])assert.ok(page.includes(marker),marker);
+});
+
+test('Waterfall chapter and optional cave quest preserve existing road saves and independent completion',()=>{
+ const base=newRoadProfile('Waterfall test');
+ const road={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02']}};
+ assert.ok(isRoadProfile(road));assert.equal(campaignQuest(road,'waterfall').state,'available');
+ assert.equal(campaignQuest(road,'caveEcho').state,'locked');
+ assert.throws(()=>changeCampaignQuest(road,'caveEcho','accept'));assert.throws(()=>changeCampaignQuest(road,'__proto__','accept'));
+ const active=changeCampaignQuest(road,'waterfall','accept');
+ assert.equal(campaignQuest(active,'waterfall').state,'active');assert.throws(()=>changeCampaignQuest(active,'waterfall','claim'));
+ const caveFirst=roadVictory(active,{id:'wilds_cave_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(caveFirst,'waterfall').count,0);assert.equal(campaignQuest(caveFirst,'caveEcho').state,'locked');
+ const done=roadVictory(caveFirst,{id:'wilds_waterfall_01',category:'Normal'}).profile;
+ const claimed=changeCampaignQuest(done,'waterfall','claim');
+ assert.equal(campaignQuest(claimed,'waterfall').state,'claimed');assert.equal(campaignQuest(claimed,'caveEcho').state,'available');
+ const optional=changeCampaignQuest(claimed,'caveEcho','accept');
+ assert.equal(campaignQuest(optional,'caveEcho').state,'complete');
+ const final=changeCampaignQuest(optional,'caveEcho','claim');
+ assert.equal(campaignQuest(final,'caveEcho').state,'claimed');assert.ok(isRoadProfile(final));assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.deepEqual(final.inventory,done.inventory);assert.equal(final.xp,done.xp);assert.equal(final.gold,done.gold);
+ assert.throws(()=>changeCampaignQuest(final,'caveEcho','claim'));
+ assert.equal(isRoadProfile({...road,quests:{...road.quests,campaign:{version:1,pilgrimRoad:'claimed',caveEcho:'active'}}}),false);
+ assert.equal(CAMPAIGN_QUESTS.find(q=>q.id==='caveEcho').optional,true);
+});
+test('Chapter 3 uses catalog journal and spoiler-gated codex without new map or asset dependencies',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['CAMPAIGN_QUESTS.flatMap','Side quest · ', "selected.id==='mistScout'","candidate.id==='wilds_waterfall_01'","candidate.id==='wilds_cave_01'","['active','complete','claimed'].includes(progress.state)"])assert.ok(page.includes(marker),marker);
 });
