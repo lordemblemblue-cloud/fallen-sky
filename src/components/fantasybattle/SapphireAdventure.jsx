@@ -1251,7 +1251,7 @@ export default function SapphireAdventure(){
     if(e.type==='encounter'&&p&&s.id==='10'&&!s.encounter){
       const updated=updateWorld(p,e.world);replaceProfile(updated);setWorld(e.world);if(e.encounter.category==='Normal')startBattle(e.encounter);else{setCandidate(e.encounter);go('23');}return;
     }
-    if(e.type==='discovery'&&p&&!s.encounter){const treasure=treasureFor(e.id);if(!treasure||s.id!=='10'||!e.world?.discoveries?.includes(e.id)){post('pause',s.id!=='10');return;}const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:treasure.label});setLoot(awarded.loot);notify(treasure.label,awarded.loot.length?'rewards':'exploration');autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
+    if(e.type==='discovery'&&p&&!s.encounter){const treasure=treasureFor(e.id);if(!treasure||!e.world?.discoveries?.includes(e.id)){post('pause',s.id!=='10');return;}const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:treasure.label});setLoot(awarded.loot);notify(treasure.label,awarded.loot.length?'rewards':'exploration');autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
     if(e.type==='service'&&p&&s.id==='10'&&!s.encounter){setService(e.service);setWorld(e.world);replaceProfile(updateWorld(p,e.world));go('13');return;}
     if(e.type==='battleReady'&&isCurrentEncounter(s.encounter,e.token)&&!failedLoad.current){setArenaReady(true);root('09');return;}
     if(e.type==='error')fail(e.message||'World error');
