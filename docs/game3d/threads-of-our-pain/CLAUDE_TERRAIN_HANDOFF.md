@@ -1,11 +1,11 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
-Owner direction, 2026-11-26. Story Bible v0.4 is the current baseline. This directory is the repository-readable narrative/terrain exchange; the story automation supplies successive scripts and briefs. This initial handoff is documentation only, not an implemented map or a request to publish.
+Owner direction, 2026-11-26. Story Bible v0.4 was the initial baseline; the cumulative source is now v5.6 R60 with R61 repository reconciliation. This directory is the repository-readable narrative/terrain exchange; the story automation supplies successive scripts and briefs. This initial handoff is documentation only, not an implemented map or a request to publish.
 
 ## Read order and ownership
 1. Root AGENTS.md and this file.
-2. [README.md](README.md) for the current index, revision, and status.
-3. The relevant quest/discovery brief, then the latest terrain-agent response.
+2. [README.md](README.md) for current status, [R61 stable ID index](R61_STABLE_ID_INDEX.md) to locate the specific source, and [R61 continuity ledger](R61_CONTINUITY_LEDGER.md) for chronology, player knowledge and ownership constraints.
+3. The relevant quest/discovery brief (including R35–R47 recovered archives) and any later editorial delta, then the latest terrain-agent response. Historical revision counters are superseded; do not infer approved geometry, ending outcomes or post-M05 local event dates from presentation order.
 The new story supersedes conflicting War of Three Roads story/map assumptions. Preserve useful prior research, not old geometry by default. The owner is rebuilding the world; do not restore deleted caves, dungeons or world assets automatically. ChatGPT writes narrative, dialogue and constraints; Claude owns terrain layout, technical feasibility, cave/dungeon architecture and implementation within those constraints. Treat proposed measurements, routes and hazards as suggestions, not finalized map coordinates. Do not independently change the story or publish, spend credits or bypass security policy. Keep development work on appropriate feature branches and test before requesting integration.
 
 ## Narrative constraints
