@@ -1,4 +1,6 @@
-# Claude unified story library — R73
+# Claude unified story library — R74
+
+> **R74:** [Final five original-world opportunity reviews — S51–S55](R74_ORIGINAL_OPPORTUNITY_SCHEDULE.md) completes 105/105 source-level scheduling reviews. Exact phase windows, S53 inscription policy, S55 two-lane policy, postgame progression and runtime tests remain open. R65 ending precedence retained.
 
 > **R73:** [Original opportunity schedule — D41–D50 / S41–S50](R73_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends detailed review to 100/105, five pending. All discovery IDs reviewed; reconcile legacy optional vista flags with R66, preserve consent, actual receipts and safe access. Exact phases and runtime remain unverified.
 
@@ -23,4 +25,4 @@ This is the repository-readable entry point for the entire story and subsequent 
 - [R67 opening character/phase register](R67_ACTOR_PHASE_REGISTER.md).
 - [R68 late character/phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md).
 
-Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue at R74, adding links here and in the stable story index.
+Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue at R75, adding links here and in the stable story index.
