@@ -68,7 +68,23 @@ export const MOONVEIL_TRIAL=Object.freeze({
  completion:'The keeper has fallen silent. The old rites were meant to release memories, not imprison them.',
  objectives:Object.freeze([Object.freeze({id:'wilds_moonveil_elite',label:'Defeat the Moonveil Keeper'})])
 });
-export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST,HEIGHTS_QUEST,ELITE_TRIAL,SANCTUARY_QUEST,ASTRAL_QUEST,MOONVEIL_TRIAL]);
+export const LAST_ESCORT=Object.freeze({
+ id:'lastEscort',title:'The Last Escort',prerequisite:'pilgrimRoad',optional:true,
+ returnService:'grove_service',rewardGold:20,
+ offer:'A stranded traveler left a patrol ledger on the upper pilgrimage walkway. Recover its evacuation order and report back at the Grove rest point.',
+ description:'Read the hidden reliquary on the upper walkway. The recorded evacuation order may explain why the sentinels turned on travelers. Return to the Grove rest point.',
+ completion:'The ledger confirms the sentinels received an evacuation order, not a command to attack travelers. The stranded traveler finally knows why the escort never returned.',
+ objectives:Object.freeze([Object.freeze({id:'disc_pilgrimage',kind:'discovery',label:'Inspect the hidden pilgrimage reliquary and recover the ledger evidence'})])
+});
+export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST,HEIGHTS_QUEST,ELITE_TRIAL,SANCTUARY_QUEST,ASTRAL_QUEST,MOONVEIL_TRIAL,LAST_ESCORT]);
+export function escortConversation(p){
+ const progress=campaignQuest(p,LAST_ESCORT.id);
+ if(!progress||progress.state==='locked')return null;
+ if(progress.state==='available')return {state:progress.state,message:LAST_ESCORT.offer};
+ if(progress.state==='active')return {state:progress.state,message:'The upper walkway reliquary holds the patrol ledger. Search there, then return here.'};
+ if(progress.state==='complete')return {state:progress.state,message:'You found the evacuation order. The traveler asks whether the escort was ever told to attack.'};
+ return {state:progress.state,message:LAST_ESCORT.completion};
+}
 const defeated=(p,id)=>p?.world?.completedEncounters?.includes(id)===true;
 const discovered=(p,id)=>p?.world?.discoveries?.includes(id)===true;
 // Only catalogued objective IDs are used; no dialogue or asset can grant progress.
@@ -102,11 +118,14 @@ export function cleanCampaign(p){
  if(!Object.hasOwn(p.quests,'campaign'))return {};
  return {campaign:{version:1,...Object.fromEntries(CAMPAIGN_QUESTS.filter(q=>Object.hasOwn(p.quests.campaign,q.id)).map(q=>[q.id,p.quests.campaign[q.id]]))}};
 }
-export function changeCampaignQuest(p,id,action){
+export function changeCampaignQuest(p,id,action,{serviceId=null}={}){
  if(!validCampaign(p))throw Error('Invalid campaign progress.');
  const state=campaignQuest(p,id)?.state;
  if(!((action==='accept'&&state==='available')||(action==='claim'&&state==='complete')))throw Error('Quest action is not available.');
- return {...p,quests:{...p.quests,campaign:{...p.quests.campaign,version:1,[id]:action==='accept'?'active':'claimed'}}};
+ const q=CAMPAIGN_QUESTS.find(q=>q.id===id);
+ if(action==='claim'&&q.returnService&&serviceId!==q.returnService)throw Error('Return to the Grove rest point to complete this quest.');
+ const gold=action==='claim'&&q.rewardGold?Math.min(10000000,p.gold+q.rewardGold):p.gold;
+ return {...p,gold,quests:{...p.quests,campaign:{...p.quests.campaign,version:1,[id]:action==='accept'?'active':'claimed'}}};
 }
 export const changeRoadQuest=(p,action)=>changeCampaignQuest(p,ROAD_QUEST.id,action);
 
@@ -124,7 +143,7 @@ export function campaignPrompt(p){
  if(!entry)return campaignArc(p).complete?'Sapphire campaign arc complete':null;
  const {q,progress}=entry;
  if(progress.state==='available')return 'New quest: '+q.title;
- if(progress.state==='complete')return 'Complete in journal: '+q.title;
+ if(progress.state==='complete')return q.returnService?'Return to Grove rest point: '+q.title:'Complete in journal: '+q.title;
  return q.title+' · '+(progress.objectives.find(o=>!o.done)?.label||'Review journal');
 }
 export function campaignServiceNote(p){
