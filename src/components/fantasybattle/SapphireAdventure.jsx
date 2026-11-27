@@ -102,7 +102,7 @@ export default function SapphireAdventure(){
   };
   const autosave=p=>{const s=current.current.slot;if(s){try{const record=readSlots(localStorage).slots.find(x=>x.id===s);if(record?.status==='valid'&&record.profile.id!==p.id){notify('Autosave paused: slot belongs to another character.');return;}if(record?.status==='corrupt'){notify('Autosave paused: save slot damaged.');return;}save(s,record?.status==='valid',p);}catch(e){fail(e.message);}}};
   const downloadBackup=p=>{try{const blob=new Blob([exportBackup(p)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='fantasy-battle-save.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('Save backup exported');}catch(e){notify(e.message);}};
-  const importBackup=async file=>{setBackupError('');if(!file||current.current.running)return;try{if(file.size>MAX_BACKUP_BYTES)throw Error('Save backup is too large.');const p=parseBackup(await file.text());if(current.current.running||current.current.id!=='03')return;const target=importSlot;const before=readSlots(localStorage);if(before.error)throw Error(before.error);const occupied=before.slots.some(s=>s.id===target);requestConfirm('Import '+p.name+' into slot '+target+(occupied?' and replace the existing save?':'?'),()=>{try{const now=readSlots(localStorage);if(now.error)throw Error(now.error);if(!occupied&&now.slots.some(s=>s.id===target))throw Error('Slot changed; please import again.');writeSlot(localStorage,target,p,{overwrite:occupied});reloadSlots();notify('Save imported into slot '+target);}catch(e){setBackupError(e.message);}});}catch(e){setBackupError(e.message);}};
+  const importBackup=async file=>{setBackupError('');if(!file||current.current.running)return;try{if(file.size>MAX_BACKUP_BYTES)throw Error('Save backup is too large.');const p=parseBackup(await file.text());if(current.current.running||current.current.id!=='03')return;const target=importSlot;const before=readSlots(localStorage);if(before.error)throw Error(before.error);const previous=before.slots.find(s=>s.id===target);const occupied=Boolean(previous);requestConfirm('Import '+p.name+' into slot '+target+(occupied?' and replace the existing save?':'?'),()=>{try{const now=readSlots(localStorage);if(now.error)throw Error(now.error);const latest=now.slots.find(s=>s.id===target);if(Boolean(latest)!==occupied||latest?.savedAt!==previous?.savedAt||latest?.profile?.id!==previous?.profile?.id||latest?.status!==previous?.status)throw Error('Slot changed; please import again.');writeSlot(localStorage,target,p,{overwrite:occupied});reloadSlots();notify('Save imported into slot '+target);}catch(e){setBackupError(e.message);}});}catch(e){setBackupError(e.message);}};
   const begin=(p,saveSlot=null)=>{
     clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);restorePending.current=false;startReady.current=false;processed.current=null;failedLoad.current=false;clearTimeout(battleTimer.current);
     replaceProfile(p);setSlot(saveSlot);current.current.slot=saveSlot;setWorld(null);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);
@@ -118,7 +118,7 @@ export default function SapphireAdventure(){
   const openPause=()=>{if(isWorldScreen(current.current.id))go('04');};
   const onKey=code=>{
     const s=current.current.id;
-    if(code==='Escape'){if(s==='40')setPending(null);if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
+    if(code==='Escape'){if(s==='47')return;if(s==='40')setPending(null);if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
     const target=HOTKEY_SCREENS[code];
     if(target&&current.current.running&&(isWorldScreen(s)||s==='04'||s===target)){if(s===target)back();else go(target);}
   };
@@ -129,7 +129,7 @@ export default function SapphireAdventure(){
   };
   const resumeWorld=(p=current.current.profile)=>{
     const e=current.current.encounter;
-    setEncounter(null);current.current.encounter=null;setArenaReady(false);setHud(null);
+    setEncounter(null);current.current.encounter=null;setArenaReady(false);setHud(null);setResult(null);
     post('restore',p.world);if(e&&!e.practice)post('finish',{id:e.id,won:p.world.completedEncounters.includes(e.id)});
     post('pause',false);root('10');setTimeout(()=>frame.current?.focus(),0);
   };
@@ -146,7 +146,7 @@ export default function SapphireAdventure(){
     root(won?'14':'15');
   };
   const victoryContinue=()=>{const r=current.current.result,p=current.current.profile;if(r?.leveled){go('32');return;}resumeWorld(p);};
-  const finishLevel=()=>{if(current.current.result?.unlocked?.length){go('45');return;}if(current.current.encounter&&current.current.result?.leveled)resumeWorld();else back();};
+  const finishLevel=()=>{if(current.current.encounter&&current.current.result?.unlocked?.length){go('45');return;}if(current.current.encounter&&current.current.result?.leveled)resumeWorld();else back();};
   const eventHandler=useRef(null);
   eventHandler.current=e=>{
     const s=current.current,p=s.profile;
