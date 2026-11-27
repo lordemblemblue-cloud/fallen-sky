@@ -1766,12 +1766,28 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         for (const s of this.swayObjects) s.obj.rotation.z = Math.sin(t * s.speed + s.phase) * s.amp;
         for (const c of this.clouds) { c.position.x += dt * c.userData.speed; const center=c.userData.centerX || 0; if (c.position.x > center+115) c.position.x -= 230; }
         if (this.petals) {
-          const dummy = new THREE.Object3D();
+          const dummy = this.petalMatrixScratch ??= new THREE.Object3D();
+          const wilds = this.mode === "wilds";
+          const base = wilds ? this.sampleWildsHeight(this.playerPos.x) : this.petalOrigin.baseY;
+          const center = wilds ? this.playerPos.x : this.petalOrigin.centerX;
+          const half = wilds ? 24 : this.petalOrigin.spanX / 2;
+          const width = 2 * half;
+          const count = Math.min(this.petals.count, this.petalData.length);
+          // Keep hidden particles' simulation current for quality changes, but
+          // avoid composing and uploading matrices that cannot be drawn.
           for (let i = 0; i < this.petalData.length; i++) {
-            const p = this.petalData[i]; p.y -= dt * p.speed; p.x += Math.sin(t * 0.8 + p.phase) * dt * 0.35; const base = this.mode === "wilds" ? this.sampleWildsHeight(this.playerPos.x) : this.petalOrigin.baseY; if (p.y < base-1) p.y = base+14; const center=this.mode === "wilds" ? this.playerPos.x : this.petalOrigin.centerX, half=this.mode === "wilds" ? 24 : this.petalOrigin.spanX/2; p.x=center+(((p.x-center+half)%(2*half)+2*half)%(2*half))-half;
-            dummy.position.set(p.x, p.y, p.z); dummy.rotation.set(t + p.phase, t * 0.7 + p.phase, p.phase); dummy.updateMatrix(); this.petals.setMatrixAt(i, dummy.matrix);
+            const p = this.petalData[i];
+            p.y -= dt * p.speed;
+            p.x += Math.sin(t * 0.8 + p.phase) * dt * 0.35;
+            if (p.y < base - 1) p.y = base + 14;
+            p.x = center + (((p.x - center + half) % width + width) % width) - half;
+            if (i >= count) continue;
+            dummy.position.set(p.x, p.y, p.z);
+            dummy.rotation.set(t + p.phase, t * 0.7 + p.phase, p.phase);
+            dummy.updateMatrix();
+            this.petals.setMatrixAt(i, dummy.matrix);
           }
-          this.petals.instanceMatrix.needsUpdate = true;
+          if (count > 0) this.petals.instanceMatrix.needsUpdate = true;
         }
       }
 
