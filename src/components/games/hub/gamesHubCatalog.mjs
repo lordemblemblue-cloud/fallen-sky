@@ -8,9 +8,9 @@
 
 export const GAMES_HUB_FOCUS_STORAGE_KEY = 'adamXEve.gamesHub.focusedGame.v2';
 
-// Fantasy Battle (game #3) is under development. Keep the public launcher and
-// direct route unavailable until the game is reviewed and ready.
-export const FANTASY_BATTLE_RELEASED = false;
+// Fantasy Battle (game #3) is explicitly enabled by the project owner.
+// This switch controls both the hub tile and direct route access.
+export const FANTASY_BATTLE_RELEASED = true;
 
 const BASE44_MEDIA = 'https://media.base44.com/images/public/6af625cd654fa5b8954442ce';
 
