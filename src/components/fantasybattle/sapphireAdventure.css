@@ -659,3 +659,32 @@
 .fa-original-bonds .fa-bond-gift{left:41.5%}.fa-original-bonds .fa-bond-talk{left:61.4%}
 .fa-bond-navigation{position:absolute;left:22%;top:89%;width:18.1%;height:5%;display:grid;grid-template-columns:1.3fr 1fr .8fr;gap:2%}
 .fa-original-bonds .fa-bond-navigation .fa-button{background:#142448e5;border:1px solid #d6b87f;border-radius:8px;font-size:.72em}
+
+/* 07 — exact original map painting with authoritative streamed map overlaid. */
+.fa-ui.page[data-staged-original="true"][data-screen="07"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="07"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="07"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-worldmap{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.15vw,2.04vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-worldmap h2,.fa-original-worldmap h3,.fa-original-worldmap p{margin:.15em 0}
+.fa-original-worldmap .fa-button{pointer-events:auto;min-height:0;min-width:0;padding:.15em .4em;border:0;background:transparent;box-shadow:none;color:inherit;font:inherit;line-height:1.1}
+.fa-original-worldmap .fa-button:hover:not(:disabled),.fa-original-worldmap .fa-button[aria-pressed=true]{background:#193d82c0;box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-worldmap .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:1px}
+.fa-worldmap-title{position:absolute;left:3%;top:13.5%;width:20%;font-size:2em;text-align:center}
+.fa-worldmap-tag{position:absolute;left:4%;top:20.2%;width:18%;text-align:center;font-size:.85em}
+.fa-worldmap-nav{position:absolute;left:4.3%;top:28.7%;width:17.5%;height:32.8%;display:grid;grid-template-rows:repeat(5,1fr);gap:5%}
+.fa-worldmap-nav .fa-button{background:#142448b0;padding-left:15%;border-radius:15px}
+.fa-worldmap-player{position:absolute;left:2%;top:71.4%;width:20%;height:12%;display:flex;align-items:center;gap:5%;background:#142448d9;border-radius:12px;padding:.3em}
+.fa-worldmap-player .fa-archer-portrait{width:30%;height:100%;max-height:none;object-fit:contain}
+.fa-worldmap-player>div{min-width:0;overflow:hidden}.fa-worldmap-player strong{overflow-wrap:anywhere}
+.fa-worldmap-heading{position:absolute;left:42%;top:8%;width:19%;height:5%;display:grid;place-items:center;text-align:center;font-size:1.25em}
+.fa-worldmap-live{position:absolute;left:25%;top:27%;width:49.6%;height:57%;border-radius:12px;overflow:auto;pointer-events:auto;background:#101f3be8;padding:1em}
+.fa-worldmap-live h3{margin-bottom:.5em}.fa-worldmap-live .fa-map{width:100%}.fa-worldmap-live .fa-map svg{max-height:24vh}
+.fa-worldmap-live>.fa-button,.fa-worldmap-discovered>.fa-button{display:block;width:100%;text-align:left;background:#13284cbb;border-radius:5px;margin:.2em 0;padding:.35em}
+.fa-worldmap-entry{display:flex;justify-content:space-between;gap:.35em;padding:.22em .1em}.fa-worldmap-entry small{white-space:nowrap}
+.fa-worldmap-data-title,.fa-worldmap-discovered-title,.fa-worldmap-encounters-title,.fa-worldmap-legend-title{position:absolute;left:81%;width:17%;text-align:center;font-size:.95em}
+.fa-worldmap-data-title{top:7%}.fa-worldmap-discovered-title{top:23.4%}.fa-worldmap-encounters-title{top:45.4%}.fa-worldmap-legend-title{top:64.8%}
+.fa-worldmap-data,.fa-worldmap-discovered,.fa-worldmap-encounters,.fa-worldmap-legend{position:absolute;left:77.7%;width:20.4%;overflow:auto;pointer-events:auto;background:#142448e0;border-radius:7px;padding:.25em .5em;font-size:.83em}
+.fa-worldmap-data{top:10.3%;height:11.7%}.fa-worldmap-discovered{top:26.5%;height:16.7%}.fa-worldmap-encounters{top:48%;height:14.4%}.fa-worldmap-legend{top:67.4%;height:16%}
+.fa-worldmap-legend p{margin:.4em 0}
+.fa-original-worldmap .fa-worldmap-center,.fa-original-worldmap .fa-worldmap-travel,.fa-original-worldmap .fa-worldmap-back{position:absolute;top:87%;height:4.6%;border-radius:14px;padding-left:2.5%;background:#142448b0}
+.fa-worldmap-center{left:30.7%;width:12.4%}.fa-worldmap-travel{left:44.2%;width:12.9%;font-size:.76em!important}.fa-worldmap-back{left:58.5%;width:12.1%}

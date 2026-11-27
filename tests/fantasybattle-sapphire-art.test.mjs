@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','11','12','18','19','20','26','27','30','32','35','40','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','11','12','18','19','20','26','27','30','32','35','40','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -114,4 +114,13 @@ test('original bonds interface reads actual recruited companion progression with
  for(const marker of ['fa-original-bonds','memberFor(profile','state.bond','bond>=75','bond>=25','max={100}','Practice and repeat victories do not count','No bond-based statistic bonuses','no rewards are claimable','<Btn disabled>Gifts','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
  assert.match(page,/case '30':content=<CompanionBonds/);
  assert.ok(!section.includes('transact('));
+});
+
+test('original world map uses streamed regions and discovered-only travel navigation',()=>{
+ assert.equal(stagedOriginalFor('07').wideOnly,true);
+ assert.ok(templateUrl('07').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function WorldMap('),page.indexOf('function SaveToast('));
+ for(const marker of ['fa-original-worldmap','world?.regions','visitedRegions.includes(r.id)','world?.encounters','<RegionMap world={world} profile={profile}','visited.find','!profile||!selected||Boolean(encounter)','onTravel(selected)','conceptual, not navigable geography','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
+ assert.match(page,/case '07':content=<WorldMap/);
 });

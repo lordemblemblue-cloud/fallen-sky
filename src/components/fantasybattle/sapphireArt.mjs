@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '07':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/4a2c142bb20f29bead0b620fa6903214_fantasy-battle-07-runtime.webp',source:'Original Fantasy Adventure 48 UI Template Kit — 07-world-map.jpg',mode:'full',wideOnly:true}),
  '30':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/1bc94f4f4c30f8fde38b9ac3d52fd283_fantasy-battle-30-runtime.webp',source:'Fantasy RPG Relationships & Bonds UI.png — original modular template batch 15',mode:'full',wideOnly:true}),
  '26':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/4869206b950ade4be0dc82c5fe237c6e_fantasy-battle-26-runtime.webp',source:'Lyria’s Temple Cleric Recruitment.png — original template batch 11',mode:'full',wideOnly:true}),
  '11':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/54a46941731d8e937e7d0d707c625275_fantasy-battle-11-runtime.webp',source:'Fantasy Battle original modular template batch 17 — Party Formation',mode:'full',wideOnly:true}),
