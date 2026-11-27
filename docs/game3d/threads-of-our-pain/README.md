@@ -52,6 +52,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M06 | A Life Forgotten | [Expanded main quest](M06.md) | Ready for proposed blockout; unverified |
 | D23 | The Road Without Flags | [Expanded discovery](D23_S30.md) | Ready for proposed blockout; unverified |
 | S30 | The Caravan Without Flags | [Expanded optional quest and terrain brief](D23_S30.md) | Ready for proposed blockout; unverified |
+| M07 | The Mark of a Forgotten Age | [Expanded main quest](M07.md) | Ready for proposed blockout; unverified |
+| D24 | The Physician's Hand | [Expanded discovery](D24_S33.md) | Ready for proposed blockout; unverified |
+| S33 | The Physician's Truce | [Expanded optional quest and terrain brief](D24_S33.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -126,3 +129,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R26
 
 [M06](M06.md) preserves the silver mark, Goddess dialogue, Wolfveil return, Lyra and optional Oath Tree; the open world unlocks without optional quests or premature cosmological explanation. [D23/S30](D23_S30.md) preserves wheel-circle alignment, supply tunnel, escort badge and independent mixed-caravan escort with M15 trust. 26/50 discoveries, 16/55 optional quests, 6/20 main quests expanded; all 75 outlines retained. Master v2.2 R26 saved in Library, 186 pages, 2,316 prior paragraphs preserved, all 176 earlier page images byte-identical; ten new pages reviewed at overview scale. Next M07 — The Mark of a Forgotten Age (reconcile earlier draft), D24 — The Physician's Hand / S33 — The Physician's Truce (Emergency recovery ability). S29 remains separate; S13/S19/S25/S26 separate. D02/D03/D05/D06 pending reconciliation. Claude return surveyed anchors, actual layout, cart clearances, traversal and performance tests. Terrain unbuilt; no code, merge, deployment or credits.
+
+## Revision R27
+
+[M07](M07.md) reconciles the earlier draft and catalog: identical asymmetric mark and tool-slip scratch, twin mountain caves, fresh versus ancient materials, historian and runner, route prediction and M08 lead. [D24/S33](D24_S33.md) preserves hand silhouette, buried infirmary, personal kit and Emergency Recovery, independent neutral clinic and supply routes. 27/50 discoveries, 17/55 optional quests, 7/20 main quests expanded; all 75 outlines retained. Master v2.3 R27 saved in Library, 194 pages, 2,430 prior paragraphs preserved, all 186 previous page images byte-identical, eight added pages reviewed at overview scale. Next M08 — The Missing History, D26 — The Treaty in Stone / S37 — The Cave Beneath the Treaty; D25 already expanded. Pending D02/D03/D05/D06 reconciliation; S13/S19/S25/S26/S29 separate. Claude return surveyed anchors, actual layout, shared mark mesh check, traversal and performance tests. No terrain build, code, merge, deployment or credits.
