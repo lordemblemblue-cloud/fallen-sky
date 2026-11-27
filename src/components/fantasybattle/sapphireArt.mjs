@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '43':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/e4461c750f548815ef2205f8a72c9cc7_fantasy-battle-43-runtime.webp',source:'Sapphire Sumi Quest Acceptance.png — original template batch 05',mode:'full',wideOnly:true}),
  '13':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/3453551f902f4b0a8a1071f521df280e_fantasy-battle-13-runtime.webp',source:'Original Fantasy Battle modular template batch 18 — 13.webp',mode:'full',wideOnly:true}),
  '42':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/84bbeeb0f9ebe8454b323d0df80ba339_fantasy-battle-42-runtime.webp',source:'Original Fantasy Battle template batch 06 — 42.webp',mode:'full',wideOnly:true}),
  '25':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/1aa3ce330b2183cc03f419793aa64ccf_fantasy-battle-25-runtime.webp',source:'Sapphire Sumi Fast Travel Map.png — original template batch 03',mode:'full',wideOnly:true}),

@@ -426,6 +426,25 @@ function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,
   return <Panel rect={layout[0]}><h2>{service?.label||'World interaction'}</h2><p>{world?.region||'World not loaded'}</p><p>{message}</p><div className="fa-dialogue-fallback-nav">{navigation}</div><div className="fa-dialogue-fallback-options">{choices}</div></Panel>;
 }
 
+// Original offer illustration is decorative; saved quest state is authoritative.
+function QuestOffer({profile,encounter,original,layout,onAccept,back}){
+  const state=profile?.quests.grove;
+  const defeated=Boolean(profile?.world.completedEncounters.includes('wilds_grove_01'));
+  const available=Boolean(profile&&state==='available'&&!encounter);
+  const reason=!profile?'Load a character first.':encounter?'Quest acceptance is unavailable during combat.':state==='claimed'?'This quest has already been completed.':state==='complete'?'This quest is ready to complete in the journal.':state==='active'?'This quest is already active.':defeated?'You have already defeated the Grove Spirit. Accept to record the completed objective.':'Accept to begin tracking this quest.';
+  const description=<><p>Defeat the Grove Spirit in the first exploration region, Whispering Grove.</p><p>{reason}</p></>;
+  const objective=<><p>Defeat the Grove Spirit · {defeated?1:0}/1</p><progress aria-label="Quest objective progress" max={1} value={defeated?1:0}/></>;
+  const rewards=<><p>Experience, gold and loot are awarded on the first eligible victory.</p><p>Accepting or claiming this journal entry does not grant additional rewards.</p></>;
+  const controls=<><Btn primary className="fa-offer-accept" disabled={!available} onClick={onAccept}>Accept Quest</Btn><Btn className="fa-offer-decline" onClick={back}>{state==='available'?'Decline':'Back'}</Btn></>;
+  if(original)return <div className="fa-original-offer">
+    <h2 className="fa-offer-title">Quest Offer</h2><h3 className="fa-offer-name">Whispering Grove Spirit</h3>
+    <section className="fa-offer-description" aria-live="polite">{description}</section>
+    <h3 className="fa-offer-objective-heading">Objective</h3><section className="fa-offer-objective">{objective}</section>
+    <h3 className="fa-offer-reward-heading">Rewards</h3><section className="fa-offer-reward">{rewards}</section>{controls}
+  </div>;
+  return <><Panel rect={layout[0]}><PaintedIllustration name="quest-offer"/></Panel><Panel rect={layout[1]}><h2>Whispering Grove Spirit</h2>{description}<h3>Objective</h3>{objective}<h3>Rewards</h3>{rewards}{controls}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -802,7 +821,7 @@ export default function SapphireAdventure(){
     case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>{const f=pending?.action;setPending(null);back();f?.();}}>Confirm</Btn>,<Btn onClick={()=>{setPending(null);back();}}>Cancel</Btn>)}</>);break;
     case '41':content=pane(0,<p role="status">{saveStatus||'No save operation in progress.'}</p>);break;
     case '42':content=<RegionDiscovery discovery={discovery} world={world} profile={profile} original={original} layout={screen.layout} onContinue={back} onMap={()=>{back();go('07');}}/>;break;
-    case '43':content=<>{pane(0,<PaintedIllustration name="quest-offer"/>)}{pane(1,<><h2>Whispering Grove Spirit</h2><p>Defeat the Grove Spirit in the first exploration region.</p><p>Battle experience is awarded on victory, not again for claiming the quest.</p><Btn primary disabled={!profile||profile.quests.grove!=='available'} onClick={()=>{const p=acceptGroveQuest(profile);replaceProfile(p);autosave(p);root('10');go('08');}}>Accept Quest</Btn><Btn onClick={back}>Decline</Btn></>)}</>;break;
+    case '43':content=<QuestOffer profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onAccept={()=>{if(transact(p=>{if(p.quests.grove!=='available')throw Error('Quest is no longer available.');return acceptGroveQuest(p);},'Quest accepted')){root('10');go('08');}}}/>;break;
     case '44':content=<><PaintedIllustration name="quest-complete" variant="fa-event-side-art"/>{pane(0,<><h2>Quest Complete</h2><p>Whispering Grove Spirit · Completed</p><Btn primary onClick={()=>root('10')}>Continue</Btn></>)}</>;break;
     case '45':content=<SkillUnlocked key={profile?.id||'guest'} profile={profile} result={result} level={level} original={original} layout={screen.layout} onContinue={()=>{if(current.current.profile)resumeWorld();else back();}} onSkillbook={()=>{if(current.current.profile){resumeWorld();go('12');}else back();}}/>;break;
     case '46':content=<>{pane(0,statPanel)}{pane(1,<><h2>Recovery Tonic</h2><p>Restore up to 40 HP. Owned: {inv.recoveryTonic||0}</p></>)}{pane(2,<><p>HP: {profile?.hp} → {Math.min(stats.maxHp,(profile?.hp||0)+40)}</p><Btn primary disabled={!profile||Boolean(encounter)||!inv.recoveryTonic||profile.hp>=stats.maxHp} onClick={()=>{if(transact(p=>heal(p),'Health restored'))back();}}>Confirm Recovery</Btn></>)}</>;break;
