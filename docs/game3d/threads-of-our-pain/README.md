@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R129 — source-to-production readiness matrix:** [125-ID production matrix](R129_SOURCE_TO_PRODUCTION_READINESS_MATRIX.md). All 125 IDs mapped to primary sources, 15 construction packet references, optional classification/family and proposed intake waves; 105 optional source paths match R61. Eight P01 gates and decision/evidence queue. Documentary coverage only, actual survey/build/runtime status unverified. Next R130 read-only technical intake of current main.
+
 > **R128 — full detailed construction coverage:** [A place to come home to](R128_S51_S55_FINAL_OPTIONAL_CONSTRUCTION_AND_COVERAGE.md). S51–S55, 9 modular stages, 20 planned tests; all 125/125 narrative IDs covered by 15 construction packets, 311 stages (including one N/A worksheet step), 402 planned cases. S51 safe gate, S52 persistent agreement, S53/S55 proposed completion policies, S54 actual consent-scoped acknowledgment. No runtime verification; R111/R65/R84 gates remain. Next R129 production readiness matrix.
 
 > **R127 — final discovery construction packet:** [The final forgotten treasures](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md). D41–D50/S41–S50, 24 modular stages, 32 planned tests; 100/105 optional IDs, all 50 discoveries and 120/125 total detailed construction entries. D44–50 required second vistas, D49 flight prerequisite, D50 precommit history, S41 consent, S43 D01 receipt reuse, S46 rest and S50 distinct short span. No runtime verification. Next R128 S51–S55 and consolidation.
