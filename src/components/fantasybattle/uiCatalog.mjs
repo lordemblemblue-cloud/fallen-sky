@@ -3,5 +3,15 @@ const rows=[["Start Menu","title","New Game:48|Continue:10|Load Game:02|Settings
 export const UI_SCREENS=Object.freeze(Object.fromEntries(rows.map(([name,mode,actions,layout],i)=>{const id=String(i+1).padStart(2,'0');return [id,{id,name,mode,layout,actions:actions.split('|').map(a=>{const [label,target]=a.split(':');return {label,target};})}];})));
 export const PAUSE_LINKS=Object.freeze(['05','06','07','08','11','12','18','03','21','24','25','27','28','29','30','34','37']);
 export const HOTKEY_SCREENS=Object.freeze({KeyC:'05',KeyI:'06',KeyM:'07',KeyL:'08',KeyK:'12'});
-export const UNSUPPORTED=new Set(['13','16','17','22','23','25','26','27','30','31','33','38','39','43','44','45','46']);
-export function makeTemplate(id){const s=UI_SCREENS[id];if(!s)return '';return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="ink" x2="1" y2="1"><stop stop-color="#080d1a" stop-opacity=".89"/><stop offset=".68" stop-color="#193d82" stop-opacity=".75"/><stop offset="1" stop-color="#448ce0" stop-opacity=".42"/></linearGradient></defs>'+s.layout.map(([x,y,w,h])=>{x*=1600;y*=900;w*=1600;h*=900;return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="14" fill="url(#ink)" stroke="#d1b784" stroke-width="2"/><rect x="'+(x+5)+'" y="'+(y+5)+'" width="'+(w-10)+'" height="'+(h-10)+'" rx="10" fill="none" stroke="#ebd6a6" stroke-opacity=".22"/>';}).join('')+'</svg>';}
+export const UNSUPPORTED=new Set(['13','16','17','22','23','25','26','27','30','31','33','38','39','46']);
+export function makeTemplate(id) {
+  const s=UI_SCREENS[id]; if(!s)return '';
+  const defs='<defs><linearGradient id="ink" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#080d1a" stop-opacity=".89"/><stop offset=".68" stop-color="#193d82" stop-opacity=".75"/><stop offset="1" stop-color="#448ce0" stop-opacity=".42"/></linearGradient><linearGradient id="gold"><stop stop-color="#aa926d" stop-opacity=".4"/><stop offset=".5" stop-color="#ebd6a6"/><stop offset="1" stop-color="#aa926d" stop-opacity=".4"/></linearGradient></defs>';
+  const parts=s.layout.map(([x,y,w,h])=>{
+    x=Math.round(x*1600);y=Math.round(y*900);w=Math.round(w*1600);h=Math.round(h*900);
+    const corners=[[x+8,y+8,1,1],[x+w-8,y+8,-1,1],[x+8,y+h-8,1,-1],[x+w-8,y+h-8,-1,-1]].map(([a,b,sx,sy])=>'<path d="M'+a+' '+(b+24*sy)+' Q'+(a+7*sx)+' '+(b+7*sy)+' '+(a+24*sx)+' '+b+'" stroke="#ebd6a6" stroke-width="2" fill="none"/>').join('');
+    return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="14" fill="url(#ink)" stroke="url(#gold)" stroke-width="2"/><rect x="'+(x+5)+'" y="'+(y+5)+'" width="'+(w-10)+'" height="'+(h-10)+'" rx="10" fill="none" stroke="#ebd6a6" stroke-opacity=".22"/>'+corners;
+  }).join('');
+  const header=['title','page','event'].includes(s.mode)?'<path d="M48 114 H1552" stroke="url(#gold)" stroke-width="2"/><path d="M800 104 l10 10 -10 10 -10 -10Z" fill="#ebd6a6"/>':'';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">'+defs+parts+header+'</svg>';
+}
