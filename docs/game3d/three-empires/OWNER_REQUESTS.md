@@ -21,7 +21,7 @@ What I read of the Threads: the handbook (`R85`), the index (`R61`), the handoff
 | 4 | Chapter 1 makes the Truce oath the first thing every player must do, and every quest is a "pledge" sworn to someone. | `S04` "Sworn at the Gate" is an optional oath: "No required faction allegiance". No compulsory oath gates the story. | `S04.md`, `R85` |
 | 5 | Chapter 1 has the player free Tome, Henut and Livilla from under wagons at the Southern Wolf Gate, as part of the main line. | `S05` "Three Travelers": an optional rescue of the same three in the gate fields, written afresh. "no oath tree, Veil oath, old faction allegiance, or old geometry imported". | `S05.md`, `D21_S27.md` |
 | 6 | Each empire has an eight-chapter story of its own, with named commanders and camps at surveyed sites. Two chapters each are built. | Keeps the three nations and "faction camps" to visit. Calls the old empire plot and terrain superseded. | `D19_S23.md`, `M14.md` |
-| 7 | Band 3 is set in the four existing caves, with new bosses. A repair branch for those caves is waiting (`claude/wolfveil-cave-mouths-20261123`). | Has its own cave plan and says: "do not restore deleted caves, dungeons or world assets automatically". | `CLAUDE_TERRAIN_HANDOFF.md` |
+| 7 | Band 3 is set in the four existing caves, with new bosses. A repair branch for those caves is waiting (`claude/wolfveil-cave-mouths-20261123`). | Has its own cave plan and says: "do not restore deleted caves, dungeons or world assets automatically". On 2026-11-25 `main` removed the cave landmarks and the graded paths up to the cave mouths (commit `8511617b`); two of band 3's outdoor spots stood on those paths and are now on 42 and 63 degree slopes. | `CLAUDE_TERRAIN_HANDOFF.md` |
 | 8 | Main chapters are numbered M01 to M12. | Main chapters are numbered M01 to M20, and mean different things. | `R61` |
 
 What the Threads says it carried over from the War of Three Roads (`R53_M14-M18_VOICE_PASS.md`): the three peoples' competing ordinary needs (Akitsu star-iron, Tameri water and grain, Remoria land), no whole empire as the villain, and the neutral fountain. Sable Vey, Lyra, Tome, Henut, Livilla, Hesper, the Oath Tree and the Gate Fields all appear in it as well.
@@ -49,7 +49,7 @@ What the Threads says it carried over from the War of Three Roads (`R53_M14-M18_
 - **Why this information is required:** They are built on the Wolf Star explanation (row 1) and they point at Hesper (row 3). Both are things the Threads says not to do.
 - **Specific questions that must be answered:** Discard these four chapters? If any part should survive, which part, and rewritten by whom?
 - **Required files or assets:** None.
-- **Other systems affected:** The cave repair branch `claude/wolfveil-cave-mouths-20261123`, made so that these chapters could be reached. Whether to merge it is now a question about the old caves, not about this story.
+- **Other systems affected:** The cave repair branch `claude/wolfveil-cave-mouths-20261123`, made on 2026-11-23 so that these chapters could be reached. It grades the paths to the cave mouths again, which `main` removed two days later, so merging it would put back what was taken out. I have not merged it into this branch, and whether it is merged at all is now a question about the old caves, not about this story.
 - **Work that can continue without this information:** None on these chapters. They stay unplayable.
 
 ## Request 3: the rest of the old plan (bands 4 and 5)
