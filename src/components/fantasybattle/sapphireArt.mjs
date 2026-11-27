@@ -46,6 +46,8 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 export const STAGED_ORIGINAL_ART=Object.freeze({
  '01':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/5f168663ac580c456e81ad1f56f83326_main-menu.webp',source:'Fantasy Adventure UI Design Atlas — main menu',mode:'full',wideOnly:true}),
  '02':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/99ac60466316703a6a3aceaa6923d4d1_load-menu.webp',source:'Fantasy Adventure UI Design Atlas — load game',mode:'full',wideOnly:true}),
+ '03':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/797d648534099880a99be0c2e86f9287_03-runtime.webp',source:'Fantasy Adventure UI Design Atlas — settings',mode:'full',wideOnly:true}),
+ '18':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/3280023d9439c8d1dbe6b4c80b2d5160_18-runtime.webp',source:'Fantasy Adventure UI Design Atlas — save game',mode:'full',wideOnly:true}),
  '35':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/4a7082e7b9748187d986dca421c14dbd_35.webp',source:'Fallen Sky: Floating Citadel Loading Screen.png',mode:'full'}),
  '40':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/ffe161b8307edf0760f05a357f4b0713_40.webp',source:'Fantasy Adventure Confirmation Screen.png',mode:'full'}),
 });
