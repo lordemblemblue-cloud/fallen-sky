@@ -179,23 +179,53 @@ export function equipItem(p,id) {
 export function equipGear(p,wearer,slot,id){if(!isProfile(p))throw Error('Invalid profile.');const next=setGear(p,wearer,slot,id,k=>memberFor(p,k).recruited);if(!isProfile(next))throw Error('Invalid equipment allocation.');return next;}
 export function memberStats(p,id){if(id==='hero')return heroStats(p);const m=ROSTER.find(x=>x.id===id);if(!m)throw Error('Unknown party member.');return addGearStats({maxHp:m.maxHp,atk:m.atk,def:m.def,spd:m.spd},p,id);}
 export function gearComparison(p,wearer,id){if(!Object.hasOwn(GEAR,id))return null;try{return {current:memberStats(p,wearer),candidate:memberStats(equipGear(p,wearer,GEAR[id].slot,id),wearer)};}catch{return null;}}
-export function buyItem(p,id) {
-  const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;if(!item?.buy||p.gold<item.buy||(p.inventory[id]??0)>=100000)throw Error('Insufficient gold or unavailable item.');
-  return {...p,gold:p.gold-item.buy,inventory:{...p.inventory,[id]:(p.inventory[id]??0)+1}};
+// Shared quote/transaction rules; browser-local progression, not server authority.
+export const MAX_TRADE_QUANTITY=99;
+export function tradeQuote(p,mode,id,quantity=1){
+ const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;
+ const fail=reason=>({ok:false,reason,total:0});
+ if(!p||!item||!['buy','sell'].includes(mode)||!integer(quantity,1,MAX_TRADE_QUANTITY)||!item[mode])return fail('Unavailable trade.');
+ const owned=p.inventory[id]??0,total=item[mode]*quantity;
+ const equipped=item.kind==='gear'?gearCount(p,id):p.equipped===id?1:0;
+ const reason=mode==='buy'?(p.gold<total?'Insufficient gold.':owned+quantity>100000?'Inventory limit reached.':null):(owned-equipped<quantity?'Not enough unequipped copies.':p.gold+total>10000000?'Gold limit reached.':null);
+ return {ok:!reason,reason,total,owned,equipped,quantity};
 }
-export function sellItem(p,id) {
-  const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;if(!item?.sell||!p.inventory[id]||(p.equipped===id&&p.inventory[id]===1)||(item.kind==='gear'&&p.inventory[id]<=gearCount(p,id)))throw Error('Cannot sell this item.');
-  return {...p,gold:p.gold+item.sell,inventory:{...p.inventory,[id]:p.inventory[id]-1}};
+function tradeItem(p,mode,id,quantity){
+ const quote=tradeQuote(p,mode,id,quantity);
+ if(!quote.ok)throw Error(quote.reason);
+ const sign=mode==='buy'?1:-1;
+ return {...p,gold:p.gold-sign*quote.total,inventory:{...p.inventory,[id]:quote.owned+sign*quantity}};
 }
+export const buyItem=(p,id,quantity=1)=>tradeItem(p,'buy',id,quantity);
+export const sellItem=(p,id,quantity=1)=>tradeItem(p,'sell',id,quantity);
 export function enhanceWeapon(p) {
   const id=p.equipped,lv=enhancementLevel(p,id),cost=15+lv*10;
   if(!weaponEligible(p,id)||!p.inventory[id]||lv>=5||p.gold<cost||p.inventory.sapphireOre<1)throw Error('Enhancement requires gold, ore and a weapon below +5.');
   return {...p,gold:p.gold-cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-1},enhancements:{...p.enhancements,[id]:lv+1}};
 }
-export function craftTonic(p) {
-  if(p.inventory.sapphireOre<2)throw Error('Requires two Sapphire Ore.');
-  return {...p,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-2,recoveryTonic:p.inventory.recoveryTonic+1}};
+// Each recipe creates an existing catalog item; no new inventory keys or save migration.
+const recipe=(id,category,ore,gold,level)=>Object.freeze({id,category,ore,gold,level});
+export const RECIPES=Object.freeze({
+ recoveryTonic:recipe('recoveryTonic','Consumables',2,0,1),
+ groveVest:recipe('groveVest','Armor',3,22,1),
+ sapphireBow:recipe('sapphireBow','Weapons',4,50,1),
+ pilgrimPendant:recipe('pilgrimPendant','Accessories',4,30,2),
+ moonveilRing:recipe('moonveilRing','Accessories',5,45,3),
+ astralPendant:recipe('astralPendant','Accessories',7,65,4)
+});
+export function craftQuote(p,id,quantity=1){
+ const r=Object.hasOwn(RECIPES,id)?RECIPES[id]:null;
+ if(!p||!r||!integer(quantity,1,MAX_TRADE_QUANTITY))return {ok:false,reason:'Unavailable recipe.'};
+ const ore=r.ore*quantity,gold=r.gold*quantity,owned=p.inventory[id]??0;
+ const reason=levelFor(p.xp)<r.level?'Requires party level '+r.level+'.':p.inventory.sapphireOre<ore?'Not enough Sapphire Ore.':p.gold<gold?'Insufficient gold.':owned+quantity>100000?'Inventory limit reached.':null;
+ return {ok:!reason,reason,ore,gold,owned,quantity};
 }
+export function craftItem(p,id,quantity=1){
+ const q=craftQuote(p,id,quantity);
+ if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore,[id]:q.owned+quantity}};
+}
+export const craftTonic=p=>craftItem(p,'recoveryTonic');
 export function heal(p,{sanctuary=false}={}) {
   const max=heroStats(p).maxHp;if(sanctuary){if(p.hp>=max&&!partyNeedsRest(p))throw Error('Health is already full.');return recoverParty({...p,hp:max});}
   if(p.hp>=max)throw Error('Health is already full.');
