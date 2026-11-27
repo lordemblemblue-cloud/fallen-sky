@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R85 — master implementation handbook:** [Story Bible and Claude production contract](R85_MASTER_STORY_BIBLE_IMPLEMENTATION_HANDBOOK.md). Current source precedence, all 20 main chapters, 105 provisional optional classifications, endings, NG+, terrain/quest/cinematic work packets, security/performance and implementation gates. Parsed index confirms 125 unique IDs and 68 distinct primary source paths; R86 must verify source files and headings. Latest Word manuscript unavailable for full text/visual QA; no implementation or publish.
+
 > **R80–R82 — completed provisional objective classification:** [R80 reconstructed D31–D40/S31–S40](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md), [R81 D41–D50/S41–S50](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md), [R82 S51–S55 and final coverage](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md). 105/105 IDs provisionally classified (50 discoveries, 55 adventures). R80 reconstructed from source, not recovered verbatim. Exact closing predicates, ending access, pending policy approvals and runtime validation remain open. R83/R84 precedence retained.
 
 > **R84 — unified New Game Plus contract:** [Progression, replay and difficulty](R84_UNIFIED_NEW_GAME_PLUS_PROGRESSION_CONTRACT.md). Owner rules consolidated, including retained levels/equipment, unlimited cycles, blue level suffix, 2x enemy XP and rebased challenge. Permanent ceiling, other rewards and exact stat curves remain open.
