@@ -339,3 +339,32 @@
 .fa-original-error p{left:48.5%;top:47%;width:32%;height:16%;overflow:auto;pointer-events:auto;font-size:.92em}
 .fa-original-error .fa-error-retry{left:22.4%;top:69.8%;width:26%;height:10%}
 .fa-original-error .fa-error-return{left:52.5%;top:69.8%;width:25.5%;height:10%}
+
+/* 05 — individual original atlas plate, with text-free source-derived ink fields
+   and native state-bound labels. Narrow screens retain the existing flexible UI. */
+.fa-ui.page[data-staged-original="true"][data-screen="05"]{inset:50% auto auto 50%;width:min(100vw,177.63vh);height:min(100vh,56.30vw);transform:translate(-50%,-50%);overflow:hidden;background:none}
+.fa-ui[data-staged-original="true"][data-screen="05"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="05"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-character{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(11px,min(1.42vw,2.52vh),21px);text-shadow:0 1px 3px #0b1732}
+.fa-original-character h2,.fa-original-character h3,.fa-original-character p{margin:.15em 0}
+.fa-character-title{position:absolute;left:5.8%;top:13%;width:19.5%;text-align:center;font-size:1.65em;letter-spacing:.04em}
+.fa-character-nav{position:absolute;left:6%;top:29.4%;width:18.8%;height:39.2%;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:5.4%;pointer-events:auto}
+.fa-original-character .fa-character-nav .fa-button,.fa-original-character .fa-character-back,.fa-original-character .fa-character-done{min-height:0;background:transparent;border:0;box-shadow:none;padding:0;border-radius:14px;color:#fff6df;transform:none;font:inherit}
+.fa-original-character .fa-character-nav .fa-button{padding-left:16%}
+.fa-original-character .fa-character-nav .fa-character-current,.fa-original-character .fa-character-done{color:#14264d;text-shadow:none}
+.fa-original-character .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 1px #efd594;background:#b0d7f033}
+.fa-original-character .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:2px}
+.fa-character-portrait{position:absolute;left:30.4%;top:12.1%;width:15.9%;height:33%;display:grid;place-items:center;overflow:hidden;border-radius:35% 35% 22% 22%;background:#132b53}
+.fa-character-portrait .fa-archer-portrait{width:100%;height:100%;max-height:none;object-fit:contain;filter:none;flex:none}
+.fa-character-statistics{position:absolute;left:49.5%;top:9.5%;width:36%;height:36%;overflow:auto;pointer-events:auto;padding:.35em .65em;background:#0b1b4260;border-radius:8px;font-size:.86em}
+.fa-character-statistics h2{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:1.35em}
+.fa-character-statistics label{display:grid;grid-template-columns:5em minmax(0,1fr) auto;align-items:center;gap:.3em;margin:.3em 0}
+.fa-character-statistics progress{width:100%;height:.6em;accent-color:#8ed9f6}
+.fa-character-statistics .fa-stats{display:grid;grid-template-columns:1fr 1fr;gap:.15em .7em;margin:.4em 0}
+.fa-character-statistics .fa-stats>div{padding:.15em 0;gap:.25em}
+.fa-character-lower{position:absolute;top:50.5%;height:24.5%;overflow:auto;pointer-events:auto;padding:.3em .6em;font-size:.83em;background:#0b1b4240;border-radius:8px;line-height:1.25}
+.fa-character-lower h3{font-size:1.05em;color:#fff1c7;text-align:center;margin:0 0 .75em}
+.fa-character-appearance{left:29.5%;width:14.7%}.fa-character-gear{left:47%;width:20.1%}.fa-character-skills{left:70%;width:16.4%}
+.fa-character-appearance .fa-button{font-size:.9em;min-height:24px;width:100%;margin-top:.45em;padding:.2em}
+.fa-original-character .fa-character-back,.fa-original-character .fa-character-done{position:absolute;pointer-events:auto;top:78.4%;height:5.5%}
+.fa-character-back{left:38%;width:14%}.fa-character-done{left:58.7%;width:17%}
