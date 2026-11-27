@@ -40,29 +40,31 @@ function normalizeSkills(data) {
 }
 
 export class Fighter {
-  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, facing, seed, renderBase }) {
+  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase }) {
     this.stage = stage;
     this.id = id;
     this.name = name;
     this.rig = rig;
     this.x = x;
+    this.y = y;
+    this.scale = scale;
     this.facing = facing;
     this.state = createPuppetState(rig, { seed });
     this.skills = new SkillPlayer(skillDoc.skills);
     this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase });
-    this.view.group.position.set(x, 0, 0);
-    this.view.group.scale.set(facing, 1, 1);
+    this.view.group.position.set(x, y, 0);
+    this.view.group.scale.set(facing*scale, scale, 1);
     this.lookWorld = null;
     this.state.life.combatTarget = 1;
   }
 
-  toWorld([x, y]) { return [this.x + this.facing * x, y]; }
+  toWorld([x, y]) { return [this.x + this.facing * x*this.scale, this.y+y*this.scale]; }
 
-  toLocal([x, y]) { return [(x - this.x) * this.facing, y]; }
+  toLocal([x, y]) { return [(x - this.x) * this.facing/this.scale, (y-this.y)/this.scale]; }
 
   hurtbox() {
     const p = this.toWorld(socketPosition(this.rig, this.state, rigData.hurtbox.socket));
-    return { x: p[0], y: p[1], r: rigData.hurtbox.radius };
+    return { x: p[0], y: p[1], r: rigData.hurtbox.radius*this.scale };
   }
 
   headWorld() { return this.toWorld(socketPosition(this.rig, this.state, 'headTop')); }
@@ -181,16 +183,18 @@ export class FantasyBattleStage {
     if (!this.transparentBackdrop) this.scene.add(backdrop); else { backdrop.geometry.dispose(); backdrop.material.map?.dispose(); backdrop.material.dispose(); this.backdrop=null; }
     const arrowTexture = this.textures.get('arrow');
     this.fx = new FxSystem(this.scene, arrowTexture);
-    const allies=this.units.filter(u=>u.team==='player');
+    const allies=this.units.filter(u=>u.team==='player'), enemies=this.units.filter(u=>u.team!=='player');
+    const compact=Math.max(allies.length,enemies.length)>2;
     this.fighters=Object.fromEntries(this.units.map((u,i)=>{
-      const ally=u.team==='player',idx=allies.findIndex(a=>a.id===u.id);
-      const x=ally?(allies.length===1?-430:-210-idx*390):430;
-      return [u.id,new Fighter(this,{id:u.id,name:u.name,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,facing:ally?1:-1,seed:11+i*18,renderBase:100+i*200})];
+      const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
+      const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
+      const y=compact&&idx>=2?185:0;
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+(compact&&idx>=2?0:400)+i*40})];
     }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
-      shadow.scale.set(380, 70, 1);
-      shadow.position.set(f.x, 6, 0);
+      shadow.scale.set(380*f.scale, 70*f.scale, 1);
+      shadow.position.set(f.x, f.y+6, 0);
       shadow.renderOrder = 2;
       this.scene.add(shadow, f.view.group);
     }
@@ -267,14 +271,14 @@ export class FantasyBattleStage {
     const front=this.units.find(u=>u.team==='player'&&(this.display?.[u.id]?.hp??u.maxHp)>0);
     rival.setLookTarget(...this.lookPointOf(this.fighters[front?.id]||hero));
     for (const f of Object.values(this.fighters)) {
-      if(f!==hero&&f!==rival)f.setLookTarget(...this.lookPointOf(rival));
+      if(f!==hero&&f!==rival){const team=this.units.find(u=>u.id===f.id)?.team;const target=this.units.find(u=>u.team!==team&&(this.display?.[u.id]?.hp??u.maxHp)>0);f.setLookTarget(...this.lookPointOf(this.fighters[target?.id]||(team==='player'?rival:hero)));}
       const { events } = f.update(dt);
       for (const e of events) this.handleEvent(f, e);
       const charge = f.state.params.charge ?? 0;
       const tip = f.view.lastArrow && (f.state.params.nocked ?? 0) > 0.5 ? f.toWorld(f.view.lastArrow.tip) : null;
       this.fx.glowAt(`charge:${f.id}`, tip?.[0] ?? 0, tip?.[1] ?? 0, tip ? charge : 0);
       const ward = this.fx.wards.get(f.id);
-      if (ward) ward.mesh.position.set(f.x + f.facing * 150, f.hurtbox().y + 10, 0);
+      if (ward) ward.mesh.position.set(f.x + f.facing * 150*f.scale, f.hurtbox().y + 10, 0);
     }
     this.fx.update(dt, (target) => target.hurtbox());
     this.checkMisses();
@@ -478,7 +482,8 @@ export class FantasyBattleStage {
     if (!this.battle) return [];
     const id=this.choosingUnit();
     return legalActions(this.battle,id).map(a=>{
-      const learned=id==='hero'?this.availableActions.has(a.id):a.id==='quickShot'||a.id==='guard'||a.id==='volley';
+      const member=this.units.find(u=>u.id===id);
+      const learned=id==='hero'?this.availableActions.has(a.id):(member?.actions||['quickShot','guard','volley']).includes(a.id);
       return {...a,enabled:a.enabled&&this.phase==='choose'&&learned,reason:learned?a.reason:'Not learned'};
     });
   }
@@ -492,7 +497,7 @@ export class FantasyBattleStage {
     const next=this.choosingUnit();
     if(next){this.log(unitById(this.battle,next).name+': choose an action.');return true;}
     const choices={...this.pendingChoices};
-    for(const u of this.battle.units)if(u.team!=='player'&&!u.ko)choices[u.id]=chooseAiAction(this.battle,u.id);
+    for(const u of this.battle.units)if(u.team!=='player'&&!u.ko)choices[u.id]=chooseAiAction(this.battle,u.id,this.units.find(m=>m.id===u.id)?.strategy);
     const {battle,round}=resolveRound(this.battle,choices);
     this.phase = 'playing';
     this.round = round;
