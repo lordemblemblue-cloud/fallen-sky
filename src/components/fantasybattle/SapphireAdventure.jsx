@@ -16,7 +16,7 @@ import { ItemArt, SkillArt } from './SapphireIcons.jsx';
 import { weaponEligible, weaponMetadata, enhancementLevel } from './core/weaponCatalog.mjs';
 import { GROVE_STORY, groveStoryState } from './core/groveStory.mjs';
 import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
-import { CAMPAIGN_QUESTS, campaignQuest, changeCampaignQuest, campaignPrompt, campaignServiceNote, campaignArc } from './core/campaignQuests.mjs';
+import { CAMPAIGN_QUESTS, campaignQuest, changeCampaignQuest, campaignPrompt, campaignServiceNote, campaignArc, LAST_ESCORT, escortConversation } from './core/campaignQuests.mjs';
 function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" alt="" className={'fa-painted-illustration '+variant} src={'/fantasybattle/sapphire/illustrations/'+name+'.webp'} decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>;}
 
 
@@ -385,7 +385,8 @@ function QuestJournal({profile,encounter,original,layout,go,back,onClaim,onCampa
   const story=q?(progress.state==='claimed'?q.completion:progress.state==='available'?q.offer:q.description):GROVE_STORY.journal;
   const campaignObjective=progress?<>{progress.objectives.map(o=><p key={o.id}>{o.done?'Completed':'Pending'}: {o.label}</p>)}<progress aria-label={q.title+' objectives'} max={progress.total} value={progress.count}/><p>{progress.count}/{progress.total} objectives complete.</p></>:null;
   const campaignAction=progress?(progress.state==='available'||progress.state==='complete'?<Btn primary className="fa-journal-action" disabled={Boolean(encounter)} onClick={()=>onCampaignAction(q.id,progress.state==='available'?'accept':'claim')}>{progress.state==='available'?'Accept quest':'Complete quest'}</Btn>:<Btn primary className="fa-journal-action" disabled={Boolean(encounter)||progress.state==='claimed'} onClick={()=>go('07')}>{progress.state==='claimed'?'Completed':'View objective'}</Btn>):null;
-  const shownAction=q?campaignAction:action;
+  const shownAction=q?.returnService&&progress.state==='complete'?<Btn primary className="fa-journal-action" disabled={Boolean(encounter)} onClick={()=>go('07')}>Return to Grove</Btn>:q?campaignAction:action;
+  const shownReward=q?.rewardGold?<><p>Return reward: {q.rewardGold} gold (up to wallet limit).</p><p>Collected treasure is recorded separately.</p></>:reward;
   const arc=campaignArc(profile);
   const arcLabel=profile?'Main story '+arc.completed+'/'+arc.total+(arc.complete?' · Arc complete':''):'Quest log';
   if(original)return <div className={'fa-original-journal'+(unlocked.length?' fa-journal-expanded':'')}>
@@ -396,10 +397,10 @@ function QuestJournal({profile,encounter,original,layout,go,back,onClaim,onCampa
     {!unlocked.length&&<div className="fa-journal-empty">No additional quests until the Grove quest is completed.</div>}
     {visible?<><h3 className="fa-journal-name">{title}</h3><div className="fa-journal-status">{q?statusFor(progress.state):status}</div><h3 className="fa-journal-objective-title">Objective</h3><section className="fa-journal-objective">{q?campaignObjective:objective}</section>
     <h3 className="fa-journal-description-title">Quest details</h3><section className="fa-journal-description"><p>{story}</p>{encounter&&<p>Quest actions are locked during combat.</p>}</section>
-    <h3 className="fa-journal-reward-title">Rewards</h3><section className="fa-journal-rewards">{reward}</section></>:<section className="fa-journal-no-selection"><p>Select a filter with an available quest to view its objectives.</p></section>}
+    <h3 className="fa-journal-reward-title">Rewards</h3><section className="fa-journal-rewards">{shownReward}</section></>:<section className="fa-journal-no-selection"><p>Select a filter with an available quest to view its objectives.</p></section>}
     <Btn className="fa-journal-map" onClick={()=>go('07')}>World map</Btn>{visible?shownAction:<Btn className="fa-journal-action" disabled>No quest selected</Btn>}<Btn className="fa-journal-back" onClick={back}>Back</Btn>
   </div>;
-  return <><Panel rect={layout[0]}>{filterButtons}<Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>{arcLabel}</h2>{questEntry}</Panel><Panel rect={layout[2]}>{visible?<><h2>{title}</h2><p>{q?statusFor(progress.state):status}</p><p>{story}</p>{q?campaignObjective:objective}{reward}{shownAction}</>:<p>No quest selected.</p>}</Panel></>;
+  return <><Panel rect={layout[0]}>{filterButtons}<Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>{arcLabel}</h2>{questEntry}</Panel><Panel rect={layout[2]}>{visible?<><h2>{title}</h2><p>{q?statusFor(progress.state):status}</p><p>{story}</p>{q?campaignObjective:objective}{shownReward}{shownAction}</>:<p>No quest selected.</p>}</Panel></>;
 }
 
 // Travel choices use live streamed bounds and saved discoveries. The painting
@@ -454,14 +455,16 @@ function RegionDiscovery({discovery,world,profile,original,layout,onContinue,onM
 
 // The original transparent conversation plate frames the actual world.
  // Service labels and availability come from the current world interaction.
-function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,back}){
-  const [group,setGroup]=useState('services');
+function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,back,onEscortAction}){
+  const [group,setGroup]=useState('services'),[escortQuestion,setEscortQuestion]=useState(null);
   const available=Boolean(profile&&serviceAvailable);
   const questAvailable=profile?.quests.grove==='available';
   const options=group==='services'?[['16','Merchant',true],['17','Blacksmith',true],['22','Crafting',true]]:[['33','Rest and recover',true],['43','View quest offer',questAvailable],['26','Companion recruitment',true]];
+  const escort=available&&service?.id===LAST_ESCORT.returnService?escortConversation(profile):null;
   const choices=options.map(([id,label,enabled])=><Btn key={id} disabled={!available||!enabled} onClick={()=>go(id)}>{label}{id==='43'&&!questAvailable?' · Unavailable':''}</Btn>);
-  const navigation=<><Btn primary={group==='services'} aria-pressed={group==='services'} onClick={()=>setGroup('services')}>Services</Btn><Btn primary={group==='preparation'} aria-pressed={group==='preparation'} onClick={()=>setGroup('preparation')}>Preparation</Btn><Btn disabled={!profile} onClick={()=>go('30')}>Relationships</Btn><Btn disabled={!profile} onClick={()=>go('08')}>Quest journal</Btn><Btn onClick={back}>Leave</Btn></>;
-  const message=!available?'Approach a gold service marker in the world to interact.':group==='services'?'Choose a service to trade, enhance equipment or craft supplies.':(campaignServiceNote(profile)||groveStoryState(profile)?.serviceNote||'Rest, review available quests or recruit companions before your next encounter.');
+  const escortChoices=escort?<><Btn primary={escortQuestion==='order'} onClick={()=>setEscortQuestion('order')}>Ask about the evacuation order</Btn><Btn primary={escortQuestion==='escort'} onClick={()=>setEscortQuestion('escort')}>Ask about the missing escort</Btn>{['available','complete'].includes(escort.state)&&<Btn primary disabled={!available} onClick={()=>{if(onEscortAction(escort.state==='available'?'accept':'claim'))setEscortQuestion(null);}}>{escort.state==='available'?'Accept The Last Escort':'Report ledger · Complete quest'}</Btn>}</>:null;
+  const navigation=<><Btn primary={group==='services'} aria-pressed={group==='services'} onClick={()=>setGroup('services')}>Services</Btn><Btn primary={group==='preparation'} aria-pressed={group==='preparation'} onClick={()=>setGroup('preparation')}>Preparation</Btn>{escort&&<Btn primary={group==='escort'} aria-pressed={group==='escort'} onClick={()=>{setGroup('escort');setEscortQuestion(null);}}>The Last Escort</Btn>}<Btn disabled={!profile} onClick={()=>go('30')}>Relationships</Btn><Btn disabled={!profile} onClick={()=>go('08')}>Quest journal</Btn><Btn onClick={back}>Leave</Btn></>;
+  const message=!available?'Approach a gold service marker in the world to interact.':group==='escort'&&escort?(escortQuestion==='order'?(escort.state==='complete'||escort.state==='claimed'?'The ledger records an evacuation, not an attack order.':'We cannot know what the order said until the ledger is found.'):escortQuestion==='escort'?'The traveler is waiting for news of the patrol. Its absence is still unexplained.':escort.message):group==='services'?'Choose a service to trade, enhance equipment or craft supplies.':(campaignServiceNote(profile)||groveStoryState(profile)?.serviceNote||'Rest, review available quests or recruit companions before your next encounter.');
   if(original)return <div className="fa-original-dialogue">
     <h2 className="fa-dialogue-title">Conversation</h2>
     <div className="fa-dialogue-subtitle">World interaction</div>
@@ -469,9 +472,9 @@ function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,
     <div className="fa-dialogue-location">{world?.region||'World not loaded'}</div>
     <h3 className="fa-dialogue-speaker">{service?.label||'World interaction'}</h3>
     <section className="fa-dialogue-message" aria-live="polite"><p>{message}</p></section>
-    <section className="fa-dialogue-options" aria-label="Available interaction choices">{choices}</section>
+    <section className="fa-dialogue-options" aria-label="Available interaction choices">{group==='escort'?escortChoices:choices}</section>
   </div>;
-  return <Panel rect={layout[0]}><h2>{service?.label||'World interaction'}</h2><p>{world?.region||'World not loaded'}</p><p>{message}</p><div className="fa-dialogue-fallback-nav">{navigation}</div><div className="fa-dialogue-fallback-options">{choices}</div></Panel>;
+  return <Panel rect={layout[0]}><h2>{service?.label||'World interaction'}</h2><p>{world?.region||'World not loaded'}</p><p>{message}</p><div className="fa-dialogue-fallback-nav">{navigation}</div><div className="fa-dialogue-fallback-options">{group==='escort'?escortChoices:choices}</div></Panel>;
 }
 
 // Original offer illustration is decorative; saved quest state is authoritative.
@@ -674,7 +677,7 @@ function TreasureReveal({profile,discovery,loot,encounter,original,layout,onItem
   const earned=verified?loot.filter(l=>ITEMS[l.id]&&Number.isInteger(l.count)&&l.count>0):[];
   const total=earned.reduce((sum,l)=>sum+l.count,0);
   const cards=earned.map(l=><div className="fa-treasure-card" key={l.id}><ItemArt id={l.id}/><strong>{ITEMS[l.id].name}</strong><span>+{l.count}</span><small>Owned: {profile.inventory[l.id]||0}</small></div>);
-  const description=earned.length?'Treasure recorded in your current inventory. No further claim is required.':'No newly awarded items to reveal.';
+  const description=(earned.length?'Treasure recorded in your current inventory. No further claim is required.':'No newly awarded items to reveal.')+(verified&&discovery.id==='disc_pilgrimage'?' A patrol ledger records an evacuation order.':'');
   const controls=<><Btn primary className="fa-treasure-items" disabled={!earned.length} onClick={onItems}>View Items</Btn><Btn className="fa-treasure-continue" onClick={onContinue}>Continue</Btn></>;
   if(original)return <div className="fa-original-treasure">
     <h2 className="fa-treasure-title">Treasure Discovered</h2>
@@ -1449,7 +1452,7 @@ export default function SapphireAdventure(){
       <Btn className="fa-painted-button fa-save-encrypted" disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Encrypted</Btn>
       <Btn className="fa-painted-button fa-save-back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
     </div>:<>{pane(0,<><h2>Save</h2><p>Save your current exploration position.</p></>)}{pane(1,<>{SLOT_IDS.map(s=>{const r=slots.slots.find(x=>x.id===s);return <Btn key={s} onClick={()=>setSelected(s)} primary={selected===s}>Slot {s} · {r?.status==='valid'?r.profile.name:r?'Damaged':'Empty'}</Btn>;})}</>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}{encounter&&<p>Manual saves are disabled during combat.</p>}</>)}</>;break;
-    case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back}/>;break;
+    case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back} onEscortAction={action=>transact(p=>{const live=current.current;if(live.service?.id!==LAST_ESCORT.returnService||live.world?.nearbyService!==LAST_ESCORT.returnService)throw Error('Visit the Grove rest point.');return changeCampaignQuest(p,LAST_ESCORT.id,action,{serviceId:LAST_ESCORT.returnService});},action==='accept'?'The Last Escort accepted':'The Last Escort completed')}/>;break;
     case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id,quantity)=>{const p=current.current.profile,q=tradeQuote(p,mode,id,quantity);if(!q.ok)return;const profileId=p.id,serviceId=current.current.service?.id;let used=false;requestConfirm((mode==='buy'?'Buy ':'Sell ')+quantity+' × '+ITEMS[id].name+' for '+q.total+' gold?',()=>{if(used)return;used=true;transact(live=>{const s=current.current;if(live.id!==profileId||!serviceId||s.service?.id!==serviceId||s.world?.nearbyService!==serviceId||s.encounter)throw Error('Return to the original service marker to trade.');return mode==='buy'?buyItem(live,id,quantity):sellItem(live,id,quantity);},mode==='buy'?'Items purchased':'Items sold');});}}/>;break;
     case '17':content=<BlacksmithShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} go={go} onEnhance={(weapon,level,cost)=>{if(!Object.hasOwn(ITEMS,weapon)||ITEMS[weapon].kind!=='weapon')return;requestConfirm('Enhance '+ITEMS[weapon].name+' to +'+(level+1)+' for '+cost+' gold and 1 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to enhance.');if(p.equipped!==weapon||enhancementLevel(p,weapon)!==level||cost!==15+level*10)throw Error('Equipment changed. Review the new enhancement preview.');return enhanceWeapon(p);},'Weapon enhanced'));}}/>;break;
     case '21':content=<ItemInventory key={profile?.id||'guest'} profile={profile} encounter={encounter} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} initialItem={itemId} onSelect={setItemId} go={go} back={back}/>;break;
