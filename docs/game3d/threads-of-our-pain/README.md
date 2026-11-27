@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R93 — source-grounded M16–M18 editorial delta:** [Memory, convergence and unfinished lives](R93_M16-M18_SOURCE_GROUNDED_SCENE_REFINEMENTS.md). Six proposed dialogue alternatives with consent, chronology and terrain constraints; preserves primary scripts and R64A/R65 finale precedence. Next M19–M20. No new quests, implementation or owner approval.
+
 > **R92 — source-grounded M13–M15 editorial delta:** [Names, civilian access and the cost of division](R92_M13-M15_SOURCE_GROUNDED_SCENE_REFINEMENTS.md). Six proposed dialogue alternatives and terrain constraints for the existing Sanctuary, Three Arrows and Gate Fields chapters. Preserve earlier scripts, phase gates and rewards; no implementation or owner approval. Next M16–M18.
 
 > **R88 — narrative strength audit:** [Targeted emotional and structural refinements](R88_NARRATIVE_STRENGTH_AUDIT_AND_REFINEMENTS.md). Proposed improvements to hero motivation, antagonist method, distinct families, political stakes, ending payoffs and optional variety. Critical original-life chronology remains a writer decision; draft alternatives do not change approved canon. Future focused editorial passes can run alongside R87 construction prompts for unaffected regions.
