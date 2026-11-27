@@ -40,7 +40,17 @@ export const ELITE_TRIAL=Object.freeze({
  completion:'The guardian has fallen silent. The watch once tested resolve, not obedience.',
  objectives:Object.freeze([Object.freeze({id:'wilds_heights_elite',label:'Defeat the Heights elite guardian'})])
 });
-export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST,HEIGHTS_QUEST,ELITE_TRIAL]);
+export const SANCTUARY_QUEST=Object.freeze({
+ id:'sanctuary',title:'Sapphire Sanctuary',prerequisite:'heights',
+ offer:'The sanctuary is still broadcasting the emergency signal. Defeat its outer guard and the Gatekeeper to end the lockdown.',
+ description:'The Gatekeeper defends a network overloaded with memories. Opening the sanctuary is the first step toward discovering the original signal.',
+ completion:'The sanctuary is open. Its oldest signal came from beyond these walls; follow it toward Moonveil.',
+ objectives:Object.freeze([
+  Object.freeze({id:'wilds_sanctuary_guard',label:'Defeat the sanctuary guard'}),
+  Object.freeze({id:'wilds_sanctuary_boss',label:'Defeat the sanctuary Gatekeeper'})
+ ])
+});
+export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST,HEIGHTS_QUEST,ELITE_TRIAL,SANCTUARY_QUEST]);
 const defeated=(p,id)=>p?.world?.completedEncounters?.includes(id)===true;
 const discovered=(p,id)=>p?.world?.discoveries?.includes(id)===true;
 // Only catalogued objective IDs are used; no dialogue or asset can grant progress.
