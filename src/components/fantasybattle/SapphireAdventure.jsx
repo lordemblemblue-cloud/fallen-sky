@@ -765,6 +765,30 @@ function SanctuaryRest({profile,service,serviceAvailable,encounter,original,layo
   return <><Panel rect={layout[0]}><h2>Sanctuary</h2><p>{service?.label||'Not at a sanctuary'}</p></Panel><Panel rect={layout[1]}>{cards}</Panel><Panel rect={layout[2]}>{rows}<p>{reason}</p>{rest}{save}<Btn disabled={!profile||Boolean(encounter)||!profile.inventory.recoveryTonic} onClick={onRecovery}>Recovery Tonic</Btn></Panel><Panel rect={layout[3]}><Btn onClick={onLeave}>Leave</Btn></Panel></>;
 }
 
+// Consumable recovery uses the same item definition and heal transaction as inventory.
+function ConsumableRecovery({profile,encounter,original,layout,onRecover,back}){
+  const max=heroStats(profile).maxHp,hp=profile?.hp||0,owned=profile?.inventory?.recoveryTonic||0;
+  const potency=ITEMS.recoveryTonic.heal,next=Math.min(max,hp+potency),amount=Math.max(0,next-hp);
+  const allowed=Boolean(profile&&!encounter&&owned>0&&amount>0);
+  const locked=useRef(false);
+  const reason=!profile?'No active character.':encounter?'Recovery is not available during combat.':!owned?'No Recovery Tonics owned.':amount===0?'Health is already full.':'Ready to consume one Recovery Tonic.';
+  const recover=()=>{if(!allowed||locked.current)return;locked.current=true;if(!onRecover(hp,owned))locked.current=false;};
+  const preview=<><p>Current HP: {hp}/{max}</p><progress aria-label="Current health" value={hp} max={max}/><p>After recovery: {next}/{max}</p><progress aria-label="Health after one tonic" value={next} max={max}/><p>HP restored: +{amount}</p></>;
+  const rows=[['Recovery Tonic','Owned: '+owned],['Health restoration','Up to '+potency+' HP'],['Consumption','1 tonic'],['Gold cost','0 gold'],['Recipient',profile?.name||'No character']];
+  const confirm=<Btn primary className="fa-recovery-confirm" disabled={!allowed} onClick={recover}>Confirm Recovery</Btn>;
+  if(original)return <div className="fa-original-recovery">
+    <h2 className="fa-recovery-title">Healing &amp; Recovery</h2><div className="fa-recovery-kicker">Consumable recovery</div>
+    <h3 className="fa-recovery-options-title">Recovery details</h3>
+    <section className="fa-recovery-options" aria-label="Recovery details">{rows.map(([label,value],i)=><div key={label} className={i===0?'selected':''}><strong>{label}</strong><span>{value}</span></div>)}</section>
+    <h3 className="fa-recovery-health-title">{profile?.name||'Current character'}</h3>
+    <section className="fa-recovery-health">{preview}</section>
+    <h3 className="fa-recovery-effects-title">Recovery preview</h3><section className="fa-recovery-effects"><div><span>HP restored</span><strong>+{amount}</strong></div><div><span>Tonics remaining</span><strong>{owned} → {allowed?owned-1:owned}</strong></div><div><span>Gold consumed</span><strong>0</strong></div></section>
+    <h3 className="fa-recovery-status-title">Availability</h3><div className="fa-recovery-status" role="status">{reason}</div>
+    {confirm}<Btn className="fa-recovery-back" onClick={back}>Back</Btn>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Current health</h2>{preview}</Panel><Panel rect={layout[1]}><h2>Recovery Tonic</h2><ItemArt id="recoveryTonic"/>{rows.map(([label,value])=><p key={label}>{label}: {value}</p>)}</Panel><Panel rect={layout[2]}><p>{reason}</p>{confirm}<Btn onClick={back}>Back</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -1143,7 +1167,7 @@ export default function SapphireAdventure(){
     case '43':content=<QuestOffer profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onAccept={()=>{if(transact(p=>{if(p.quests.grove!=='available')throw Error('Quest is no longer available.');return acceptGroveQuest(p);},'Quest accepted')){root('10');go('08');}}}/>;break;
     case '44':content=<QuestCompletion profile={profile} original={original} layout={screen.layout} onContinue={()=>root('10')} onJournal={()=>{root('10');go('08');}}/>;break;
     case '45':content=<SkillUnlocked key={profile?.id||'guest'} profile={profile} result={result} level={level} original={original} layout={screen.layout} onContinue={()=>{if(current.current.profile)resumeWorld();else back();}} onSkillbook={()=>{if(current.current.profile){resumeWorld();go('12');}else back();}}/>;break;
-    case '46':content=<>{pane(0,statPanel)}{pane(1,<><h2>Recovery Tonic</h2><p>Restore up to 40 HP. Owned: {inv.recoveryTonic||0}</p></>)}{pane(2,<><p>HP: {profile?.hp} → {Math.min(stats.maxHp,(profile?.hp||0)+40)}</p><Btn primary disabled={!profile||Boolean(encounter)||!inv.recoveryTonic||profile.hp>=stats.maxHp} onClick={()=>{if(transact(p=>heal(p),'Health restored'))back();}}>Confirm Recovery</Btn></>)}</>;break;
+    case '46':content=<ConsumableRecovery key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onRecover={(hp,owned)=>{const s=current.current;if(s.id!=='46'||!s.profile||s.encounter)return false;const ok=transact(p=>{if(p.hp!==hp||p.inventory.recoveryTonic!==owned)throw Error('Recovery preview changed. Review the current values.');return heal(p);},'Health restored');if(ok)back();return ok;}}/>;break;
     case '47':content=original?<div className="fa-original-error">
       <h2>Unable to continue</h2><p role="alert">{error}</p>
       <Btn primary className="fa-painted-button fa-error-retry" onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}><span className="fa-art-sr">Retry</span></Btn>
