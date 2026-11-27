@@ -38,3 +38,14 @@ export function makeSapphireTemplate(id){
 
 const urlCache=new Map();
 export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!urlCache.has(id))urlCache.set(id,'data:image/svg+xml,'+encodeURIComponent(makeSapphireTemplate(id)));return urlCache.get(id);}
+
+
+// Original modular art hosted in the owner's Base44 media library, staged for
+// in-game preview. Only these explicitly uploaded URLs are accepted. The
+// original local-asset registry is reserved for final, approved repository art.
+export const STAGED_ORIGINAL_ART=Object.freeze({
+ '35':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/4a7082e7b9748187d986dca421c14dbd_35.webp',source:'Fallen Sky: Floating Citadel Loading Screen.png',mode:'full'}),
+ '40':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/ffe161b8307edf0760f05a357f4b0713_40.webp',source:'Fantasy Adventure Confirmation Screen.png',mode:'full'}),
+});
+export const ORIGINAL_SAVE_PLAQUE='https://media.base44.com/images/public/6af625cd654fa5b8954442ce/1ee119108cb7a71bec9a7253562db5fa_fantasy-battle-autosave-plaque.webp';
+export function stagedOriginalFor(id){return Object.hasOwn(STAGED_ORIGINAL_ART,id)?STAGED_ORIGINAL_ART[id]:null;}
