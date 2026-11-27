@@ -1,5 +1,7 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
+> **R132 — bounded P01 implementation handoff:** [Eight engineering tickets and acceptance return](R132_P01_BOUNDED_IMPLEMENTATION_TICKETS_AND_ACCEPTANCE_RETURN.md). T00–T07, ten review gates, runner/entry limitations and copyable evidence template. Initial scope stops at isolated Low blockout/controller evidence; no live game changes or implementation authority. Next owner review or R133 Low blockout measurement worksheet.
+
 > **R131 — P01 preview isolation and fixture contract:** [Opening forest preview boundary](R131_P01_PREVIEW_BOUNDARY_AND_FIXTURE_CONTRACT.md). 12 pinned technical paths, 11 source anchor groups, three proposed isolation options and 16 supplemental planned checks. Prefer separate local dev entry with ephemeral fixtures, no live stores/quest rewards/platform changes; controller/asset compatibility and launch path remain unverified. Next R132 bounded implementation ticket and acceptance template.
 
 > **R130 — pinned-main P01 technical intake:** [Verified source inventory and isolation gates](R130_P01_PINNED_MAIN_TECHNICAL_INTAKE.md). 20 technical paths at main 9da8d909, platform enabled (24 m), renderer choice and recovery, existing movement/quest/checkpoint integration; checkpoint v1 only wolfveil/forest, dedicated isolated preview unverified. Partial P01.0 survey, no runtime/build evidence or live changes. Next R131 preview boundary and fixture contract.
