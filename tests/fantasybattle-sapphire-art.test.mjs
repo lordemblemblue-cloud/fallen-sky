@@ -43,7 +43,7 @@ test('character statistics art is optional and uses live profile and equipment d
 
 test('equipment plate uses original image with actual owned inventory and existing equip transactions',()=>{
  assert.equal(stagedOriginalFor('06').wideOnly,true);
- assert.match(templateUrl('06'),/^data:image\\/svg\\+xml,/);
+ assert.ok(templateUrl('06').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf("case '06':"),page.indexOf("case '07':"));
  for(const marker of ['fa-original-equipment','inv[k]>0','gearCount(profile,itemId)','memberStats(profile,wearer)','gearCompare','equipGear(p,wearer','equipItem(p,itemId)','Boolean(profile&&selectedOwned','!encounter'])assert.ok(section.includes(marker),marker);
@@ -51,7 +51,7 @@ test('equipment plate uses original image with actual owned inventory and existi
 
 test('wardrobe uses original artwork, draft-only palette selection, and validated application on both layouts',()=>{
  assert.equal(stagedOriginalFor('27').wideOnly,true);
- assert.match(templateUrl('27'),/^data:image\/svg\+xml,/);
+ assert.ok(templateUrl('27').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function Wardrobe('),page.indexOf('function SaveToast('));
  for(const marker of ['fa-original-wardrobe','Object.entries(APPEARANCES)','setPreview(key)','appearance:preview','chooseAppearance(preview)','setPreview(saved)','Boolean(encounter)','disabled={locked||!dirty}','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
