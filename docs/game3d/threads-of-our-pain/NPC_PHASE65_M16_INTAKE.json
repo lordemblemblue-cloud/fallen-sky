@@ -1,0 +1,401 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M16",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "R35-R38_RECOVERED_SOURCE.md",
+    "D27_S40.md",
+    "R93_M16-M18_SOURCE_GROUNDED_SCENE_REFINEMENTS.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R119_M15_M16_GATE_FIELDS_AND_WITNESS_CONSTRUCTION_PROMPTS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "M16_BRIEF",
+      "reality": "PRESERVED",
+      "anchor": "M16_NOTICE",
+      "requires": [
+        "M15_COMPLETE"
+      ],
+      "evidence": "Actual public notice and warden briefing"
+    },
+    {
+      "id": "WITNESS_OBSERVED",
+      "reality": "PRESERVED",
+      "anchor": "GUARDROOM_PUBLIC or PRIVATE_NOOK",
+      "requires": [
+        "M16_BRIEF"
+      ],
+      "evidence": "Actual eligible account or anonymous municipal lookout environmental report; no compulsory private disclosure"
+    },
+    {
+      "id": "FAMILY_CONTACT",
+      "reality": "PRESERVED",
+      "anchor": "FAMILY_CONTACT",
+      "requires": [
+        "M16_BRIEF"
+      ],
+      "evidence": "Existing M12 family contact and volunteered water, wooden slats and shelf description; no private hand memory required"
+    },
+    {
+      "id": "SHELTER_SURVEY",
+      "reality": "PRESERVED",
+      "anchor": "CELLAR_ENTRY",
+      "requires": [
+        "M16_BRIEF"
+      ],
+      "evidence": "Actual current entrance, intact rafters and cistern observations"
+    },
+    {
+      "id": "SAFE_CONSULTATION_READY",
+      "reality": "PRESERVED",
+      "anchor": "COURTYARD",
+      "requires": [
+        "WITNESS_OBSERVED",
+        "FAMILY_CONTACT",
+        "SHELTER_SURVEY"
+      ],
+      "evidence": "Actual clear exit sign, quiet room and eligible trusted attendant"
+    },
+    {
+      "id": "MIGRATION_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "MARKET18",
+      "requires": [
+        "SAFE_CONSULTATION_READY"
+      ],
+      "evidence": "Authored protagonist-only transfer after safe rest and destination preflight"
+    },
+    {
+      "id": "ROOF18_CONFIRMED",
+      "reality": "ORIGINAL",
+      "anchor": "ROOF_WRECK",
+      "requires": [
+        "MIGRATION_SAFE"
+      ],
+      "evidence": "Actual broken roof, lamp and shelter wall; current guide confirmation and incursion account"
+    },
+    {
+      "id": "REFUGE18_CONFIRMED",
+      "reality": "ORIGINAL",
+      "anchor": "M11_TRANSFER",
+      "requires": [
+        "ROOF18_CONFIRMED"
+      ],
+      "evidence": "Revisit actual M11 mine via ordinary route or staffed transfer; observe slats, water and shelf with current resident confirmation"
+    },
+    {
+      "id": "RETURN15",
+      "reality": "PRESERVED",
+      "anchor": "REST15",
+      "requires": [
+        "REFUGE18_CONFIRMED"
+      ],
+      "evidence": "Safe authored return; preserve actual observations and local age-specific state"
+    },
+    {
+      "id": "REVIEW_READY",
+      "reality": "PRESERVED",
+      "anchor": "REVIEW_TABLE",
+      "requires": [
+        "RETURN15"
+      ],
+      "evidence": "Actual present-world evidence review, limited consent summary and lack of verified harmful conduct"
+    },
+    {
+      "id": "LOCAL_PROTECTION_RESOLVED",
+      "reality": "PRESERVED",
+      "anchor": "COURTYARD_RELEASE or SAFE_LODGING",
+      "requires": [
+        "REVIEW_READY"
+      ],
+      "evidence": "Actual appropriate safe release, trusted voluntary account or anonymous voluntary lodging; never re-detain"
+    },
+    {
+      "id": "M16_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "OBSERVATORY_LEAD",
+      "requires": [
+        "LOCAL_PROTECTION_RESOLVED"
+      ],
+      "evidence": "Receive actual ridge observatory lead; M17 eligibility only"
+    }
+  ],
+  "actors": [
+    {
+      "role": "warden",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "clerk",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "detained soldier or eligible released witness",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "municipal lookout",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "cellar keeper",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "trusted attendant",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "Lessa",
+      "reality": "PRESERVED",
+      "runtimeId": null,
+      "reuse": "M12"
+    },
+    {
+      "role": "Neri",
+      "reality": "PRESERVED",
+      "runtimeId": null,
+      "reuse": "M12"
+    },
+    {
+      "role": "Calen",
+      "reality": "PRESERVED",
+      "runtimeId": null,
+      "reuse": "M12"
+    },
+    {
+      "role": "survivor guide",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "steward or eligible M11 resident",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "original signaler",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "Mira",
+      "reality": "ORIGINAL",
+      "runtimeId": null,
+      "reuse": "M11"
+    },
+    {
+      "role": "Renn",
+      "reality": "ORIGINAL",
+      "runtimeId": null,
+      "reuse": "M11"
+    },
+    {
+      "role": "Tovin",
+      "reality": "ORIGINAL",
+      "runtimeId": null,
+      "reuse": "M11"
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_011",
+      "name": "Sable Vey",
+      "relationship": "Thematic association only; no mandatory physical appearance"
+    },
+    {
+      "id": "FS_NPC_012",
+      "name": "Elias Windrow",
+      "relationship": "Thematic association only; no mandatory physical appearance"
+    },
+    {
+      "id": "FS_NPC_021",
+      "name": "Mara Hearthwood",
+      "relationship": "Thematic association only; no mandatory physical appearance"
+    },
+    {
+      "id": "FS_NPC_027",
+      "name": "Riven Ashborne",
+      "relationship": "S40 proposed witness association; not confirmed identity of source soldier"
+    }
+  ],
+  "witness": {
+    "variants": [
+      "eligible_public_account",
+      "consented_private_account",
+      "anonymous_lookout",
+      "previously_released_eligible_account"
+    ],
+    "declineFallback": "anonymous_lookout",
+    "unavailableFallback": "anonymous_lookout",
+    "privateConsentRequired": true,
+    "noConsentFallback": "anonymous_lookout",
+    "noInventedConsent": true,
+    "previousReleaseRetained": true,
+    "npcMigration": false,
+    "diagnosis": false
+  },
+  "family": {
+    "preserved": [
+      "Lessa",
+      "Neri",
+      "Calen"
+    ],
+    "original": [
+      "Mira",
+      "Renn",
+      "Tovin"
+    ],
+    "memorySpeaker": null,
+    "requiredVolunteeredDetails": [
+      "water",
+      "wooden_slats",
+      "cup_shelf"
+    ],
+    "privateHandMemoryRequired": false,
+    "reuseExistingHouse": true,
+    "sharedIdentityConfirmed": false,
+    "optionalGutterHelp": true,
+    "mealGreeting": "NEUTRAL_UNLESS_ACTUAL_RELEVANT_FLAG_VERIFIED",
+    "ordinaryRoutineResumes": true
+  },
+  "refuge": {
+    "retainM11": [
+      "VENT_RESTORED",
+      "MEDICINE_DELIVERED",
+      "CORRIDOR_SECURE"
+    ],
+    "actualMineRequired": true,
+    "relocateToBorderTown": false,
+    "transferAlternative": "STAFFED_AUTHORED_CHECKPOINT",
+    "songOnlyIfScheduleSupports": true,
+    "physicalPropTransfer": false,
+    "olderCoherentYoungerFamilyKnowledge": false
+  },
+  "evidence": {
+    "classes": [
+      "PRESENT_OBSERVATION",
+      "REPORTED_MEMORY",
+      "ORIGINAL_CORROBORATION",
+      "INFERENCE"
+    ],
+    "fields": [
+      "stableSourceId",
+      "reality",
+      "recordType",
+      "consentScope",
+      "verificationStatus"
+    ],
+    "anonymousScopeOmitsNames": true,
+    "privateDataExcludedFromPublicAndAmbient": true,
+    "absenceOfDamageProvesLying": false,
+    "originalEvidenceAsPublicLegalFact": false
+  },
+  "consultation": {
+    "required": [
+      "clear_exit",
+      "quiet_room",
+      "eligible_trusted_attendant"
+    ],
+    "consentBased": true,
+    "availableBeforeMigration": true
+  },
+  "protection": {
+    "outcomes": [
+      "safe_release",
+      "trusted_private_account_voluntary_followup",
+      "anonymous_voluntary_lodging"
+    ],
+    "actualOutcomeRequired": true,
+    "lodgingVoluntary": true,
+    "previouslyReleasedNeverRedetained": true,
+    "basis": [
+      "present_conditions",
+      "no_verified_harm"
+    ],
+    "publicNamesRequireConsent": true,
+    "globalWarEnds": false
+  },
+  "migration": {
+    "authoredOnly": true,
+    "protagonistOnly": true,
+    "preflightCollisionControllerRigs": true,
+    "rollbackOnFailure": true,
+    "oneActiveReality": true
+  },
+  "optionalIndependent": [
+    "D27",
+    "S40"
+  ],
+  "optional": {
+    "D27": "Separate two first focuses, hidden balcony and whistle, post-claim second vista; no automatic unlock",
+    "S40": "Own consent, actual evidence and review outcome; no M16 auto-completion; prior authorized records may reduce repeated questions; actual current guide confirmation remains required",
+    "exteriorCartDefense": "Optional existing local encounter, evidence route outside combat, no reward invented"
+  },
+  "routes": {
+    "preserved": [
+      "MARKET15",
+      "NOTICE/WARDEN",
+      "GUARDROOM or COURTYARD",
+      "FAMILY12",
+      "CELLAR_SURVEY",
+      "SAFE_REST15"
+    ],
+    "original": [
+      "MARKET18",
+      "GUIDE",
+      "ROOF_WRECK/BOARD",
+      "SIGNAL_PERCH",
+      "SHELTER_WALL",
+      "REFUGE11_TRANSFER",
+      "VENT/SHELF",
+      "SAFE_REST18"
+    ],
+    "return": [
+      "OFFICE_REVIEW",
+      "COURTYARD_RELEASE or VOLUNTARY_LODGING",
+      "MARKET_EXIT",
+      "OBSERVATORY_LEAD"
+    ],
+    "transforms": null
+  },
+  "completion": {
+    "next": "M17_READY",
+    "autoAccept": false,
+    "rewardGrant": false,
+    "ordinaryMainXpProposed": true,
+    "newPower": false,
+    "definitiveMemoryMechanism": false
+  },
+  "prohibitions": [
+    "NPC migration",
+    "forced testimony",
+    "private name leak",
+    "re-detention",
+    "involuntary lodging",
+    "physical cross-world evidence",
+    "diagnosis",
+    "confirmed reincarnation",
+    "early M17 revelation",
+    "Celestial Sight",
+    "third reality",
+    "mandatory combat",
+    "mandatory paired focus",
+    "runtime activation"
+  ]
+}
