@@ -1,4 +1,6 @@
-# Claude unified story library — R76A
+# Claude unified story library — R76B
+
+> **R76B — owner-confirmed unlimited NG+:** [Unlimited New Game Plus and persistent progression](R76B_UNLIMITED_NEW_GAME_PLUS.md). No fixed cycle cap; successive cycles increase enemy challenge and allow continued character leveling and equipment enhancement. Exact balance and progression caps remain open.
 
 > **R76A — owner clarification:** [Missable chapter quests and New Game Plus](R76A_MISSABLE_QUESTS_AND_NEW_GAME_PLUS.md). Persistent quests remain available; genuinely chapter-exclusive opportunities can close for the current cycle. NG+ at increased difficulty is the preferred recovery design; no magical rewind or automatic rewards. Exact classification and scaling pending.
 
