@@ -1,3 +1,4 @@
+import {WORLD_MAX_X} from './worldExpansion.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats} from './equipmentCatalog.mjs';
 export const SAVE_KEY='fantasyBattle.sapphire.saves.v1';
@@ -82,7 +83,7 @@ export function createProfile(name){
   return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=218&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer(GEAR_IDS.includes(k)&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&['starterBow','sapphireBow'].includes(p.equipped)&&p.inventory[p.equipped]>0&&['starterBow','sapphireBow'].every(k=>integer(p.enhancements?.[k],0,5))&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);
+  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer(GEAR_IDS.includes(k)&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&['starterBow','sapphireBow'].includes(p.equipped)&&p.inventory[p.equipped]>0&&['starterBow','sapphireBow'].every(k=>integer(p.enhancements?.[k],0,5))&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);
 }
 export function readSlots(storage){
   let raw;try{raw=storage.getItem(SAVE_KEY);}catch(error){return {slots:[],error:String(error?.message||error)};}
@@ -108,7 +109,7 @@ export function readSettings(storage){
 export function updateWorld(p,w){
   if(!p||!w||!Array.isArray(w.position)||w.position.length!==3||!w.position.every(Number.isFinite))return p;
   const region=w.regions?.find(r=>w.position[0]>=r.minX&&w.position[0]<=r.maxX);
-  return {...p,world:{...p.world,position:[Math.max(1.5,Math.min(218,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))],discoveries:uniqueStrings(w.discoveries)?[...new Set([...p.world.discoveries,...w.discoveries])]:p.world.discoveries,visitedRegions:region?[...new Set([...p.world.visitedRegions,region.id])]:p.world.visitedRegions}};
+  return {...p,world:{...p.world,position:[Math.max(1.5,Math.min(WORLD_MAX_X,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))],discoveries:uniqueStrings(w.discoveries)?[...new Set([...p.world.discoveries,...w.discoveries])]:p.world.discoveries,visitedRegions:region?[...new Set([...p.world.visitedRegions,region.id])]:p.world.visitedRegions}};
 }
 export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
   if(!p||!encounter?.id||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[]};
@@ -162,7 +163,7 @@ export function heal(p,{sanctuary=false}={}) {
 }
 export function travelTo(p,region) {
   if(!region||!p.world.visitedRegions.includes(region.id)||!Number.isFinite(region.minX)||!Number.isFinite(region.maxX))throw Error('Discover this region before travelling.');
-  const x=Math.min(218,Math.max(1.5,Math.min(region.minX+6,region.maxX-1)));
+  const x=Math.min(WORLD_MAX_X,Math.max(1.5,Math.min(region.minX+6,region.maxX-1)));
   return {...p,world:{...p.world,position:[x,0,0]}};
 }
 export function comparison(p,id) {
