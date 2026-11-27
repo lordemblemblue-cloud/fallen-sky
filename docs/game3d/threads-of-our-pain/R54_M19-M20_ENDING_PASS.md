@@ -1,4 +1,6 @@
 # R54 — Main campaign: the morning that belongs to them
+
+> Historical editorial draft. [R64A](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting finale dialogue, aftermath, actor fates and scene direction. Review before staging M19/M20.
 27 November 2026 | Source: cumulative v4.9 R53, M19 R39, M20 R40, R50 chronology audit, R53 M18 counsel. Editorial additions, not a replacement for the original scripts. All new dialogue and staging are proposed. The sacrifice/rebirth concept is owner-directed canon as an optional ending; the exact consequence contracts remain awaiting approval. No new quest IDs.
 
 ## M19.V01 — The report is not a verdict
