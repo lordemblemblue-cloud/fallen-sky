@@ -2,6 +2,7 @@ import worldMarkup from './worldMarkup.html?raw';
 import {WORLD_MAX_X,WORLD_END_X,EXTRA_REGIONS,ARENAS,EXTRA_ENCOUNTERS,arenaForEncounter,extraHeight,regionForX} from '../core/worldExpansion.mjs';
 import {TREASURE_IDS,treasureFor} from '../core/treasureCatalog.mjs';
 import {WORLD_SERVICES,nearestService} from '../core/worldInteractions.mjs';
+import {createWorldTelemetry,WORLD_TELEMETRY_INTERVAL} from '../core/worldTelemetry.mjs';
 import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
 import {makeExplorationAvatar} from './explorationAvatar.js';
 
@@ -1954,11 +1955,12 @@ export async function mountSapphireWorld(root, onEvent) {
   await app.init();
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   if(app.renderFailed)throw Error('World renderer did not start.');
-  const timer=setInterval(()=>{if(app.mode==='wilds')send('world',{world:snapshot()});},250);
+  const telemetry=createWorldTelemetry();
+  const timer=setInterval(()=>{if(app.mode!=='wilds'||app.inputLocked||app.renderFailed)return;const sample=telemetry.sample(snapshot(),performance.now());if(sample)send('world',sample);},WORLD_TELEMETRY_INTERVAL);
   send('ready',{world:snapshot()});
   return {
     snapshot,
-    pause(value){app.resetInput();app.inputLocked=Boolean(value);},
+    pause(value){app.resetInput();app.inputLocked=Boolean(value);if(!value)telemetry.reset();},
     battle(data){if(typeof data?.token!=='string'||!data.token)return;app.activeBattleToken=data.token;app.resetInput();app.inputLocked=true;const arenaId=arenaForEncounter(typeof data.id==='string'?data.id:null);app.loadMode('sanctuary',arenaId);app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(app.activeBattleToken!==data.token)return;if(!app.renderFailed)send('battleReady',{arenaId,token:data.token});else send('error',{message:'Battleground renderer failed.'});}));},
     restore(data){app.activeBattleToken=null;if(!data || !Array.isArray(data.position))return;
       const [x,,z]=data.position;if(!Number.isFinite(x)||!Number.isFinite(z))return;
