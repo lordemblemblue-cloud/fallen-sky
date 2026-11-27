@@ -1,4 +1,6 @@
-# Claude unified story library — R71
+# Claude unified story library — R72
+
+> **R72:** [Original opportunity schedule — D31–D40 / S31–S40](R72_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 80/105, 25 pending. Preserve guardian rest, consent, genuine original receipts, and occupied crossing safety. Exact phases and gameplay remain unverified.
 
 > **R71:** [Original opportunity schedule — D21–D30 / S21–S30](R71_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 60/105, 45 pending. Preserve R66 evidence adapters, actual arrival and repair receipts, and second vista. Exact phase bounds and gameplay remain unverified.
 
@@ -19,4 +21,4 @@ This is the repository-readable entry point for the entire story and subsequent 
 - [R67 opening character/phase register](R67_ACTOR_PHASE_REGISTER.md).
 - [R68 late character/phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md).
 
-Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue at R72, adding links here and in the stable story index.
+Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue at R73, adding links here and in the stable story index.
