@@ -58,6 +58,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M08 | The Missing History | [Expanded main quest](M08.md) | Ready for proposed blockout; unverified |
 | D26 | The Treaty in Stone | [Expanded discovery](D26_S37.md) | Ready for proposed blockout; unverified |
 | S37 | The Cave Beneath the Treaty | [Expanded optional quest and terrain brief](D26_S37.md) | Ready for proposed blockout; unverified |
+| M09 | Beneath the Silver Veil | [Expanded main quest](M09.md) | Ready for proposed blockout; unverified |
+| D27 | The Silver Signal | [Expanded discovery](D27_S40.md) | Ready for proposed blockout; unverified |
+| S40 | The Soldier Who Remembered | [Expanded optional quest and terrain brief](D27_S40.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -140,3 +143,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R28
 
 [M08](M08.md) expands the archive, damaged manuscript and intact transcript, original evacuation notice, and sanctuary lead. Proposed adjacent crest in M07 is distinct from the personal carving; requires matching asset handoff, not a change to prior script. [D26/S37](D26_S37.md) preserves three cultural carvings, original supply emblems, hidden council hall, signed note, Coalition keepsake and independent satchel/mural quest. D26 crest distinct from M08 pending owner confirmation. 28/50 discoveries, 18/55 optional quests, 8/20 main quests expanded; all 75 outlines retained. Master v2.4 R28 saved to Library, 204 pages, 2,538 prior paragraphs preserved, all 194 previous page images byte-identical, ten new pages reviewed at overview scale. Next M09 — Beneath the Silver Veil, D27 — The Silver Signal / S40 (verify title). D02/D03/D05/D06 reconciliation pending; S13/S19/S25/S26/S29 separate. Claude return surveyed anchors, actual layout, crest assets, traversal and performance tests. No terrain build, code, merge, deployment or credits.
+
+## Revision R29
+
+[M09](M09.md) preserves the abandoned sanctuary, silver-mark contact, ritual disruption, two skies, and older self witnessing a threatened child. M10 retains physical interception and escape; no identity reveal or Celestial Sight. [D27/S40](D27_S40.md) preserves three chimney gaps, original evacuation signal, hidden lookout balcony, Signal Whistle, private testimony and optional M16 evidence. 29/50 discoveries, 19/55 optional quests, 9/20 main quests expanded; all 75 outlines retained. Master v2.5 R29 saved to Library, 214 pages, 2,661 prior paragraphs preserved, all 204 previous page images byte-identical, ten added pages reviewed at overview scale. Next M10 — Against the Divine, D28 — The House Between / S42 — The House With Two Doors. D02/D03/D05/D06 reconciliation pending; S13/S19/S25/S26/S29 separate. Claude return surveyed anchors, shared arena sightlines, roof collision/navmesh, actual layout, traversal and performance checks. No terrain build, code, merge, deployment or credits.
