@@ -417,3 +417,26 @@ test('original first-time setup uses actual guest settings and routes drafts and
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '48':"));
  for(const marker of ["s.id==='48'&&!s.running&&!s.encounter","go('19')",'reloadSlots()','mostRecent(fresh.slots)','fresh.error||!latest',"go('02')",'onSettings={applySettings}'])assert.ok(handler.includes(marker),marker);
 });
+
+
+import {GROVE_STORY,groveStoryState} from '../src/components/fantasybattle/core/groveStory.mjs';
+test('Grove narrative tracks existing quest and encounter state without writes or future spoilers',()=>{
+ assert.equal(groveStoryState(null),null);
+ const profile=(state,ids=[])=>({quests:{grove:state},world:{completedEncounters:ids}});
+ assert.equal(groveStoryState(profile('unknown')),null);
+ assert.equal(groveStoryState(profile('available')).history,null);
+ assert.equal(groveStoryState(profile('available')).serviceNote,GROVE_STORY.opening);
+ assert.match(groveStoryState(profile('active')).history,/light has gone out/);
+ assert.equal(groveStoryState(profile('active',['wilds_waterfall_01'])).defeated,false);
+ for(const state of ['available','active','complete','claimed']){
+  const p=profile(state,['wilds_grove_01']),before=JSON.stringify(p),story=groveStoryState(p);
+  assert.equal(story.defeated,true);
+  assert.equal(story.serviceNote===GROVE_STORY.completion,state==='claimed');
+  assert.equal(JSON.stringify(p),before);
+ }
+ assert.notEqual(groveStoryState(profile('claimed')).serviceNote,GROVE_STORY.completion);
+});
+test('Chapter 1 narrative uses original and fallback interfaces without replacing quest authority',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['GROVE_STORY.journal','GROVE_STORY.offer','GROVE_STORY.completion','GROVE_STORY.warning','GROVE_STORY.recruit','groveStoryState(profile)?.serviceNote','groveStoryState(profile)?.history',"candidate.id==='wilds_grove_01'","eligible&&selected.id==='groveArcher'&&!member.recruited","acceptGroveQuest(p)","claimGroveQuest(p)"])assert.ok(page.includes(marker),marker);
+});
