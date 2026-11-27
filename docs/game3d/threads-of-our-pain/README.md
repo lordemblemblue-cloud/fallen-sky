@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R74:** [Final five original-world opportunity reviews — S51–S55](R74_ORIGINAL_OPPORTUNITY_SCHEDULE.md) completes 105/105 source-level scheduling reviews. Exact phase windows, S53 inscription policy, S55 two-lane policy, postgame progression and runtime tests remain open. R65 ending precedence retained.
+
 > **R73:** [Original opportunity schedule — D41–D50 / S41–S50](R73_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends detailed review to 100/105, five pending. All discovery IDs reviewed; reconcile legacy optional vista flags with R66, preserve consent, actual receipts and safe access. Exact phases and runtime remain unverified.
 
 > **R72:** [Original opportunity schedule — D31–D40 / S31–S40](R72_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 80/105, 25 pending. Preserve guardian rest, consent, genuine original receipts, and occupied crossing safety. Exact phases and gameplay remain unverified.
