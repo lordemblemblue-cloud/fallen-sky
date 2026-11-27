@@ -1683,6 +1683,8 @@ import worldMarkup from './worldMarkup.html?raw';
             else this.openService?.();
           }
         });
+        window.addEventListener('blur', () => this.resetInput());
+        document.addEventListener('visibilitychange', () => { if(document.hidden)this.resetInput(); });
         window.addEventListener('keyup', e => {
           if (e.code === 'KeyA' || e.code === 'ArrowLeft') this.keys.left = false;
           if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.right = false;
