@@ -1,5 +1,6 @@
 import {WORLD_MAX_X} from './worldExpansion.mjs';
 import {validCampaign,cleanCampaign} from './campaignQuests.mjs';
+import {treasureFor} from './treasureCatalog.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats} from './equipmentCatalog.mjs';
@@ -167,8 +168,9 @@ export function acceptGroveQuest(p){return p.quests.grove!=='available'?p:{...p,
 export function claimGroveQuest(p){return p.quests.grove!=='complete'?p:{...p,quests:{...p.quests,grove:'claimed'}};}
 
 export function collectLoot(p,id) {
-  if(!p.world.discoveries.includes(id)||p.rewardedDiscoveries.includes(id))return {profile:p,loot:[]};
-  const {inventory,loot}=grantLoot(p,[{id:'recoveryTonic',count:1},{id:'sapphireOre',count:2}]);
+  const treasure=treasureFor(id);
+  if(!treasure||!p?.world?.discoveries.includes(id)||p.rewardedDiscoveries.includes(id))return {profile:p,loot:[]};
+  const {inventory,loot}=grantLoot(p,treasure.loot);
   return {profile:{...p,rewardedDiscoveries:[...p.rewardedDiscoveries,id],inventory},loot};
 }
 export function equipItem(p,id) {
