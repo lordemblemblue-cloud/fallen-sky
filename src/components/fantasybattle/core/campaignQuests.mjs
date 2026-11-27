@@ -121,7 +121,7 @@ export function trackedCampaign(p){
 }
 export function campaignPrompt(p){
  const entry=trackedCampaign(p);
- if(!entry)return null;
+ if(!entry)return campaignArc(p).complete?'Sapphire campaign arc complete':null;
  const {q,progress}=entry;
  if(progress.state==='available')return 'New quest: '+q.title;
  if(progress.state==='complete')return 'Complete in journal: '+q.title;
@@ -129,7 +129,7 @@ export function campaignPrompt(p){
 }
 export function campaignServiceNote(p){
  const entry=trackedCampaign(p);
- if(!entry)return null;
+ if(!entry)return campaignArc(p).complete?'The observatory is quiet. Explore the remaining optional encounters.':null;
  return entry.progress.state==='complete'?'Return to the journal to record your progress.':entry.q.offer;
 }
 
