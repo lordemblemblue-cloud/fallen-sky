@@ -1,4 +1,6 @@
-# Claude unified story library — R76B
+# Claude unified story library — R76C
+
+> **R76C — character level caps:** [Base 155 / proposed NG+ 310](R76C_LEVEL_CAP_PROGRESSION.md). Base cap 155 confirmed; proposed additional 155 levels in NG+. Recommended carryover without resetting earned levels; permanent ceiling and reset semantics pending confirmation.
 
 > **R76B — owner-confirmed unlimited NG+:** [Unlimited New Game Plus and persistent progression](R76B_UNLIMITED_NEW_GAME_PLUS.md). No fixed cycle cap; successive cycles increase enemy challenge and allow continued character leveling and equipment enhancement. Exact balance and progression caps remain open.
 
