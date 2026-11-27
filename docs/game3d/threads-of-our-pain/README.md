@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R115 — Wolfveil, twin caves and historical archive:** [The world that remembers](R115_M06_M08_WORLD_THAT_REMEMBERS_CONSTRUCTION_PROMPTS.md). M06–M08, 20 independently executable stages, 12 anchor groups, 20 planned tests. Distinguish personal tool-slip mark from public crest; preserve optional access and canonical M05 death. Detailed main construction coverage 8/20. R111 chronology-dependent O18 shipping blocked. No build or runtime verification. Next R116 M09–M10 sanctuary and interception prompts.
+
 > **R114 — original evacuation construction prompts:** [The burning city](R114_M04_M05_ORIGINAL_EVACUATION_CONSTRUCTION_PROMPTS.md). M04–M05 continuous city/refuge/river route, 16 modular stages, 10 anchor groups and 16 planned tests. Preserve canonical death and M06 handoff; R111 later chronology blocked. Detailed main construction coverage 5/20. No build or runtime verification. Next R115 M06–M08 town/cave/archive prompts.
 
 > **R113 — Wolfveil opening source-to-acceptance worksheet:** [Building Wolfveil](R113_WOLFVEIL_OPENING_SOURCE_TO_ACCEPTANCE_WORKSHEET.md). M01–M03 shared forest/clearing, 11 landmark rows, 16-stage preview worksheet and 14 planned tests; read-only main file references checked, no build or runtime verification. Next R114 M04–M05 evacuation/barrier construction prompts.
