@@ -121,16 +121,45 @@ export function updateWorld(p,w){
   const region=w.regions?.find(r=>w.position[0]>=r.minX&&w.position[0]<=r.maxX);
   return {...p,world:{...p.world,position:[Math.max(1.5,Math.min(WORLD_MAX_X,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))],discoveries:uniqueStrings(w.discoveries)?[...new Set([...p.world.discoveries,...w.discoveries])]:p.world.discoveries,visitedRegions:region?[...new Set([...p.world.visitedRegions,region.id])]:p.world.visitedRegions}};
 }
+// One guaranteed equipment drop per registered first victory. Values are prototype tuning.
+export const ENCOUNTER_GEAR_REWARDS=Object.freeze({
+ wilds_grove_01:'groveRing',
+ wilds_pilgrimage_01:'pilgrimCloak',
+ wilds_pilgrimage_02:'pilgrimPendant',
+ wilds_waterfall_01:'mistJacket',
+ wilds_cave_01:'pilgrimBow',
+ wilds_heights_01:'pilgrimCuirass',
+ wilds_heights_02:'moonveilVeil',
+ wilds_heights_elite:'moonveilRing',
+ wilds_sanctuary_guard:'moonveilRaiment',
+ wilds_sanctuary_boss:'astralCarapace',
+ wilds_moonveil_01:'moonveilPendant',
+ wilds_moonveil_elite:'moonveilBow',
+ wilds_astral_01:'astralMantle',
+ wilds_astral_elite:'astralBow'
+});
+// Award only items that fit the existing save bounds; report exactly what was added.
+function grantLoot(p,requested){
+ const inventory={...p.inventory},loot=[];
+ for(const {id,count} of requested){
+  if(!Object.hasOwn(ITEMS,id))continue;
+  const awarded=Math.min(count,100000-(inventory[id]??0));
+  if(awarded>0){inventory[id]=(inventory[id]??0)+awarded;loot.push({id,count:awarded});}
+ }
+ return {inventory,loot};
+}
 export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
-  if(!p||!encounter?.id||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[]};
+  if(!p||!encounter?.id||encounter.practice||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[]};
   // Explicit prototype balancing: one-time 25 XP for normal encounters, 50 elite, 100 boss.
-  const xp=encounter.category==='Boss'?100:encounter.category==='Elite'?50:25;
-  const gold=encounter.category==='Boss'?80:encounter.category==='Elite'?45:25;
+  const xp=Math.min(100000-p.xp,encounter.category==='Boss'?100:encounter.category==='Elite'?50:25);
+  const gold=Math.min(10000000-p.gold,encounter.category==='Boss'?80:encounter.category==='Elite'?45:25);
   const ore=encounter.category==='Boss'?3:encounter.category==='Elite'?2:1;
   const oldLevel=levelFor(p.xp),newLevel=levelFor(p.xp+xp);
+  const gearId=Object.hasOwn(ENCOUNTER_GEAR_REWARDS,encounter.id)?ENCOUNTER_GEAR_REWARDS[encounter.id]:null;
+  const {inventory,loot}=grantLoot(p,[{id:'sapphireOre',count:ore},...(gearId?[{id:gearId,count:1}]:[])]);
   const completedEncounters=[...p.world.completedEncounters,encounter.id];
   const quest=p.quests.grove==='active'&&completedEncounters.includes('wilds_grove_01')?'complete':p.quests.grove;
-  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre+ore},world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot:[{id:'sapphireOre',count:ore}],leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
+  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
 }
 export function allocate(p,key){if(!STAT_KEYS.includes(key)||pointsFor(p)<1)return p;return {...p,hp:p.hp+(key==='vitality'?10:0),attributes:{...p.attributes,[key]:p.attributes[key]+1}};}
 export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+enhancementLevel(p,p?.equipped)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero');}
@@ -139,7 +168,8 @@ export function claimGroveQuest(p){return p.quests.grove!=='complete'?p:{...p,qu
 
 export function collectLoot(p,id) {
   if(!p.world.discoveries.includes(id)||p.rewardedDiscoveries.includes(id))return {profile:p,loot:[]};
-  return {profile:{...p,rewardedDiscoveries:[...p.rewardedDiscoveries,id],inventory:{...p.inventory,recoveryTonic:p.inventory.recoveryTonic+1,sapphireOre:p.inventory.sapphireOre+2}},loot:[{id:'recoveryTonic',count:1},{id:'sapphireOre',count:2}]};
+  const {inventory,loot}=grantLoot(p,[{id:'recoveryTonic',count:1},{id:'sapphireOre',count:2}]);
+  return {profile:{...p,rewardedDiscoveries:[...p.rewardedDiscoveries,id],inventory},loot};
 }
 export function equipItem(p,id) {
   if(!Object.hasOwn(WEAPONS,id)||!p.inventory[id])throw Error('You do not own that weapon.');
