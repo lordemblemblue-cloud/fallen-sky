@@ -115,3 +115,17 @@ The Heights unlocks after the waterfall main quest is claimed. Two recorded enco
 - Trial of the Silent Watch: an old guardian tests those approaching the sanctuary. The encounter entrance explicitly identifies it as optional and advises party preparation. A completed trial reveals the original purpose of the watch without blocking the main path.
 - Claude/Gemini anchor handoff: fb.heights.relay (safe interaction at first relay), fb.heights.relay_upper (second relay), fb.heights.trial_warning (before elite trigger), fb.heights.rest_approach (safe preparation/retreat), and fb.heights.sanctuary_view (sightline toward next destination). Provide editable coordinates, walkable clearance, facing, interaction radius, keyboard/touch access, visible non-color-only cues and return paths. Keep existing encounter IDs; physical relay interactions and new geometry are pending.
 - Chapter 3 head passed Fantasy Battle and Base44 security checks, shared Game 3D failed and WebGPU was still running at last check. Chapter 4 regression tests added; new head CI and visual/mobile acceptance pending. Next: Sapphire Sanctuary, its two required encounters and the gatekeeper story.
+
+## Chapter 5 runtime slice — Sapphire Sanctuary
+
+The main quest unlocks after Heights is claimed. Both wilds_sanctuary_guard and wilds_sanctuary_boss must be recorded; neither optional trial, cave investigation nor recruitment is required. A boss victory before quest acceptance is recognized, but cannot substitute for the outer guard objective. Journal, codex, HUD, service notes and portable save validation reuse the campaign catalog. Claim adds no loot, XP or gold; the existing first-victory reward transaction remains the authority.
+
+The outer guard's warning explains the repeated emergency order. The Gatekeeper's introduction states that it waits for the light to return. Existing combat intent UI already displays phase names and action previews in both layouts: Astral Watch above 65% HP, Falling Stars above 30% through 65%, Total Eclipse at or below 30%. No phase, HP, damage, action or AI change is made. A verified non-practice victory with the recorded boss ID displays a story acknowledgement; the journal completion reveals that the original signal came from beyond the sanctuary. These are text beats, not a scripted cinematic or new NPC scene.
+
+### Placement handoff
+- fb.sanctuary.outer_warning: safe approach before guard trigger; readable warning and retreat.
+- fb.sanctuary.prepare: recovery and equipment preparation near, but outside, the existing boss trigger. Do not invent free items or rest facilities.
+- fb.sanctuary.gatekeeper_intro: clear sightline and safe return point, no automatic combat from dialogue.
+- fb.sanctuary.epilogue: quiet post-battle position, with a visible route toward Moonveil. Do not put the required quest claim behind a yet-unimplemented physical interaction.
+- Claude/Gemini own final art, map geometry and coordinates. Preserve existing encounter IDs and world bounds. Next: Chapter 6 Moonveil/Astral quests, optional keeper, conclusion to the currently playable arc (not the complete game story), campaign progress summary, tests and handoff.
+- Chapter 4 passed Fantasy Battle and Base44 security checks; Game 3D and WebGPU failed. Chapter 5 tests added; latest CI, lint/build and visual testing pending.
