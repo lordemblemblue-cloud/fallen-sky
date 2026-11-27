@@ -442,7 +442,7 @@ test('Chapter 1 narrative uses original and fallback interfaces without replacin
 });
 
 
-import {roadQuest,changeRoadQuest,validCampaign,campaignQuest,changeCampaignQuest,CAMPAIGN_QUESTS} from '../src/components/fantasybattle/core/campaignQuests.mjs';
+import {roadQuest,changeRoadQuest,validCampaign,campaignQuest,changeCampaignQuest,CAMPAIGN_QUESTS,campaignPrompt,campaignServiceNote,trackedCampaign} from '../src/components/fantasybattle/core/campaignQuests.mjs';
 import {createProfile as newRoadProfile, isProfile as isRoadProfile, exportBackup as exportRoadBackup, parseBackup as parseRoadBackup, rewardVictory as roadVictory} from '../src/components/fantasybattle/core/adventureState.mjs';
 test('Pilgrim Road progression is bounded, backward compatible and derives objectives from recorded victories',()=>{
  const legacy=newRoadProfile('Road test');
@@ -497,4 +497,47 @@ test('Waterfall chapter and optional cave quest preserve existing road saves and
 test('Chapter 3 uses catalog journal and spoiler-gated codex without new map or asset dependencies',()=>{
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  for(const marker of ['CAMPAIGN_QUESTS.flatMap','Side quest · ', "selected.id==='mistScout'","candidate.id==='wilds_waterfall_01'","candidate.id==='wilds_cave_01'","['active','complete','claimed'].includes(progress.state)"])assert.ok(page.includes(marker),marker);
+});
+
+test('Heights campaign and independent elite trial maintain main-story priority and preserve saves',()=>{
+ const base=newRoadProfile('Heights test');
+ const prior={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed',waterfall:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02','wilds_waterfall_01']}};
+ assert.ok(isRoadProfile(prior));
+ assert.equal(campaignQuest(prior,'heights').state,'available');
+ assert.equal(campaignQuest(prior,'heightsTrial').state,'available');
+ assert.equal(campaignQuest(prior,'caveEcho').state,'available');
+ assert.equal(trackedCampaign(prior).q.id,'heights');
+ assert.match(campaignPrompt(prior),/New quest: The Heights/);
+ assert.match(campaignServiceNote(prior),/relay/);
+ const active=changeCampaignQuest(prior,'heights','accept');
+ const trial=changeCampaignQuest(active,'heightsTrial','accept');
+ assert.equal(trackedCampaign(trial).q.id,'heights');
+ const first=roadVictory(trial,{id:'wilds_heights_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(first,'heights').count,1);
+ assert.match(campaignPrompt(first),/second Heights/);
+ assert.throws(()=>changeCampaignQuest(first,'heights','claim'));
+ const second=roadVictory(first,{id:'wilds_heights_02',category:'Normal'}).profile;
+ assert.equal(campaignQuest(second,'heights').state,'complete');
+ assert.match(campaignPrompt(second),/Complete in journal/);
+ const cleared=changeCampaignQuest(second,'heights','claim');
+ assert.equal(campaignQuest(cleared,'heightsTrial').state,'active');
+ assert.equal(campaignQuest(cleared,'caveEcho').state,'available');
+ assert.deepEqual(cleared.inventory,second.inventory);
+ assert.equal(cleared.xp,second.xp);assert.equal(cleared.gold,second.gold);
+ assert.throws(()=>changeCampaignQuest(cleared,'heights','claim'));
+ const elite=roadVictory(cleared,{id:'wilds_heights_elite',category:'Elite'}).profile;
+ const final=changeCampaignQuest(elite,'heightsTrial','claim');
+ assert.equal(campaignQuest(final,'heightsTrial').state,'claimed');
+ assert.equal(campaignQuest(final,'heights').state,'claimed');
+ assert.equal(trackedCampaign(final),null);
+ assert.ok(isRoadProfile(final));
+ assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.equal(isRoadProfile({...prior,quests:{...prior.quests,campaign:{...prior.quests.campaign,heightsTrial:'claimed'}}}),false);
+ const early=roadVictory(prior,{id:'wilds_heights_elite',category:'Elite'}).profile;
+ assert.equal(campaignQuest(changeCampaignQuest(early,'heightsTrial','accept'),'heightsTrial').state,'complete');
+ assert.equal(campaignQuest(early,'heights').count,0);
+});
+test('Heights warnings and campaign tracking use the existing UI surfaces',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ["candidate.id==='wilds_heights_01'","candidate.id==='wilds_heights_02'","candidate.id==='wilds_heights_elite'",'campaignServiceNote(profile)','campaignPrompt(profile)','onCampaignAction'])assert.ok(page.includes(marker),marker);
 });
