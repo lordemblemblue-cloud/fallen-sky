@@ -129,3 +129,20 @@ The outer guard's warning explains the repeated emergency order. The Gatekeeper'
 - fb.sanctuary.epilogue: quiet post-battle position, with a visible route toward Moonveil. Do not put the required quest claim behind a yet-unimplemented physical interaction.
 - Claude/Gemini own final art, map geometry and coordinates. Preserve existing encounter IDs and world bounds. Next: Chapter 6 Moonveil/Astral quests, optional keeper, conclusion to the currently playable arc (not the complete game story), campaign progress summary, tests and handoff.
 - Chapter 4 passed Fantasy Battle and Base44 security checks; Game 3D and WebGPU failed. Chapter 5 tests added; latest CI, lint/build and visual testing pending.
+
+## Chapter 6 runtime slice — Moonveil Gardens / Astral Ruins
+
+The Last Unsent Message unlocks after the Sanctuary quest is claimed. Its three required encounter IDs are wilds_moonveil_01, wilds_astral_01 and wilds_astral_elite. The independent Keeper of Forgotten Rites side quest uses wilds_moonveil_elite, is not required for the conclusion, and remains available afterward. The Vanguard is an existing elite encounter, not a new boss. All story claims are journal acknowledgements; first-victory rewards remain the only combat reward path.
+
+The six-chapter arc summary is derived from the actual Grove claim and the five main campaign quest records. It appears in the original and fallback journal; the HUD and service notes acknowledge completion when no active optional quest needs attention. The player may continue exploring, recruiting and completing optional quests. No forced credits, new save fields, invented enemies or automatic map unlocks. The observatory reveals the original source but deliberately leaves the identity of the person who withheld the final message unresolved. This closes the currently planned arc, not the entire game.
+
+### Placement and asset handoff
+- fb.moonveil.archive: readable historical marker near a safe path through the garden; distinguish background lore from quest authority.
+- fb.moonveil.keeper_warning: optional encounter approach with clear retreat and non-color-only difficulty cue.
+- fb.astral.signal_echo: safe sightline near the Wraith approach; no new discovery trigger yet.
+- fb.astral.observatory: approach before the existing Vanguard encounter with room to prepare.
+- fb.astral.epilogue: safe post-victory interaction location, with return route and no forced exit from the world.
+- Claude/Gemini supply geometry, final anchor transforms, textures and character models. Keep established world bounds and encounter IDs; no physical interaction placement or new art in this PR.
+
+### Release boundary
+All six main chapters and three encounter-based side quests now have runtime journal support (the separate Last Escort ledger remains design-only). The UI and data use existing game systems; final integration still needs approved asset manifests, actual map/NPC anchors, cinematics, equipment content expansion, cloud-save work, performance and device acceptance. Chapter 5 passed Fantasy Battle and Base44 security checks; Game 3D failed and WebGPU was still running at last check. Chapter 6 adds regression tests for all six required claims, optional independence, duplicate prevention and portable saves. New-head CI is required before merge; do not publish this draft.
