@@ -1,0 +1,123 @@
+# Work packages
+
+Packages from the 2026-11-27 baseline (`main` `ab03f50a`), in the format of the owner's directive §10. **Ready** packages can start now; **Approval** packages are finished or nearly finished work that waits for the owner; **Blocked** packages name the missing item. The hub session assigns them to the specialised sessions; one package per branch and PR; follow [AGENT_HANDOFF_PROTOCOL.md](AGENT_HANDOFF_PROTOCOL.md).
+
+Every package keeps the other two games and unrelated pages untouched, runs `npm run lint`, the package's tests and the full suite compared with the `ab03f50a` baseline (159 failing in `tests/`), and ends with a hand-back record.
+
+## Top packages per game (for the hub)
+
+| Game | Package | Kind | Why first |
+|---|---|---|---|
+| Fallen Sky | WP-FS-S1 P01 opening slice preparation (see Part A packages) | Ready (documentation-bounded) | The owner's first priority is the story; P01 is the only slice with a full source-to-acceptance chain |
+| Fallen Sky | WP-FS-02 land the four hub-verified WebGPU/perf branches | Approval | Fixes the black-world race and device loss; already verified |
+| Fallen Sky | WP-FS-01 skill damage curve failures | Ready | A real behaviour failure on `main` |
+| Duelist | WP-DA-05 push rework | Ready | Owner request 2026-11-22, fully specified, not built |
+| Duelist | WP-DA-01 triage the 24 failing tests | Ready | Keeps corrected problems from coming back |
+| Duelist | WP-DA-02, WP-DA-03 rebase #361 and #346 | Approval | Small, valid fixes |
+| Fantasy Battle | WP-FB-01 browser acceptance pass | Ready | The game is live (`FANTASY_BATTLE_RELEASED = true`) with no browser evidence |
+| Fantasy Battle | WP-FB-03 UI-level tests for Continue/Load | Ready | Directive §6 names exactly this logic |
+
+## Fallen Sky: story, quests and world (Part A)
+
+<!-- FS story packages inserted here -->
+
+## Fallen Sky: systems (Part B)
+
+### WP-FS-01 Skill damage curve: fix the `WEAPON_NOT_EQUIPPED` failures — Ready
+- Requirement: the curve as approved [mem `blacksmith-combat-handoff-v2.md`; doc `docs/game3d/SKILL_DAMAGE_CURVE_20261118.md`]; tests in `tests/game3d-skill-damage-curve.test.mjs`.
+- Status: code merged behind a flag; 13 pass, 4 fail on `main` [checked].
+- Dependencies: none. Assets: none.
+- Steps: find why the cast path's equip check disagrees with the inventory read; fix without changing the approved numbers; keep the flag off.
+- Tests: the 17 tests in the file; full-suite comparison.
+- Done when: 17/17 pass, no new failures, the flag still defaults off.
+
+### WP-FS-02 Land the hub-verified WebGPU and performance branches — Approval
+- Requirement: the hub verified and approved them (brief of 2026-11-27).
+- Branches: `claude/webgpu-device-loss-recovery-20261123` (`cfeead4d`), `claude/webgpu-morph-texture-key-20261123` (`70710779`), `claude/webgpu-late-compile-stuck-only-20261123` (`9eda0d3f`), then `claude/low-poly-world-2-20261123` (`60b95b5a`, contains `claude/webgpu-first-load-slices-20261123`). All 1,128 commits behind `main`, clean `merge-tree` [reader-checked].
+- Dependencies: the owner's merge (FS-D11). Assets: none.
+- Steps: one PR per branch, each merged with current `main` and re-tested; the morph-key fix checked on the create-character flow in a real browser.
+- Tests: each branch's own tests plus all `tests/webgpu*`; `game3d-low-poly-world-2`, `webgpu-precompile-slices`, `game3d-swap-shared-morph` for part 2.
+- Done when: each PR is green against the baseline and the owner merges it. `claude/three-empire-war-20261121` and `claude/wolfveil-cave-mouths-20261123` are not in this package: they build on deleted caves (FS-D2).
+
+### WP-FS-03 Level cap remainder — Ready for the approved part
+- Requirement: weapon skill points continue to 155 (owner, [mem `level-cap-155-20261119.md`]); hero cap 155 already in `main` (`02e89b96`).
+- Status: `WEAPON_SKILL_CAP = 100` on `main` [checked]; branch `claude/level-cap-155-20261119` (`5e98b0cd`) holds the work but predates `main`'s own cap change.
+- Dependencies: FS-D3 for paying out banked XP (build the bank, leave payout off until answered).
+- Steps: port the weapon-skill cap and XP bank onto `main`'s cap implementation; keep par rows 1–100 byte-identical; list the Base44 functions to deploy before the site.
+- Tests: the branch's tests ported; `game3d-melee-free-aim-level-155`; `game3d/weapon-skill-points`.
+- Done when: `WEAPON_SKILL_CAP` equals `AXE_LEVEL_CAP`, par rows 1–100 unchanged, tests pass.
+
+### WP-FS-04 Effects light pool — Ready
+- Requirement: effects dispose follow-up [mem `effects-dispose-20261119.md`]; branch `claude/effects-dispose-20261119` (`6104562a`, 4 commits not in `main`).
+- Steps: rebase, open a new PR. Tests: `game3d-active-effects-dispose` and the shared-light tests. Done when: tests pass and a live check shows the light count staying flat during skill casts (once a world is reachable).
+
+### WP-FS-05 Test triage — Ready
+- Requirement: directive §15 (don't reintroduce corrected problems) and TB-03.
+- Steps: sort the 129 Fallen Sky failures into real bugs, stale assertions (deleted caves, old Clone UI) and environment-only; fix real ones in their own packages; retire stale ones only after FS-D2 for the cave set; record the new baseline.
+- Done when: every failing test is fixed, retired with a stated reason, or listed as blocked; the baseline number is written in BACKLOG.md.
+
+### WP-FS-06 `duel-system-backend` harness — Ready
+- The six failures read `Deno.env` [reader]. Make the test run under Node with a stub environment without weakening the server rules it tests. Done when: the file passes and its assertions are unchanged.
+
+### WP-FS-07 Platform-mode QA override — Approval (proposal, not owner-approved)
+- A dev-only query override so QA can test the world without code edits, default unchanged. Touches `GameView.jsx` (a hot file). Needs the owner's OK and FS-D1 first.
+
+### WP-FS-08 Base44 permissions review — Ready
+- Requirement: AGENTS.md server security; `docs/security/BASE44_SECURITY_HARDENING_20261123.md`.
+- Steps: list every Base44 function and entity with anonymous or guest write access; check each against the hardening doc; report, don't loosen anything.
+- Done when: the list is empty or each entry is explained, as a doc in `docs/security/`.
+
+### WP-FS-09 Reward authority gap map — Ready (analysis only)
+- Requirement: R139 contract (20 planned acceptance cases), fixtures R140–R145.
+- Steps: map each R139 case to the real vault, `itemUpgrade` and reward code (or "none"). No runtime changes. Done when: the map is committed beside R139 and FS-D14 can be decided on it.
+
+## Duelist Adventure
+
+### WP-DA-01 Triage the 24 failing Duelist tests — Ready
+- Source: the reader's per-file run on `main` (DUELIST_RECORD §8). Leave the four `duelist-levels` failures to WP-DA-09.
+- Done when: each is fixed or updated to an owner-approved rule with the reason in the commit.
+
+### WP-DA-02 Healer Levitate fix (#361) — Approval
+- Rebase on `sim/world.mjs`; `duelist-healer-levitate-fall` must pass on current `main`; check the online snapshot shows the state.
+
+### WP-DA-03 Startup hang guards (#346) — Approval
+- 0 conflicts [reader]. Confirm it weakens no protection (the 15 s intro bypass included); build and startup tests pass.
+
+### WP-DA-04 Announcer and clash sounds — Approval
+- Branch `claude/duelist-feel-20261122` (`295c5f4a`). Open a PR; listen in game (66 announcer lines, judge voices Alice/Daniel/off, clash sounds); tests pass.
+
+### WP-DA-05 Push rework — Ready
+- Requirement (owner, 2026-11-22, [mem `duelist-kit-fixes-20261122.md`]): translucent visible wind with no bright flash; harder hit (knockback from 4.5 to about 6.5); the knocked-down body slides along the floor instead of the `vy 3.5` hop (`sim/world.mjs` collect); wire the recorded `pushSlide.mp3`.
+- Dependencies: none (do it after WP-DA-02 if both touch `sim/world.mjs`). Assets: the sound exists.
+- Tests: push tests plus a new slide test; server authority unchanged; practice live check.
+- Done when: the four points are visible and audible in practice, tests pass.
+
+### WP-DA-06 Mobile settings regression — Ready
+- `duelist-mobile-ui` fails on `main` (settings tabs at 667 and 844 wide); it passed 31/31 on `96c0c70a` [note `mobile-duelist-ui-20261123/HANDOVER.md`]. Done when: the test passes and live checks at 667×375 and 844×390 match the hand-over.
+
+### WP-DA-07 Two-player online check, all four classes — Ready (verification)
+- Two real clients against a local match server; every class's abilities and specials; record what the other player sees (the Execution tether and Sanctuary glow are known gaps). Done when: a written result per class.
+
+### WP-DA-08 Docs refresh — Ready
+- Bring REBUILD_PLAN, CLASSES_PLAN and COMBAT_DIRECTIONAL in line with `main`; update issue #103's status. Docs only.
+
+### WP-DA-09 Class progression reconcile — Blocked (DA-D2, MI-DA-04)
+
+## Fantasy Battle
+
+### WP-FB-01 Browser acceptance pass — Ready (verification)
+- Requirement: every Fantasy Battle doc lists browser QA as pending; directive §6 backend-logic list.
+- Steps: `npm run build`, `npm run lint`, the `fantasybattle-adventure` workflow; live run of title, new game, save, load, continue, battle, level-up, equipment, quest journal on desktop and at 667×375, with WebGPU and `?renderer=webgl`; screenshots and console logs.
+- Done when: a hand-back record lists each step as PASS, FAIL or NOT RUN with evidence. No fixes in this package; failures become their own packages.
+
+### WP-FB-02 README reconcile — Ready
+- `src/components/fantasybattle/README.md` still describes the duel only. Bring it in line with Sapphire Adventure and the release flag. Docs only.
+
+### WP-FB-03 UI-level tests for Continue and Load — Ready
+- Only the state functions are tested today. Add tests that the Continue button is disabled without a valid save and that Load lists exactly the valid slots. Done when: the tests pass and fail if the gating is removed.
+
+### WP-FB-04 Review #423 for the owner — Approval
+- Visual QA and CI for the loot economy; 133/133 logic tests already pass. The owner decides the merge (FB-D7).
+
+### WP-FB-05 Original plates on every screen size — Blocked (FB-D4, MI-FB-01)
+- Needs the original source files committed (or the owner's acceptance of the current hosting) before the SVG fallback can be dropped.
