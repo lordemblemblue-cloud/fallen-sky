@@ -43,7 +43,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FS-19 | Achievements | Awaiting information | none found | MI-FS-P3 |
 | FS-20 | Multiplayer: secure guest world join | Blocked | issue #298 | SE-02 |
 | FS-21 | PvP/PK rules, faction governance | Testing required | WORLD_PVP_PK…, FACTION_GOVERNANCE… | Server APIs; FS-D8 |
-| FS-22 | Reward authority (R137–R145 contracts and fixtures) | In progress | PR #420 merged, #425 open | FS-D14; WP-FS-10 gap map |
+| FS-22 | Reward authority (R137–R145 contracts and fixtures) | In progress | PR #420 and #425 merged (#425 at 18:49); fixtures only, no runtime | FS-D14; WP-FS-09 gap map |
 | FS-23 | Luna mansion geometry | Awaiting assets | issue #261 | FS-D10 |
 | FS-24 | War of Three Roads (bands 1–2 built, flag off; band 3 written) | Implemented (kept switched off by the owner, 2026-11-27) | `docs/game3d/three-empires/OWNER_REQUESTS.md`; merged `0b6ca52d` | Nothing more is built; reuse of its systems for the Threads is FS-D16 |
 | FS-25 | Cave-mouths branch `claude/wolfveil-cave-mouths-20261123` | Awaiting approval | conflicts with the 2026-11-25 removals | Close or keep (FS-D11) |
@@ -62,7 +62,7 @@ Story, quest and world rows (FS-S…) follow in the next section.
 | FB-04 | Six-chapter campaign text, three side quests | Awaiting approval | SAPPHIRE_CAMPAIGN_FOUNDATION ("proposed") | FB-D2, MI-FB-01 |
 | FB-05 | Party, equipment, accessories, bows, enhancement | Implemented | PR #399, #411 | Balance provisional (FB-D5) |
 | FB-06 | Browser acceptance of `/fantasy-battle` on desktop and phone, WebGPU and WebGL | Implementation-ready | every FB doc lists it pending | WP-FB-01 |
-| FB-07 | Loot economy and 24 world anchors | Awaiting approval | PR #423 (133/133; CI and visual pending) | FB-D7 |
+| FB-07 | Loot economy and 24 world anchors | Testing required | PR #423 merged 18:49 (133/133 on the branch; CI and visual QA were pending) | FB-D7; anchors wait for map geometry |
 | FB-08 | Dungeons | Awaiting information | none designed | MI-FB-02 |
 | FB-09 | Skill upgrades | Awaiting information | not designed | MI-FB-03 |
 | FB-10 | Quest rewards, Last Escort quest | Awaiting information | claims are acknowledgement only | MI-FB-04 |

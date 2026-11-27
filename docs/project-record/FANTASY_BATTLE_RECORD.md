@@ -9,7 +9,7 @@ Source labels: **[code]** a file on `main`; **[doc]** a repo document; **[PR #n]
 - `/fantasy-battle` is no longer the small archer duel of PR #310. It renders **Sapphire Adventure**: a 3D exploration world (Sapphire Wilds and Sanctuary) with turn-based 2D layered-puppet battles, a four-member party, a six-chapter campaign, equipment and guest saves [code `src/routes/fantasy-battle.jsx`, `src/components/fantasybattle/SapphireAdventure.jsx`; PR #398, #399, #403, #411; checked].
 - The hub flag `FANTASY_BATTLE_RELEASED = true` (commit `8046cf04`, 2026-11-27 05:50) makes the route and hub tile live outside dev [code `src/components/games/hub/gamesHubCatalog.mjs:13`; checked]. No browser, mobile or GPU acceptance evidence exists for any chapter [doc `docs/fantasybattle/SAPPHIRE_UI_INTEGRATION.md` QA matrix "pending"; PR bodies].
 - The owner's own design conversations for this game (story, campaign, party, skills, saves, menu, and the approved UI kit as source files) are **not in the repository and were not reachable** from this machine [see [SOURCES.md](SOURCES.md)]. The only owner words that reached a Claude session are listed in §1 [note `fantasy-battle/OWNER_INPUT_VS_DEFAULTS.md`].
-- Logic tests: 121/121 pass on `main` (5 files), 133/133 on open PR #423; hub 14/14 [checked by the reader, `tests/fantasybattle-*.test.mjs`, `tests/games-hub-cross-scroll.test.mjs`]. The full-suite run for this record had no Fantasy Battle failures [checked, see [BACKLOG.md](BACKLOG.md) testing section].
+- Logic tests: 121/121 pass on `ab03f50a` (5 files), 133/133 on PR #423's branch (merged into `main` at 18:49 as `b25ee6af`); hub 14/14 [checked by the reader, `tests/fantasybattle-*.test.mjs`, `tests/games-hub-cross-scroll.test.mjs`]. The full-suite run for this record had no Fantasy Battle failures [checked, see [BACKLOG.md](BACKLOG.md) testing section].
 
 ## 1. Approved and implemented
 
@@ -39,7 +39,7 @@ None fully owner-specified was found that is not already built. The ready packag
 
 ## 4. Approved but blocked by missing dependencies
 
-- 24 world interaction anchors (open PR #423 `worldInteractions` registry, all transforms `null`): need approved map geometry from the environment owner [doc `WORLD_INTERACTION_HANDOFF.md` on the PR branch].
+- 24 world interaction anchors (PR #423 `worldInteractions` registry, merged; all transforms `null`): need approved map geometry from the environment owner [doc `WORLD_INTERACTION_HANDOFF.md`, added by #423].
 - Item icons per item id (`public/fantasybattle/sapphire/items/<id>.webp`): need delivered art [doc `EQUIPMENT_EXPANSION.md`].
 - Unique character, companion, enemy and boss models: everything shares the archer rig with tinted SVG layers [doc `SAPPHIRE_UI_INTEGRATION.md`; assets `public/fantasybattle/companions/`, `enemies/`].
 
@@ -67,7 +67,7 @@ Final character, companion, enemy and boss art and rigs; item icons; map geometr
 | FB-D4 | Original-image policy: keep Base44-hosted, wide-only plates with SVG fallback, or commit the originals and use them on every screen size; accept the plate 05 label removal | [PR #403] |
 | FB-D5 | Quest-claim rewards, loot tables, XP, gold and prices | [PR #423 body; doc `EQUIPMENT_EXPANSION.md`] |
 | FB-D6 | Restore the owner's engine-spec Studio and download panel (unrouted since Sapphire took the route) or leave it out | [note `fantasy-battle/HANDOVER.md`] |
-| FB-D7 | Merge open PR #423 (loot economy; its body says CI and visual testing pending, "do not publish") | [PR #423] |
+| FB-D7 | PR #423 (loot economy) was merged at 18:49 although its body said CI and visual testing were pending and "do not publish": confirm it may be published as it is, and confirm its provisional rewards | [PR #423] |
 | FB-D8 | Implementer defaults from #310 (action names Quick Shot / Radiant Shot / Triple Volley / Guard, Focus 0–3, damage formula, the "Shade Archer" rival, look and sounds): keep or replace with the recovered design | [note `OWNER_INPUT_VS_DEFAULTS.md`] |
 
 ## 8. Awaiting technical verification
@@ -87,7 +87,7 @@ Final character, companion, enemy and boss art and rigs; item icons; map geometr
 
 | PR / branch | State | What it adds | Notes |
 |---|---|---|---|
-| #423 `fantasybattle-loot-economy` (`2ff60c21`) | open | first-victory gear for 14 encounters, treasure catalog, 24 planned anchors, guest checkpoint recovery | 133/133 logic tests pass [checked by the reader from a `git archive` copy]; CI and visual testing pending per its body |
+| #423 `fantasybattle-loot-economy` (`2ff60c21`) | **merged 2026-11-27 18:49** (`b25ee6af`), after this record's baseline | first-victory gear for 14 encounters, treasure catalog, 24 planned anchors (transforms `null`), guest checkpoint recovery | 133/133 logic tests passed on the branch [checked by the reader]; its body said CI and visual testing were pending and "do not publish"; rewards provisional |
 | `claude/fantasy-battle-20261123` (`feafc2f4`) | merged as #310 | the duel foundation | worktree clean |
 | `claude/games-hub-cross-scroll-20261123` (`bfeaae7d`) | merged as #311 | the left/right game menu | memory said "not merged": stale [checked: ancestor of `main`] |
 

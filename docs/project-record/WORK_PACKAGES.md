@@ -111,8 +111,8 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 ### WP-FB-03 UI-level tests for Continue and Load — Ready
 - Only the state functions are tested today. Add tests that the Continue button is disabled without a valid save and that Load lists exactly the valid slots. Done when: the tests pass and fail if the gating is removed.
 
-### WP-FB-04 Review #423 for the owner — Approval
-- Visual QA and CI for the loot economy; 133/133 logic tests already pass. The owner decides the merge (FB-D7).
+### WP-FB-04 Visual QA of the merged loot economy (#423) — Ready (verification)
+- #423 was merged at 18:49 with CI and visual testing still pending (its body). Include it in WP-FB-01's browser pass: first-victory gear on the 14 encounters, no duplicate grant on replay or practice, the art fallbacks. Report to the owner for FB-D7.
 
 ### WP-FB-05 Original plates on every screen size — Blocked (FB-D4, MI-FB-01)
 - Needs the original source files committed (or the owner's acceptance of the current hosting) before the SVG fallback can be dropped.

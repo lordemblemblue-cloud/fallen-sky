@@ -2,7 +2,7 @@
 
 The authoritative development record, backlog and missing-information report for the owner's three games, written 2026-11-27 as steps 1–9 of the owner's recovery directive (sent 2026-11-27; saved in the hub session's notes as `project-recovery/OWNER_DIRECTIVE_20261127.md`).
 
-Baseline: `lordemblemblue-cloud/fallen-sky` `main` at **`ab03f50a`** (merge of PR #420, 2026-11-27 18:03 -0500). Everything below describes that commit unless a row names a branch or PR. While the record was being written, `main` moved to **`0b6ca52d`** (18:39): six of the seven hub-verified branches were merged and the War of Three Roads was kept switched off by the owner; the records were updated for those changes, and the test counts were re-run on `0b6ca52d` (see [BACKLOG.md](BACKLOG.md) §Testing).
+Baseline: `lordemblemblue-cloud/fallen-sky` `main` at **`ab03f50a`** (merge of PR #420, 2026-11-27 18:03 -0500). Everything below describes that commit unless a row names a branch or PR. While the record was being written, `main` moved to **`0b6ca52d`** (18:39): six of the seven hub-verified branches were merged and the War of Three Roads was kept switched off by the owner; then to **`9034ba14`** (18:49): Fantasy Battle's loot economy (#423) and the R143 fixture (#425). The records were updated for those changes, and the test counts were re-run on `0b6ca52d` (see [BACKLOG.md](BACKLOG.md) §Testing). The NPC-phase story docs (phases 57–67, PRs #424, #426–#433) were merged into each other as a stacked chain of docs branches and are **not in `main`** as of `9034ba14`.
 
 ## Files
 
