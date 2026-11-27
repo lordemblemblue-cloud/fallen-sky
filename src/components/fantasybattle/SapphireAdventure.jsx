@@ -60,7 +60,7 @@ export default function SapphireAdventure(){
   const [hud,setHud]=useState(null),[result,setResult]=useState(null),[notice,setNotice]=useState(''),[error,setError]=useState(''),[pending,setPending]=useState(null);
   const [itemId,setItemId]=useState('starterBow'),[loot,setLoot]=useState([]),[service,setService]=useState(null),[candidate,setCandidate]=useState(null),[destination,setDestination]=useState(null);
   const [notifications,setNotifications]=useState([]),[lesson,setLesson]=useState(0),[discovery,setDiscovery]=useState(null),[saveStatus,setSaveStatus]=useState('');
-  const frame=useRef(null),stageRef=useRef(null),current=useRef({}),processed=useRef(null),startReady=useRef(false),saveTimer=useRef(null),focusRef=useRef(null),timeoutRef=useRef(null);
+  const frame=useRef(null),stageRef=useRef(null),current=useRef({}),processed=useRef(null),startReady=useRef(false),saveTimer=useRef(null),focusRef=useRef(null),timeoutRef=useRef(null),startTimer=useRef(null),restorePending=useRef(false);
   const id=stack[stack.length-1],screen=UI_SCREENS[id];
   current.current={id,stack,profile,slot,settings,world,encounter,result,running,service,candidate};
   const replaceProfile=p=>{current.current.profile=p;setProfile(p);};
@@ -72,7 +72,7 @@ export default function SapphireAdventure(){
   const fail=message=>{setError(message);go('47');};
   const transact=(operation,success)=>{const p=current.current.profile;if(!p||current.current.encounter){notify('This action is available only outside battle.');return false;}try{const next=operation(p);replaceProfile(next);autosave(next);notify(success);return true;}catch(e){notify(e.message);return false;}};
   const reloadSlots=()=>{const s=readSlots(localStorage);setSlots(s);return s;};
-  useEffect(()=>{reloadSlots();setSettings(readSettings(localStorage));return()=>{clearTimeout(saveTimer.current);clearTimeout(timeoutRef.current);};},[]);
+  useEffect(()=>{reloadSlots();setSettings(readSettings(localStorage));return()=>{clearTimeout(saveTimer.current);clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);};},[]);
   useEffect(()=>{if(!notice)return;const t=setTimeout(()=>setNotice(''),4000);return()=>clearTimeout(t);},[notice]);
   useEffect(()=>{if(id==='10'&&running)frame.current?.focus();else if(!isWorldScreen(id)&&id!=='35')focusRef.current?.focus();},[id,running]);
   useEffect(()=>{post('pause',id!=='10');if(stageRef.current)stageRef.current.paused=id!=='09';},[id]);
@@ -86,20 +86,20 @@ export default function SapphireAdventure(){
   };
   const autosave=p=>{const s=current.current.slot;if(s){try{const record=readSlots(localStorage).slots.find(x=>x.id===s);if(record?.status==='valid'&&record.profile.id!==p.id){notify('Autosave paused: slot belongs to another character.');return;}if(record?.status==='corrupt'){notify('Autosave paused: save slot damaged.');return;}save(s,record?.status==='valid',p);}catch(e){fail(e.message);}}};
   const begin=(p,saveSlot=null)=>{
-    clearTimeout(timeoutRef.current);startReady.current=false;processed.current=null;
+    clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);restorePending.current=false;startReady.current=false;processed.current=null;
     replaceProfile(p);setSlot(saveSlot);current.current.slot=saveSlot;setWorld(null);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);
     setService(null);setCandidate(null);setLoot([]);setRunning(false);root('35');
     // Remount even if loading from an active session.
-    setTimeout(()=>{setRunning(true);timeoutRef.current=setTimeout(()=>{if(!startReady.current)fail('The 3D world did not become ready. Check your graphics device and retry.');},30000);},0);
+    startTimer.current=setTimeout(()=>{setRunning(true);timeoutRef.current=setTimeout(()=>{if(!startReady.current)fail('The 3D world did not become ready. Check your graphics device and retry.');},30000);},0);
   };
   const startNew=()=>{try{const p=createProfile(name);replaceProfile(p);go('20');}catch(e){setNotice(e.message);}};
   const enterNew=()=>{const p=current.current.profile;if(!p)return;const empty=SLOT_IDS.find(s=>!slots.slots.some(x=>x.id===s));begin(p,empty||null);};
-  const leaveTitle=()=>{clearTimeout(timeoutRef.current);setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
+  const leaveTitle=()=>{clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);restorePending.current=false;setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
   const requestConfirm=(message,action)=>{setPending({message,action});go('40');};
   const openPause=()=>{if(isWorldScreen(current.current.id))go('04');};
   const onKey=code=>{
     const s=current.current.id;
-    if(code==='Escape'){if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
+    if(code==='Escape'){if(s==='40')setPending(null);if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
     const target=HOTKEY_SCREENS[code];
     if(target&&current.current.running&&(isWorldScreen(s)||s==='04'||s===target)){if(s===target)back();else go(target);}
   };
@@ -131,9 +131,12 @@ export default function SapphireAdventure(){
   eventHandler.current=e=>{
     const s=current.current,p=s.profile;
     if(e.type==='ready'&&p){
-      if(startReady.current)return;
-      startReady.current=true;clearTimeout(timeoutRef.current);
-      post('restore',p.world);post('quality',s.settings.quality);post('pause',false);setWorld(e.world);root('10');autosave(p);return;
+      if(startReady.current||restorePending.current)return;
+      restorePending.current=true;post('quality',s.settings.quality);post('restore',p.world);return;
+    }
+    if(e.type==='restored'&&p&&!s.encounter){
+      const updated=updateWorld(p,e.world);replaceProfile(updated);setWorld(e.world);
+      if(!startReady.current){startReady.current=true;restorePending.current=false;clearTimeout(timeoutRef.current);post('pause',false);root('10');autosave(updated);}return;
     }
     if(e.type==='world'&&p&&startReady.current&&!s.encounter){
       const updated=updateWorld(p,e.world);setWorld(e.world);replaceProfile(updated);
@@ -178,7 +181,7 @@ export default function SapphireAdventure(){
     case '05':content=<>{pane(0,nav(['06','12','32','27']))}{pane(1,<><h2>{profile?.name||'No character'}</h2><p>Archer · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
     case '06':content=<>{pane(0,nav(['21','17','39']))}{pane(1,<><h2>{profile?.name||'No character'}</h2><p>Equipped: {ITEMS[profile?.equipped]?.name||'None'} +{profile?.enhancements?.[profile?.equipped]||0}</p><p>Gold: {profile?.gold||0}</p></>)}{pane(2,<>{listItems((item,k)=>item.kind==='weapon'&&inv[k]>0)}<Btn disabled={!compare||Boolean(encounter)} onClick={()=>go('39')}>Compare Selected</Btn></>)}{pane(3,statPanel)}</>;break;
     case '07':content=<>{pane(0,nav(['25','08']))}{pane(1,<RegionMap world={world} profile={profile}/>)}{pane(2,<><h2>Current position</h2><p>{world?.region||'World not loaded'}</p><p>{world?.nearby||'No nearby interaction'}</p><small>Encounter markers are added from streamed sections, not sample artwork.</small></>)}</>;break;
-    case '08':content=<>{pane(0,<><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('43')} disabled={!profile||profile.quests.grove!=='available'}>Available Quest</Btn></>)}{pane(1,<><h2>Whispering Grove</h2><p>{profile?.quests.grove||'No active profile'}</p></>)}{pane(2,<><h2>Defeat the Grove Spirit</h2><p>Find the encounter in Whispering Grove and win the battle.</p><Btn primary disabled={profile?.quests.grove!=='complete'} onClick={()=>{const p=claimGroveQuest(profile);replaceProfile(p);autosave(p);go('44');}}>Complete Quest</Btn></>)}</>;break;
+    case '08':content=<>{pane(0,<><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('43')} disabled={!profile||Boolean(encounter)||profile.quests.grove!=='available'}>Available Quest</Btn></>)}{pane(1,<><h2>Whispering Grove</h2><p>{profile?.quests.grove||'No active profile'}</p></>)}{pane(2,<><h2>Defeat the Grove Spirit</h2><p>Find the encounter in Whispering Grove and win the battle.</p><Btn primary disabled={Boolean(encounter)||profile?.quests.grove!=='complete'} onClick={()=>{const p=claimGroveQuest(profile);replaceProfile(p);autosave(p);go('44');}}>Complete Quest</Btn></>)}</>;break;
     case '09':content=<>{pane(0,<><h2>{hud?'Round '+hud.round:'Preparing combat…'}</h2><div className="fa-turns">{hud?.order.map(o=><span className={o.active?'active':''} key={o.id}>{o.name}{o.action?' · '+o.action:''}</span>)}</div></>)}{pane(1,<>{hud?.units.filter(u=>u.id==='hero').map(u=><div key={u.id}><strong>{u.name}</strong><progress value={u.hp} max={u.maxHp}/><p>HP {u.hp}/{u.maxHp} · Focus {u.focus}/{u.maxFocus}</p></div>)}<small aria-live="polite">{hud?.log.at(-1)}</small></>)}{pane(2,<div className="fa-combat-actions">{hud?.legal.map(a=><Btn key={a.id} disabled={!a.enabled} onClick={()=>stageRef.current?.chooseAction(a.id)}>{a.action.hotkey} · {a.action.name}<small>{a.reason||a.action.summary}</small></Btn>)}</div>)}{pane(3,<>{hud?.units.filter(u=>u.id==='rival').map(u=><div key={u.id}><strong>{u.name}</strong><progress value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small></div>)}</>)}<div className="fa-hud-top"><Btn onClick={openPause}>Pause · Esc</Btn><Btn onClick={()=>go('12')}>Skills · K</Btn></div></>;break;
     case '10':content=<>{pane(0,<><strong>{profile?.name}</strong><p>Level {level}</p><progress value={profile?.xp%100||0} max={100}/><small>{profile?.xp||0} total XP</small><progress value={profile?.hp||0} max={stats.maxHp}/><small>HP {profile?.hp||0}/{stats.maxHp} · Gold {profile?.gold||0}</small></>)}{pane(1,<button className="fa-map-button" onClick={()=>go('07')}><RegionMap world={world} profile={profile} small/></button>)}{pane(2,<><small>{world?.region}</small>{world?.nearby&&<Btn primary onClick={()=>post('interact')}>{world.nearby} · E</Btn>}{profile?.quests.grove==='active'&&<p>Quest: Defeat the Grove Spirit</p>}</>)}{pane(3,<div className="fa-hud-buttons"><Btn onClick={openPause}>Menu</Btn><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('08')}>Journal</Btn><Btn onClick={()=>go('12')}>Skills</Btn></div>)}<div className="fa-touch">{[['left','←'],['right','→'],['in','↑'],['out','↓']].map(([k,label])=><Btn key={k} onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);post('move',{key:k,value:true});}} onPointerUp={()=>post('move',{key:k,value:false})} onPointerCancel={()=>post('move',{key:k,value:false})} onLostPointerCapture={()=>post('move',{key:k,value:false})}>{label}</Btn>)}<Btn onClick={()=>post('jump')}>Jump</Btn></div><div className="fa-hud-top"><Btn onClick={()=>frame.current?.focus()}>Focus world · WASD</Btn></div></>;break;
     case '11':content=<>{pane(0,nav(['05','26']))}{pane(1,<><h2>Active party</h2><p>{profile?.name||'No member'} · Archer</p><p>Additional party slots await the multi-character combat system.</p></>)}{pane(2,statPanel)}</>;break;
@@ -200,7 +203,7 @@ export default function SapphireAdventure(){
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
     case '30':content=<>{pane(0,<h2>Companions</h2>)}{pane(1,<p>{profile?.name}</p>)}{pane(2,<p>No bond records exist until companion recruitment is implemented.</p>)}{pane(3,<Btn onClick={()=>go('26')}>Recruitment</Btn>)}</>;break;
     case '31':content=pane(0,<><h2>Treasure Discovered</h2><p>{discovery}</p>{lootList}<p>These items were recorded once in your inventory.</p><Btn primary onClick={()=>go('38')}>View Items</Btn><Btn onClick={back}>Continue</Btn></>);break;
-    case '32':content=<>{pane(0,<><p>{profile?.name}</p><h2>Level {level}</h2><p>{profile?pointsFor(profile):0} available points</p></>)}{pane(1,statPanel)}{pane(2,<>{STAT_KEYS.map(k=><div className="fa-allocation" key={k}><span>{k}: {profile?.attributes[k]||0}</span><Btn disabled={!profile||pointsFor(profile)<1||Boolean(encounter&&hud?.phase!=='over')} onClick={()=>{const p=allocate(current.current.profile,k);replaceProfile(p);}}>+</Btn></div>)}<Btn primary onClick={()=>{autosave(current.current.profile);finishLevel();}}>Confirm Allocation</Btn></>)}</>;break;
+    case '32':content=<>{pane(0,<><p>{profile?.name}</p><h2>Level {level}</h2><p>{profile?pointsFor(profile):0} available points</p></>)}{pane(1,statPanel)}{pane(2,<>{STAT_KEYS.map(k=><div className="fa-allocation" key={k}><span>{k}: {profile?.attributes[k]||0}</span><Btn disabled={!profile||pointsFor(profile)<1||Boolean(encounter&&hud?.phase!=='over')} onClick={()=>{const p=allocate(current.current.profile,k);replaceProfile(p);}}>+</Btn></div>)}<Btn primary disabled={Boolean(encounter&&hud?.phase!=='over')} onClick={()=>{autosave(current.current.profile);finishLevel();}}>Confirm Allocation</Btn></>)}</>;break;
     case '33':content=<>{pane(0,<><h2>Rest Point</h2><p>{service?.label||'Not at a sanctuary'}</p></>)}{pane(1,statPanel)}{pane(2,<><p>Restore HP at a registered service point.</p><Btn disabled={!serviceAvailable||profile.hp>=stats.maxHp} onClick={()=>requestConfirm('Rest and recover?',()=>transact(p=>heal(p,{sanctuary:true}),'Health restored'))}>Rest</Btn><Btn onClick={()=>go('18')}>Save</Btn></>)}{pane(3,<Btn onClick={()=>root('10')}>Leave</Btn>)}</>;break;
     case '34':{const lessons=['Explore with WASD or the on-screen movement controls. Approach a marker and press E.','Choose a legal combat action. Quick Shot and Guard generate Focus; stronger skills spend it.','Open Character with C, Skillbook with K, Map with M, Journal with L, Equipment with I; Escape returns one level.'];content=<>{pane(0,<>{lessons.map((_,i)=><Btn key={i} primary={lesson===i} onClick={()=>setLesson(i)}>Lesson {i+1}</Btn>)}</>)}{pane(1,<><h2>Lesson {lesson+1}</h2><p>{lessons[lesson]}</p></>)}{pane(2,<Btn disabled={!running||Boolean(encounter)} onClick={()=>startBattle({id:'practice',label:'Practice Archer',category:'Normal',practice:true})}>Practice Battle</Btn>)}{pane(3,buttons(<Btn onClick={()=>setLesson(Math.max(0,lesson-1))}>Previous</Btn>,<Btn onClick={()=>setLesson(Math.min(lessons.length-1,lesson+1))}>Next</Btn>))}</>;break;}
     case '35':content=pane(0,<><h2>Loading the world…</h2><progress aria-label="Loading world"/><p>Waiting for the 3D renderer and map to become ready.</p><Btn onClick={leaveTitle}>Cancel</Btn></>);break;
@@ -215,7 +218,7 @@ export default function SapphireAdventure(){
     case '44':content=pane(0,<><h2>Quest Complete</h2><p>Whispering Grove Spirit · Completed</p><Btn primary onClick={()=>root('10')}>Continue</Btn></>);break;
     case '45':content=pane(1,<><h2>Skill Unlocked</h2>{result?.unlocked?.map(k=><div key={k}><strong>{skillName(k)}</strong><p>{ACTIONS[k].summary}</p></div>)}<Btn primary onClick={()=>{resumeWorld();go('12');}}>View Skillbook</Btn></>);break;
     case '46':content=<>{pane(0,statPanel)}{pane(1,<><h2>Recovery Tonic</h2><p>Restore up to 40 HP. Owned: {inv.recoveryTonic||0}</p></>)}{pane(2,<><p>HP: {profile?.hp} → {Math.min(stats.maxHp,(profile?.hp||0)+40)}</p><Btn primary disabled={!profile||Boolean(encounter)||!inv.recoveryTonic||profile.hp>=stats.maxHp} onClick={()=>{if(transact(p=>heal(p),'Health restored'))back();}}>Confirm Recovery</Btn></>)}</>;break;
-    case '47':content=pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(!startReady.current&&profile)begin(profile,slot);else if(encounter&&!hud)retryBattle();else back();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
+    case '47':content=pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(profile)begin(profile,slot);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
   const template='data:image/svg+xml,'+encodeURIComponent(makeTemplate(id));
