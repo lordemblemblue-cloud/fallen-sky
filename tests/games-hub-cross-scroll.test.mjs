@@ -61,42 +61,42 @@ test('Fantasy Battle art ships as small WebP files in public/hub', () => {
   assert.equal(tileBackdrop(GAMES_HUB_TILES[0]), GAMES_HUB_TILES[0].art, 'without a backdrop the tile art is the background');
 });
 
-test('Fantasy Battle stays coming soon even when its route is registered', () => {
+test('Fantasy Battle uses its explicit owner-enabled release flag and registered route', () => {
   const [duelist, fallen, fantasy] = GAMES_HUB_TILES;
   assert.equal(isTilePlayable(fallen, ROUTES_WITHOUT_FANTASY), true);
   assert.equal(isTilePlayable(duelist, ROUTES_WITHOUT_FANTASY), true);
-  assert.equal(isTilePlayable(fantasy, ROUTES_WITHOUT_FANTASY), false, 'coming soon until the route exists');
-  assert.equal(FANTASY_BATTLE_RELEASED, false, 'third game stays disabled pending review');
-  assert.equal(fantasy.releaseStatus, 'coming-soon');
-  assert.equal(isTilePlayable(fantasy, ROUTES_WITH_FANTASY), false, 'registered routes do not auto-release games');
-  assert.equal(isTilePlayable({ ...fantasy, to: '/fantasy-battle/' }, ROUTES_WITH_FANTASY), false, 'trailing slash cannot bypass');
-  assert.equal(isTilePlayable(fantasy, undefined), false, 'missing router table cannot bypass explicit release gate');
-  assert.equal(isTilePlayable({ ...fantasy, releaseStatus: 'ready' }, ROUTES_WITH_FANTASY), true, 'ready flag and route both required');
+  assert.equal(isTilePlayable(fantasy, ROUTES_WITHOUT_FANTASY), false);
+  assert.equal(FANTASY_BATTLE_RELEASED, true, 'owner explicitly enabled this game');
+  assert.equal(fantasy.releaseStatus, 'ready');
+  assert.equal(isTilePlayable(fantasy, ROUTES_WITH_FANTASY), true);
+  assert.equal(isTilePlayable({ ...fantasy, releaseStatus: 'coming-soon' }, ROUTES_WITH_FANTASY), false, 'route alone cannot release a disabled game');
+  assert.equal(isTilePlayable({ ...fantasy, releaseStatus: 'coming-soon', to: '/fantasy-battle/' }, ROUTES_WITH_FANTASY), false);
+  assert.equal(isTilePlayable({ ...fantasy, releaseStatus: 'coming-soon' }, undefined), false);
   assert.equal(isTilePlayable(null, ROUTES_WITH_FANTASY), false);
-  assert.equal(isTilePlayable({ id: 'x', to: 'gameview' }, ROUTES_WITH_FANTASY), false, 'relative routes are refused');
+  assert.equal(isTilePlayable({ id: 'x', to: 'gameview' }, ROUTES_WITH_FANTASY), false);
 });
 
-test('direct Fantasy Battle URL renders Coming Soon instead of the unfinished game', () => {
+test('direct Fantasy Battle URL retains the explicit release guard and Coming Soon fallback', () => {
   const route = source('src/routes/fantasy-battle.jsx');
   assert.match(route, /component: \(FANTASY_BATTLE_RELEASED \|\| import\.meta\.env\.DEV\) \? SapphireAdventure : FantasyBattleComingSoon/);
   assert.match(route, /Fantasy Battle is still in development/);
   assert.match(route, /href="\/"/);
 });
 
-test('choosing: a playable game launches its route, the coming-soon tile goes nowhere', () => {
+test('choosing: a playable game launches its route, a blocked tile goes nowhere', () => {
   const [duelist, fallen, fantasy] = GAMES_HUB_TILES;
   assert.deepEqual(resolveHubChoice(fallen, true), { launch: '/gameview', blocked: null });
   assert.deepEqual(resolveHubChoice(duelist, true), { launch: '/duelist', blocked: null });
   assert.deepEqual(resolveHubChoice(fantasy, false), { launch: null, blocked: 'coming-soon' });
   assert.deepEqual(resolveHubChoice(undefined, true), { launch: null, blocked: 'missing' });
 
-  // Walk the menu as a player does: two steps right reach Fantasy Battle, Enter does nothing yet.
+  // Walk the menu as a player does: two steps right reach Fantasy Battle; launch only with its registered route.
   let index = 0;
   for (let i = 0; i < 2; i += 1) index = stepFocusIndex(index, 1, GAMES_HUB_TILES.length).index;
   const tile = GAMES_HUB_TILES[index];
   assert.equal(tile.id, 'fantasy-battle');
   assert.equal(resolveHubChoice(tile, isTilePlayable(tile, ROUTES_WITHOUT_FANTASY)).launch, null);
-  assert.equal(resolveHubChoice(tile, isTilePlayable(tile, ROUTES_WITH_FANTASY)).launch, null);
+  assert.equal(resolveHubChoice(tile, isTilePlayable(tile, ROUTES_WITH_FANTASY)).launch, '/fantasy-battle');
 });
 
 test('left and right move one game and stop clearly at both ends', () => {
