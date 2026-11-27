@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R109 — optional voice selection, second forty entries:** [The people behind the banners](R109_D21-D40_S21-S40_OPTIONAL_VOICE_SELECTION.md). D21–D40/S21–S40 performance and staging selection, political evidence, guardian rest and consent boundaries. Optional voice QA 80/105; main voice QA 20/20. Next R110 D41–D50/S41–S55. Draft, not recorded or built.
+
 > **R108 — optional voice selection, first forty entries:** [Every encounter has a personality](R108_D01-D20_S01-S20_OPTIONAL_VOICE_SELECTION.md). D01–D20/S01–S20 performance and staging selections, shared-location dialogue de-duplication and actual state guards. Optional voice QA 40/105; main voice QA 20/20. Next R109 D21–D40/S21–S40. Draft, not recorded or built.
 
 > **R107 — completed main-campaign voice and cinematic selection:** [The voices of those we remember](R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md). M11–M20 ten proposed performance packets and terrain deltas; R106–R107 cover 20/20 main IDs. Preserve distinct families, evidence/consent, M17/M18 reveal order, R98 encounter phases and R65 ending precedence. Next R108 optional dialogue differentiation. Draft, not recorded or built.
