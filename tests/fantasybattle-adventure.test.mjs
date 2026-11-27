@@ -229,3 +229,35 @@ test('planned anchors remain inactive and candidate transform review is bounded'
  assert.ok(page.includes('liveService(e.world,registered.id)'));assert.ok(page.includes('gearSlotLabel(item.slot)'));
  assert.ok(!page.includes('item.gearSlotLabel(slot)'));
 });
+
+test('previous save checkpoint is bounded, explicit, and revision checked',()=>{
+ const s=storage(),p=A.createProfile('Traveler');
+ const first=A.writeSlot(s,'1',p,{expectedStamp:null});
+ assert.equal(A.readSlots(s).slots[0].recovery,null);
+ const second=A.writeSlot(s,'1',{...p,gold:10},{overwrite:true,expectedStamp:A.slotStamp(first)});
+ const third=A.writeSlot(s,'1',{...p,gold:20},{overwrite:true,expectedStamp:A.slotStamp(second)});
+ const row=A.readSlots(s).slots[0];assert.equal(row.recovery.profile.gold,10);
+ assert.equal(third.previous.previous,undefined);
+ assert.throws(()=>A.recoverSlot(s,'1',A.slotStamp(second)));
+ const restored=A.recoverSlot(s,'1',row.stamp);
+ assert.equal(restored.profile.gold,10);assert.equal(restored.previous.profile.gold,20);
+ assert.ok(A.isProfile(restored.profile));assert.equal(A.readSlots(s).slots[0].profile.gold,10);
+});
+test('a damaged current slot can recover a valid prior record but malformed storage is not overwritten',()=>{
+ const s=storage(),p=A.createProfile('Recovery');
+ const first=A.writeSlot(s,'2',p);
+ const second=A.writeSlot(s,'2',{...p,gold:30},{overwrite:true,expectedStamp:A.slotStamp(first)});
+ const raw=JSON.parse(s.getItem(A.SAVE_KEY));raw['2'].profile={};s.setItem(A.SAVE_KEY,JSON.stringify(raw));
+ const row=A.readSlots(s).slots[0];assert.equal(row.status,'corrupt');assert.equal(row.recovery.profile.id,p.id);
+ assert.equal(A.recoverSlot(s,'2',row.stamp).profile.gold,0);
+ s.setItem(A.SAVE_KEY,'broken');assert.throws(()=>A.recoverSlot(s,'2',A.slotStamp(second)));assert.equal(s.getItem(A.SAVE_KEY),'broken');
+});
+test('movement checkpoints throttle writes, require actual displacement, and reject invalid position',()=>{
+ const last={at:100,position:[6,0,0]};
+ assert.equal(A.positionSaveDue(last,[10,0,0],10099),false);
+ assert.equal(A.positionSaveDue(last,[6.2,0,0],10100),false);
+ assert.equal(A.positionSaveDue(last,[7,0,0],10100),true);
+ assert.equal(A.positionSaveDue(last,[6,10,0],10100),false);
+ assert.equal(A.positionSaveDue(last,[NaN,0,0],10100),false);
+ assert.equal(A.positionSaveDue(null,[7,0,0],10100),false);
+});
