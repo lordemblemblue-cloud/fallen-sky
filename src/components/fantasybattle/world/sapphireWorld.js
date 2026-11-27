@@ -1794,7 +1794,7 @@ import worldMarkup from './worldMarkup.html?raw';
       handleRenderFailure(err) {
         if (this.renderFailed) return;
         this.renderFailed = true;
-        recoverOrShowError(err, this);
+        if(this.onRuntimeError)this.onRuntimeError(err);else recoverOrShowError(err, this);
       }
 
       animate() {
@@ -1855,6 +1855,7 @@ export async function mountSapphireWorld(root, onEvent) {
   root.replaceChildren(...Array.from(parsed.body.childNodes));
   const app = new SapphireSumiViewer();
   const send = (type, data = {}) => onEvent({type, ...data});
+  app.onRuntimeError=err=>send('error',{message:err?.message||String(err)});
   const snapshot = () => {
     for(const e of app.encounters) registeredMarkers.set(e.id,{id:e.id,label:e.label,position:e.pos.toArray(),category:e.category,completed:app.completedEncounters.has(e.id)});
     for(const m of registeredMarkers.values()) m.completed=app.completedEncounters.has(m.id);
@@ -1890,7 +1891,7 @@ export async function mountSapphireWorld(root, onEvent) {
       app.foundDiscoveries=new Set(data.discoveries||[]);app.completedEncounters=new Set(data.completedEncounters||[]);
       const px=Math.max(1.5,Math.min(218,x)), pz=Math.max(-6.8,Math.min(3.4,z)), py=app.terrainVisualHeight(px,pz);
       app.savedExploreState={position:new THREE.Vector3(px,py,pz),velocityY:0,grounded:true,cameraPos:new THREE.Vector3(px+2,py+4.8,pz+16.5),cameraTarget:new THREE.Vector3(px+2.5,py+1.8,pz),encounterId:null};
-      app.loadMode('wilds');send('world',{world:snapshot()});},
+      app.loadMode('wilds');send('restored',{world:snapshot()});},
     finish(id,won){if(won)app.completedEncounters.add(id);app.retriggerCooldowns.set(id,performance.now()+3500);app.activeEncounter=null;app.resetInput();app.inputLocked=false;},
     quality(q){if(['performance','balanced','high','cinematic'].includes(q))app.applyQuality(q);},
     interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);else app.openService();},
