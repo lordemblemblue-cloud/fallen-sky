@@ -46,7 +46,14 @@ function Btn({children,onClick,disabled=false,primary=false,className='',...prop
 // requests leave the existing interface available instead of a blank screen.
 function useStagedOriginal(id){
   const entry=stagedOriginalFor(id);
-  const url=entry?.url;
+  const [wide,setWide]=useState(false);
+  useEffect(()=>{
+    const query=window.matchMedia('(min-aspect-ratio: 4/3) and (min-height: 500px) and (min-width: 850px)');
+    const sync=()=>setWide(query.matches);
+    sync();query.addEventListener('change',sync);
+    return()=>query.removeEventListener('change',sync);
+  },[]);
+  const url=entry&&(!entry.wideOnly||wide)?entry.url:null;
   const [loaded,setLoaded]=useState(null);
   useEffect(()=>{
     if(!url)return;
@@ -235,13 +242,39 @@ export default function SapphireAdventure(){
   const nav=(targets)=>targets.map(t=><Btn key={t} onClick={()=>go(t)}>{UI_SCREENS[t].name}{UNSUPPORTED.has(t)?' · Not available':''}</Btn>);
   const buttons=(...children)=><div className="fa-buttons">{children}</div>;
   const pane=(i,content,cls)=> <Panel key={i} rect={screen.layout[i]} className={cls}>{content}</Panel>;
+  const original=useStagedOriginal(id);
   let content;
   switch(id){
-    case '01':content=pane(0,<><div className="fa-title-mark" aria-hidden="true">✧</div><h1>Fantasy Battle</h1><p className="fa-title-subtitle">A Sapphire Sumi adventure</p><div className="fa-title-divider" aria-hidden="true"/><Btn primary onClick={()=>go('48')}>Start New Game</Btn><Btn disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}>Continue</Btn><Btn disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}>Load Game</Btn><Btn onClick={()=>go('03')}>Settings</Btn><a className="fa-button" href="/">Back to Games</a>{slots.error&&<small role="alert">{slots.error}</small>}</>);break;
+    case '01':content=original?<div className="fa-original-menu">
+      <h1 className="fa-art-sr">Fantasy Battle — Sapphire Sumi</h1>
+      <p className="fa-menu-subtitle">Fantasy Battle</p>
+      <Btn className="fa-painted-button fa-menu-start" primary onClick={()=>go('48')}><span className="fa-art-sr">Start New Game</span></Btn>
+      <Btn className="fa-painted-button fa-menu-continue" disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}><span className="fa-art-sr">Continue</span></Btn>
+      <Btn className="fa-painted-button fa-menu-load" disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}><span className="fa-art-sr">Load Game</span></Btn>
+      <Btn className="fa-painted-button fa-menu-settings" onClick={()=>go('03')}><span className="fa-art-sr">Settings</span></Btn>
+      <a className="fa-button fa-painted-button fa-menu-exit" href="/">Back to Games</a>
+      {recent&&<div className="fa-menu-portrait"><ArcherPortrait profile={recent.profile}/></div>}
+      <div className="fa-menu-save">{recent?<><strong>{recent.profile.name}</strong><small>Level {levelFor(recent.profile.xp)}</small></>:<span>No saved game</span>}</div>
+      {slots.error&&<small className="fa-menu-error" role="alert">{slots.error}</small>}
+    </div>:pane(0,<><div className="fa-title-mark" aria-hidden="true">✧</div><h1>Fantasy Battle</h1><p className="fa-title-subtitle">A Sapphire Sumi adventure</p><div className="fa-title-divider" aria-hidden="true"/><Btn primary onClick={()=>go('48')}>Start New Game</Btn><Btn disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}>Continue</Btn><Btn disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}>Load Game</Btn><Btn onClick={()=>go('03')}>Settings</Btn><a className="fa-button" href="/">Back to Games</a>{slots.error&&<small role="alert">{slots.error}</small>}</>);break;
     case '48':content=<>{pane(0,<>{nav(['03','34'])}<Btn onClick={back}>Back</Btn></>)}{pane(2,<><h2>Welcome, adventurer</h2><p>Guest progress is stored on this browser. No account is required. Choose your settings before beginning.</p><Btn primary onClick={()=>go('19')}>Create Character</Btn><Btn onClick={()=>go('03')}>Graphics and Audio</Btn><Btn onClick={()=>go('34')}>Tutorial</Btn></>)}</>;break;
     case '19':content=<>{pane(0,<><Btn onClick={back}>Back</Btn></>)}{pane(1,<><h2>Silver Archer</h2><ArcherPortrait/><p>The existing playable bow class.</p></>)}{pane(2,<><label>Adventurer name<input value={name} maxLength={40} onChange={e=>setName(e.target.value)} placeholder="Enter name"/></label><Btn primary disabled={!name.trim()} onClick={startNew}>Create</Btn></>)}</>;break;
     case '20':content=<>{pane(0,<>{profile&&<p>{profile.name}</p>}<Btn onClick={()=>go('19')}>Create Character</Btn></>)}{pane(1,<ArcherPortrait profile={profile}/>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile} onClick={enterNew}>Enter World</Btn><Btn onClick={back}>Back</Btn></>)}</>;break;
-    case '02':content=<>{pane(0,<>{validSlots.map(s=><Btn primary={selected===s.id} key={s.id} onClick={()=>setSelected(s.id)}>Slot {s.id} · {s.profile.name}</Btn>)}{!validSlots.length&&<p>No loadable saves on this browser.</p>}{slots.slots.filter(s=>s.status==='corrupt').map(s=><p key={s.id}>Slot {s.id} is damaged.</p>)}<Btn onClick={back}>Back</Btn></>)}{pane(1,<><h2>{selectedSave?.profile.name||'Select a save'}</h2>{selectedSave&&<p>Level {levelFor(selectedSave.profile.xp)} · X {selectedSave.profile.world.position[0].toFixed(1)} · {new Date(selectedSave.savedAt).toLocaleString('en-US')}</p>}</>)}{pane(2,<><Btn primary disabled={!selectedSave} onClick={()=>begin(selectedSave.profile,selectedSave.id,selectedSave.stamp)}>Load Game</Btn><Btn disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!selectedSave||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(selectedSave.profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</>)}</>;break;
+    case '02':content=original?<div className="fa-original-load">
+      <div className="fa-load-rows" aria-label="Save slots">
+        {SLOT_IDS.map(s=>{const record=slots.slots.find(x=>x.id===s),valid=record?.status==='valid';return <Btn key={s} className="fa-painted-button fa-load-row" primary={valid&&selected===s} aria-pressed={valid&&selected===s} disabled={!valid} onClick={()=>setSelected(s)}>
+          <span className="fa-load-row-portrait">{valid&&<ArcherPortrait profile={record.profile}/>}</span>
+          <span className="fa-load-row-data"><strong>Slot {s} · {valid?record.profile.name:record?'Damaged':'Empty'}</strong>{valid&&<small>Level {levelFor(record.profile.xp)}</small>}</span>
+        </Btn>;})}
+      </div>
+      <div className="fa-load-preview">{selectedSave?<ArcherPortrait profile={selectedSave.profile}/>:<p>No save selected</p>}</div>
+      <div className="fa-load-name"><strong>{selectedSave?.profile.name||'Select a save'}</strong>{selectedSave&&<span>Level {levelFor(selectedSave.profile.xp)}</span>}</div>
+      <div className="fa-load-metadata">{selectedSave?<><p>Position X {selectedSave.profile.world.position[0].toFixed(1)}</p><p>Last save {new Date(selectedSave.savedAt).toLocaleString('en-US')}</p><p>Saved locally on this browser.</p></>:<p>{validSlots.length?'Choose a valid save slot.':'No loadable saves on this browser.'}</p>}{slots.error&&<small role="alert">{slots.error}</small>}</div>
+      <div className="fa-load-backup">{backupField}<Btn disabled={!selectedSave||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(selectedSave.profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</div>
+      <Btn className="fa-painted-button fa-load-confirm" primary disabled={!selectedSave} onClick={()=>begin(selectedSave.profile,selectedSave.id,selectedSave.stamp)}><span className="fa-art-sr">Load Game</span></Btn>
+      <Btn className="fa-painted-button fa-load-export" disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export</Btn>
+      <Btn className="fa-painted-button fa-load-back" onClick={back}>Back</Btn>
+    </div>:<>{pane(0,<>{validSlots.map(s=><Btn primary={selected===s.id} key={s.id} onClick={()=>setSelected(s.id)}>Slot {s.id} · {s.profile.name}</Btn>)}{!validSlots.length&&<p>No loadable saves on this browser.</p>}{slots.slots.filter(s=>s.status==='corrupt').map(s=><p key={s.id}>Slot {s.id} is damaged.</p>)}<Btn onClick={back}>Back</Btn></>)}{pane(1,<><h2>{selectedSave?.profile.name||'Select a save'}</h2>{selectedSave&&<p>Level {levelFor(selectedSave.profile.xp)} · X {selectedSave.profile.world.position[0].toFixed(1)} · {new Date(selectedSave.savedAt).toLocaleString('en-US')}</p>}</>)}{pane(2,<><Btn primary disabled={!selectedSave} onClick={()=>begin(selectedSave.profile,selectedSave.id,selectedSave.stamp)}>Load Game</Btn><Btn disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!selectedSave||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(selectedSave.profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</>)}</>;break;
     case '03':content=<>{pane(0,<><h2>Settings</h2><Btn onClick={back}>Back</Btn></>)}{pane(1,<><label>Graphics quality<select value={settings.quality} onChange={e=>applySettings({quality:e.target.value})}>{['performance','balanced','high','cinematic'].map(q=><option key={q}>{q}</option>)}</select></label><label><input type="checkbox" checked={settings.muted} onChange={e=>applySettings({muted:e.target.checked})}/> Mute battle audio</label><label><input type="checkbox" checked={settings.reducedMotion} onChange={e=>applySettings({reducedMotion:e.target.checked})}/> Reduce UI and clothing motion</label><p>Renderer: {world?.renderer||'Detected when world loads'}</p><Btn onClick={()=>{if(document.fullscreenElement)document.exitFullscreen().catch(e=>setNotice(e.message));else document.documentElement.requestFullscreen?.().catch(e=>setNotice(e.message));}}>Toggle fullscreen</Btn>{!running&&<><h2>Portable Save Backup</h2><p>Import a plain or encrypted JSON backup. For encrypted files, enter the original passphrase before choosing the file. Files and passphrases are never sent to a server. Keep the passphrase separately; it cannot be recovered.</p>{backupField}<label>Destination slot<select value={importSlot} onChange={e=>setImportSlot(e.target.value)}>{SLOT_IDS.map(s=><option key={s} value={s}>Slot {s}</option>)}</select></label><label>Choose save backup<input disabled={backupBusy} type="file" accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)importBackup(f);}}/></label>{backupError&&<p role="alert">{backupError}</p>}</>}<Btn primary onClick={back}>Done</Btn></>)}</>;break;
     case '04':content=<>{pane(0,<><Btn primary onClick={back}>Resume</Btn>{nav(PAUSE_LINKS)}<Btn onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to Title</Btn></>)}{pane(1,<><h2>{profile?.name}</h2><p>{world?.region||'Sapphire Wilds'} · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
     case '05':content=<>{pane(0,nav(['06','12','32','27']))}{pane(1,<><h2>{profile?.name||'No character'}</h2><ArcherPortrait profile={profile}/><p>Archer · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
@@ -287,7 +320,6 @@ export default function SapphireAdventure(){
     case '47':content=pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
-  const original=useStagedOriginal(id);
   const template=original?.url||templateUrl(id);
   const artwork=original?{mode:'original-full',asset:null}:artFor(id,running);
   const artworkUrl=artUrl(artwork.asset);
