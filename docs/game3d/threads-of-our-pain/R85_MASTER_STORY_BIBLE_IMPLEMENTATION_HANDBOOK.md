@@ -1,6 +1,8 @@
 # R85 — The Threads of Our Pain: master Story Bible implementation handbook
 27 November 2026 | Fallen Sky Game 3D | Repository-first editorial reconciliation and production handoff. No new story IDs, implementation, publish, merge, paid generation or terrain build authorized by this document. The original scripts remain the full source of dialogue and descriptions. This handbook organizes those sources and resolves precedence; it is not a replacement summary for the full story.
 
+> **R87 construction series:** [Low-poly-first environment standard](R87_LOW_POLY_ENVIRONMENTAL_CONSTRUCTION_STANDARD.md), [Wolfveil M01–M03 detailed prompts](R87A_LOW_POLY_WOLFVEIL_M01_M03_CONSTRUCTION_PROMPTS.md), and [16-stage code-first preview, three quality tiers and parallel-agent workflow](R87B_CODE_FIRST_REGION_PREVIEW_AND_QUALITY_VARIANTS.md). Start with low-poly, review previews before integration, and compare Claude/Gemini pilot results before assigning distinct regions concurrently. Further detailed packets pending; no terrain implemented.
+
 > **R86 — verified repository development handoff:** [Repository verification and development handoff](R86_REPOSITORY_VERIFICATION_AND_DEVELOPMENT_HANDOFF.md). Verified 125/125 unique story IDs, 68/68 primary source files, 105/105 unique optional classification rows and all 117 distinct pre-R86 central relative link targets. Documentation inventory complete; unresolved writer decisions, latest Word manuscript QA, implementation, balancing and runtime/security tests remain open. PR #402 is the unmerged documentation candidate.
 
 ## 1. Start here — source of truth and approval levels
