@@ -4,20 +4,24 @@
  * Plain MeshBasicMaterials, so it draws the same on WebGPURenderer and the WebGL fallback.
  */
 import * as THREE from 'three';
+import {CLOTH_PROFILES,createSecondaryMotion,stepCloth,capeGeometry,deformCape,resetSecondaryMotion} from '../core/secondaryMotion.mjs';
+import {GEAR} from '../core/equipmentCatalog.mjs';
 import { faceState, socketPosition } from '../core/puppetCore.mjs';
 
 const STRING_HALF_WIDTH = 1.1;
+const SAPPHIRE_BOW_COLOR=new THREE.Color(0x438ee8);
 const FLASH_COLOR = new THREE.Color(1, 0.6, 0.55);
 export const NOCKED_ARROW_LENGTH = 292;
 
 export async function loadTextures(names, base) {
   const loader = new THREE.TextureLoader();
-  const entries = await Promise.all([...new Set(names)].map(async (name) => {
+  const entries = await Promise.allSettled([...new Set(names)].map(async (name) => {
     const tex = await loader.loadAsync(`${base}${name}.png`);
     prepareTexture(tex);
     return [name, tex];
   }));
-  return new Map(entries);
+  if(entries.some(e=>e.status==='rejected')){for(const e of entries)if(e.status==='fulfilled')e.value[1].dispose();throw Error('Base character textures failed to load.');}
+  return new Map(entries.map(e=>e.value));
 }
 
 export function prepareTexture(tex) {
@@ -48,8 +52,9 @@ export class PuppetView {
    * @param {number} [o.tint]     colour multiplied into every layer (the rival's shade)
    * @param {number} [o.renderBase]
    */
-  constructor({ rig, textures, arrowTexture, tint = 0xffffff, renderBase = 100 }) {
+  constructor({ rig, textures, arrowTexture, tint = 0xffffff, renderBase = 100, combatClass, gearVisuals=[], weaponId }) {
     this.rig = rig;
+    this.combatClass=combatClass;this.weaponId=weaponId;
     this.textures = textures;
     this.renderBase = renderBase;
     this.group = new THREE.Group();
@@ -86,7 +91,24 @@ export class PuppetView {
     this.debug = { wireframe: false, pivots: false };
     this.wire = null;
     this.pivots = null;
+    this.meleeWeapons=[];
+    if(combatClass==='warden'||combatClass==='scout'){
+      const make=(points,color,socket)=>{const shape=new THREE.Shape();points.forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));shape.closePath();const mesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshBasicMaterial({color,side:THREE.DoubleSide,transparent:true,depthTest:false,depthWrite:false}));mesh.renderOrder=renderBase+80;this.group.add(mesh);this.meleeWeapons.push({mesh,socket});};
+      if(combatClass==='warden'){
+        make([[-11,-26],[11,-26],[11,5],[31,5],[31,15],[10,15],[15,150],[0,184],[-15,150],[-10,15],[-31,15],[-31,5],[-11,5]],0xdcefff,'bowGrip');
+        make([[-42,55],[42,55],[38,-18],[0,-55],[-38,-18]],0x9d804f,'nock');
+      }else{for(const socket of ['bowGrip','nock'])make([[-8,-20],[8,-20],[8,0],[19,0],[19,7],[9,7],[12,72],[0,102],[-12,72],[-9,7],[-19,7],[-19,0],[-8,0]],0xd8c7ff,socket);}
+    }
     this.layerIds = Object.fromEntries(rig.layers.map((l) => [l.id, l.index]));
+    this.gearMeshes=[];
+    this.capes=[];
+    const capeMesh=(profile,width,color)=>{const data=capeGeometry(profile,width),geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.BufferAttribute(data.positions.slice(),3));geometry.setIndex(data.indices);const mesh=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color,transparent:true,depthTest:false,depthWrite:false,side:THREE.DoubleSide}));mesh.frustumCulled=false;this.group.add(mesh);return {mesh,bind:data.positions};};
+    const shape=(pts,color)=>{const path=new THREE.Shape();pts.forEach(([x,y],i)=>i?path.lineTo(x,y):path.moveTo(x,y));path.closePath();const mesh=new THREE.Mesh(new THREE.ShapeGeometry(path),new THREE.MeshBasicMaterial({color,transparent:true,depthTest:false,depthWrite:false,side:THREE.DoubleSide}));mesh.frustumCulled=false;this.group.add(mesh);return mesh;};
+    for(const id of gearVisuals){if(!Object.hasOwn(GEAR,id))continue;const g=GEAR[id],armor=g.slot==='armor',width=rig.data.id==='pilgrimWarden'?1.19:rig.data.id==='mistScout'?0.92:1;
+      if(!armor){const profile=CLOTH_PROFILES[g.style];if(profile){const outer=capeMesh(profile,width,g.trim),inner=capeMesh(profile,width*.92,g.color);this.capes.push({profile,parts:[outer,inner],motion:createSecondaryMotion(),bone:rig.boneOf('spine')});continue;}}
+      const outline=armor?(g.style==='plate'?[[-94,80],[-57,110],[0,87],[57,110],[94,80],[66,23],[52,-75],[-52,-75],[-66,23]]:g.style==='jacket'?[[-71,82],[-45,98],[0,64],[45,98],[71,82],[48,-86],[-48,-86]]:[[-72,85],[-43,98],[0,64],[43,98],[72,85],[49,-75],[-49,-75]]):g.style==='ward'?[[-54,85],[54,85],[96,-168],[0,-146],[-96,-168]]:g.style==='dusk'?[[-48,85],[48,85],[72,-145],[6,-205],[-65,-148]]:[[-50,85],[50,85],[87,-150],[12,-197],[-83,-157]];
+      const scaled=pts=>pts.map(([x,y])=>[x*width,y]);const meshes=[shape(scaled(outline),g.trim),shape(scaled(outline.map(([x,y])=>[x*.91,y*.94])),g.color)];if(armor)meshes.push(shape(scaled([[0,42],[12,20],[0,-2],[-12,20]]),g.trim));this.gearMeshes.push({meshes,armor,bone:rig.boneOf('spine')});
+    }
   }
 
   setLayerTexture(layerId, texture) {
@@ -122,7 +144,9 @@ export class PuppetView {
   }
 
   /** Copy one frame of puppetCore output into the meshes. */
-  update(state) {
+  resetCloth(){for(const cape of this.capes)resetSecondaryMotion(cape.motion);}
+
+  update(state,dt=0) {
     const { rig } = this;
     const face = faceState(rig, state.life);
     const rank = new Array(rig.layers.length);
@@ -141,12 +165,20 @@ export class PuppetView {
       if (layer.role === 'face') map = this.overrides.get(layer.id) || this.textures.get(face.face) || map;
       else if (layer.role === 'faceFade') { map = face.fadeFrom ? this.textures.get(face.fadeFrom) : null; opacity = face.fadeOpacity; }
       else if (layer.role === 'blink') opacity = face.blink;
-      mesh.visible = !!map && opacity > 0.003;
+      mesh.visible = !!map && opacity > 0.003 && !(this.meleeWeapons.length&&['bow','quiver'].includes(layer.id));
       if (material.map !== map) { material.map = map; material.needsUpdate = true; }
       material.opacity = opacity * this.opacity;
       material.color.copy(this._color);
+      if(layer.id==='bow'&&this.weaponId==='sapphireBow')material.color.lerp(SAPPHIRE_BOW_COLOR,.65);
     }
-    this.updateString(state, rank);
+    for(const g of this.gearMeshes){const j=g.bone*6;const a=state.frame[j],b=state.frame[j+1],c=state.frame[j+2],d=state.frame[j+3];for(const [i,mesh] of g.meshes.entries()){mesh.position.set(state.frame[j+4],state.frame[j+5],0);mesh.rotation.z=Math.atan2(b,a);mesh.scale.set(Math.hypot(a,b),Math.hypot(c,d),1);mesh.material.opacity=this.opacity;mesh.renderOrder=this.renderBase+(g.armor?(rank[this.layerIds.torso]??11)*2+1:-2)+i*.1;}}
+    for(const cape of this.capes){const j=cape.bone*6,frame=state.world,amount=state.settings.secondaryMotion??1;cape.motion.ax=state.externalMotion?.ax||0;const angle=stepCloth(cape.motion,cape.profile,dt,amount,state.life.breath||0);for(const [i,part] of cape.parts.entries()){const mesh=part.mesh;deformCape(part.bind,mesh.geometry.attributes.position.array,angle);mesh.geometry.attributes.position.needsUpdate=true;mesh.position.set(frame[j+4],frame[j+5],0);mesh.rotation.z=Math.atan2(frame[j+1],frame[j]);mesh.scale.set(Math.hypot(frame[j],frame[j+1]),Math.hypot(frame[j+2],frame[j+3]),1);mesh.material.opacity=this.opacity;mesh.renderOrder=this.renderBase-2+i*.1;}}
+    if(this.meleeWeapons.length){
+      this.string.visible=false;this.arrow.visible=false;this.lastArrow=null;
+      for(const [i,{mesh,socket}] of this.meleeWeapons.entries()){
+        const [x,y]=socketPosition(rig,state,socket);mesh.position.set(x,y,0);mesh.rotation.z=(this.combatClass==='warden'&&i===1?(state.params.shieldAngle??0):i===0?-35+(state.params.meleeMain??0):-13+(state.params.meleeOff??0))*Math.PI/180;mesh.material.opacity=this.opacity;
+      }
+    }else this.updateString(state, rank);
     if (this.debug.wireframe && this.wire) this.updateWire(state);
     if (this.debug.pivots && this.pivots) this.updatePivots(state);
   }
@@ -229,6 +261,9 @@ export class PuppetView {
     for (const { geo, material } of this.layers) { geo.dispose(); material.dispose(); }
     this.string.geometry.dispose(); this.string.material.dispose();
     this.arrow.geometry.dispose(); this.arrow.material.dispose();
+    for(const {mesh} of this.meleeWeapons){mesh.geometry.dispose();mesh.material.dispose();}
+    for(const g of this.gearMeshes)for(const mesh of g.meshes){mesh.geometry.dispose();mesh.material.dispose();}
+    for(const cape of this.capes)for(const {mesh} of cape.parts){mesh.geometry.dispose();mesh.material.dispose();}
     if (this.wire) { this.wire.geometry.dispose(); this.wire.material.dispose(); }
     if (this.pivots) { this.pivots.geometry.dispose(); this.pivots.material.dispose(); }
     for (const tex of this.overrides.values()) tex.dispose?.();

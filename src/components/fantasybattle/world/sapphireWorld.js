@@ -1,4 +1,7 @@
 import worldMarkup from './worldMarkup.html?raw';
+import {WORLD_MAX_X,WORLD_END_X,EXTRA_REGIONS,ARENAS,EXTRA_ENCOUNTERS,arenaForEncounter,extraHeight,regionForX} from '../core/worldExpansion.mjs';
+import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
+import {makeExplorationAvatar} from './explorationAvatar.js';
 
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -842,13 +845,14 @@ import worldMarkup from './worldMarkup.html?raw';
           { id: 'wilds_sec_2', idx: 2, name: '3. Celestial Waterfall', minX: 75, maxX: 110 },
           { id: 'wilds_sec_3', idx: 3, name: '4. Forgotten Passage', minX: 110, maxX: 140 },
           { id: 'wilds_sec_4', idx: 4, name: '5. Blossom Heights', minX: 140, maxX: 185 },
-          { id: 'wilds_sec_5', idx: 5, name: '6. Sanctuary Entrance', minX: 185, maxX: 220 }
+          { id: 'wilds_sec_5', idx: 5, name: '6. Sanctuary Entrance', minX: 185, maxX: 220 },...EXTRA_REGIONS
         ];
         this.combatAnchors = new Map(); this.debug4v4Group = null; this.debugBossGroup = null;
         this.ribbons = []; this.swayObjects = []; this.waterfalls = []; this.clouds = [];
         this.cameraObstacles = []; this.raycaster = new THREE.Raycaster(); this.petals = null; this.petalData = [];
         this.player = null; this.playerPos = new THREE.Vector3(6, 0, 0); this.playerVelY = 0; this.grounded = true;
-        this.keys = { left: false, right: false, in: false, out: false };
+        this.keys = { left: false, right: false, in: false, out: false, run:false };
+        this.locomotion=createLocomotion();
         this.encounters = []; this.discoveries = []; this.foundDiscoveries = new Set(); this.retriggerCooldowns = new Map();
         this.activeEncounter = null; this.activeDiscovery = null; this.savedExploreState = null;
         this.transitionState = 'idle'; this.inputLocked = false; this.inBattleFromExplore = false;
@@ -858,7 +862,7 @@ import worldMarkup from './worldMarkup.html?raw';
         this.exportBusy = false; this.renderFailed = false; this.lastAdaptiveAt = 0; this.envMapRT = null;
       }
 
-      resetInput() { Object.keys(this.keys).forEach(k => { this.keys[k] = false; }); }
+      resetInput() { Object.keys(this.keys).forEach(k => { this.keys[k] = false; }); if(this.locomotion){resetLocomotion(this.locomotion,this.grounded);this.player?.userData.applyPose?.(this.locomotion);} }
       updateRenderScale() {
         const base = Math.min(window.devicePixelRatio || 1, this.baseDprCap || 1.25);
         this.renderer.setPixelRatio(base * this.adaptiveScale);
@@ -920,6 +924,7 @@ import worldMarkup from './worldMarkup.html?raw';
           badge: 'Arena Center', build: () => this.buildSanctuary()
         });
 
+        for(const [id,def] of Object.entries(ARENAS)){if(id==='sapphire_sanctuary')continue;this.battleRegistry.register(id,{title:def.title,subtitle:def.title+' — Battleground',badge:'Arena Center',build:()=>this.buildRegionalArena(def.theme)});}
         this.setupLightsAndSky();
         this.bindUI();
         this.applyQuality('performance');
@@ -959,7 +964,7 @@ import worldMarkup from './worldMarkup.html?raw';
 
       getCombatAnchor(name) { return this.combatAnchors.get(name) || null; }
 
-      loadMode(mode) {
+      loadMode(mode,arenaId='sapphire_sanctuary') {
         this.mode = mode; this.clearWorld();
         if (this.keyLight) { this.keyLight.position.set(28, 42, 22); this.keyLight.target.position.set(0, 0, 0); }
         document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
@@ -969,13 +974,12 @@ import worldMarkup from './worldMarkup.html?raw';
         this.controls.enabled = mode !== 'wilds';
         if (mode === 'sanctuary') {
           exploreBar.classList.add('hidden'); discBadge.classList.add('hidden');
-          document.getElementById('mode-subtitle').textContent = 'Sapphire Sanctuary — Floating Island Battleground';
-          document.getElementById('badge-section').textContent = 'Arena Center';
-          this.buildSanctuary();
+          const def=this.battleRegistry.get(arenaId)||this.battleRegistry.get('sapphire_sanctuary');this.activeArenaId=this.battleRegistry.get(arenaId)?arenaId:'sapphire_sanctuary';
+          document.getElementById('mode-subtitle').textContent=def.subtitle;document.getElementById('badge-section').textContent=def.badge;def.build();
         } else if (mode === 'wilds') {
           exploreBar.classList.remove('hidden'); discBadge.classList.remove('hidden');
-          discBadge.textContent = `Discoveries: ${this.foundDiscoveries.size}/3`;
-          document.getElementById('mode-subtitle').textContent = 'The Sapphire Wilds — 220m 6-Section Exploration World';
+          discBadge.textContent = `Discoveries: ${this.foundDiscoveries.size}/5`;
+          document.getElementById('mode-subtitle').textContent = 'The Sapphire Wilds — 302m 8-Section Exploration World';
           this.buildSapphireWilds();
         } else if (mode === 'materials') {
           exploreBar.classList.add('hidden'); discBadge.classList.add('hidden');
@@ -1187,7 +1191,33 @@ import worldMarkup from './worldMarkup.html?raw';
         this.setCameraPreset('battle', false);
       }
 
+      buildRegionalArena(theme) {
+        // New low-poly arenas keep the existing 12 anchor positions and flat combat floor.
+        const root=new THREE.Group();root.name='RegionalArena_'+theme;
+        const deck=new THREE.Mesh(new THREE.CylinderGeometry(14.5,13.5,.44,32),this.mats.m15Paving());deck.scale.z=.48;deck.position.y=-.22;deck.receiveShadow=true;root.add(deck);
+        const core=new THREE.Mesh(new THREE.CylinderGeometry(14,9,3.8,20),this.mats.m03Bedrock());core.scale.z=.5;core.position.y=-2.35;root.add(core);
+        const color=theme==='garden'?0x94deca:theme==='crystal'?0xa6a1ed:0xe5c48b;
+        const ringMat=new THREE.MeshBasicMaterial({color,side:THREE.DoubleSide,transparent:true,opacity:.6});
+        for(const radius of [2.6,4.0,6.3]){const ring=new THREE.Mesh(new THREE.RingGeometry(radius-.035,radius,40),ringMat);ring.rotation.x=-Math.PI/2;ring.scale.y=.78;ring.position.y=.012;root.add(ring);}
+        if(theme==='garden'){
+          for(const [i,x] of [-12,-7,7,12].entries()){const tree=this.assets.createAncientFloweringTree(i%2?7:10,3200+i);tree.position.set(x,0,-5.2);root.add(tree);const flowers=this.assets.createFlowerCluster(i%2?'lavender':'sapphire',3300+i);flowers.position.set(x,0,4.9);root.add(flowers);}
+          const arch=this.assets.createArch(4.8,5.5,'complete');arch.position.set(0,0,-6);root.add(arch);
+        }else if(theme==='crystal'){
+          for(let i=0;i<8;i++){const x=-14+i*4,cr=this.assets.createCrystalCluster(1.3+(i%3)*.65,3400+i);cr.position.set(x,0,-5.8);root.add(cr);}
+          for(let i=0;i<5;i++){const rock=this.assets.createRock('large',3450+i);rock.position.set(-14+i*7,3.5,-8.5);rock.scale.set(1.8,3.2,1.5);root.add(rock);}
+          const wf=new THREE.Mesh(new THREE.PlaneGeometry(4,10),this.mats.m11Waterfall());wf.position.set(0,4,-10);this.waterfalls.push(wf);root.add(wf);
+        }else{
+          for(let i=0;i<6;i++){const col=this.assets.createColumn(3.6+i%3*1.4,i%2===0,3500+i);col.position.set(-12+i*4.8,0,-5.5);root.add(col);}
+          const portal=this.assets.createArch(6,7,'complete');portal.position.set(0,0,-7);root.add(portal);
+          const halo=new THREE.Mesh(new THREE.TorusGeometry(2.4,.055,6,40),ringMat);halo.position.set(0,4,-6.9);root.add(halo);
+        }
+        const anchors=[['PlayerFront01',-4.5,0,1.5],['PlayerFront02',-4.5,0,-1.5],['PlayerRear01',-8.5,0,2],['PlayerRear02',-8.5,0,-2],['EnemyFront01',4.5,0,1.5],['EnemyFront02',4.5,0,-1.5],['EnemyRear01',8.5,0,2],['EnemyRear02',8.5,0,-2],['CombatCenter',0,0,0],['BossCenter',7,0,0],['PlayerEntrance',-11,0,0],['EnemyEntrance',11,0,0]];
+        for(const [name,x,y,z] of anchors){const anchor=new THREE.Object3D();anchor.name=name;anchor.position.set(x,y,z);root.add(anchor);this.combatAnchors.set(name,anchor);}
+        this.worldGroup.add(root);this.addCloudLayer(-9,10,0);this.addFallingPetals(theme==='crystal'?30:80,32,0,0);this.setCameraPreset('battle',false);
+      }
+
       sampleWildsHeight(x) {
+        if(x>=220)return extraHeight(x);
         const cx = Math.max(0, Math.min(220, x));
         if (cx < 35) return (cx / 35) * 1.4 + Math.sin(cx * 0.14) * Math.sin(Math.PI * cx / 35) * 0.18;
         if (cx < 75) return 1.4 + ((cx - 35) / 40) * 1.6;
@@ -1211,26 +1241,23 @@ import worldMarkup from './worldMarkup.html?raw';
         const m = new THREE.Mesh(geo, this.mats.m14Soil()); m.name = 'TraversableTerrain'; m.receiveShadow = true; return m;
       }
       getWildsSectionName(x) {
-        if (x < 35) return '1. Whispering Grove'; if (x < 75) return '2. Broken Pilgrimage'; if (x < 110) return '3. Celestial Waterfall';
-        if (x < 140) return '4. Forgotten Passage'; if (x < 185) return '5. Blossom Heights'; return '6. Sanctuary Entrance';
+        return regionForX(this.sectionSpecs,Math.max(0,x)).name;
       }
 
       buildSapphireWilds() {
         const root = new THREE.Group(); root.name = 'TheSapphireWilds_Root'; this.wildsRoot = root;
         this.collisions.clear(); this.collisions.setOwner('wilds_global');
-        root.add(this.createWildsTerrain(-5, 225));
-        this.collisions.addBox(110, 8, 3.85, 224, 24, 0.7, 'cliff_front');
+        root.add(this.createWildsTerrain(-5, WORLD_END_X+5));
+        this.collisions.addBox(WORLD_END_X/2, 15, 3.85, WORLD_END_X+4, 40, 0.7, 'cliff_front');
         this.collisions.addBox(60, 8, -4.5, 120, 24, 0.7, 'cliff_back_left');
         this.collisions.addBox(174.5, 12, -4.5, 91, 24, 0.7, 'cliff_back_right');
+        this.collisions.addBox(261,16,-4.5,82,32,.7,'expansion_back');
 
-        const avatar = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.95, 6, 12), new THREE.MeshStandardMaterial({ color: this.appearanceTint ?? 0xffffff, emissive: '#448ce0', emissiveIntensity: 0.25, roughness: 0.4 }));
-        body.position.y = 0.88; body.castShadow = true; avatar.add(body);
-        const lt = new THREE.PointLight('#fff0cc', 2.4, 15, 1.4); lt.position.set(0, 1.8, 1.2); avatar.add(lt);
+        const avatar = makeExplorationAvatar(this.appearanceTint ?? 0xffffff);
 
         if (this.savedExploreState) { this.playerPos.copy(this.savedExploreState.position); this.playerVelY = this.savedExploreState.velocityY; this.grounded = this.savedExploreState.grounded; }
         else { this.playerPos.set(6, this.sampleWildsHeight(6), 0); this.playerVelY = 0; this.grounded = true; }
-        avatar.position.copy(this.playerPos); this.player = avatar; root.add(avatar);
+        avatar.position.copy(this.playerPos); this.player = avatar; resetLocomotion(this.locomotion,this.grounded);avatar.userData.applyPose(this.locomotion);root.add(avatar);
         this.worldGroup.add(root);
         this.addCloudLayer(-6, 12, 110); this.addFallingPetals(160, 120, 110, 4);
         this.updateWildsStreaming(true);
@@ -1281,7 +1308,8 @@ import worldMarkup from './worldMarkup.html?raw';
         if (registerRuntime) this.collisions.setOwner(secId);
 
         const addEnc = (e) => {
-          const ey = this.sampleWildsHeight(e.x), eg = new THREE.Group(); eg.userData.exportExclude = true;
+          e={...e,battleMapId:arenaForEncounter(e.id)};
+          const ey = this.terrainVisualHeight(e.x,e.z), eg = new THREE.Group(); eg.userData.exportExclude = true;
           const sz = e.category === 'Boss' ? 0.78 : (e.category === 'Elite' ? 0.65 : 0.52);
           const m = new THREE.Mesh(new THREE.OctahedronGeometry(sz, 0), new THREE.MeshStandardMaterial({ color: e.color, emissive: e.color, emissiveIntensity: 0.68, roughness: 0.3 }));
           m.position.y = 1.3; m.userData.ownedGeo = m.userData.ownedMat = true; eg.add(m);
@@ -1307,7 +1335,7 @@ import worldMarkup from './worldMarkup.html?raw';
         }
 
         const vegStep = this.quality === 'performance' ? 14 : (this.quality === 'balanced' ? 10 : 8);
-        for (let x = Math.max(8, spec.minX + 3); x < Math.min(214, spec.maxX); x += vegStep) {
+        for (let x = Math.max(8, spec.minX + 3); x < Math.min(WORLD_MAX_X-4, spec.maxX); x += vegStep) {
           const rz = -3.4 - rand() * 0.8, ry = this.sampleWildsHeight(x), isLarge = x % 16 === 0;
           const r = this.assets.createRock(isLarge ? 'large' : 'medium', x); r.position.set(x, ry, rz); r.scale.multiplyScalar(0.55); g.add(r);
           if (registerRuntime && isLarge && (x < 118 || x > 130)) { addCamObs(r); this.collisions.addBox(x, ry + 0.65, rz, 1.3, 1.3, 1.1, 'major_rock'); }
@@ -1394,7 +1422,7 @@ import worldMarkup from './worldMarkup.html?raw';
           addEnc({ id: 'wilds_heights_02', x: 164, z: 0.5, category: 'Normal', battleMapId: 'sapphire_sanctuary', triggerRadius: 2.0, label: 'Sapphire Canopy Guard (Normal)', color: '#78c9ed' });
           addEnc({ id: 'wilds_heights_elite', x: 179, z: 0, category: 'Elite', battleMapId: 'sapphire_sanctuary', triggerRadius: 2.2, label: 'Blossom Heights Warden (Elite)', color: '#ebd6a6' });
           addDisc({ id: 'disc_overlook', x: 163.0, y: oT, z: -2.2, label: 'Sky Blossom Overlook (Upper Terrace)' });
-        } else {
+        } else if(secIdx===5) {
           const stS = this.sampleWildsHeight(194), gs = this.assets.createStaircase(12, 4.4, 0.17, 0.36); gs.position.set(194, stS, 0); gs.rotation.y = -Math.PI * 0.5; g.add(gs);
           const gY = this.sampleWildsHeight(208), ga = this.assets.createArch(5.0, 7.0, 'complete'); ga.position.set(208, gY, 0); ga.rotation.y = Math.PI * 0.5; g.add(ga); addCamObs(ga);
           const gl = this.assets.createLantern(); gl.position.set(206.8, gY + 4.8, 1.9); g.add(gl);
@@ -1406,6 +1434,16 @@ import worldMarkup from './worldMarkup.html?raw';
           }
           addEnc({ id: 'wilds_sanctuary_guard', x: 202, z: 0, category: 'Elite', battleMapId: 'sapphire_sanctuary', triggerRadius: 2.2, label: 'Sanctuary Vanguard (Elite)', color: '#ebd6a6' });
           addEnc({ id: 'wilds_sanctuary_boss', x: 213, z: 0, category: 'Boss', battleMapId: 'sapphire_sanctuary', triggerRadius: 2.4, label: 'Celestial Gatekeeper (Boss)', color: '#e87a90' });
+        }
+        if(secIdx>=6){
+          const garden=secIdx===6;
+          for(let i=0;i<5;i++){const x=spec.minX+4+i*7,y=this.sampleWildsHeight(x);const obj=garden?this.assets.createAncientFloweringTree(6+i%3,3600+i):this.assets.createColumn(4+i%3,true,3700+i);obj.position.set(x,y,-3.6);g.add(obj);addCamObs(obj);if(registerRuntime)this.collisions.addCylinder(x,y,-3.6,.52,4,'expansion_pillar');}
+          for(let i=0;i<3;i++){const x=spec.minX+9+i*11,obj=garden?this.assets.createFlowerCluster('lavender',3800+i):this.assets.createCrystalCluster(1.1,3900+i);obj.position.set(x,this.terrainVisualHeight(x,2.65),2.65);g.add(obj);}
+          const gx=spec.minX+18,arch=this.assets.createArch(4.5,5.2,garden?'complete':'partial');arch.position.set(gx,this.sampleWildsHeight(gx),-3.1);g.add(arch);addCamObs(arch);
+          // Optional side alcove, off the main travel lane and within existing collision bounds.
+          const dx=spec.minX+29,dz=-2.2,dy=this.terrainVisualHeight(dx,dz);const shrine=this.assets.createCrystalCluster(1.2,4000+secIdx);shrine.position.set(dx,dy,-3.25);g.add(shrine);
+          addDisc({id:garden?'disc_moonveil':'disc_astral',x:dx,y:dy,z:dz,label:garden?'Moonveil Reliquary (Garden Alcove)':'Astral Archive (Ruined Alcove)'});
+          for(const enc of EXTRA_ENCOUNTERS.filter(e=>e.x>=spec.minX&&e.x<spec.maxX))addEnc(enc);
         }
         if (registerRuntime) { this.resourcePool.trackOwnedObject(secId, g); this.collisions.setOwner('global'); }
         return g;
@@ -1676,7 +1714,8 @@ import worldMarkup from './worldMarkup.html?raw';
           if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.right = true;
           if (e.code === 'KeyW' || e.code === 'ArrowUp') this.keys.in = true;
           if (e.code === 'KeyS' || e.code === 'ArrowDown') this.keys.out = true;
-          if (e.code === 'Space' && this.mode === 'wilds' && this.grounded) { this.playerVelY = 7.6; this.grounded = false; }
+          if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.keys.run = true;
+          if (!e.repeat && e.code === 'Space' && this.mode === 'wilds' && this.grounded) { this.playerVelY = 7.6; this.grounded = false; }
           if (!e.repeat && e.code === 'KeyE' && this.mode === 'wilds') {
             if (this.activeDiscovery) this.collectDiscovery(this.activeDiscovery);
             else if (this.activeEncounter) this.triggerEncounterTransition(this.activeEncounter);
@@ -1690,6 +1729,7 @@ import worldMarkup from './worldMarkup.html?raw';
           if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.right = false;
           if (e.code === 'KeyW' || e.code === 'ArrowUp') this.keys.in = false;
           if (e.code === 'KeyS' || e.code === 'ArrowDown') this.keys.out = false;
+          if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.keys.run = e.shiftKey;
         });
 
         for (const [id, key] of [['touch-left','left'],['touch-right','right'],['touch-in','in'],['touch-out','out']]) {
@@ -1706,7 +1746,7 @@ import worldMarkup from './worldMarkup.html?raw';
 
       collectDiscovery(disc) {
         this.foundDiscoveries.add(disc.id); disc.mesh.visible = false;
-        document.getElementById('badge-discoveries').textContent = `Discoveries: ${this.foundDiscoveries.size}/3`;
+        document.getElementById('badge-discoveries').textContent = `Discoveries: ${this.foundDiscoveries.size}/5`;
       }
 
       onResize() {
@@ -1726,30 +1766,50 @@ import worldMarkup from './worldMarkup.html?raw';
         for (const s of this.swayObjects) s.obj.rotation.z = Math.sin(t * s.speed + s.phase) * s.amp;
         for (const c of this.clouds) { c.position.x += dt * c.userData.speed; const center=c.userData.centerX || 0; if (c.position.x > center+115) c.position.x -= 230; }
         if (this.petals) {
-          const dummy = new THREE.Object3D();
+          const dummy = this.petalMatrixScratch ??= new THREE.Object3D();
+          const wilds = this.mode === "wilds";
+          const base = wilds ? this.sampleWildsHeight(this.playerPos.x) : this.petalOrigin.baseY;
+          const center = wilds ? this.playerPos.x : this.petalOrigin.centerX;
+          const half = wilds ? 24 : this.petalOrigin.spanX / 2;
+          const width = 2 * half;
+          const count = Math.min(this.petals.count, this.petalData.length);
+          // Keep hidden particles' simulation current for quality changes, but
+          // avoid composing and uploading matrices that cannot be drawn.
           for (let i = 0; i < this.petalData.length; i++) {
-            const p = this.petalData[i]; p.y -= dt * p.speed; p.x += Math.sin(t * 0.8 + p.phase) * dt * 0.35; const base = this.mode === "wilds" ? this.sampleWildsHeight(this.playerPos.x) : this.petalOrigin.baseY; if (p.y < base-1) p.y = base+14; const center=this.mode === "wilds" ? this.playerPos.x : this.petalOrigin.centerX, half=this.mode === "wilds" ? 24 : this.petalOrigin.spanX/2; p.x=center+(((p.x-center+half)%(2*half)+2*half)%(2*half))-half;
-            dummy.position.set(p.x, p.y, p.z); dummy.rotation.set(t + p.phase, t * 0.7 + p.phase, p.phase); dummy.updateMatrix(); this.petals.setMatrixAt(i, dummy.matrix);
+            const p = this.petalData[i];
+            p.y -= dt * p.speed;
+            p.x += Math.sin(t * 0.8 + p.phase) * dt * 0.35;
+            if (p.y < base - 1) p.y = base + 14;
+            p.x = center + (((p.x - center + half) % width + width) % width) - half;
+            if (i >= count) continue;
+            dummy.position.set(p.x, p.y, p.z);
+            dummy.rotation.set(t + p.phase, t * 0.7 + p.phase, p.phase);
+            dummy.updateMatrix();
+            this.petals.setMatrixAt(i, dummy.matrix);
           }
-          this.petals.instanceMatrix.needsUpdate = true;
+          if (count > 0) this.petals.instanceMatrix.needsUpdate = true;
         }
       }
 
       updateExploration(dt, t) {
         if (this.mode !== 'wilds' || !this.player || this.inputLocked) return;
-        let dirX = (this.keys.right ? 1 : 0) - (this.keys.left ? 1 : 0), dirZ = (this.keys.out ? 1 : 0) - (this.keys.in ? 1 : 0);
-        const diagonal = dirX && dirZ ? Math.SQRT1_2 : 1;
+        const startX=this.playerPos.x,startZ=this.playerPos.z;
+        let landingImpact=0;
         const steps = Math.max(1, Math.ceil(dt / (1/120))), step = dt / steps;
         for (let i=0;i<steps;i++) {
-          this.playerPos.x = Math.max(1.5, Math.min(218, this.playerPos.x + dirX * 7.4 * step * diagonal));
-          this.playerPos.z = Math.max(-6.8, Math.min(3.4, this.playerPos.z + dirZ * 4.8 * step * diagonal));
+          const motion=advanceVelocity(this.locomotion,this.keys,this.grounded,step);
+          this.playerPos.x = Math.max(1.5, Math.min(WORLD_MAX_X, this.playerPos.x + motion.x));
+          this.playerPos.z = Math.max(-6.8, Math.min(3.4, this.playerPos.z + motion.z));
           this.playerVelY -= 19.5 * step; this.playerPos.y += this.playerVelY * step;
+          const fallSpeed=this.playerVelY,wasGrounded=this.grounded;
           this.playerVelY = this.collisions.resolveCapsule(this.playerPos, this.playerVelY, 0.35, 1.75);
-          this.playerPos.x = Math.max(1.5, Math.min(218,this.playerPos.x)); this.playerPos.z=Math.max(-6.8,Math.min(3.4,this.playerPos.z));
+          this.playerPos.x = Math.max(1.5, Math.min(WORLD_MAX_X,this.playerPos.x)); this.playerPos.z=Math.max(-6.8,Math.min(3.4,this.playerPos.z));
           const supY = this.collisions.sampleSupportHeight(this.playerPos.x, this.playerPos.z, this.playerPos.y, (x, z) => this.terrainVisualHeight(x, z), 0.55);
-          if (this.playerVelY <= 0 && this.playerPos.y <= supY) { this.playerPos.y = supY; this.playerVelY = 0; this.grounded = true; } else this.grounded = false;
+          if (this.playerVelY <= 0 && this.playerPos.y <= supY) { if(!wasGrounded)landingImpact=Math.max(landingImpact,-fallSpeed);this.playerPos.y = supY; this.playerVelY = 0; this.grounded = true; } else this.grounded = false;
         }
         this.player.position.copy(this.playerPos);
+        updateLocomotion(this.locomotion,{dx:this.playerPos.x-startX,dz:this.playerPos.z-startZ,vy:this.playerVelY,grounded:this.grounded,impact:landingImpact,running:this.keys.run},dt);
+        this.player.userData.applyPose(this.locomotion);
 
         const inCave = this.playerPos.x >= 109 && this.playerPos.x <= 141;
         const camZ = inCave ? 9.2 : 16.2, camY = inCave ? 2.6 : 4.7, lookX = inCave ? 1.8 : 2.6;
@@ -1801,7 +1861,7 @@ import worldMarkup from './worldMarkup.html?raw';
 
       animate() {
         if (this.renderFailed) return;
-        requestAnimationFrame(() => this.animate());
+        this.animationFrame=requestAnimationFrame(() => this.animate());
         const rawDt = this.clock.getDelta(), dt = Math.min(0.05, rawDt), t = this.clock.elapsedTime;
         if (this.camLerp) {
           this.camera.position.lerp(this.camLerp.pos, Math.min(1, dt * 5));
@@ -1859,7 +1919,7 @@ export async function mountSapphireWorld(root, onEvent) {
   const send = (type, data = {}) => onEvent({type, ...data});
   app.onRuntimeError=err=>send('error',{message:err?.message||String(err)});
   const snapshot = () => {
-    for(const e of app.encounters) registeredMarkers.set(e.id,{id:e.id,label:e.label,position:e.pos.toArray(),category:e.category,completed:app.completedEncounters.has(e.id)});
+    for(const e of app.encounters) registeredMarkers.set(e.id,{id:e.id,label:e.label,position:e.pos.toArray(),category:e.category,battleMapId:e.battleMapId,completed:app.completedEncounters.has(e.id)});
     for(const m of registeredMarkers.values()) m.completed=app.completedEncounters.has(m.id);
     return ({
     position: app.playerPos.toArray(), regions: app.sectionSpecs.map(({id,name,minX,maxX})=>({id,name,minX,maxX})),
@@ -1870,11 +1930,11 @@ export async function mountSapphireWorld(root, onEvent) {
   app.triggerEncounterTransition = async (enc) => {
     if(app.inputLocked || app.completedEncounters.has(enc.id)) return;
     const world=snapshot(); app.resetInput(); app.inputLocked=true;
-    send('encounter',{encounter:{id:enc.id,label:enc.label,category:enc.category},world});
+    send('encounter',{encounter:{id:enc.id,label:enc.label,category:enc.category,battleMapId:enc.battleMapId},world});
   };
   app.completedEncounters = new Set();
   app.appearanceTint=0xffffff;
-  app.servicePoints=[{id:'grove_service',label:'Grove rest point',x:9,z:-1.4},{id:'sanctuary_service',label:'Sanctuary services',x:191,z:-1.4}];
+  app.servicePoints=[{id:'grove_service',label:'Grove rest point',x:9,z:-1.4},{id:'sanctuary_service',label:'Sanctuary services',x:191,z:-1.4},{id:'moonveil_service',label:'Moonveil rest point',x:226,z:-1.4}];
   const nearService=()=>app.mode==='wilds'&&app.servicePoints.find(s=>Math.hypot(app.playerPos.x-s.x,app.playerPos.z-s.z)<=2.4&&Math.abs(app.playerPos.y-app.terrainVisualHeight(s.x,s.z))<2);
   app.openService=()=>{const service=nearService();if(service&&!app.inputLocked){app.resetInput();app.inputLocked=true;send('service',{service,world:snapshot()});}};
   const registeredMarkers = new Map();
@@ -1888,19 +1948,19 @@ export async function mountSapphireWorld(root, onEvent) {
   return {
     snapshot,
     pause(value){app.resetInput();app.inputLocked=Boolean(value);},
-    battle(){app.resetInput();app.inputLocked=true;app.loadMode('sanctuary');app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!app.renderFailed)send('battleReady');else send('error',{message:'Sanctuary renderer failed.'});}));},
-    restore(data){if(!data || !Array.isArray(data.position))return;
+    battle(data){if(typeof data?.token!=='string'||!data.token)return;app.activeBattleToken=data.token;app.resetInput();app.inputLocked=true;const arenaId=arenaForEncounter(typeof data.id==='string'?data.id:null);app.loadMode('sanctuary',arenaId);app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(app.activeBattleToken!==data.token)return;if(!app.renderFailed)send('battleReady',{arenaId,token:data.token});else send('error',{message:'Battleground renderer failed.'});}));},
+    restore(data){app.activeBattleToken=null;if(!data || !Array.isArray(data.position))return;
       const [x,,z]=data.position;if(!Number.isFinite(x)||!Number.isFinite(z))return;
       app.foundDiscoveries=new Set(data.discoveries||[]);app.completedEncounters=new Set(data.completedEncounters||[]);
-      const px=Math.max(1.5,Math.min(218,x)), pz=Math.max(-6.8,Math.min(3.4,z)), py=app.terrainVisualHeight(px,pz);
+      const px=Math.max(1.5,Math.min(WORLD_MAX_X,x)), pz=Math.max(-6.8,Math.min(3.4,z)), py=app.terrainVisualHeight(px,pz);
       app.savedExploreState={position:new THREE.Vector3(px,py,pz),velocityY:0,grounded:true,cameraPos:new THREE.Vector3(px+2,py+4.8,pz+16.5),cameraTarget:new THREE.Vector3(px+2.5,py+1.8,pz),encounterId:null};
       app.loadMode('wilds');app.inputLocked=true;send('restored',{world:snapshot()});},
     finish(id,won){if(won)app.completedEncounters.add(id);app.retriggerCooldowns.set(id,performance.now()+3500);app.activeEncounter=null;app.resetInput();app.inputLocked=false;},
-    appearance(tint){if(![0xffffff,0x98c8ff,0xffc9dc,0xc8b5ff].includes(tint))return;app.appearanceTint=tint;app.player?.children[0]?.material?.color?.set(tint);},
+    appearance(tint){if(![0xffffff,0x98c8ff,0xffc9dc,0xc8b5ff].includes(tint))return;app.appearanceTint=tint;app.player?.userData.setAppearance?.(tint);},
     quality(q){if(['performance','balanced','high','cinematic'].includes(q))app.applyQuality(q);},
     interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);else app.openService();},
     move(key,value){if(Object.hasOwn(app.keys,key))app.keys[key]=!app.inputLocked && Boolean(value);},
-    jump(){if(!app.inputLocked&&app.grounded){app.playerVelY=7.6;app.grounded=false;}},
-    stop(){clearInterval(timer);app.renderFailed=true;app.resetInput();app.renderer?.dispose();app.controls?.dispose();}
+    jump(){if(!app.inputLocked&&app.mode==='wilds'&&app.grounded){app.playerVelY=7.6;app.grounded=false;}},
+    stop(){clearInterval(timer);app.renderFailed=true;cancelAnimationFrame(app.animationFrame);app.resetInput();app.clearWorld();app.renderer?.dispose();app.controls?.dispose();}
   };
 }
