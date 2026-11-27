@@ -181,10 +181,12 @@ export class FantasyBattleStage {
     if (!this.transparentBackdrop) this.scene.add(backdrop); else { backdrop.geometry.dispose(); backdrop.material.map?.dispose(); backdrop.material.dispose(); this.backdrop=null; }
     const arrowTexture = this.textures.get('arrow');
     this.fx = new FxSystem(this.scene, arrowTexture);
-    this.fighters = {
-      hero: new Fighter(this, { id: 'hero', name: this.units[0].name, rig: this.rig, textures: this.textures, arrowTexture, tint: this.units[0].tint ?? 0xffffff, x: -430, facing: 1, seed: 11, renderBase: 100 }),
-      rival: new Fighter(this, { id: 'rival', name: this.units[1].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xb9a6e8, x: 430, facing: -1, seed: 29, renderBase: 300 }),
-    };
+    const allies=this.units.filter(u=>u.team==='player');
+    this.fighters=Object.fromEntries(this.units.map((u,i)=>{
+      const ally=u.team==='player',idx=allies.findIndex(a=>a.id===u.id);
+      const x=ally?(allies.length===1?-430:-210-idx*390):430;
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,facing:ally?1:-1,seed:11+i*18,renderBase:100+i*200})];
+    }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
       shadow.scale.set(380, 70, 1);
@@ -262,8 +264,10 @@ export class FantasyBattleStage {
     const heroBusy = hero.skills.busy;
     if (cursorFresh && !heroBusy && (this.mode === 'practice' || this.phase === 'choose')) hero.setLookTarget(this.cursor.x, this.cursor.y);
     else hero.setLookTarget(...this.lookPointOf(rival));
-    rival.setLookTarget(...this.lookPointOf(hero));
-    for (const f of [hero, rival]) {
+    const front=this.units.find(u=>u.team==='player'&&(this.display?.[u.id]?.hp??u.maxHp)>0);
+    rival.setLookTarget(...this.lookPointOf(this.fighters[front?.id]||hero));
+    for (const f of Object.values(this.fighters)) {
+      if(f!==hero&&f!==rival)f.setLookTarget(...this.lookPointOf(rival));
       const { events } = f.update(dt);
       for (const e of events) this.handleEvent(f, e);
       const charge = f.state.params.charge ?? 0;
@@ -362,7 +366,8 @@ export class FantasyBattleStage {
         target.playSkill('defeat');
         target.state.life.combatTarget = 0;
         this.fadeOut(target, 0.6, 1.2);
-        this.koPending = { winner: attacker, loser: target };
+        const loserTeam=this.units.find(u=>u.id===target.id)?.team;
+        if(!this.units.some(u=>u.team===loserTeam&&(this.display[u.id]?.hp??u.maxHp)>0))this.koPending = { winner: attacker, loser: target };
         this.onAudioEvent?.('defeat', target.id);
       }
       this.emitHud();
@@ -440,6 +445,7 @@ export class FantasyBattleStage {
     this.display = Object.fromEntries(this.battle.units.map((u) => [u.id, { hp: u.hp, focus: u.focus }]));
     this.koPending = null;
     this.round = null;
+    this.pendingChoices={};
     this.activeActor = null;
     this.roundGuards = new Set();
     for (const f of Object.values(this.fighters)) {
@@ -464,23 +470,37 @@ export class FantasyBattleStage {
     this.emitHud();
   }
 
-  legal() {
-    if (!this.battle) return [];
-    return legalActions(this.battle, 'hero').map((a) => ({ ...a, enabled: a.enabled && this.phase === 'choose' && this.availableActions.has(a.id), reason: this.availableActions.has(a.id) ? a.reason : 'Not learned' }));
+  choosingUnit() {
+    return this.battle?.units.find(u=>u.team==='player'&&!u.ko&&!this.pendingChoices?.[u.id])?.id||null;
   }
 
-  /** The player's choice for this round (battle mode). Returns false when it cannot be taken now. */
+  legal() {
+    if (!this.battle) return [];
+    const id=this.choosingUnit();
+    return legalActions(this.battle,id).map(a=>{
+      const learned=id==='hero'?this.availableActions.has(a.id):a.id==='quickShot'||a.id==='guard'||a.id==='volley';
+      return {...a,enabled:a.enabled&&this.phase==='choose'&&learned,reason:learned?a.reason:'Not learned'};
+    });
+  }
+
+  /** Each living ally chooses independently before the deterministic round resolves. */
   async chooseAction(actionId) {
-    if (this.paused || !this.availableActions.has(actionId) || this.mode !== 'battle' || this.phase !== 'choose' || !isLegal(this.battle, 'hero', actionId)) return false;
+    const id=this.choosingUnit();
+    if(this.paused||this.mode!=='battle'||this.phase!=='choose'||!id||!this.legal().some(a=>a.id===actionId&&a.enabled))return false;
     this.sfx.ensure();
-    const rivalAction = chooseAiAction(this.battle, 'rival');
-    const { battle, round } = resolveRound(this.battle, { hero: actionId, rival: rivalAction });
+    this.pendingChoices[id]=actionId;
+    const next=this.choosingUnit();
+    if(next){this.log(unitById(this.battle,next).name+': choose an action.');return true;}
+    const choices={...this.pendingChoices};
+    for(const u of this.battle.units)if(u.team!=='player'&&!u.ko)choices[u.id]=chooseAiAction(this.battle,u.id);
+    const {battle,round}=resolveRound(this.battle,choices);
     this.phase = 'playing';
     this.round = round;
-    this.log(`Round ${round.number}: you chose ${ACTIONS[actionId].name}; the shade chose ${ACTIONS[rivalAction].name}.`);
+    this.log('Round '+round.number+': actions locked.');
     await this.playRound(round);
     if (this.disposed) return true;
     this.battle = battle;
+    this.pendingChoices={};
     for (const u of battle.units) this.display[u.id] = { hp: u.hp, focus: u.focus };
     this.round = null;
     if (battle.phase === 'over') {
@@ -544,7 +564,7 @@ export class FantasyBattleStage {
 
   hudState() {
     const units = (this.battle?.units || this.units).map((u) => ({
-      id: u.id, name: u.name, maxHp: u.maxHp, hp: this.display?.[u.id]?.hp ?? u.maxHp, focus: this.display?.[u.id]?.focus ?? 1, maxFocus: MAX_FOCUS,
+      id: u.id, team:u.team, name: u.name, maxHp: u.maxHp, hp: this.display?.[u.id]?.hp ?? u.maxHp, focus: this.display?.[u.id]?.focus ?? 1, maxFocus: MAX_FOCUS,
       spd: u.spd, guarding: this.roundGuards?.has(u.id) ?? false,
     }));
     const order = this.round
@@ -552,7 +572,7 @@ export class FantasyBattleStage {
       : [...units].sort((a, b) => b.spd - a.spd).map((u) => ({ id: u.id, name: u.name, action: null, active: false }));
     return {
       mode: this.mode, phase: this.phase, round: this.round?.number ?? (this.phase === 'over' ? this.battle.round - 1 : this.battle?.round ?? 1), units, order,
-      legal: this.legal(), log: this.logLines, winner: this.battle?.winner ?? null, renderer: this.rendererInfo,
+      legal: this.legal(), choosingUnit:this.choosingUnit(), pendingChoices:{...this.pendingChoices}, log: this.logLines, winner: this.battle?.winner ?? null, renderer: this.rendererInfo,
       skills: this.fighters ? [...this.fighters.hero.skills.library.values()].map((s) => ({ id: s.id, name: s.name, hotkey: s.hotkey })) : [],
     };
   }
