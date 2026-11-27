@@ -15,6 +15,7 @@ import {encryptBackup,importTransfer,MAX_ENCRYPTED_BYTES} from './core/encrypted
 import { ItemArt, SkillArt } from './SapphireIcons.jsx';
 import { weaponEligible, weaponMetadata, enhancementLevel } from './core/weaponCatalog.mjs';
 import { GROVE_STORY, groveStoryState } from './core/groveStory.mjs';
+import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
 import { CAMPAIGN_QUESTS, campaignQuest, changeCampaignQuest, campaignPrompt, campaignServiceNote, campaignArc } from './core/campaignQuests.mjs';
 function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" alt="" className={'fa-painted-illustration '+variant} src={'/fantasybattle/sapphire/illustrations/'+name+'.webp'} decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>;}
 
@@ -445,7 +446,7 @@ function RegionDiscovery({discovery,world,profile,original,layout,onContinue,onM
     <h3 className="fa-discovery-name">{label}</h3>
     <section className="fa-discovery-info" aria-live="polite">{info}</section>
     <div className="fa-discovery-summary">Exploration progress</div>
-    <section className="fa-discovery-record" aria-label="Exploration progress"><span>{count} / {regions.length} regions</span><span>{profile?.world.discoveries.length||0} landmarks</span></section>
+    <section className="fa-discovery-record" aria-label="Exploration progress"><span>{count} / {regions.length} regions</span><span>{treasureProgress(profile).collected} / {treasureProgress(profile).total} treasures collected</span></section>
     {controls}
   </div>;
   return <><Panel rect={layout[0]}><h2>{heading}</h2><RegionMap world={world} profile={profile} small/></Panel><Panel rect={layout[1]}><h3>{label}</h3>{info}{controls}</Panel></>;
@@ -1250,7 +1251,7 @@ export default function SapphireAdventure(){
     if(e.type==='encounter'&&p&&s.id==='10'&&!s.encounter){
       const updated=updateWorld(p,e.world);replaceProfile(updated);setWorld(e.world);if(e.encounter.category==='Normal')startBattle(e.encounter);else{setCandidate(e.encounter);go('23');}return;
     }
-    if(e.type==='discovery'&&p&&!s.encounter){const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:e.label});setLoot(awarded.loot);notify(e.label,awarded.loot.length?'rewards':'exploration');autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
+    if(e.type==='discovery'&&p&&!s.encounter){const treasure=treasureFor(e.id);if(!treasure||s.id!=='10'||!e.world?.discoveries?.includes(e.id)){post('pause',s.id!=='10');return;}const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:treasure.label});setLoot(awarded.loot);notify(treasure.label,awarded.loot.length?'rewards':'exploration');autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
     if(e.type==='service'&&p&&s.id==='10'&&!s.encounter){setService(e.service);setWorld(e.world);replaceProfile(updateWorld(p,e.world));go('13');return;}
     if(e.type==='battleReady'&&isCurrentEncounter(s.encounter,e.token)&&!failedLoad.current){setArenaReady(true);root('09');return;}
     if(e.type==='error')fail(e.message||'World error');
