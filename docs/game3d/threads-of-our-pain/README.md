@@ -30,6 +30,8 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | S17 | The Child's Wooden Bird | [Expanded quest and terrain brief](D14_S17.md) | Ready for proposed blockout; unverified |
 | D15 | The Chalk Road | [Expanded script](D15_S18.md) | Ready for proposed blockout; unverified |
 | S18 | The Road of Chalk | [Expanded quest and terrain brief](D15_S18.md) | Ready for proposed blockout; unverified |
+| D16 | The Last Name | [Expanded script](D16_S20.md) | Ready for proposed blockout; unverified |
+| S20 | The Nameless Grave | [Expanded quest and terrain brief](D16_S20.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -72,3 +74,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R18
 
 [D15/S18](D15_S18.md) preserves the faded/fresh chalk arrows, cave crossroads, hidden rest station, worn route map and Wayfinder map upgrade. Independent refugee escort uses safe holding points and route choices; authored focus marks remain available even if S18 is skipped. Eighteen distinct discoveries, eight optional quests, zero main quests expanded. Master v1.4 R18 saved to Library; previous 114 rendered pages identical, six new pages. Next D16 — The Last Name / S20 — The Nameless Grave (memorial ribbon and optional spirit lore); S19 remains separate, as does S13. Pending D02/D03/D05/D06/M07 reconciliation. Claude return surveyed anchors, layout, traversal and performance tests. Terrain unbuilt and unverified; no code changes, merge, credits or deployment.
+
+## Revision R19
+
+[D16/S20](D16_S20.md) preserves the cemetery, spirit requesting a name, ledger, three-part seal, original burial, hidden crypt and memorial ribbon. Defender name Taren Vale and slab shortcut are proposals; no forced battle or confirmed reincarnation. Nineteen discoveries, nine optional quests, zero main quests expanded. Master v1.5 R19 saved to Library; 120 previous rendered pages identical, five new pages inspected. Next D17 — The Cooling Forge / S21 — The Smith's Last Order, weapon upgrade component. Pending D02/D03/D05/D06/M07 reconciliation; S13 and S19 separate. Claude return surveyed anchors, layout, traversal and performance checks. Terrain unbuilt and unverified; no game code or merge.
