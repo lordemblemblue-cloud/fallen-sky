@@ -1,5 +1,6 @@
 import worldMarkup from './worldMarkup.html?raw';
 import {WORLD_MAX_X,WORLD_END_X,EXTRA_REGIONS,ARENAS,EXTRA_ENCOUNTERS,arenaForEncounter,extraHeight,regionForX} from '../core/worldExpansion.mjs';
+import {TREASURE_IDS,treasureFor} from '../core/treasureCatalog.mjs';
 import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
 import {makeExplorationAvatar} from './explorationAvatar.js';
 
@@ -978,7 +979,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           document.getElementById('mode-subtitle').textContent=def.subtitle;document.getElementById('badge-section').textContent=def.badge;def.build();
         } else if (mode === 'wilds') {
           exploreBar.classList.remove('hidden'); discBadge.classList.remove('hidden');
-          discBadge.textContent = `Discoveries: ${this.foundDiscoveries.size}/5`;
+          discBadge.textContent = `Discoveries: ${TREASURE_IDS.filter(id=>this.foundDiscoveries.has(id)).length}/${TREASURE_IDS.length}`;
           document.getElementById('mode-subtitle').textContent = 'The Sapphire Wilds — 302m 8-Section Exploration World';
           this.buildSapphireWilds();
         } else if (mode === 'materials') {
@@ -1745,8 +1746,12 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
       }
 
       collectDiscovery(disc) {
+        if(this.inputLocked||this.mode!=='wilds'||!disc||!treasureFor(disc.id)||this.foundDiscoveries.has(disc.id)||!this.discoveries.includes(disc))return false;
+        if(Math.hypot(this.playerPos.x-disc.pos.x,this.playerPos.z-disc.pos.z)>2||Math.abs(this.playerPos.y-disc.pos.y)>=1.6)return false;
         this.foundDiscoveries.add(disc.id); disc.mesh.visible = false;
-        document.getElementById('badge-discoveries').textContent = `Discoveries: ${this.foundDiscoveries.size}/5`;
+        this.activeDiscovery=null;
+        document.getElementById('badge-discoveries').textContent = `Discoveries: ${TREASURE_IDS.filter(id=>this.foundDiscoveries.has(id)).length}/${TREASURE_IDS.length}`;
+        return true;
       }
 
       onResize() {
@@ -1939,7 +1944,7 @@ export async function mountSapphireWorld(root, onEvent) {
   app.openService=()=>{const service=nearService();if(service&&!app.inputLocked){app.resetInput();app.inputLocked=true;send('service',{service,world:snapshot()});}};
   const registeredMarkers = new Map();
   const collect = app.collectDiscovery.bind(app);
-  app.collectDiscovery = d => { collect(d); send('discovery',{id:d.id,label:d.label,world:snapshot()}); };
+  app.collectDiscovery = d => { if(!collect(d))return false; app.resetInput(); app.inputLocked=true; send('discovery',{id:d.id,label:d.label,world:snapshot()}); return true; };
   await app.init();
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   if(app.renderFailed)throw Error('World renderer did not start.');
