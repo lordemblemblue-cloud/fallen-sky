@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R76 — owner-approved requirements:** [Postgame quest continuation and equipment retention](R76_OWNER_POSTGAME_CONTINUATION.md). Both endings must preserve earned gear and enable unfinished quests to be completed for continuing progression. Exact historical access mechanism and other R75/R75A policies remain open. No runtime validation.
+
 > **R75A:** [Concurrent progression addendum](R75A_POSTGAME_PROGRESSION_ADDENDUM.md) supplements the primary R75 with consumed/sold item provenance, safe snapshot failure recovery and historical journal states. Dialogue variants are alternatives. No owner approval or runtime validation.
 
 > **R75:** [Postgame progression and save decisions](R75_POSTGAME_PROGRESSION_DECISIONS.md) proposes preserving earned progression, isolated pre-finale replay and branch-safe play. Owner approval remains required; R74 completes all 105 detailed source reviews, not runtime validation.
