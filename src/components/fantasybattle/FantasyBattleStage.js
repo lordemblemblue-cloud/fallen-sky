@@ -1,5 +1,5 @@
 /**
- * Fantasy Battle stage: the renderer, two archers built from the same rig, the effects, and the turn-based battle.
+ * Fantasy Battle stage: the renderer, archers built from the same rig, the effects, and the turn-based battle.
  *
  * Each Fighter wraps a puppetCore state, a SkillPlayer and a PuppetView and offers the puppet API:
  *   setLookTarget(x, y)          world point to look at (cursor or combat target)
@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady } from '@/lib/webgpuSceneRenderer.js';
 import { buildRig, createPuppetState, stepPuppet, socketPosition, setLookTarget as lookAt, triggerExpression as expressionOf } from './core/puppetCore.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
-import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, isLegal, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
+import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
 import { PuppetView, loadTextures, prepareTexture } from './render/puppetView.js';
 import { FxSystem, makeBackdropTexture } from './render/stageFx.js';
 import { SfxSynth } from './render/sfx.js';
@@ -40,29 +40,31 @@ function normalizeSkills(data) {
 }
 
 export class Fighter {
-  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, facing, seed, renderBase }) {
+  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase }) {
     this.stage = stage;
     this.id = id;
     this.name = name;
     this.rig = rig;
     this.x = x;
+    this.y = y;
+    this.scale = scale;
     this.facing = facing;
     this.state = createPuppetState(rig, { seed });
     this.skills = new SkillPlayer(skillDoc.skills);
     this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase });
-    this.view.group.position.set(x, 0, 0);
-    this.view.group.scale.set(facing, 1, 1);
+    this.view.group.position.set(x, y, 0);
+    this.view.group.scale.set(facing*scale, scale, 1);
     this.lookWorld = null;
     this.state.life.combatTarget = 1;
   }
 
-  toWorld([x, y]) { return [this.x + this.facing * x, y]; }
+  toWorld([x, y]) { return [this.x + this.facing * x*this.scale, this.y+y*this.scale]; }
 
-  toLocal([x, y]) { return [(x - this.x) * this.facing, y]; }
+  toLocal([x, y]) { return [(x - this.x) * this.facing/this.scale, (y-this.y)/this.scale]; }
 
   hurtbox() {
     const p = this.toWorld(socketPosition(this.rig, this.state, rigData.hurtbox.socket));
-    return { x: p[0], y: p[1], r: rigData.hurtbox.radius };
+    return { x: p[0], y: p[1], r: rigData.hurtbox.radius*this.scale };
   }
 
   headWorld() { return this.toWorld(socketPosition(this.rig, this.state, 'headTop')); }
@@ -99,10 +101,14 @@ export class Fighter {
 }
 
 export class FantasyBattleStage {
-  constructor(container, { onHud = null, seed = Date.now() % 100000 } = {}) {
+  constructor(container, { onHud = null, seed = Date.now() % 100000, units = UNITS, availableActions = ACTION_ORDER, transparentBackdrop = false } = {}) {
     this.container = container;
     this.onHud = onHud;
     this.seed = seed;
+    this.units = units;
+    this.availableActions = new Set(availableActions);
+    this.transparentBackdrop = transparentBackdrop;
+    this.paused = false;
     this.mode = 'battle';
     this.phase = 'loading';
     this.speed = 1;
@@ -125,13 +131,13 @@ export class FantasyBattleStage {
     const manifestLoad = fetch(`${ASSET_BASE}parts.json`).then((r) => r.json());
     const names = [...rigData.layers.map((l) => l.part), ...Object.values(rigData.expressions), 'arrow'];
     const texturesLoad = loadTextures(names, ASSET_BASE);
-    let { renderer, ready, kind, reason } = createSceneRenderer(SCENE_ID, { antialias: true, alpha: false, powerPreference: 'high-performance', gameplay: true });
+    let { renderer, ready, kind, reason } = createSceneRenderer(SCENE_ID, { antialias: true, alpha: this.transparentBackdrop, powerPreference: 'high-performance', gameplay: true });
     try {
       await ready;
     } catch (error) {
       console.warn('[fantasy-battle] WebGPU did not start; using WebGL', error);
       destroySceneRenderer(renderer);
-      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: this.transparentBackdrop });
       kind = 'webgl';
       reason = 'webgpu-failed';
     }
@@ -145,7 +151,8 @@ export class FantasyBattleStage {
     this.overlay.className = 'fb-numbers';
     this.container.appendChild(this.overlay);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x120f1c);
+    this.scene.background = this.transparentBackdrop ? null : new THREE.Color(0x120f1c);
+    if(this.transparentBackdrop) renderer.setClearColor(0x000000,0);
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -100, 100);
     this.camera.position.set(0, CAMERA_Y, 10);
     this.resize();
@@ -173,17 +180,22 @@ export class FantasyBattleStage {
     backdrop.position.set(0, 880 - 650, -5);
     backdrop.renderOrder = 0;
     this.backdrop = backdrop;
-    this.scene.add(backdrop);
+    if (!this.transparentBackdrop) this.scene.add(backdrop); else { backdrop.geometry.dispose(); backdrop.material.map?.dispose(); backdrop.material.dispose(); this.backdrop=null; }
     const arrowTexture = this.textures.get('arrow');
     this.fx = new FxSystem(this.scene, arrowTexture);
-    this.fighters = {
-      hero: new Fighter(this, { id: 'hero', name: UNITS[0].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xffffff, x: -430, facing: 1, seed: 11, renderBase: 100 }),
-      rival: new Fighter(this, { id: 'rival', name: UNITS[1].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xb9a6e8, x: 430, facing: -1, seed: 29, renderBase: 300 }),
-    };
+    const allies=this.units.filter(u=>u.team==='player'), enemies=this.units.filter(u=>u.team!=='player');
+    const compact=Math.max(allies.length,enemies.length)>2;
+    const drawOrder=[...this.units].sort((a,b)=>{const ga=a.team==='player'?allies:enemies,gb=b.team==='player'?allies:enemies;return Number(gb.indexOf(b)>=2)-Number(ga.indexOf(a)>=2);});
+    this.fighters=Object.fromEntries(this.units.map((u,i)=>{
+      const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
+      const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
+      const y=compact&&idx>=2?185:0;
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
+    }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
-      shadow.scale.set(380, 70, 1);
-      shadow.position.set(f.x, 6, 0);
+      shadow.scale.set(380*f.scale, 70*f.scale, 1);
+      shadow.position.set(f.x, f.y+6, 0);
       shadow.renderOrder = 2;
       this.scene.add(shadow, f.view.group);
     }
@@ -242,6 +254,7 @@ export class FantasyBattleStage {
   frame(now) {
     const real = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
     this.last = now;
+    if(this.paused)return;
     let dt = real * this.speed;
     if (this.hitStop > 0) { this.hitStop = Math.max(0, this.hitStop - real); dt = 0; }
     this.step(dt, real);
@@ -256,15 +269,17 @@ export class FantasyBattleStage {
     const heroBusy = hero.skills.busy;
     if (cursorFresh && !heroBusy && (this.mode === 'practice' || this.phase === 'choose')) hero.setLookTarget(this.cursor.x, this.cursor.y);
     else hero.setLookTarget(...this.lookPointOf(rival));
-    rival.setLookTarget(...this.lookPointOf(hero));
-    for (const f of [hero, rival]) {
+    const front=this.units.find(u=>u.team==='player'&&(this.display?.[u.id]?.hp??u.maxHp)>0);
+    rival.setLookTarget(...this.lookPointOf(this.fighters[front?.id]||hero));
+    for (const f of Object.values(this.fighters)) {
+      if(f!==hero&&f!==rival){const team=this.units.find(u=>u.id===f.id)?.team;const target=this.units.find(u=>u.team!==team&&(this.display?.[u.id]?.hp??u.maxHp)>0);f.setLookTarget(...this.lookPointOf(this.fighters[target?.id]||(team==='player'?rival:hero)));}
       const { events } = f.update(dt);
       for (const e of events) this.handleEvent(f, e);
       const charge = f.state.params.charge ?? 0;
       const tip = f.view.lastArrow && (f.state.params.nocked ?? 0) > 0.5 ? f.toWorld(f.view.lastArrow.tip) : null;
       this.fx.glowAt(`charge:${f.id}`, tip?.[0] ?? 0, tip?.[1] ?? 0, tip ? charge : 0);
       const ward = this.fx.wards.get(f.id);
-      if (ward) ward.mesh.position.set(f.x + f.facing * 150, f.hurtbox().y + 10, 0);
+      if (ward) ward.mesh.position.set(f.x + f.facing * 150*f.scale, f.hurtbox().y + 10, 0);
     }
     this.fx.update(dt, (target) => target.hurtbox());
     this.checkMisses();
@@ -356,7 +371,8 @@ export class FantasyBattleStage {
         target.playSkill('defeat');
         target.state.life.combatTarget = 0;
         this.fadeOut(target, 0.6, 1.2);
-        this.koPending = { winner: attacker, loser: target };
+        const loserTeam=this.units.find(u=>u.id===target.id)?.team;
+        if(!this.units.some(u=>u.team===loserTeam&&(this.display[u.id]?.hp??u.maxHp)>0))this.koPending = { winner: attacker, loser: target };
         this.onAudioEvent?.('defeat', target.id);
       }
       this.emitHud();
@@ -430,10 +446,11 @@ export class FantasyBattleStage {
   // ---- battle ----
   restart() {
     this.seed = (this.seed * 1103515245 + 12345) % 2147483647;
-    this.battle = createBattle({ seed: this.seed, units: UNITS });
+    this.battle = createBattle({ seed: this.seed, units: this.units });
     this.display = Object.fromEntries(this.battle.units.map((u) => [u.id, { hp: u.hp, focus: u.focus }]));
     this.koPending = null;
     this.round = null;
+    this.pendingChoices={};
     this.activeActor = null;
     this.roundGuards = new Set();
     for (const f of Object.values(this.fighters)) {
@@ -458,23 +475,38 @@ export class FantasyBattleStage {
     this.emitHud();
   }
 
-  legal() {
-    if (!this.battle) return [];
-    return legalActions(this.battle, 'hero').map((a) => ({ ...a, enabled: a.enabled && this.phase === 'choose' }));
+  choosingUnit() {
+    return this.battle?.units.find(u=>u.team==='player'&&!u.ko&&!this.pendingChoices?.[u.id])?.id||null;
   }
 
-  /** The player's choice for this round (battle mode). Returns false when it cannot be taken now. */
+  legal() {
+    if (!this.battle) return [];
+    const id=this.choosingUnit();
+    return legalActions(this.battle,id).map(a=>{
+      const member=this.units.find(u=>u.id===id);
+      const learned=id==='hero'?this.availableActions.has(a.id):(member?.actions||['quickShot','guard','volley']).includes(a.id);
+      return {...a,enabled:a.enabled&&this.phase==='choose'&&learned,reason:learned?a.reason:'Not learned'};
+    });
+  }
+
+  /** Each living ally chooses independently before the deterministic round resolves. */
   async chooseAction(actionId) {
-    if (this.mode !== 'battle' || this.phase !== 'choose' || !isLegal(this.battle, 'hero', actionId)) return false;
+    const id=this.choosingUnit();
+    if(this.disposed||this.paused||this.mode!=='battle'||this.phase!=='choose'||!id||!this.legal().some(a=>a.id===actionId&&a.enabled))return false;
     this.sfx.ensure();
-    const rivalAction = chooseAiAction(this.battle, 'rival');
-    const { battle, round } = resolveRound(this.battle, { hero: actionId, rival: rivalAction });
+    this.pendingChoices[id]=actionId;
+    const next=this.choosingUnit();
+    if(next){this.log(unitById(this.battle,next).name+': choose an action.');return true;}
+    const choices={...this.pendingChoices};
+    for(const u of this.battle.units)if(u.team!=='player'&&!u.ko)choices[u.id]=chooseAiAction(this.battle,u.id,this.units.find(m=>m.id===u.id)?.strategy);
+    const {battle,round}=resolveRound(this.battle,choices);
     this.phase = 'playing';
     this.round = round;
-    this.log(`Round ${round.number}: you chose ${ACTIONS[actionId].name}; the shade chose ${ACTIONS[rivalAction].name}.`);
+    this.log('Round '+round.number+': actions locked.');
     await this.playRound(round);
     if (this.disposed) return true;
     this.battle = battle;
+    this.pendingChoices={};
     for (const u of battle.units) this.display[u.id] = { hp: u.hp, focus: u.focus };
     this.round = null;
     if (battle.phase === 'over') {
@@ -537,8 +569,8 @@ export class FantasyBattleStage {
   }
 
   hudState() {
-    const units = (this.battle?.units || UNITS).map((u) => ({
-      id: u.id, name: u.name, maxHp: u.maxHp, hp: this.display?.[u.id]?.hp ?? u.maxHp, focus: this.display?.[u.id]?.focus ?? 1, maxFocus: MAX_FOCUS,
+    const units = (this.battle?.units || this.units).map((u) => ({
+      id: u.id, team:u.team, name: u.name, maxHp: u.maxHp, hp: this.display?.[u.id]?.hp ?? u.maxHp, focus: this.display?.[u.id]?.focus ?? 1, maxFocus: MAX_FOCUS,
       spd: u.spd, guarding: this.roundGuards?.has(u.id) ?? false,
     }));
     const order = this.round
@@ -546,7 +578,7 @@ export class FantasyBattleStage {
       : [...units].sort((a, b) => b.spd - a.spd).map((u) => ({ id: u.id, name: u.name, action: null, active: false }));
     return {
       mode: this.mode, phase: this.phase, round: this.round?.number ?? (this.phase === 'over' ? this.battle.round - 1 : this.battle?.round ?? 1), units, order,
-      legal: this.legal(), log: this.logLines, winner: this.battle?.winner ?? null, renderer: this.rendererInfo,
+      legal: this.legal(), choosingUnit:this.choosingUnit(), pendingChoices:{...this.pendingChoices}, log: this.logLines, winner: this.battle?.winner ?? null, renderer: this.rendererInfo,
       skills: this.fighters ? [...this.fighters.hero.skills.library.values()].map((s) => ({ id: s.id, name: s.name, hotkey: s.hotkey })) : [],
     };
   }

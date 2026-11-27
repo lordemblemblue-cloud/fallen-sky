@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import FantasyBattlePage from '@/components/fantasybattle/FantasyBattlePage';
+import SapphireAdventure from '@/components/fantasybattle/SapphireAdventure';
 import { FANTASY_BATTLE_RELEASED } from '@/components/games/hub/gamesHubCatalog.mjs';
 
 // Block both hub launches and direct links while the third game is unfinished.
@@ -19,5 +19,5 @@ function FantasyBattleComingSoon() {
 export const Route = createFileRoute('/fantasy-battle')({
   ssr: false,
   head: () => ({ meta: [{ title: 'Fantasy Battle · Adam X Eve Games' }] }),
-  component: FANTASY_BATTLE_RELEASED ? FantasyBattlePage : FantasyBattleComingSoon,
+  component: (FANTASY_BATTLE_RELEASED || import.meta.env.DEV) ? SapphireAdventure : FantasyBattleComingSoon,
 });

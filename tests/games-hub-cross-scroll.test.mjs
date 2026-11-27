@@ -78,7 +78,7 @@ test('Fantasy Battle stays coming soon even when its route is registered', () =>
 
 test('direct Fantasy Battle URL renders Coming Soon instead of the unfinished game', () => {
   const route = source('src/routes/fantasy-battle.jsx');
-  assert.match(route, /component: FANTASY_BATTLE_RELEASED \? FantasyBattlePage : FantasyBattleComingSoon/);
+  assert.match(route, /component: \(FANTASY_BATTLE_RELEASED \|\| import\.meta\.env\.DEV\) \? SapphireAdventure : FantasyBattleComingSoon/);
   assert.match(route, /Fantasy Battle is still in development/);
   assert.match(route, /href="\/"/);
 });
