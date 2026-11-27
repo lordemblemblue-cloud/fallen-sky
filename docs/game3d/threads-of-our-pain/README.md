@@ -34,6 +34,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | S20 | The Nameless Grave | [Expanded quest and terrain brief](D16_S20.md) | Ready for proposed blockout; unverified |
 | D17 | The Cooling Forge | [Expanded script](D17_S21.md) | Ready for proposed blockout; unverified |
 | S21 | The Smith's Last Order | [Expanded quest and terrain brief](D17_S21.md) | Ready for proposed blockout; unverified |
+| D18 | Steps of the Other Side | [Expanded script](D18_S22.md) | Ready for proposed blockout; unverified |
+| S22 | The Cavern of Returning Steps | [Expanded quest and terrain brief](D18_S22.md) | Ready for proposed blockout; unverified |
+| M01 | The Journey Home | [Expanded main quest](M01.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -84,3 +87,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R20
 
 [D17/S21](D17_S21.md) preserves the hammer alignment, ancient smithy annex, personal blade fitting, half-finished blade and matching stamps, tools-before-blade dialogue, and weapon upgrade component. Initial milestone reached: 20 distinct expanded discoveries (D01, D25, D36, D31, D32–D35, D04, D07–D17), 10 optional quests, zero main quests expanded; all 75 outlines retained. Cumulative v1.6 R20 saved to Library; 125 previous page images byte-identical, six new pages rendered and reviewed at overview scale. Next D18 — Steps of the Other Side / S22 — The Cavern of Returning Steps (Air recovery technique); prioritize main quests alongside remaining discoveries and optional quests. D02/D03/D05/D06/M07 pending reconciliation; S13 and S19 separate. Claude return surveyed anchors, layout, traversal and performance results. Terrain unbuilt, no game code, merge, credits or deployment.
+
+## Revision R21
+
+[D18/S22](D18_S22.md) expands Inverted Cavern and Air Recovery with readable gravity and safe alternative paths. [M01](M01.md) expands the ordinary Wolfveil homeward journey and lunar fracture, without revealing the older self. Master v1.7 R21 saved to Library. 21 discoveries, 11 optional quests, 1 main quest expanded; all 75 outlines retained. Next D19/S23 and M02. D02/D03/D05/D06/M07 pending reconciliation; S13/S19 separate. Claude return surveyed anchors, traversal and performance tests. No terrain build, game code, merge or deployment.
