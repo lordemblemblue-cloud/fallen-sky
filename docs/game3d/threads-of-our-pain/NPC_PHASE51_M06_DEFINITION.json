@@ -1,0 +1,15 @@
+{
+  "id": "M06",
+  "reality": "PRESERVED",
+  "requires": [
+    "M05"
+  ],
+  "objectives": [
+    "wake_safe",
+    "mark_inspected",
+    "path_open",
+    "lyra_met",
+    "open_world"
+  ],
+  "enabled": false
+}
