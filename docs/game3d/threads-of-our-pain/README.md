@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R76B — owner-confirmed unlimited NG+:** [Unlimited New Game Plus and persistent progression](R76B_UNLIMITED_NEW_GAME_PLUS.md). No fixed cycle cap; successive cycles increase enemy challenge and allow continued character leveling and equipment enhancement. Exact balance and progression caps remain open.
+
 > **R76A — owner clarification:** [Missable chapter quests and New Game Plus](R76A_MISSABLE_QUESTS_AND_NEW_GAME_PLUS.md). Persistent quests remain available; genuinely chapter-exclusive opportunities can close for the current cycle. NG+ at increased difficulty is the preferred recovery design; no magical rewind or automatic rewards. Exact classification and scaling pending.
 
 > **R76 — owner-approved requirements:** [Postgame quest continuation and equipment retention](R76_OWNER_POSTGAME_CONTINUATION.md). Both endings preserve earned gear and permit continuing quests subject to R76A chapter exclusivity. Exact historical access mechanism and other R75/R75A policies remain open. No runtime validation.
