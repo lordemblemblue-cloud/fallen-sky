@@ -492,6 +492,36 @@ function DungeonEntrance({profile,world,candidate,encounter,running,original,lay
   return <><Panel rect={layout[0]}><h2>Current encounter</h2><p>{title}</p><p>{world?.region||'World not loaded'}</p><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{roster}</Panel><Panel rect={layout[2]}><h2>{title}</h2>{stats}{details}{rewards}{controls}</Panel></>;
 }
 
+// Boss introduction uses the real encounter and the same party-size scaling as battle.
+function BossIntroduction({profile,candidate,encounter,running,original,layout,onEnter,back}){
+  const ready=Boolean(profile&&running&&candidate&&!encounter);
+  const partySize=profile?1+activeRoster(profile).length:0;
+  const enemies=ready?enemyFormation(candidate,partySize):[];
+  const lead=enemies[0];
+  const completed=Boolean(profile&&candidate&&profile.world.completedEncounters.includes(candidate.id));
+  const [selectedId,setSelectedId]=useState(null);
+  const selected=enemies.find(e=>e.id===selectedId)||lead;
+  const title=candidate?.label||'No encounter selected';
+  const category=candidate?.category||'—';
+  const roster=enemies.map(e=><Btn key={e.id} primary={selected?.id===e.id} aria-pressed={selected?.id===e.id} onClick={()=>setSelectedId(e.id)}><EnemyPortrait enemy={e} small/><strong>{e.name}</strong><small>HP {e.maxHp}</small></Btn>);
+  const details=<StatRows stats={{HP:selected?.maxHp??'—',Attack:selected?.atk??'—',Defense:selected?.def??'—',Speed:selected?.spd??'—'}}/>;
+  const tactics=<>{enemies.map(e=><div className="fa-boss-tactic" key={e.id}><EnemyPortrait enemy={e} small/><div><strong>{e.name}</strong><p>{tacticFor(e.strategy,e.archetype)}</p></div></div>)}{!enemies.length&&<p>No encounter data available.</p>}</>;
+  const reward=completed?'First-victory rewards already recorded.':ready?'First eligible victory awards XP, gold and loot.':'No reward preview available.';
+  const enter=<Btn primary className="fa-boss-enter" disabled={!ready} onClick={onEnter}>Enter Battle</Btn>;
+  if(original)return <div className="fa-original-boss">
+    <h2 className="fa-boss-title">{category==='Boss'?'Boss Introduction':'Encounter Introduction'}</h2>
+    <h3 className="fa-boss-name">{title}</h3><div className="fa-boss-category">{category} encounter</div>
+    <section className="fa-boss-description"><p>{ready?'Review the enemy formation before entering.':'Approach an encounter marker to begin.'}</p>{completed&&<p>Previously defeated.</p>}</section>
+    <div className="fa-boss-preview">{selected?<><EnemyPortrait enemy={selected}/><strong>{selected.name}</strong></>:<p>No enemy selected</p>}</div>
+    <h3 className="fa-boss-stats-title">Enemy details</h3><section className="fa-boss-stats">{details}</section>
+    <h3 className="fa-boss-tactics-title">Enemy mechanics</h3><section className="fa-boss-tactics" aria-label="Enemy mechanics">{tactics}</section>
+    <h3 className="fa-boss-formation-title">Enemy formation</h3><section className="fa-boss-roster" aria-label="Select enemy to inspect">{roster}{!enemies.length&&<p>No enemies</p>}</section>
+    <h3 className="fa-boss-rewards-title">Battle rewards</h3><section className="fa-boss-rewards"><p>{reward}</p><small>Party {partySize}/4 · Fixed encounter difficulty · No reward at entry</small></section>
+    {enter}<Btn className="fa-boss-close" aria-label="Back to entrance" onClick={back}>×</Btn>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>{title}</h2><p>{category} · Party {partySize}/4</p>{roster}{details}</Panel><Panel rect={layout[1]}><h2>Enemy mechanics</h2>{tactics}<p>{reward}</p>{enter}<Btn onClick={back}>Back</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -861,7 +891,7 @@ export default function SapphireAdventure(){
     case '33':content=<>{pane(0,<><h2>Rest Point</h2><p>{service?.label||'Not at a sanctuary'}</p></>)}{pane(1,statPanel)}{pane(2,<><p>Restore the leader and all recruited companions at a registered service point.</p><Btn disabled={!serviceAvailable||(profile.hp>=stats.maxHp&&!partyNeedsRest(profile))} onClick={()=>requestConfirm('Rest and recover?',()=>transact(p=>heal(p,{sanctuary:true}),'Health restored'))}>Rest</Btn><Btn onClick={()=>go('18')}>Save</Btn></>)}{pane(3,<Btn onClick={()=>root('10')}>Leave</Btn>)}</>;break;
     case '34':{const lessons=['Explore with WASD or the on-screen movement controls. Hold Shift or Run to sprint; Space or Jump to jump. Approach a marker and press E.','Choose a legal combat action. Quick Shot and Guard generate Focus; stronger skills spend it.','Open Character with C, Skillbook with K, Map with M, Journal with L, Equipment with I; Escape returns one level.'];content=<>{pane(0,<>{lessons.map((_,i)=><Btn key={i} primary={lesson===i} onClick={()=>setLesson(i)}>Lesson {i+1}</Btn>)}</>)}{pane(1,<><h2>Lesson {lesson+1}</h2><p>{lessons[lesson]}</p></>)}{pane(2,<Btn disabled={!running||Boolean(encounter)} onClick={()=>startBattle({id:'practice',label:'Practice Archer',category:'Normal',practice:true})}>Practice Battle</Btn>)}{pane(3,buttons(<Btn onClick={()=>setLesson(Math.max(0,lesson-1))}>Previous</Btn>,<Btn onClick={()=>setLesson(Math.min(lessons.length-1,lesson+1))}>Next</Btn>))}</>;break;}
     case '35':content=pane(0,<><h2>{encounter?'Preparing the battleground…':'Loading the world…'}</h2><progress aria-label="Loading world"/><p>{encounter?'Waiting for the regional battleground and combat renderer.':'Waiting for the 3D renderer and saved world position.'}</p><Btn onClick={leaveTitle}>Cancel</Btn></>);break;
-    case '36':content=<>{pane(0,<h2>{candidate?.label||'Boss encounter'}</h2>)}{pane(1,<>{candidate&&enemyFormation(candidate,1+activeRoster(profile).length).map(e=><div key={e.id}><EnemyPortrait enemy={e} small/><strong>{e.name}</strong><p>HP {e.maxHp} · {tacticFor(e.strategy,e.archetype)}</p></div>)}<Btn primary disabled={!candidate} onClick={()=>startBattle(candidate)}>Enter Battle</Btn><Btn onClick={back}>Back</Btn></>)}</>;break;
+    case '36':content=<BossIntroduction key={candidate?.id||'none'} profile={profile} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onEnter={()=>{const s=current.current;if(s.profile&&s.running&&!s.encounter&&s.candidate&&s.candidate.id===candidate?.id&&s.id==='36')startBattle(s.candidate);}}/>;break;
     case '37':content=<>{pane(0,<h2>Local gameplay events</h2>)}{pane(1,<>{notifications.length?notifications.map((n,i)=><p key={n.time+'-'+i}>{n.message}</p>):<p>No notifications.</p>}</>)}{pane(2,<p>Notifications are generated by actual game events.</p>)}</>;break;
     case '38':content=<>{pane(0,<><h2>Items Acquired</h2><PaintedIllustration name="item-acquired"/></>)}{pane(1,<>{lootList}<p>Already added to your inventory.</p></>)}{pane(2,<>{!encounter&&<Btn onClick={()=>go('06')}>Inventory</Btn>}<Btn primary onClick={back}>Continue</Btn></>)}</>;break;
     case '39':content=<>{pane(0,listItems((item,k)=>item.kind==='weapon'&&inv[k]>0))}{pane(1,<><h2>Equipped</h2><p>{ITEMS[profile?.equipped]?.name}</p>{compare&&<StatRows stats={compare.current}/>}</>)}{pane(2,<><h2>Selected</h2><p>{selectedItem?.name}</p>{compare&&<StatRows stats={compare.candidate}/>}</>)}{pane(3,<><p>Attack difference: {compare?compare.candidate.atk-compare.current.atk:'—'}</p><Btn primary disabled={!compare||Boolean(encounter)} onClick={()=>{if(transact(p=>equipItem(p,itemId),'Weapon equipped'))back();}}>Equip</Btn></>)}</>;break;

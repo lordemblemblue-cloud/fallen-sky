@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '36':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/80f9da3c1b678508c6935a5a5d362610_fantasy-battle-36-runtime.webp',source:'Original Fantasy Battle modular template batch 15 — 36.webp',mode:'full',wideOnly:true}),
  '23':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/c3b60ab190dfe7324c2acaee32faa98f_fantasy-battle-23-runtime.webp',source:'Warden of Tides: Dungeon Entrance.png — original modular template batch 12',mode:'full',wideOnly:true}),
  '44':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/b78e16460dbfea412253294657f58f57_fantasy-battle-44-runtime.webp',source:'Original Fantasy Battle template batch 05 — 44.webp',mode:'full',wideOnly:true}),
  '43':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/e4461c750f548815ef2205f8a72c9cc7_fantasy-battle-43-runtime.webp',source:'Sapphire Sumi Quest Acceptance.png — original template batch 05',mode:'full',wideOnly:true}),

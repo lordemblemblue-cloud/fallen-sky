@@ -859,3 +859,36 @@
 .fa-original-entrance .fa-button:hover:not(:disabled){box-shadow:inset 0 0 0 2px #d6b87f}
 .fa-original-entrance .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:2px}
 .fa-panel .fa-entrance-enemy .fa-archer-portrait{max-height:140px}
+
+/* 36 — original boss introduction plate, dynamic enemy preview and mechanics. */
+.fa-ui.page[data-staged-original="true"][data-screen="36"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="36"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="36"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-boss{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.2vw,2.13vh),19px);text-shadow:0 1px 3px #081329}
+.fa-original-boss h2,.fa-original-boss h3,.fa-original-boss p{margin:.15em 0}
+.fa-boss-title{position:absolute;left:10%;top:3.8%;width:25%;height:6%;display:grid;place-items:center;text-align:center;font-size:1.4em}
+.fa-boss-name{position:absolute;left:10.7%;top:15.6%;width:15.1%;height:13.7%;display:grid;place-items:center;text-align:center;overflow-wrap:anywhere;font-size:1.1em}
+.fa-boss-category{position:absolute;left:8%;top:34.8%;width:15%;height:4.5%;display:grid;place-items:center;font-size:.9em}
+.fa-boss-description{position:absolute;left:5.4%;top:42%;width:20.5%;height:10.5%;padding:.35em;overflow:auto;pointer-events:auto;font-size:.88em}
+.fa-boss-preview{position:absolute;left:38.5%;top:1.4%;width:36%;height:53.7%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.25em;overflow:hidden;background:radial-gradient(ellipse,#2859b855,#142448);border-radius:6px}
+.fa-boss-preview .fa-archer-portrait{max-height:86%;max-width:90%;width:auto;height:auto;object-fit:contain}
+.fa-boss-stats-title,.fa-boss-tactics-title{position:absolute;left:78%;width:19%;height:4%;text-align:center;font-size:1em}
+.fa-boss-stats-title{top:15%}.fa-boss-tactics-title{top:36%}
+.fa-boss-stats{position:absolute;left:77.5%;top:20%;width:20.7%;height:14.3%;overflow:auto;pointer-events:auto;background:#142448f5;border-radius:7px;padding:.3em;font-size:.82em}
+.fa-boss-stats .fa-stats>div{padding:.13em 0}
+.fa-boss-tactics{position:absolute;left:77%;top:41%;width:21.2%;height:26%;overflow:auto;pointer-events:auto;background:#142448f5;border-radius:7px;padding:.3em;font-size:.8em}
+.fa-boss-tactic{display:flex;align-items:flex-start;gap:.4em;margin-bottom:.4em}.fa-boss-tactic .fa-archer-portrait{width:2.5em;height:auto;max-height:3em;object-fit:contain;flex:none}
+.fa-boss-tactic p{line-height:1.2}
+.fa-boss-formation-title,.fa-boss-rewards-title{position:absolute;left:40%;width:20%;height:4%;text-align:center;font-size:1em}
+.fa-boss-formation-title{top:55.4%}.fa-boss-rewards-title{top:69.3%}
+.fa-boss-roster{position:absolute;left:28.5%;top:60.2%;width:43%;height:8.5%;display:flex;justify-content:center;gap:1%;pointer-events:auto;background:#142448f5;border-radius:7px;padding:.2em}
+.fa-original-boss .fa-button{pointer-events:auto;min-width:0;min-height:0;color:inherit;box-shadow:none;font:inherit;line-height:1.05}
+.fa-original-boss .fa-boss-roster .fa-button{display:flex;flex:1;min-width:0;align-items:center;gap:.25em;justify-content:center;background:#18335a;border:1px solid #d6b87f;border-radius:5px;padding:.2em;font-size:.75em;overflow:hidden}
+.fa-boss-roster .fa-archer-portrait{height:90%;width:auto;max-width:28%;object-fit:contain}
+.fa-boss-roster strong{overflow-wrap:anywhere}.fa-boss-roster small{font-size:.75em}
+.fa-boss-rewards{position:absolute;left:30.5%;top:73.7%;width:39%;height:8.6%;display:flex;flex-direction:column;justify-content:center;text-align:center;overflow:auto;pointer-events:auto;background:#142448f5;border-radius:7px;padding:.3em;font-size:.85em}
+.fa-original-boss .fa-boss-enter{position:absolute;left:34%;top:86.2%;width:32%;height:8%;background:transparent;border:0;border-radius:15px;font-size:1.35em;font-weight:bold;text-shadow:0 1px 3px #081329}
+.fa-original-boss .fa-boss-enter:disabled{background:#142448aa;opacity:.7}
+.fa-original-boss .fa-boss-close{position:absolute;left:95%;top:3%;width:3.2%;height:6%;background:transparent;border:0;font-size:1.4em}
+.fa-original-boss .fa-button:hover:not(:disabled),.fa-original-boss .fa-button[aria-pressed=true]{box-shadow:inset 0 0 0 2px #d6b87f}
+.fa-original-boss .fa-button:focus-visible{outline:2px solid #78c9ed;outline-offset:1px}
