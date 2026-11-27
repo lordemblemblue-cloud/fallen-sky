@@ -32,6 +32,8 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | S18 | The Road of Chalk | [Expanded quest and terrain brief](D15_S18.md) | Ready for proposed blockout; unverified |
 | D16 | The Last Name | [Expanded script](D16_S20.md) | Ready for proposed blockout; unverified |
 | S20 | The Nameless Grave | [Expanded quest and terrain brief](D16_S20.md) | Ready for proposed blockout; unverified |
+| D17 | The Cooling Forge | [Expanded script](D17_S21.md) | Ready for proposed blockout; unverified |
+| S21 | The Smith's Last Order | [Expanded quest and terrain brief](D17_S21.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -78,3 +80,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R19
 
 [D16/S20](D16_S20.md) preserves the cemetery, spirit requesting a name, ledger, three-part seal, original burial, hidden crypt and memorial ribbon. Defender name Taren Vale and slab shortcut are proposals; no forced battle or confirmed reincarnation. Nineteen discoveries, nine optional quests, zero main quests expanded. Master v1.5 R19 saved to Library; 120 previous rendered pages identical, five new pages inspected. Next D17 — The Cooling Forge / S21 — The Smith's Last Order, weapon upgrade component. Pending D02/D03/D05/D06/M07 reconciliation; S13 and S19 separate. Claude return surveyed anchors, layout, traversal and performance checks. Terrain unbuilt and unverified; no game code or merge.
+
+## Revision R20
+
+[D17/S21](D17_S21.md) preserves the hammer alignment, ancient smithy annex, personal blade fitting, half-finished blade and matching stamps, tools-before-blade dialogue, and weapon upgrade component. Initial milestone reached: 20 distinct expanded discoveries (D01, D25, D36, D31, D32–D35, D04, D07–D17), 10 optional quests, zero main quests expanded; all 75 outlines retained. Cumulative v1.6 R20 saved to Library; 125 previous page images byte-identical, six new pages rendered and reviewed at overview scale. Next D18 — Steps of the Other Side / S22 — The Cavern of Returning Steps (Air recovery technique); prioritize main quests alongside remaining discoveries and optional quests. D02/D03/D05/D06/M07 pending reconciliation; S13 and S19 separate. Claude return surveyed anchors, layout, traversal and performance results. Terrain unbuilt, no game code, merge, credits or deployment.
