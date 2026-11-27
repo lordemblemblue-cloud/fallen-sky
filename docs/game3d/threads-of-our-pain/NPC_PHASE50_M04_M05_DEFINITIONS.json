@@ -1,0 +1,34 @@
+[
+  {
+    "id": "M04",
+    "reality": "ORIGINAL",
+    "requires": [
+      "M03"
+    ],
+    "objectives": [
+      "awaken_safe",
+      "practice_or_skip",
+      "role_selected",
+      "court_group_safe",
+      "retreat_group_a_safe",
+      "retreat_group_b_safe",
+      "road_exit_confirmed"
+    ],
+    "enabled": false
+  },
+  {
+    "id": "M05",
+    "reality": "ORIGINAL",
+    "requires": [
+      "M04"
+    ],
+    "objectives": [
+      "evacuation_road",
+      "river_safe",
+      "barrier_view",
+      "threshold_ready",
+      "authored_transition"
+    ],
+    "enabled": false
+  }
+]
