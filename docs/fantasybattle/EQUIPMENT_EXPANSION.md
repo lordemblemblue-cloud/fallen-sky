@@ -49,3 +49,28 @@ Existing gear ownership, level restrictions, comparison, sale protection and sav
 Claude/Gemini artwork contract: deliver a square transparent WebP icon, recommended 256 x 256 or 512 x 512, under public/fantasybattle/sapphire/items/<exactItemId>.webp. Use consistent light, camera angle, scale and transparent padding. No embedded text, labels, rarity frames or UI background. Register only reviewed files in ITEM_ARTWORK (core/itemArtwork.mjs) using the exact same-origin path /fantasybattle/sapphire/items/<exactItemId>.webp. The registry is deliberately empty until files are supplied. Shared ItemArt uses lazy loading, async decoding and vector fallback on image failure. Never accept URLs from saves, player input, or remote manifests; images cannot grant stats, items or equipment. Equipped accessory models and unique weapon geometry are separate future work.
 
 Next: audit inventory/loot acquisition, economy and encounter rewards, and supply a complete item asset manifest. CI and device layout validation remain pending.
+
+## Fourth pass — first-victory loot
+
+All 14 existing world encounters grant one deterministic equipment item alongside existing XP, gold and ore on their first recorded victory. See ENCOUNTER_GEAR_REWARDS in adventureState.mjs for stable item and encounter IDs. Existing equipment level gates, art fallbacks, merchant prices and combat balance are unchanged. Practice battles and repeated victories grant nothing. Older saves do not retroactively grant equipment for previously completed encounters; no migration or new save fields are required. Inventory grants and victory currencies are capped to existing save limits, with actual awarded amounts returned to the existing result UI. Discoveries retain their existing one-time tonic and ore rewards; new physical treasure placements await approved map anchors. This is provisional reward tuning, not a repeatable farming or server-authoritative economy. Regression tests added; CI and device validation required before merge. Next: merchant and crafting progression, treasure anchor registry and economy balance.
+
+## Fifth pass — merchant and crafting economy
+
+Merchant and crafting quantities are integers from 1 through 99. The same quote functions drive the UI and the transaction. Confirmations recheck the character, service marker, combat state and current resources; a single confirmation is consumed once. Buying and selling use existing catalog prices, protect equipped copies and enforce existing inventory/gold caps. All existing merchants retain their catalogs until regional stock is authored; no artificial stock or new currency.
+
+| Recipe ID | Party level | Sapphire Ore | Gold |
+| --- | ---: | ---: | ---: |
+| recoveryTonic | 1 | 2 | 0 |
+| groveVest | 1 | 3 | 22 |
+| sapphireBow | 1 | 4 | 50 |
+| pilgrimPendant | 2 | 4 | 30 |
+| moonveilRing | 3 | 5 | 45 |
+| astralPendant | 4 | 7 | 65 |
+
+Amounts are per output and provisional; the old tonic recipe is unchanged. Selling crafted items cannot produce more gold than selling the ingredients plus the crafting fee. No equipment is auto-equipped. Existing profile and backup schemas remain unchanged. Original merchant/crafting pictures remain the underlying UI templates; the existing potion illustration is decorative even for other recipes. Actual item art uses the existing registry and fallback. CI, lint and browser layout verification are still required. No new server endpoints, world/character artwork or publish action. Next: registered physical treasure anchors and location-specific discoveries, coordinating with the map team.
+
+## Sixth pass — hidden treasure and exploration
+
+The five existing world discovery markers use the registered TREASURES catalog. No map mesh, position, collision or passage geometry changed. Each awards a tonic, ore (2 early / 3 late) and a distinct equipment piece: pilgrimage Groveweave Vest, cave Sanctuary Mantle, overlook Sapphire Plate, Moonveil Astral Star Ring, Astral Archive Astral Signal Pendant. Loot choices are provisional. Existing level requirements still apply; no automatic equip. Unknown markers do not grant loot. The current world checks proximity in X/Z and vertical clearance before collection, ignores already found markers and locks interaction while reporting the result. The host uses canonical labels and the original treasure reveal, item acquisition and discovery UI. Existing rewardedDiscoveries records prevent re-collection across saves; no retroactive rewards or new schema. Capacity limits may truncate loot and collection is still recorded.
+
+Map handoff: preserve disc_pilgrimage, disc_cave, disc_overlook, disc_moonveil, disc_astral and their existing marker positions until new map assets are reviewed. Claude/Gemini can design chests, secret passage geometry and distinct treasure artwork for these IDs; physical chest animations and new anchors are not implemented. Existing glowing discovery markers are used now. Add future markers only via reviewed catalog + world registration and test reachability, clear collision and touch interaction. Existing economy production build and security gate passed, but two original template assertions failed after quote refactor; updated to verify shared quote and live confirmation guards. New head CI/lint and actual device reachability still pending.

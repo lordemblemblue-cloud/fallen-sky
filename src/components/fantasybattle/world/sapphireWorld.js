@@ -1,5 +1,8 @@
 import worldMarkup from './worldMarkup.html?raw';
 import {WORLD_MAX_X,WORLD_END_X,EXTRA_REGIONS,ARENAS,EXTRA_ENCOUNTERS,arenaForEncounter,extraHeight,regionForX} from '../core/worldExpansion.mjs';
+import {TREASURE_IDS,treasureFor} from '../core/treasureCatalog.mjs';
+import {WORLD_SERVICES,nearestService} from '../core/worldInteractions.mjs';
+import {createWorldTelemetry,WORLD_TELEMETRY_INTERVAL} from '../core/worldTelemetry.mjs';
 import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
 import {makeExplorationAvatar} from './explorationAvatar.js';
 
@@ -978,7 +981,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           document.getElementById('mode-subtitle').textContent=def.subtitle;document.getElementById('badge-section').textContent=def.badge;def.build();
         } else if (mode === 'wilds') {
           exploreBar.classList.remove('hidden'); discBadge.classList.remove('hidden');
-          discBadge.textContent = `Discoveries: ${this.foundDiscoveries.size}/5`;
+          discBadge.textContent = `Discoveries: ${TREASURE_IDS.filter(id=>this.foundDiscoveries.has(id)).length}/${TREASURE_IDS.length}`;
           document.getElementById('mode-subtitle').textContent = 'The Sapphire Wilds — 302m 8-Section Exploration World';
           this.buildSapphireWilds();
         } else if (mode === 'materials') {
@@ -1738,15 +1741,19 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointerleave', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
         }
         document.getElementById('touch-jump').addEventListener('click', () => { if (!this.inputLocked && this.mode === 'wilds' && this.grounded) { this.playerVelY = 7.6; this.grounded = false; } });
-        const act = () => { if (!this.inputLocked && this.mode === 'wilds') { if (this.activeDiscovery) this.collectDiscovery(this.activeDiscovery); else if (this.activeEncounter) this.triggerEncounterTransition(this.activeEncounter); } };
+        const act = () => { if (!this.inputLocked && this.mode === 'wilds') { if (this.activeDiscovery) this.collectDiscovery(this.activeDiscovery); else if (this.activeEncounter) this.triggerEncounterTransition(this.activeEncounter); else this.openService?.(); } };
         document.getElementById('touch-act').addEventListener('click', act);
         document.getElementById('btn-engage').addEventListener('click', act);
         document.getElementById('btn-return').addEventListener('click', () => this.returnToExploration());
       }
 
       collectDiscovery(disc) {
+        if(this.inputLocked||this.mode!=='wilds'||!disc||!treasureFor(disc.id)||this.foundDiscoveries.has(disc.id)||!this.discoveries.includes(disc))return false;
+        if(Math.hypot(this.playerPos.x-disc.pos.x,this.playerPos.z-disc.pos.z)>2||Math.abs(this.playerPos.y-disc.pos.y)>=1.6)return false;
         this.foundDiscoveries.add(disc.id); disc.mesh.visible = false;
-        document.getElementById('badge-discoveries').textContent = `Discoveries: ${this.foundDiscoveries.size}/5`;
+        this.activeDiscovery=null;
+        document.getElementById('badge-discoveries').textContent = `Discoveries: ${TREASURE_IDS.filter(id=>this.foundDiscoveries.has(id)).length}/${TREASURE_IDS.length}`;
+        return true;
       }
 
       onResize() {
@@ -1850,6 +1857,10 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           document.getElementById('encounter-title').textContent = nearEnc.label;
           document.getElementById('encounter-sub').textContent = `Press [E] to enter ${nearEnc.battleMapId}`;
           document.getElementById('btn-engage').textContent = 'Engage [E]'; bar.classList.remove('hidden');
+        } else if(this.nearService?.()) {
+          document.getElementById('encounter-title').textContent=this.nearService().label;
+          document.getElementById('encounter-sub').textContent='Press [E] to interact';
+          document.getElementById('btn-engage').textContent='Interact [E]'; bar.classList.remove('hidden');
         } else bar.classList.add('hidden');
       }
 
@@ -1934,20 +1945,22 @@ export async function mountSapphireWorld(root, onEvent) {
   };
   app.completedEncounters = new Set();
   app.appearanceTint=0xffffff;
-  app.servicePoints=[{id:'grove_service',label:'Grove rest point',x:9,z:-1.4},{id:'sanctuary_service',label:'Sanctuary services',x:191,z:-1.4},{id:'moonveil_service',label:'Moonveil rest point',x:226,z:-1.4}];
-  const nearService=()=>app.mode==='wilds'&&app.servicePoints.find(s=>Math.hypot(app.playerPos.x-s.x,app.playerPos.z-s.z)<=2.4&&Math.abs(app.playerPos.y-app.terrainVisualHeight(s.x,s.z))<2);
+  app.servicePoints=WORLD_SERVICES;
+  const nearService=()=>app.mode==='wilds'?nearestService(app.playerPos.toArray(),(x,z)=>app.terrainVisualHeight(x,z)):null;
+  app.nearService=nearService;
   app.openService=()=>{const service=nearService();if(service&&!app.inputLocked){app.resetInput();app.inputLocked=true;send('service',{service,world:snapshot()});}};
   const registeredMarkers = new Map();
   const collect = app.collectDiscovery.bind(app);
-  app.collectDiscovery = d => { collect(d); send('discovery',{id:d.id,label:d.label,world:snapshot()}); };
+  app.collectDiscovery = d => { if(!collect(d))return false; app.resetInput(); app.inputLocked=true; send('discovery',{id:d.id,label:d.label,world:snapshot()}); return true; };
   await app.init();
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   if(app.renderFailed)throw Error('World renderer did not start.');
-  const timer=setInterval(()=>{if(app.mode==='wilds')send('world',{world:snapshot()});},250);
+  const telemetry=createWorldTelemetry();
+  const timer=setInterval(()=>{if(app.mode!=='wilds'||app.inputLocked||app.renderFailed)return;const sample=telemetry.sample(snapshot(),performance.now());if(sample)send('world',sample);},WORLD_TELEMETRY_INTERVAL);
   send('ready',{world:snapshot()});
   return {
     snapshot,
-    pause(value){app.resetInput();app.inputLocked=Boolean(value);},
+    pause(value){app.resetInput();app.inputLocked=Boolean(value);if(!value)telemetry.reset();},
     battle(data){if(typeof data?.token!=='string'||!data.token)return;app.activeBattleToken=data.token;app.resetInput();app.inputLocked=true;const arenaId=arenaForEncounter(typeof data.id==='string'?data.id:null);app.loadMode('sanctuary',arenaId);app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(app.activeBattleToken!==data.token)return;if(!app.renderFailed)send('battleReady',{arenaId,token:data.token});else send('error',{message:'Battleground renderer failed.'});}));},
     restore(data){app.activeBattleToken=null;if(!data || !Array.isArray(data.position))return;
       const [x,,z]=data.position;if(!Number.isFinite(x)||!Number.isFinite(z))return;
