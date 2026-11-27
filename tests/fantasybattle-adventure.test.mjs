@@ -261,3 +261,30 @@ test('movement checkpoints throttle writes, require actual displacement, and rej
  assert.equal(A.positionSaveDue(last,[NaN,0,0],10100),false);
  assert.equal(A.positionSaveDue(null,[7,0,0],10100),false);
 });
+
+import {createWorldTelemetry,WORLD_HEARTBEAT_INTERVAL} from '../src/components/fantasybattle/core/worldTelemetry.mjs';
+test('unchanged exploration telemetry suppresses redundant updates but preserves checkpoint heartbeat',()=>{
+ const t=createWorldTelemetry(),world={position:[6,0,0],discoveries:[],encounters:[],mode:'wilds'};
+ assert.deepEqual(t.sample(world,0),{world,unchanged:false});
+ for(let n=250;n<WORLD_HEARTBEAT_INTERVAL;n+=250)assert.equal(t.sample({...world},n),null);
+ assert.deepEqual(t.sample(world,2000),{world,unchanged:true});
+ const moved={...world,position:[8,0,0]};
+ assert.deepEqual(t.sample(moved,2250),{world:moved,unchanged:false});
+ assert.equal(t.sample(moved,2500),null);
+ const found={...moved,discoveries:['disc_pilgrimage']};
+ assert.deepEqual(t.sample(found,2750),{world:found,unchanged:false});
+ t.reset();assert.deepEqual(t.sample(found,2800),{world:found,unchanged:false});
+});
+test('world merge preserves identity, rejects malformed metadata, and bounds legacy histories',()=>{
+ const p=A.createProfile('Telemetry'),w={position:[...p.world.position],discoveries:[],regions:[]};
+ assert.equal(A.updateWorld(p,w),p);
+ assert.equal(A.updateWorld(p,{...w,regions:{},discoveries:['x'.repeat(161)]}),p);
+ assert.equal(A.updateWorld(p,{...w,position:[NaN,0,0]}),p);
+ const moved=A.updateWorld(p,{...w,position:[7,0,0]});assert.notEqual(moved,p);assert.equal(moved.world.discoveries,p.world.discoveries);
+ const region=A.updateWorld(moved,{...w,position:[35,0,0],regions:[null,{id:'first',minX:0,maxX:35},{id:'second',minX:35,maxX:75}]});
+ assert.deepEqual(region.world.visitedRegions,['second']);
+ const legacy={...p,world:{...p.world,discoveries:Array(999).fill('legacy')}};
+ const merged=A.updateWorld(legacy,{...w,discoveries:['new','overflow']});assert.equal(merged.world.discoveries.length,1000);assert.ok(A.isProfile(merged));
+ assert.equal(A.updateWorld(merged,{...w,discoveries:['overflow']}),merged);
+ assert.equal(A.isProfile({...p,equipped:{toString:null}}),false);
+});
