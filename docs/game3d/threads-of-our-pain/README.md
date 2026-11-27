@@ -20,6 +20,8 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | S11 | The Bell Below | [Expanded optional quest and shared terrain brief](D09_S11.md) | Ready for proposed blockout; unverified |
 | D10 | The Hidden Bandage | [Expanded scene script](D10_S12.md) | Ready for proposed blockout; unverified |
 | S12 | The Empty Shrine | [Expanded optional quest and shared terrain brief](D10_S12.md) | Ready for proposed blockout; unverified |
+| D11 | Roots of Yesterday | [Expanded scene script](D11_S14.md) | Ready for proposed blockout; unverified |
+| S14 | The Tree That Grew Too Soon | [Expanded optional quest](D11_S14.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -42,3 +44,7 @@ D08 and S10 are now expanded in one shared script with independently tracked com
 ## Revision R13 — 26 November 2026
 
 [D10/S12](D10_S12.md) preserves the woodland shrine, three candle shadows/folded hand, older medic's storage niche, field dressing and recipe. Missing votive objects lead to noncombat restitution; traveler circumstances and optional trench hazard are proposed. Independent quest and discovery completion. Thirteen distinct expanded discovery briefs, three expanded optional quests, zero expanded main quests. Cumulative v0.9 R13 saved to the Fallen Sky Story Bible Library folder. Next D11 — Roots of Yesterday / S14 (Herbalism Satchel); S13 is separate, do not renumber. D02, D03, D05, D06 and M07 still need reconciliation. Claude return actual terrain anchors, traversal and performance tests. No game code, merge, credits or deployment.
+
+## Revision R14
+
+D11/S14 expanded, preserving catalog reward Herbalism Satchel and original planting scene. Fourteen discoveries, four optional quests, zero main quests expanded. Master v1.0 R14 saved in Library. Next D12/S15; S13 separate. D02/D03/D05/D06/M07 pending reconciliation. No terrain built or verified, no merge.
