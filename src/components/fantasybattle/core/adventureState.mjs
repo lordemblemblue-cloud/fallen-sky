@@ -22,35 +22,48 @@ export function selectAppearance(p,id){
 // First recruitable companion uses the existing bow rig until distinct art is authored.
 // All values below are prototype balancing, not a new character class or story canon.
 export const COMPANION=Object.freeze({id:'groveArcher',name:'Grove Archer',tint:0x9fe8ce,role:'Archer',maxHp:85,atk:9,def:9,spd:9,requiredEncounter:'wilds_grove_01'});
-export const partyFor=p=>p?.party||{recruited:false,active:false,front:'hero',hp:COMPANION.maxHp,bond:0};
+export const ROSTER=Object.freeze([
+ COMPANION,
+ Object.freeze({id:'pilgrimWarden',name:'Pilgrim Warden',role:'Defensive archer',tint:0xf1d4a0,maxHp:135,atk:8,def:16,spd:7,requiredEncounter:'wilds_pilgrimage_02'}),
+ Object.freeze({id:'mistScout',name:'Mist Scout',role:'Swift archer',tint:0xc7a8fa,maxHp:75,atk:11,def:8,spd:16,requiredEncounter:'wilds_waterfall_01'})
+]);
+const blankMember=m=>({recruited:false,active:false,hp:m.maxHp,bond:0});
+export const partyFor=p=>p?.party||{...blankMember(COMPANION),front:'hero'};
+export function memberFor(p,id){const a=partyFor(p);return id===COMPANION.id?a:a.extra?.[id]||blankMember(ROSTER.find(m=>m.id===id)||COMPANION);}
+export const activeRoster=p=>ROSTER.filter(m=>memberFor(p,m.id).active);
+export const partyNeedsRest=p=>ROSTER.some(m=>memberFor(p,m.id).recruited&&memberFor(p,m.id).hp<m.maxHp);
+function validMember(p,m,a){return Boolean(a&&typeof a.recruited==='boolean'&&typeof a.active==='boolean'&&(!a.active||a.recruited)&&integer(a.hp,1,m.maxHp)&&integer(a.bond,0,100)&&(!a.recruited?(!a.active&&a.bond===0&&a.hp===m.maxHp):p.world.completedEncounters.includes(m.requiredEncounter)));}
 export function validParty(p){
-  if(p.party===undefined)return true;
-  const a=p.party;
-  return Boolean(a&&typeof a.recruited==='boolean'&&typeof a.active==='boolean'&&(!a.active||a.recruited)&&['hero',COMPANION.id].includes(a.front)&&(a.front==='hero'||a.active)&&integer(a.hp,1,COMPANION.maxHp)&&integer(a.bond,0,100)&&(!a.recruited?(!a.active&&a.bond===0&&a.hp===COMPANION.maxHp):p.world.completedEncounters.includes(COMPANION.requiredEncounter)));
+ if(p.party===undefined)return true;
+ const a=p.party;if(!a||!validMember(p,COMPANION,a))return false;
+ if(a.extra!==undefined&&(!a.extra||Array.isArray(a.extra)||typeof a.extra!=='object'||Object.keys(a.extra).some(id=>!ROSTER.slice(1).some(m=>m.id===id))||ROSTER.slice(1).some(m=>Object.hasOwn(a.extra,m.id)&&!validMember(p,m,a.extra[m.id]))))return false;
+ return a.front==='hero'||activeRoster(p).some(m=>m.id===a.front);
 }
-export function recruitCompanion(p){
-  const a=partyFor(p);
-  if(a.recruited)throw Error('Companion already recruited.');
-  if(!p.world.completedEncounters.includes(COMPANION.requiredEncounter))throw Error('Defeat the Whispering Grove Spirit first.');
-  return {...p,party:{...a,recruited:true,active:true}};
+function withMember(p,id,state){const a=partyFor(p);return {...p,party:id===COMPANION.id?{...a,...state}:{...a,extra:{...a.extra,[id]:state}}};}
+export function recruitCompanion(p,id=COMPANION.id){
+ const m=ROSTER.find(m=>m.id===id);if(!m)throw Error('Unknown companion.');
+ const a=memberFor(p,id);if(a.recruited)throw Error('Companion already recruited.');
+ if(!p.world.completedEncounters.includes(m.requiredEncounter))throw Error('Complete the required encounter first.');
+ return withMember(p,id,{...blankMember(m),recruited:true,active:true});
 }
-export function configureParty(p,{active=partyFor(p).active,front=partyFor(p).front}={}){
-  const a=partyFor(p);
-  if(!a.recruited||typeof active!=='boolean'||!['hero',COMPANION.id].includes(front))throw Error('Invalid party formation.');
-  return {...p,party:{...a,active,front:active?front:'hero'}};
+export function configureParty(p,{id=COMPANION.id,active,front}={}){
+ const a=partyFor(p),m=ROSTER.find(m=>m.id===id);if(!m)throw Error('Unknown companion.');
+ let next=p;
+ if(active!==undefined){const state=memberFor(p,id);if(!state.recruited||typeof active!=='boolean')throw Error('Invalid party formation.');next=withMember(p,id,{recruited:state.recruited,active,hp:state.hp,bond:state.bond});}
+ const target=front??(a.front===id&&active===false?'hero':a.front);
+ if(target!=='hero'&&!activeRoster(next).some(m=>m.id===target))throw Error('Frontline must be an active member.');
+ return {...next,party:{...partyFor(next),front:target}};
 }
 export function companionProgress(p,encounter,units){
-  const a=partyFor(p);
-  if(!a.active||encounter?.practice||p.world.completedEncounters.includes(encounter?.id))return a;
-  const u=units?.find(x=>x.id===COMPANION.id);
-  if(!u||!Number.isInteger(u.hp))return a;
-  return {...a,hp:Math.max(1,Math.min(COMPANION.maxHp,u.hp)),bond:Math.min(100,a.bond+5)};
+ if(encounter?.practice||p.world.completedEncounters.includes(encounter?.id))return partyFor(p);
+ let next=p;
+ for(const m of activeRoster(p)){const u=units?.find(x=>x.id===m.id),a=memberFor(p,m.id);if(!u||!Number.isInteger(u.hp))continue;next=withMember(next,m.id,{recruited:true,active:true,hp:Math.max(1,Math.min(m.maxHp,u.hp)),bond:Math.min(100,a.bond+5)});}
+ return partyFor(next);
 }
 export function recoverParty(p){
-  const a=partyFor(p);
-  if(!a.recruited)return p;
-  return {...p,party:{...a,hp:COMPANION.maxHp}};
+ let next=p;for(const m of ROSTER){const a=memberFor(next,m.id);if(a.recruited)next=withMember(next,m.id,{recruited:true,active:a.active,hp:m.maxHp,bond:a.bond});}return next;
 }
+export function cleanParty(p){const a=partyFor(p);const result={recruited:a.recruited,active:a.active,front:a.front,hp:a.hp,bond:a.bond};if(a.extra){result.extra={};for(const m of ROSTER.slice(1)){if(Object.hasOwn(a.extra,m.id)){const s=memberFor(p,m.id);result.extra[m.id]={recruited:s.recruited,active:s.active,hp:s.hp,bond:s.bond};}}}return result;}
 
 export const SLOT_IDS=['1','2','3'];
 export const STAT_KEYS=['vitality','strength','defense','speed'];
@@ -138,7 +151,7 @@ export function craftTonic(p) {
   return {...p,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-2,recoveryTonic:p.inventory.recoveryTonic+1}};
 }
 export function heal(p,{sanctuary=false}={}) {
-  const max=heroStats(p).maxHp;if(sanctuary){if(p.hp>=max&&(!partyFor(p).recruited||partyFor(p).hp>=COMPANION.maxHp))throw Error('Health is already full.');return recoverParty({...p,hp:max});}
+  const max=heroStats(p).maxHp;if(sanctuary){if(p.hp>=max&&!partyNeedsRest(p))throw Error('Health is already full.');return recoverParty({...p,hp:max});}
   if(p.hp>=max)throw Error('Health is already full.');
   if(!p.inventory.recoveryTonic)throw Error('No Recovery Tonics available.');
   return {...p,hp:Math.min(max,p.hp+ITEMS.recoveryTonic.heal),inventory:{...p.inventory,recoveryTonic:p.inventory.recoveryTonic-1}};
@@ -165,8 +178,8 @@ export function parseBackup(raw){
   let data;try{data=JSON.parse(raw);}catch{throw Error('Save backup is not valid JSON.');}
   if(data?.format!=='fantasy-battle-guest-save'||data.version!==1||!isProfile(data.profile))throw Error('This is not a valid Fantasy Battle save backup.');
   // Pick supported fields to avoid preserving unknown or injected properties.
-  const p=data.profile,w=p.world,a=partyFor(p);
-  return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',party:{recruited:a.recruited,active:a.active,front:a.front,hp:a.hp,bond:a.bond},xp:p.xp,hp:p.hp,gold:p.gold,
+  const p=data.profile,w=p.world;
+  return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',party:cleanParty(p),xp:p.xp,hp:p.hp,gold:p.gold,
     inventory:Object.fromEntries(Object.keys(ITEMS).map(k=>[k,p.inventory[k]])),equipped:p.equipped,
     enhancements:{starterBow:p.enhancements.starterBow,sapphireBow:p.enhancements.sapphireBow},
     rewardedDiscoveries:[...p.rewardedDiscoveries],attributes:Object.fromEntries(STAT_KEYS.map(k=>[k,p.attributes[k]])),
