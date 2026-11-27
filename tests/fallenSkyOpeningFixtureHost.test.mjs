@@ -1,0 +1,48 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createOpeningFixtureHost} from '../src/components/game3d/narrative/openingFixtureHost.mjs';
+import {createOpeningQuestAdapter} from '../src/components/game3d/narrative/openingQuestAdapter.mjs';
+import {createM01Bridge} from '../src/components/game3d/narrative/m01MerchantBridge.mjs';
+import {createM02Bridge} from '../src/components/game3d/narrative/m02ClearingBridge.mjs';
+const draft=JSON.parse(readFileSync(new URL('../docs/game3d/threads-of-our-pain/NPC_PHASE46_OPENING_REGION.json',import.meta.url),'utf8'));
+function runChecks(makeHost,A,F,S,draft,assert){
+ const scope={ownerId:"__anon__",characterId:"char_fixture",campaignId:"campaign_fixture"};
+ const a=A({definitions:draft.objectiveDefinitions.map(d=>({...d,enabled:true})),contentRevision:"phase53_fixture"}),f=F(a),s=S(a,f);
+ // The unused later routes are explicit reject-only doubles, not implementations.
+ const blocked={create:()=>({ok:false,reason:"NOT_UNDER_TEST"}),read:()=>({ok:false,reason:"NOT_UNDER_TEST"}),apply:()=>({ok:false,reason:"NOT_UNDER_TEST"}),encode:()=>({ok:false,reason:"NOT_UNDER_TEST"})};
+ let allowed=true,commit=true,h;
+ const approved=new Set(["BEGIN","WARNING","FRAGMENT","ARRIVAL","BARRIER","WOLF","SHADOW","READINESS"]);
+ const bridges={M01:f,M02:s,M03:blocked,M04_M05:blocked,M06:blocked};
+ h=makeHost({scope,bridges,verifyObservation:({event})=>allowed&&approved.has(event.kind),commitGuard:()=>commit});
+ const checks=[];const check=(name,fn)=>{fn();checks.push(name);};
+ const evt=(kind,mode,anchor,safeDestinationReady=false)=>({eventId:kind,kind,mode,anchor,reality:"PRESERVED",safeDestinationReady});
+ const request=(event,chapter="M01",receiptId=chapter+"_"+event.eventId,expectedRevision=h.ui.view().revision)=>({scope,chapter,receiptId,expectedRevision,event});
+ const add=(event,chapter)=>{const r=h.host.submit(request(event,chapter));assert(r.ok,r.reason);return r;};
+ const start=evt("BEGIN","spawn","M01_SPAWN"),warn=evt("WARNING","proximity","M01_MERCHANT"),fragment=evt("FRAGMENT","visual","M01_SKY_WINDOW"),arrival=evt("ARRIVAL","threshold","M01_CLEARING_EDGE",true);
+ check("UI has read only surface",()=>assert(Object.keys(h.ui).join(",")==="view"&&!h.ui.submit&&!h.ui.checkpoint));
+ check("no direct completion event",()=>assert(h.host.submit(request({eventId:"raw",kind:"COMPLETE",questId:"M01"})).reason==="EVIDENCE_REJECTED"));
+ check("foreign scope rejected",()=>assert(h.host.submit({...request(start),scope:{...scope,characterId:"other"}}).reason==="INVALID_REQUEST"));
+ check("unapproved evidence rejected",()=>{allowed=false;assert(h.host.submit(request(start)).reason==="EVIDENCE_REJECTED");allowed=true;});
+ check("no premature chapter switch",()=>assert(h.host.submit(request(start,"M02")).reason==="CHAPTER_NOT_AVAILABLE"));
+ check("commit failure does not advance",()=>{commit=false;assert(h.host.submit(request(start)).reason==="COMMIT_REJECTED"&&h.ui.view().revision===0);commit=true;});
+ check("begin succeeds",()=>{add(start);assert(h.ui.view().revision===1);});
+ check("idempotent host receipt",()=>assert(h.host.submit(request(start,"M01","M01_BEGIN",0)).duplicate&&h.ui.view().revision===1));
+ check("conflicting receipt rejected",()=>assert(h.host.submit(request(warn,"M01","M01_BEGIN")).reason==="RECEIPT_CONFLICT"));
+ check("stale host revision rejected",()=>assert(h.host.submit(request(warn,"M01","M01_WARNING",0)).reason==="STALE_HOST_REVISION"));
+ check("scene order enforced even for approved evidence",()=>assert(h.host.submit(request(arrival)).reason==="REQUIRED_CUES_MISSING"));
+ check("warning recorded",()=>add(warn));
+ check("same scene event new receipt rejected",()=>assert(h.host.submit(request(warn,"M01","new_receipt")).reason==="SCENE_EVENT_ALREADY_USED"));
+ check("detached public view",()=>{const v=h.ui.view();v.state.warning="tampered";assert(h.ui.view().state.warning==="proximity");});
+ check("fragment then arrival",()=>{add(fragment);add(arrival);assert(h.ui.view().nextChapter==="M02");});
+ check("checkpoint diagnostic only",()=>{const c=h.host.checkpoint();assert(c.ok&&!c.restorable&&c.chapter==="M01");});
+ const e2={eventId:"BEGIN",kind:"BEGIN",mode:"approach",anchor:"M02_APPROACH",reality:"PRESERVED",arenaLoaded:false,controlAvailable:false};
+ check("failed next chapter commit retains M01",()=>{commit=false;assert(h.host.submit(request(e2,"M02")).reason==="COMMIT_REJECTED"&&h.ui.view().chapter==="M01");commit=true;});
+ check("M02 entered through bridge",()=>{add(e2,"M02");assert(h.ui.view().chapter==="M02"&&h.ui.view().state.started);});
+ check("old receipt retry retains newest chapter",()=>assert(h.host.submit(request(start,"M01","M01_BEGIN",0)).duplicate&&h.ui.view().chapter==="M02"));
+ check("no old chapter mutation",()=>assert(h.host.submit(request({...warn,eventId:"old"},"M01")).reason==="CHAPTER_NOT_AVAILABLE"));
+ check("unknown chapter rejected",()=>assert(h.host.submit(request(start,"M19")).reason==="INVALID_REQUEST"));
+ check("disabled draft blocks host",()=>{const aa=A({definitions:draft.objectiveDefinitions,contentRevision:"disabled"}),ff=F(aa),ss=S(aa,ff),hh=makeHost({scope,bridges:{...bridges,M01:ff,M02:ss},verifyObservation:()=>true});assert(hh.host.submit({...request(start),expectedRevision:0}).reason==="UNKNOWN_OR_DISABLED_QUEST");});
+ return checks;
+}
+test('opening fixture host: 22 scenarios',()=>assert.equal(runChecks(createOpeningFixtureHost,createOpeningQuestAdapter,createM01Bridge,createM02Bridge,draft,(v,m)=>assert.ok(v,m)).length,22));
