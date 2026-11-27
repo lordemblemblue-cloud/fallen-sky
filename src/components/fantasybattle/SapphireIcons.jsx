@@ -15,6 +15,13 @@ const paths={
   daggerLunge:<><path d="M8 49L53 9l-8 23-26 21z" fill="#d1b5ff" stroke="#fff1c4"/><path d="M8 35l18-17M26 55l17-12" stroke="#a28de4" strokeWidth="3"/></>,
   daggerFlurry:<>{[0,1,2].map(i=><path key={i} d={'M'+(7+i*8)+' '+(43+i*5)+'l28-30 10-4-4 11-28 29z'} fill="#d1b5ff" stroke="#fff1c4"/>)}</>,
   bulwark:<><path d="M32 5L56 15v20Q53 49 32 59 11 49 8 35V15Z" fill="#2859b8" stroke="#eacb8f" strokeWidth="3"/><path d="M32 12v39M15 25h34" stroke="#fff1c4" strokeWidth="4"/></>,
+ spiritBolt:<><circle cx="32" cy="32" r="22" stroke="#83e4bc" strokeDasharray="4 5" fill="none"/><path d="M8 50L47 11l11-3-4 14-36 36Z" fill="#83e4bc" stroke="#e8ffe2"/></>,
+ sentinelWard:<><path d="M32 5L56 15v20L32 59 8 35V15Z" fill="#425b83" stroke="#d9bd86" strokeWidth="3"/><path d="M32 14L46 32 32 49 18 32Z M32 18V46M21 32H43" fill="none" stroke="#f2da9e" strokeWidth="2"/></>,
+ mistBarrage:<>{[0,1,2].map(i=><path key={i} d={'M'+(6+i*9)+' '+(40+i*7)+'l33-33 10-3-3 11-32 34z'} fill="#8ce9fa" stroke="#e9fbff"/>)}</>,
+ celestialLance:<><circle cx="32" cy="32" r="24" stroke="#a5c9ff" fill="none"/><path d="M8 52L48 8l10-3-4 15-35 40Z" fill="#a5c9ff" stroke="#fff0c4" strokeWidth="2"/></>,
+ starfall:<>{[0,1,2].map(i=><path key={i} d={'M'+(7+i*9)+' '+(40+i*7)+'l31-32 10-4-3 12-32 32z'} fill="#c29aef" stroke="#fff0c4"/>)}</>,
+ eclipseRay:<><circle cx="32" cy="32" r="24" fill="#352344" stroke="#e77e99" strokeWidth="3"/><path d="M7 49L48 8 58 5 53 22 17 59Z" fill="#e77e99" stroke="#ffe1aa" strokeWidth="2"/></>,
+ celestialWard:<><path d="M32 5L56 15v20L32 59 8 35V15Z" fill="#352344" stroke="#ffe1aa" strokeWidth="3"/><circle cx="32" cy="30" r="13" fill="none" stroke="#ffe1aa"/><path d="M32 15L38 30 32 45 26 30Z" fill="#ffe1aa"/></>,
  guard:<><path d="M32 6l22 9v19q0 14-22 24Q10 48 10 34V15Z" fill="url(#gem)" stroke="#eacb8f" strokeWidth="2.5"/><path d="M32 14l12 7v13q0 9-12 17-12-8-12-17V21z" stroke="#cbf7ff" strokeWidth="1.5" fill="none"/><path d="M32 22l4 10-4 10-4-10z" fill="#fff1c4"/></>
 };
 import {useId} from 'react';
