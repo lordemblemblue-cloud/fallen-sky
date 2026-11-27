@@ -1,6 +1,6 @@
 # The Threads of Our Pain — story-to-world index
 
-> **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed, 69 targeted source reviews, 36 still pending. No game implementation or final script sign-off.
+> **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed and targeted source-reviewed; exact phase windows and conflict reconciliation pending. No game implementation or final script sign-off.
 
 **Current R61 handoff:** [125-ID source navigation](R61_STABLE_ID_INDEX.md) and [three-reality continuity ledger](R61_CONTINUITY_LEDGER.md). The historical table and revision logs below are retained, but their coverage counters and backfill status are superseded by the R61 section.
 
@@ -262,3 +262,7 @@ Recovered all thirteen missing revision text ranges R35–R47 from the actual R6
 ## R64D — availability review, third pass
 
 [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): 69/105 targeted source reviews (32 discoveries, 37 optional quests); 22 additional IDs, 36 pending. Distinguish genuinely required original-world objectives from optional counterpart scenes and independent public access. Preserve consent, evidence provenance and actual completion; reconstruction cannot backfill historical encounters. Exact phase windows and postgame inventory rules remain open. No runtime changes, terrain construction, merge or deployment.
+
+## R64E — all optional IDs reviewed
+
+[Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md) now covers 105/105 targeted source reviews (50 discoveries and 55 optional quests); 36 additional entries. Explicitly flag D25/D45 second-vista policy, S27/S29 evidence eligibility, S39/S55 completion policy, S43 shared D01 access and S46/D31 testimony compatibility. No exact timeline or postgame access certification. Next R65: M19/M20 revised scripts under R64A, then step-level availability, actor lifetimes, save/progression decisions and full manuscript QA. No game code, terrain, merge or deployment.
