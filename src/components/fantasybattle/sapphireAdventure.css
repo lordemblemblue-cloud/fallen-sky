@@ -1535,3 +1535,10 @@
 .fa-original-journal.fa-journal-expanded .fa-journal-list{height:53%;align-content:start;align-items:stretch;gap:.5em;overflow:auto;pointer-events:auto}
 .fa-original-journal.fa-journal-expanded .fa-journal-entry{width:100%;min-width:0;min-height:3em;padding:.45em .65em;text-align:left;white-space:normal;overflow-wrap:anywhere;align-items:flex-start}
 .fa-original-journal.fa-journal-expanded .fa-journal-name{font-size:1.05em}
+
+/* Keep the three original equipment sockets; place accessory controls in the unused lower socket column. */
+.fa-eq-slot.slot-3,.fa-eq-slot.slot-4{height:8%;font-size:.68em!important}
+.fa-eq-slot.slot-3{top:63%}
+.fa-eq-slot.slot-4{top:72%}
+.fa-eq-slot .fa-item-art{max-width:70%;max-height:53%;object-fit:contain;margin:0}
+.fa-item-art.fa-registered-item-art{object-fit:contain;aspect-ratio:1}
