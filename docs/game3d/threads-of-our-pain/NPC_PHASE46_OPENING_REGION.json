@@ -1,0 +1,491 @@
+{
+  "schemaVersion": 1,
+  "regionId": "WOLFVEIL_OPENING_DRAFT",
+  "reality": "PRESERVED",
+  "status": "UNSURVEYED_DRAFT",
+  "enabled": false,
+  "source": [
+    "M01.md",
+    "M02.md",
+    "R51_M01-M06_VOICE_PASS.md",
+    "CLAUDE_TERRAIN_HANDOFF.md"
+  ],
+  "dimensionsProposalM": {
+    "spawnToClearing": [
+      100,
+      150
+    ],
+    "ascent": [
+      6,
+      12
+    ],
+    "forestPathWidth": [
+      3,
+      5
+    ],
+    "merchantPullout": [
+      6,
+      8
+    ],
+    "canopyOpeningMin": 12,
+    "clearingDiameter": [
+      24,
+      34
+    ],
+    "perimeterWidth": [
+      3,
+      5
+    ],
+    "depressionDepth": [
+      1,
+      2
+    ],
+    "safeShelf": [
+      5,
+      8
+    ]
+  },
+  "nodes": [
+    {
+      "id": "M01_SPAWN",
+      "kind": "walk",
+      "description": "Forest arrival",
+      "transform": null
+    },
+    {
+      "id": "M01_ROOT_BEND",
+      "kind": "walk",
+      "description": "Optional root vault has walking bypass",
+      "transform": null
+    },
+    {
+      "id": "M01_RIVER_BEND",
+      "kind": "walk",
+      "description": "Persistent shared geographic silhouette",
+      "transform": null
+    },
+    {
+      "id": "M01_BOULDER",
+      "kind": "landmark",
+      "description": "Split boulder at river bend; crooked tree above bank",
+      "transform": null
+    },
+    {
+      "id": "M01_MERCHANT",
+      "kind": "walk",
+      "description": "Roadside warning and optional strap help",
+      "transform": null
+    },
+    {
+      "id": "M01_SKY_WINDOW",
+      "kind": "walk",
+      "description": "Insect silence, birds, lunar seam, fragment cue",
+      "transform": null
+    },
+    {
+      "id": "M01_FORK",
+      "kind": "walk",
+      "description": "Voluntary investigation",
+      "transform": null
+    },
+    {
+      "id": "M01_HOMEWARD_LOOP",
+      "kind": "walk",
+      "description": "Optional safe detour; returns to fork",
+      "transform": null
+    },
+    {
+      "id": "M01_STREAMSIDE_LOOP",
+      "kind": "walk",
+      "description": "Optional scenic bypass",
+      "transform": null
+    },
+    {
+      "id": "M01_UPPER_VISTA",
+      "kind": "walk",
+      "description": "Upper ridge view",
+      "transform": null
+    },
+    {
+      "id": "M01_STREAM_PATH",
+      "kind": "walk",
+      "description": "Lower stream route",
+      "transform": null
+    },
+    {
+      "id": "M01_CLEARING_EDGE",
+      "kind": "walk",
+      "description": "Voluntary threshold and return",
+      "transform": null
+    },
+    {
+      "id": "M01_MOON_AZIMUTH",
+      "kind": "sky",
+      "description": "Surveyed direction pending",
+      "transform": null
+    },
+    {
+      "id": "M01_FRAGMENT_TRAJECTORY",
+      "kind": "sky",
+      "description": "Distant fragment, not whole moon",
+      "transform": null
+    },
+    {
+      "id": "M02_APPROACH",
+      "kind": "walk",
+      "description": "Safe approach around fallen trunk",
+      "transform": null
+    },
+    {
+      "id": "M02_PERIMETER_N",
+      "kind": "walk",
+      "description": "North perimeter",
+      "transform": null
+    },
+    {
+      "id": "M02_PERIMETER_S",
+      "kind": "walk",
+      "description": "South perimeter",
+      "transform": null
+    },
+    {
+      "id": "M02_FRAGMENT_VIEW",
+      "kind": "walk",
+      "description": "One of multiple barrier clues",
+      "transform": null
+    },
+    {
+      "id": "M02_WOLF_VIEW",
+      "kind": "walk",
+      "description": "Safe wolf observation",
+      "transform": null
+    },
+    {
+      "id": "M02_PROTECT_SAFE",
+      "kind": "walk",
+      "description": "Voluntary protective readiness near woman",
+      "transform": null
+    },
+    {
+      "id": "M02_OUTER_LOOKOUT",
+      "kind": "walk",
+      "description": "Alternate protective readiness",
+      "transform": null
+    },
+    {
+      "id": "M02_RETREAT",
+      "kind": "walk",
+      "description": "Return to M01 forest",
+      "transform": null
+    },
+    {
+      "id": "M02_GODDESS",
+      "kind": "actor",
+      "description": "Player-facing Woman in the Light",
+      "transform": null
+    },
+    {
+      "id": "M02_FRAGMENT",
+      "kind": "hazard",
+      "description": "Central depression, readable soft boundary",
+      "transform": null
+    },
+    {
+      "id": "M02_WOLF",
+      "kind": "actor",
+      "description": "Wounded wolf; not hostile during M02",
+      "transform": null
+    },
+    {
+      "id": "M02_SHADOW",
+      "kind": "effect",
+      "description": "Independent authored silhouette",
+      "transform": null
+    },
+    {
+      "id": "M02_BARRIER_ARC",
+      "kind": "effect",
+      "description": "Readable protection boundary",
+      "transform": null
+    },
+    {
+      "id": "M02_CLUE_SOIL",
+      "kind": "clue",
+      "description": "Scorched crescent",
+      "transform": null
+    },
+    {
+      "id": "M02_CLUE_TWIG",
+      "kind": "clue",
+      "description": "Overlapping shadows",
+      "transform": null
+    },
+    {
+      "id": "M02_CLEAR_SKY",
+      "kind": "sky",
+      "description": "Local sky view",
+      "transform": null
+    },
+    {
+      "id": "M03_ARENA_START",
+      "kind": "handoff",
+      "description": "Requires readiness and loaded safe arena; M03 owns combat",
+      "transform": null
+    }
+  ],
+  "edges": [
+    {
+      "from": "M01_SPAWN",
+      "to": "M01_ROOT_BEND",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_ROOT_BEND",
+      "to": "M01_RIVER_BEND",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_ROOT_BEND",
+      "to": "M01_STREAMSIDE_LOOP",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_STREAMSIDE_LOOP",
+      "to": "M01_RIVER_BEND",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_RIVER_BEND",
+      "to": "M01_MERCHANT",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_MERCHANT",
+      "to": "M01_SKY_WINDOW",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_SKY_WINDOW",
+      "to": "M01_FORK",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_FORK",
+      "to": "M01_HOMEWARD_LOOP",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_FORK",
+      "to": "M01_UPPER_VISTA",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_FORK",
+      "to": "M01_STREAM_PATH",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_UPPER_VISTA",
+      "to": "M01_CLEARING_EDGE",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_STREAM_PATH",
+      "to": "M01_CLEARING_EDGE",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M01_CLEARING_EDGE",
+      "to": "M02_APPROACH",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_APPROACH",
+      "to": "M02_PERIMETER_N",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_APPROACH",
+      "to": "M02_PERIMETER_S",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_PERIMETER_N",
+      "to": "M02_FRAGMENT_VIEW",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_PERIMETER_S",
+      "to": "M02_WOLF_VIEW",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_FRAGMENT_VIEW",
+      "to": "M02_PROTECT_SAFE",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_WOLF_VIEW",
+      "to": "M02_PROTECT_SAFE",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_PERIMETER_N",
+      "to": "M02_OUTER_LOOKOUT",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_PERIMETER_S",
+      "to": "M02_OUTER_LOOKOUT",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_PERIMETER_N",
+      "to": "M02_RETREAT",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_PERIMETER_S",
+      "to": "M02_RETREAT",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    },
+    {
+      "from": "M02_RETREAT",
+      "to": "M01_CLEARING_EDGE",
+      "bidirectional": true,
+      "mode": "WALK",
+      "status": "PROPOSED_UNSURVEYED"
+    }
+  ],
+  "arenaHandoff": {
+    "from": [
+      "M02_PROTECT_SAFE",
+      "M02_OUTER_LOOKOUT"
+    ],
+    "to": "M03_ARENA_START",
+    "requires": [
+      "M02_COMPLETE",
+      "M03_SAFE_ARENA_LOADED",
+      "PLAYER_CONTROL_AVAILABLE"
+    ]
+  },
+  "objectiveDefinitions": [
+    {
+      "id": "M01",
+      "reality": "PRESERVED",
+      "requires": [],
+      "objectives": [
+        "merchant_warning",
+        "fragment_cue",
+        "voluntary_clearing_arrival"
+      ],
+      "enabled": false
+    },
+    {
+      "id": "M02",
+      "reality": "PRESERVED",
+      "requires": [
+        "M01"
+      ],
+      "objectives": [
+        "clearing_approach",
+        "protective_warning",
+        "barrier_observation",
+        "wolf_observation_and_warning",
+        "voluntary_readiness"
+      ],
+      "enabled": false
+    }
+  ],
+  "eventAlternatives": {
+    "merchant_warning": [
+      "interaction",
+      "proximity"
+    ],
+    "fragment_cue": [
+      "visual",
+      "audio",
+      "accessible_cue",
+      "residual_glow_and_journal"
+    ],
+    "voluntary_clearing_arrival": [
+      "threshold",
+      "overlook_confirmation"
+    ],
+    "barrier_observation": [
+      "soil",
+      "shard",
+      "twig"
+    ],
+    "wolf_observation_and_warning": [
+      "observe_at_distance_and_warn",
+      "crouch_and_warn",
+      "call_woman"
+    ],
+    "voluntary_readiness": [
+      "protect_safe",
+      "outer_lookout"
+    ]
+  },
+  "optionalFlags": [
+    "strap_help",
+    "scenic_detour",
+    "additional_barrier_clues",
+    "dialogue_tone"
+  ],
+  "restrictions": {
+    "noCombatM01M02": true,
+    "noForcedCamera": true,
+    "noTimer": true,
+    "noPairedFocus": true,
+    "noOlderReveal": true,
+    "noAutoEquip": true,
+    "platformUnchanged": true
+  }
+}
