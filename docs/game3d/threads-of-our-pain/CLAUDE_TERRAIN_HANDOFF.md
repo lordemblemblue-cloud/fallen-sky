@@ -1,5 +1,7 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
+> **R133 — Low blockout asset and measurement worksheet:** [Opening forest construction components](R133_P01_LOW_BLOCKOUT_ASSET_AND_MEASUREMENT_WORKSHEET.md). Eleven landmark groups, 20 proposed logical asset modules, ten survey/evidence rows; source dimensions and shared clearing preserved, A01/A20 reuse, no new runtime IDs. T04 planning input only; no actual surveyed coordinates, implementation or runtime evidence. Next R134 cue and encounter presentation handoff.
+
 > **R132 — bounded P01 implementation handoff:** [Eight engineering tickets and acceptance return](R132_P01_BOUNDED_IMPLEMENTATION_TICKETS_AND_ACCEPTANCE_RETURN.md). T00–T07, ten review gates, runner/entry limitations and copyable evidence template. Initial scope stops at isolated Low blockout/controller evidence; no live game changes or implementation authority. Next owner review or R133 Low blockout measurement worksheet.
 
 > **R131 — P01 preview isolation and fixture contract:** [Opening forest preview boundary](R131_P01_PREVIEW_BOUNDARY_AND_FIXTURE_CONTRACT.md). 12 pinned technical paths, 11 source anchor groups, three proposed isolation options and 16 supplemental planned checks. Prefer separate local dev entry with ephemeral fixtures, no live stores/quest rewards/platform changes; controller/asset compatibility and launch path remain unverified. Next R132 bounded implementation ticket and acceptance template.
