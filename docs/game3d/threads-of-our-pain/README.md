@@ -26,6 +26,8 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | S15 | The Quiet Watch | [Expanded optional quest and terrain brief](D12_S15.md) | Ready for proposed blockout; unverified |
 | D13 | The Remedy I Carried | [Expanded script](D13_S16.md) | Ready for proposed blockout; unverified |
 | S16 | Medicine for the Deep | [Expanded quest and terrain brief](D13_S16.md) | Ready for proposed blockout; unverified |
+| D14 | The Bird With One Wing | [Expanded script](D14_S17.md) | Ready for proposed blockout; unverified |
+| S17 | The Child's Wooden Bird | [Expanded quest and terrain brief](D14_S17.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -60,3 +62,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R16
 
 [D13/S16](D13_S16.md): catalog salve recipe, moss leaf, pouch, grotto and family trust preserved. Sixteen discoveries, six optional quests, zero main quests expanded. Master v1.2 R16 saved in Library. Next D14/S17, wooden bird keepsake and companion cosmetic. Pending D02/D03/D05/D06/M07 reconciliation; S13 separate. No terrain built, code changes or merge.
+
+## Revision R17
+
+[D14/S17](D14_S17.md) retains the catalog toy repair, three-part bird silhouette, ancient workshop, wooden bird keepsake and companion cosmetic. The child retains the original toy; the older protagonist already owns a separate model. M12 clue remains optional. Seventeen discoveries, seven optional quests, zero main quests expanded. Master v1.3 R17 created. Next D15 — The Chalk Road / S18 — The Road of Chalk, Wayfinder map upgrade. D02/D03/D05/D06/M07 pending reconciliation; S13 separate. Terrain unbuilt, no code changes or merge. Claude return surveyed anchors, actual layout, traversal and performance measurements.
