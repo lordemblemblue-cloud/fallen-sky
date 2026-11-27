@@ -1224,7 +1224,7 @@ import worldMarkup from './worldMarkup.html?raw';
         this.collisions.addBox(174.5, 12, -4.5, 91, 24, 0.7, 'cliff_back_right');
 
         const avatar = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.95, 6, 12), new THREE.MeshStandardMaterial({ color: '#edf2f6', emissive: '#448ce0', emissiveIntensity: 0.25, roughness: 0.4 }));
+        const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.95, 6, 12), new THREE.MeshStandardMaterial({ color: this.appearanceTint ?? 0xffffff, emissive: '#448ce0', emissiveIntensity: 0.25, roughness: 0.4 }));
         body.position.y = 0.88; body.castShadow = true; avatar.add(body);
         const lt = new THREE.PointLight('#fff0cc', 2.4, 15, 1.4); lt.position.set(0, 1.8, 1.2); avatar.add(lt);
 
@@ -1287,7 +1287,7 @@ import worldMarkup from './worldMarkup.html?raw';
           m.position.y = 1.3; m.userData.ownedGeo = m.userData.ownedMat = true; eg.add(m);
           const ring = new THREE.Mesh(new THREE.RingGeometry(e.triggerRadius * 0.55, e.triggerRadius * 0.68, 24), new THREE.MeshBasicMaterial({ color: e.color, side: THREE.DoubleSide, transparent: true, opacity: 0.72 }));
           ring.rotation.x = -Math.PI * 0.5; ring.position.y = 0.08; ring.userData.ownedGeo = ring.userData.ownedMat = true; eg.add(ring);
-          eg.position.set(e.x, ey, e.z); g.add(eg);
+          eg.position.set(e.x, ey, e.z); eg.visible=!this.completedEncounters?.has(e.id); g.add(eg);
           if (registerRuntime) this.encounters.push({ ...e, pos: eg.position, mesh: m, ownerId: secId });
         };
         const addDisc = (d) => {
@@ -1871,6 +1871,7 @@ export async function mountSapphireWorld(root, onEvent) {
     send('encounter',{encounter:{id:enc.id,label:enc.label,category:enc.category},world});
   };
   app.completedEncounters = new Set();
+  app.appearanceTint=0xffffff;
   app.servicePoints=[{id:'grove_service',label:'Grove rest point',x:9,z:-1.4},{id:'sanctuary_service',label:'Sanctuary services',x:191,z:-1.4}];
   const nearService=()=>app.mode==='wilds'&&app.servicePoints.find(s=>Math.hypot(app.playerPos.x-s.x,app.playerPos.z-s.z)<=2.4&&Math.abs(app.playerPos.y-app.terrainVisualHeight(s.x,s.z))<2);
   app.openService=()=>{const service=nearService();if(service&&!app.inputLocked){app.resetInput();app.inputLocked=true;send('service',{service,world:snapshot()});}};
@@ -1891,8 +1892,9 @@ export async function mountSapphireWorld(root, onEvent) {
       app.foundDiscoveries=new Set(data.discoveries||[]);app.completedEncounters=new Set(data.completedEncounters||[]);
       const px=Math.max(1.5,Math.min(218,x)), pz=Math.max(-6.8,Math.min(3.4,z)), py=app.terrainVisualHeight(px,pz);
       app.savedExploreState={position:new THREE.Vector3(px,py,pz),velocityY:0,grounded:true,cameraPos:new THREE.Vector3(px+2,py+4.8,pz+16.5),cameraTarget:new THREE.Vector3(px+2.5,py+1.8,pz),encounterId:null};
-      app.loadMode('wilds');send('restored',{world:snapshot()});},
+      app.loadMode('wilds');app.inputLocked=true;send('restored',{world:snapshot()});},
     finish(id,won){if(won)app.completedEncounters.add(id);app.retriggerCooldowns.set(id,performance.now()+3500);app.activeEncounter=null;app.resetInput();app.inputLocked=false;},
+    appearance(tint){if(![0xffffff,0x98c8ff,0xffc9dc,0xc8b5ff].includes(tint))return;app.appearanceTint=tint;app.player?.children[0]?.material?.color?.set(tint);},
     quality(q){if(['performance','balanced','high','cinematic'].includes(q))app.applyQuality(q);},
     interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);else app.openService();},
     move(key,value){if(Object.hasOwn(app.keys,key))app.keys[key]=!app.inputLocked && Boolean(value);},
