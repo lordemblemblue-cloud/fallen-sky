@@ -20,7 +20,8 @@ import { makeCompanionRig, requiredCompanionParts, visualFor } from './core/comp
 import {createSecondaryMotion,sampleMotion,resetSecondaryMotion} from './core/secondaryMotion.mjs';
 import { MELEE_SKILLS, isMeleeSkill, approachWeight, classAnimationLibrary, guardPose } from './core/meleeSkills.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
-import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
+import {enemySkillLibrary} from './core/enemySkills.mjs';
+import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, enemyIntent, bossPhase, BOSS_PHASE_NAMES, unitById, computeDamage } from './core/battleRules.mjs';
 import { PuppetView, loadTextures, prepareTexture } from './render/puppetView.js';
 import { FxSystem, makeBackdropTexture } from './render/stageFx.js';
 import { SfxSynth } from './render/sfx.js';
@@ -44,7 +45,7 @@ function normalizeSkills(data) {
 }
 
 export class Fighter {
-  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase, combatClass, gearVisuals, weaponId }) {
+  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase, combatClass, gearVisuals, weaponId, enemyArchetype }) {
     this.stage = stage;
     this.id = id;
     this.name = name;
@@ -56,7 +57,7 @@ export class Fighter {
     this.facing = facing;
     this.state = createPuppetState(rig, { seed });
     this.motion=createSecondaryMotion();this.state.externalMotion=this.motion;
-    this.skills = new SkillPlayer(combatClass?[...skillDoc.skills,...MELEE_SKILLS,...classAnimationLibrary(combatClass)]:skillDoc.skills);
+    this.skills = new SkillPlayer(combatClass?[...skillDoc.skills,...MELEE_SKILLS,...classAnimationLibrary(combatClass)]:enemyArchetype?[...skillDoc.skills,...enemySkillLibrary(skillDoc.skills)]:skillDoc.skills);
     this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase, combatClass, gearVisuals, weaponId });
     this.view.group.position.set(x, y, 0);
     this.view.group.scale.set(facing*scale, scale, 1);
@@ -216,7 +217,7 @@ export class FantasyBattleStage {
       const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
       const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
       const y=compact&&idx>=2?185:0;
-      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,gearVisuals:u.gearVisuals,weaponId:u.weaponId,rig:this.companionRigs?.get(u.id)||this.enemyRigs?.get(u.visualId)||this.rig,textures:this.textures,arrowTexture,tint:(this.companionRigs?.has(u.id)||this.enemyRigs?.has(u.visualId))?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,enemyArchetype:u.archetype,gearVisuals:u.gearVisuals,weaponId:u.weaponId,rig:this.companionRigs?.get(u.id)||this.enemyRigs?.get(u.visualId)||this.rig,textures:this.textures,arrowTexture,tint:(this.companionRigs?.has(u.id)||this.enemyRigs?.has(u.visualId))?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
     }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
@@ -543,7 +544,9 @@ export class FantasyBattleStage {
     this.log('Round '+round.number+': actions locked.');
     await this.playRound(round);
     if (this.disposed) return true;
+    const priorPhase=bossPhase(unitById(this.battle,'rival'));
     this.battle = battle;
+    const nextPhase=bossPhase(unitById(battle,'rival'));
     this.pendingChoices={};
     for (const u of battle.units) this.display[u.id] = { hp: u.hp, focus: u.focus };
     this.round = null;
@@ -552,7 +555,7 @@ export class FantasyBattleStage {
       this.log(battle.winner === 'player' ? 'Victory! The shade is down.' : 'Defeat. The shade stands over you.');
     } else {
       this.phase = 'choose';
-      this.log(`Round ${battle.round}. Choose an action.`);
+      this.log(nextPhase&&priorPhase!==nextPhase?`Gatekeeper enters ${BOSS_PHASE_NAMES[nextPhase]}. Round ${battle.round}: choose an action.`:`Round ${battle.round}. Choose an action.`);
     }
     return true;
   }
@@ -618,7 +621,9 @@ export class FantasyBattleStage {
     const order = this.round
       ? this.round.order.map((id) => ({ id, name: unitById(this.battle, id).name, action: ACTIONS[this.round.choices[id]].name, active: this.activeActor === id }))
       : [...units].sort((a, b) => b.spd - a.spd).map((u) => ({ id: u.id, name: u.name, action: null, active: false }));
+    const intents=this.phase==='choose'&&this.battle?this.battle.units.filter(u=>u.team==='enemy'&&!u.ko&&u.archetype).map(u=>enemyIntent(this.battle,u.id,this.units.find(m=>m.id===u.id)?.strategy)).filter(Boolean):[];
     return {
+      intents, bossPhase:bossPhase(unitById(this.battle||{units:[]},'rival')),
       mode: this.mode, phase: this.phase, round: this.round?.number ?? (this.phase === 'over' ? this.battle.round - 1 : this.battle?.round ?? 1), units, order,
       legal: this.legal(), choosingUnit:this.choosingUnit(), pendingChoices:{...this.pendingChoices}, log: this.logLines, winner: this.battle?.winner ?? null, renderer: this.rendererInfo,
       skills: this.fighters ? [...this.fighters.hero.skills.library.values()].map((s) => ({ id: s.id, name: s.name, hotkey: s.hotkey })) : [],

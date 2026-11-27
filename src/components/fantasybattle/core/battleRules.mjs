@@ -24,6 +24,13 @@ export const ACTIONS = Object.freeze({
   daggerLunge: Object.freeze({id:'daggerLunge',name:'Veil Lunge',skill:'daggerLunge',hotkey:'2',kind:'attack',power:34,hits:1,accuracy:0.88,critChance:0.28,priority:0,focusCost:2,focusGain:0,summary:'A precise high-critical strike. Costs 2 Focus.'}),
   daggerFlurry: Object.freeze({id:'daggerFlurry',name:'Mist Flurry',skill:'daggerFlurry',hotkey:'3',kind:'attack',power:9,hits:3,accuracy:0.86,critChance:0.14,priority:1,focusCost:1,focusGain:0,summary:'Three independent dagger hits. Costs 1 Focus.'}),
   bulwark: Object.freeze({id:'bulwark',name:'Bulwark',skill:'guard',hotkey:'4',kind:'guard',priority:3,focusCost:0,focusGain:2,guardFactor:0.3,summary:'Reduces damage taken by 70% this round. +2 Focus.'}),
+  spiritBolt:Object.freeze({id:'spiritBolt',name:'Spirit Bolt',skill:'spiritBolt',kind:'attack',power:21,hits:1,accuracy:.92,critChance:.12,priority:1,focusCost:1,focusGain:0,summary:'Focused spirit projectile.'}),
+  sentinelWard:Object.freeze({id:'sentinelWard',name:'Runic Ward',skill:'sentinelWard',kind:'guard',priority:3,focusCost:1,focusGain:1,guardFactor:.32,summary:'Reduces incoming damage by 68% this round.'}),
+  mistBarrage:Object.freeze({id:'mistBarrage',name:'Mist Barrage',skill:'mistBarrage',kind:'attack',power:12,hits:3,accuracy:.83,critChance:.12,priority:0,focusCost:2,focusGain:0,summary:'Three rapid spectral projectiles.'}),
+  celestialLance:Object.freeze({id:'celestialLance',name:'Celestial Lance',skill:'celestialLance',kind:'attack',power:42,hits:1,accuracy:.92,critChance:.13,priority:-1,focusCost:2,focusGain:0,summary:'Heavy single-target attack. Guard before impact.'}),
+  starfall:Object.freeze({id:'starfall',name:'Starfall Volley',skill:'starfall',kind:'attack',power:15,hits:3,accuracy:.88,critChance:.10,priority:-1,focusCost:2,focusGain:0,summary:'Three projectiles directed at the living frontline.'}),
+  eclipseRay:Object.freeze({id:'eclipseRay',name:'Eclipse Ray',skill:'eclipseRay',kind:'attack',power:55,hits:1,accuracy:.94,critChance:.10,priority:-2,focusCost:3,focusGain:0,summary:'Final-phase charged attack. Guard or Bulwark recommended.'}),
+  celestialWard:Object.freeze({id:'celestialWard',name:'Celestial Aegis',skill:'celestialWard',kind:'guard',priority:3,focusCost:0,focusGain:2,guardFactor:.38,summary:'Reduces incoming damage by 62% and charges Focus.'}),
   guard: Object.freeze({ id: 'guard', name: 'Guard', skill: 'guard', hotkey: '4', kind: 'guard', priority: 3, focusCost: 0, focusGain: 2, guardFactor: 0.5,
     summary: 'Acts first. Halves damage this round. +2 Focus.' }),
 });
@@ -35,6 +42,17 @@ export const CLASS_KITS=Object.freeze({
 });
 export const actionsForClass=id=>Object.hasOwn(CLASS_KITS,id)?CLASS_KITS[id]:ACTION_ORDER;
 
+// Enemy-only action kits. A player cannot gain these actions through a class name or custom actions list.
+export const ENEMY_KITS=Object.freeze({
+ spirit:Object.freeze(['quickShot','guard','spiritBolt']),
+ sentinel:Object.freeze(['quickShot','guard','volley','sentinelWard']),
+ mist:Object.freeze(['quickShot','guard','mistBarrage']),
+ gatekeeper:Object.freeze(['quickShot','celestialWard','celestialLance','starfall','eclipseRay'])
+});
+export function bossPhase(unit){if(unit?.archetype!=='gatekeeper')return null;const ratio=unit.hp/unit.maxHp;return ratio<=.30?3:ratio<=.65?2:1;}
+export const BOSS_PHASE_NAMES=Object.freeze({1:'Astral Watch',2:'Falling Stars',3:'Total Eclipse'});
+function unitKit(u){return u.team==='enemy'&&Object.hasOwn(ENEMY_KITS,u.archetype)?ENEMY_KITS[u.archetype]:actionsForClass(u.combatClass);}
+function phaseAllows(unit,id){const phase=bossPhase(unit);return id==='starfall'?phase>=2:id==='eclipseRay'?phase===3:true;}
 /** mulberry32 step on an explicit state: returns [value in [0, 1), next state]. */
 export function rngNext(state) {
   const s = (state + 0x6d2b79f5) >>> 0;
@@ -59,7 +77,7 @@ export function createBattle({ seed = 1, units } = {}) {
     ids.add(u.id);
     for (const key of ['maxHp', 'atk', 'def', 'spd']) if (!(Number(u[key]) > 0)) throw new Error(`unit ${u.id}: ${key} must be > 0`);
     return { id: u.id, name: u.name || u.id, team: u.team, maxHp: u.maxHp, hp: u.hp ?? u.maxHp, atk: u.atk, def: u.def, spd: u.spd,
-      focus: Math.min(MAX_FOCUS, u.focus ?? 1), actions: Array.isArray(u.actions)?actionsForClass(u.combatClass).filter(id=>u.actions.includes(id)):[...actionsForClass(u.combatClass)], guarding: false, ko: false };
+      focus: Math.min(MAX_FOCUS, u.focus ?? 1), ...(u.team==='enemy'&&Object.hasOwn(ENEMY_KITS,u.archetype)?{archetype:u.archetype}:{}), actions: Array.isArray(u.actions)?unitKit(u).filter(id=>u.actions.includes(id)):[...unitKit(u)], guarding: false, ko: false };
   });
   if (new Set(list.map((u) => u.team)).size < 2) throw new Error('a battle needs two teams');
   return { round: 1, rng: (seed >>> 0) || 1, units: list, phase: 'choose', winner: null, history: [] };
@@ -82,6 +100,7 @@ export function legalActions(battle, unitId) {
     let reason = null;
     if (!unit || unit.ko) reason = 'down';
     else if (battle.phase !== 'choose') reason = 'battle over';
+    else if (!phaseAllows(unit,id)) reason = 'not available in this phase';
     else if (unit.focus < a.focusCost) reason = `needs ${a.focusCost} Focus`;
     return { id, action: a, enabled: reason === null, reason };
   });
@@ -119,8 +138,24 @@ export function chooseAiAction(battle, unitId, strategy='balanced') {
   const unit = unitById(battle, unitId);
   const r = rngNext((battle.rng ^ 0x9e3779b9 ^ (battle.round * 7919)) >>> 0)[0];
   const legal = new Set(legalActions(battle, unitId).filter((a) => a.enabled).map((a) => a.id));
+  if(unit?.archetype==='gatekeeper'){
+    const phase=bossPhase(unit);
+    if(phase===3&&legal.has('eclipseRay'))return 'eclipseRay';
+    if(phase===3&&legal.has('celestialWard'))return 'celestialWard';
+    if(phase===2&&legal.has('starfall'))return 'starfall';
+    if(phase===1&&battle.round%3===1&&legal.has('celestialWard'))return 'celestialWard';
+    if(legal.has('celestialLance'))return 'celestialLance';
+    if(legal.has('celestialWard'))return 'celestialWard';
+  }
+  if(unit?.archetype==='spirit'&&legal.has('spiritBolt'))return 'spiritBolt';
+  if(unit?.archetype==='sentinel'){
+    if(battle.round%2===1&&legal.has('sentinelWard'))return 'sentinelWard';
+    if(legal.has('volley'))return 'volley';
+  }
+  if(unit?.archetype==='mist'&&legal.has('mistBarrage'))return 'mistBarrage';
   if (!legal.has('quickShot')) { const kit=unit.actions||ACTION_ORDER; return kit.find(id=>legal.has(id)&&ACTIONS[id].focusCost>0)||kit.find(id=>legal.has(id)); }
   const hurt = unit.hp / unit.maxHp < 0.35;
+  if(unit?.archetype&&legal.has('quickShot'))return 'quickShot';
   if(strategy==='boss'){if(battle.round%3===1&&legal.has('guard'))return 'guard';if(legal.has('chargedShot'))return 'chargedShot';return 'quickShot';}
   if(strategy==='warden'){if(battle.round%2===1&&legal.has('guard'))return 'guard';if(legal.has('volley'))return 'volley';return 'quickShot';}
   if(strategy==='scout'){if(legal.has('volley'))return 'volley';return 'quickShot';}
@@ -130,6 +165,8 @@ export function chooseAiAction(battle, unitId, strategy='balanced') {
   if (r > 0.9 && legal.has('guard')) return 'guard';
   return 'quickShot';
 }
+
+export function enemyIntent(battle,unitId,strategy){const unit=unitById(battle,unitId);if(battle.phase!=='choose'||!unit||unit.ko||unit.team!=='enemy')return null;const id=chooseAiAction(battle,unitId,strategy),action=ACTIONS[id];if(!action)return null;const phase=bossPhase(unit);return {unitId,actionId:id,name:action.name,summary:action.summary,phase,phaseName:phase?BOSS_PHASE_NAMES[phase]:null,targetId:action.kind==='attack'?opponentsOf(battle,unitId)[0]?.id:null,kind:action.kind};}
 
 /**
  * Resolve one round. Throws on an illegal choice.
