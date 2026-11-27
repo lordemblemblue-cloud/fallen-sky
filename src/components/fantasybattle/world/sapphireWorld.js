@@ -1845,7 +1845,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
 
       animate() {
         if (this.renderFailed) return;
-        requestAnimationFrame(() => this.animate());
+        this.animationFrame=requestAnimationFrame(() => this.animate());
         const rawDt = this.clock.getDelta(), dt = Math.min(0.05, rawDt), t = this.clock.elapsedTime;
         if (this.camLerp) {
           this.camera.position.lerp(this.camLerp.pos, Math.min(1, dt * 5));
@@ -1932,8 +1932,8 @@ export async function mountSapphireWorld(root, onEvent) {
   return {
     snapshot,
     pause(value){app.resetInput();app.inputLocked=Boolean(value);},
-    battle(data){app.resetInput();app.inputLocked=true;const arenaId=arenaForEncounter(typeof data?.id==='string'?data.id:null);app.loadMode('sanctuary',arenaId);app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!app.renderFailed)send('battleReady',{arenaId,token:data?.token});else send('error',{message:'Battleground renderer failed.'});}));},
-    restore(data){if(!data || !Array.isArray(data.position))return;
+    battle(data){if(typeof data?.token!=='string'||!data.token)return;app.activeBattleToken=data.token;app.resetInput();app.inputLocked=true;const arenaId=arenaForEncounter(typeof data.id==='string'?data.id:null);app.loadMode('sanctuary',arenaId);app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(app.activeBattleToken!==data.token)return;if(!app.renderFailed)send('battleReady',{arenaId,token:data.token});else send('error',{message:'Battleground renderer failed.'});}));},
+    restore(data){app.activeBattleToken=null;if(!data || !Array.isArray(data.position))return;
       const [x,,z]=data.position;if(!Number.isFinite(x)||!Number.isFinite(z))return;
       app.foundDiscoveries=new Set(data.discoveries||[]);app.completedEncounters=new Set(data.completedEncounters||[]);
       const px=Math.max(1.5,Math.min(WORLD_MAX_X,x)), pz=Math.max(-6.8,Math.min(3.4,z)), py=app.terrainVisualHeight(px,pz);
@@ -1945,6 +1945,6 @@ export async function mountSapphireWorld(root, onEvent) {
     interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);else app.openService();},
     move(key,value){if(Object.hasOwn(app.keys,key))app.keys[key]=!app.inputLocked && Boolean(value);},
     jump(){if(!app.inputLocked&&app.mode==='wilds'&&app.grounded){app.playerVelY=7.6;app.grounded=false;}},
-    stop(){clearInterval(timer);app.renderFailed=true;app.resetInput();app.renderer?.dispose();app.controls?.dispose();}
+    stop(){clearInterval(timer);app.renderFailed=true;cancelAnimationFrame(app.animationFrame);app.resetInput();app.clearWorld();app.renderer?.dispose();app.controls?.dispose();}
   };
 }

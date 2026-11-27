@@ -15,12 +15,13 @@ export const NOCKED_ARROW_LENGTH = 292;
 
 export async function loadTextures(names, base) {
   const loader = new THREE.TextureLoader();
-  const entries = await Promise.all([...new Set(names)].map(async (name) => {
+  const entries = await Promise.allSettled([...new Set(names)].map(async (name) => {
     const tex = await loader.loadAsync(`${base}${name}.png`);
     prepareTexture(tex);
     return [name, tex];
   }));
-  return new Map(entries);
+  if(entries.some(e=>e.status==='rejected')){for(const e of entries)if(e.status==='fulfilled')e.value[1].dispose();throw Error('Base character textures failed to load.');}
+  return new Map(entries.map(e=>e.value));
 }
 
 export function prepareTexture(tex) {

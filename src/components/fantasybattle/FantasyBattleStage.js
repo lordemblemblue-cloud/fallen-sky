@@ -119,9 +119,9 @@ export class Fighter {
 }
 
 export class FantasyBattleStage {
-  constructor(container, { onHud = null, seed = Date.now() % 100000, units = UNITS, availableActions = ACTION_ORDER, transparentBackdrop = false } = {}) {
+  constructor(container, { onHud = null, onError = null, seed = Date.now() % 100000, units = UNITS, availableActions = ACTION_ORDER, transparentBackdrop = false } = {}) {
     this.container = container;
-    this.onHud = onHud;
+    this.onHud = onHud;this.onError=onError;this.renderFailed=false;
     this.seed = seed;
     this.units = units;
     this.availableActions = new Set(availableActions);
@@ -146,9 +146,6 @@ export class FantasyBattleStage {
   }
 
   async init() {
-    const manifestLoad = fetch(`${ASSET_BASE}parts.json`).then((r) => r.json());
-    const names = [...rigData.layers.map((l) => l.part), ...Object.values(rigData.expressions), 'arrow'];
-    const texturesLoad = loadTextures(names, ASSET_BASE);
     let { renderer, ready, kind, reason } = createSceneRenderer(SCENE_ID, { antialias: true, alpha: this.transparentBackdrop, powerPreference: 'high-performance', gameplay: true });
     try {
       await ready;
@@ -180,11 +177,14 @@ export class FantasyBattleStage {
     renderer.domElement.addEventListener('pointermove', this.onPointer);
     renderer.domElement.addEventListener('pointerdown', this.onPointer);
 
-    const [manifest, textures] = await Promise.all([manifestLoad, texturesLoad]);
+    const response=await fetch(`${ASSET_BASE}parts.json`);if(!response.ok)throw Error('Character manifest failed to load.');const manifest=await response.json();
+    if(this.disposed)return;
+    const names=[...rigData.layers.map(l=>l.part),...Object.values(rigData.expressions),'arrow'];
+    const textures=await loadTextures(names,ASSET_BASE);
     if (this.disposed) { for (const t of textures.values()) t.dispose(); return; }
     this.manifest = manifest;
-    this.rig = buildRig(rigData, manifest);
     this.textures = textures;
+    this.rig = buildRig(rigData, manifest);
     const companionIds=this.units.filter(u=>u.team==='player'&&visualFor(u.id)).map(u=>u.id);
     const loader=new THREE.TextureLoader();
     // All settled so a failed asset or a cancelled mount does not leak successful textures.
@@ -198,7 +198,7 @@ export class FantasyBattleStage {
     this.buildScene();
     this.restart();
     this.last = performance.now();
-    this.loop = (now) => { this.raf = requestAnimationFrame(this.loop); this.frame(now); };
+    this.loop = (now) => { if(this.disposed||this.renderFailed)return;try{this.frame(now);}catch(e){this.reportRenderFailure(e);}if(!this.disposed&&!this.renderFailed)this.raf=requestAnimationFrame(this.loop); };
     this.raf = requestAnimationFrame(this.loop);
   }
 
@@ -275,9 +275,11 @@ export class FantasyBattleStage {
   setMuted(muted) { this.sfx.setMuted(muted); }
 
   // ---- time ----
-  wait(seconds) { return new Promise((resolve) => this.timers.push({ at: this.time + seconds, resolve })); }
+  reportRenderFailure(error){if(this.disposed||this.renderFailed)return;this.renderFailed=true;cancelAnimationFrame(this.raf);for(const w of this.waiters)w.resolve();for(const t of this.timers)t.resolve();this.waiters=[];this.timers=[];this.onError?.(error);}
 
-  waitUntil(check) { return new Promise((resolve) => this.waiters.push({ check, resolve })); }
+  wait(seconds) { if(this.disposed||this.renderFailed)return Promise.resolve();return new Promise((resolve) => this.timers.push({ at: this.time + seconds, resolve })); }
+
+  waitUntil(check) { if(this.disposed||this.renderFailed)return Promise.resolve();return new Promise((resolve) => this.waiters.push({ check, resolve })); }
 
   frame(now) {
     const real = Math.min(0.05, Math.max(0, (now - this.last) / 1000));
@@ -319,7 +321,7 @@ export class FantasyBattleStage {
     const [sx, sy] = this.fx.shakeOffset();
     if (this.hitStop > 0 || real > 0) this.fx.updateShake(dt > 0 ? 0 : real);
     this.camera.position.set(sx, CAMERA_Y + sy, 10);
-    if (isSceneRendererReady(this.renderer)) this.renderer.render(this.scene, this.camera);
+    if (isSceneRendererReady(this.renderer)){const rendered=this.renderer.render(this.scene,this.camera);if(rendered&&typeof rendered.catch==='function')rendered.catch(e=>this.reportRenderFailure(e));}
     this.updateNumbers(real);
   }
 
@@ -543,7 +545,7 @@ export class FantasyBattleStage {
     this.round = round;
     this.log('Round '+round.number+': actions locked.');
     await this.playRound(round);
-    if (this.disposed) return true;
+    if (this.disposed||this.renderFailed) return true;
     const priorPhase=bossPhase(unitById(this.battle,'rival'));
     this.battle = battle;
     const nextPhase=bossPhase(unitById(battle,'rival'));
@@ -564,7 +566,7 @@ export class FantasyBattleStage {
     this.activeGuards = new Set();
     this.roundGuards = new Set(round.steps.filter((s) => ACTIONS[s.action].kind === 'guard' && !s.skipped).map((s) => s.actor));
     for (const step of round.steps) {
-      if (this.disposed) return;
+      if (this.disposed||this.renderFailed) return;
       this.activeActor = step.actor;
       this.emitHud();
       if (step.skipped) continue;
@@ -579,7 +581,9 @@ export class FantasyBattleStage {
       actor.playSkill(ACTIONS[step.action].skill, null, { hits: step.hits.map((h) => ({ ...h })), target, step });
       const run = actor.skills.current;
       await this.waitUntil(() => actor.skills.current !== run && !this.fx.arrows.some((a) => a.meta?.run === run));
+      if(this.disposed||this.renderFailed)return;
       await this.wait(0.35);
+      if(this.disposed||this.renderFailed)return;
       if (this.koPending) {
         const { winner } = this.koPending;
         winner.skills.stop();
@@ -588,6 +592,7 @@ export class FantasyBattleStage {
         this.onAudioEvent?.('victory', winner.id);
         this.koPending = null;
         await this.wait(1.2);
+        if(this.disposed||this.renderFailed)return;
       }
     }
     for (const id of this.roundGuards) this.fx.clearWard(id);
@@ -669,6 +674,7 @@ export class FantasyBattleStage {
   }
 
   dispose() {
+    if(this.disposed)return;
     this.disposed = true;
     cancelAnimationFrame(this.raf);
     this.resizeObserver?.disconnect();
