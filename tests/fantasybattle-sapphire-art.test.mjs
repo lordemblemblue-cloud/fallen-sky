@@ -529,7 +529,7 @@ test('Heights campaign and independent elite trial maintain main-story priority 
  const final=changeCampaignQuest(elite,'heightsTrial','claim');
  assert.equal(campaignQuest(final,'heightsTrial').state,'claimed');
  assert.equal(campaignQuest(final,'heights').state,'claimed');
- assert.equal(trackedCampaign(final),null);
+ assert.equal(trackedCampaign(final).q.id,'sanctuary');
  assert.ok(isRoadProfile(final));
  assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
  assert.equal(isRoadProfile({...prior,quests:{...prior.quests,campaign:{...prior.quests.campaign,heightsTrial:'claimed'}}}),false);
@@ -540,4 +540,34 @@ test('Heights campaign and independent elite trial maintain main-story priority 
 test('Heights warnings and campaign tracking use the existing UI surfaces',()=>{
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  for(const marker of ["candidate.id==='wilds_heights_01'","candidate.id==='wilds_heights_02'","candidate.id==='wilds_heights_elite'",'campaignServiceNote(profile)','campaignPrompt(profile)','onCampaignAction'])assert.ok(page.includes(marker),marker);
+});
+
+test('Sanctuary main quest requires both recorded encounters, not optional trials or recruitment',()=>{
+ const base=newRoadProfile('Sanctuary test');
+ const prior={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed',waterfall:'claimed',heights:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02','wilds_waterfall_01','wilds_heights_01','wilds_heights_02']}};
+ assert.ok(isRoadProfile(prior));
+ assert.equal(campaignQuest(prior,'sanctuary').state,'available');
+ assert.equal(trackedCampaign(prior).q.id,'sanctuary');
+ const active=changeCampaignQuest(prior,'sanctuary','accept');
+ assert.match(campaignPrompt(active),/sanctuary guard/);
+ const guard=roadVictory(active,{id:'wilds_sanctuary_guard',category:'Normal'}).profile;
+ assert.equal(campaignQuest(guard,'sanctuary').count,1);
+ assert.match(campaignPrompt(guard),/Gatekeeper/);
+ assert.throws(()=>changeCampaignQuest(guard,'sanctuary','claim'));
+ const boss=roadVictory(guard,{id:'wilds_sanctuary_boss',category:'Boss'}).profile;
+ assert.equal(campaignQuest(boss,'sanctuary').state,'complete');
+ const final=changeCampaignQuest(boss,'sanctuary','claim');
+ assert.equal(campaignQuest(final,'sanctuary').state,'claimed');
+ assert.equal(campaignQuest(final,'heightsTrial').state,'available');
+ assert.equal(campaignQuest(final,'caveEcho').state,'available');
+ assert.deepEqual(final.inventory,boss.inventory);assert.equal(final.gold,boss.gold);assert.equal(final.xp,boss.xp);
+ assert.ok(isRoadProfile(final));assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.throws(()=>changeCampaignQuest(final,'sanctuary','claim'));
+ const bossFirst=roadVictory(prior,{id:'wilds_sanctuary_boss',category:'Boss'}).profile;
+ assert.equal(campaignQuest(changeCampaignQuest(bossFirst,'sanctuary','accept'),'sanctuary').count,1);
+ assert.equal(isRoadProfile({...guard,quests:{...guard.quests,campaign:{...guard.quests.campaign,sanctuary:'claimed'}}}),false);
+});
+test('Sanctuary narrative and actual boss phase intent are rendered without a second reward path',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ["candidate.id==='wilds_sanctuary_guard'","candidate.id==='wilds_sanctuary_boss'","sanctuaryIntro","sanctuaryCleared","!encounter.practice","profile.world.completedEncounters.includes('wilds_sanctuary_boss')","i.phaseName","tacticFor(e.strategy,e.archetype)"])assert.ok(page.includes(marker),marker);
 });
