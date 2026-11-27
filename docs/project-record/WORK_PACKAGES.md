@@ -9,7 +9,6 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 | Game | Package | Kind | Why first |
 |---|---|---|---|
 | Fallen Sky | WP-FS-S1 P01 opening slice preparation (see Part A packages) | Ready (documentation-bounded) | The owner's first priority is the story; P01 is the only slice with a full source-to-acceptance chain |
-| Fallen Sky | WP-FS-02 land the four hub-verified WebGPU/perf branches | Approval | Fixes the black-world race and device loss; already verified |
 | Fallen Sky | WP-FS-01 skill damage curve failures | Ready | A real behaviour failure on `main` |
 | Duelist | WP-DA-05 push rework | Ready | Owner request 2026-11-22, fully specified, not built |
 | Duelist | WP-DA-01 triage the 24 failing tests | Ready | Keeps corrected problems from coming back |
@@ -31,13 +30,9 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 - Tests: the 17 tests in the file; full-suite comparison.
 - Done when: 17/17 pass, no new failures, the flag still defaults off.
 
-### WP-FS-02 Land the hub-verified WebGPU and performance branches — Approval
-- Requirement: the hub verified and approved them (brief of 2026-11-27).
-- Branches: `claude/webgpu-device-loss-recovery-20261123` (`cfeead4d`), `claude/webgpu-morph-texture-key-20261123` (`70710779`), `claude/webgpu-late-compile-stuck-only-20261123` (`9eda0d3f`), then `claude/low-poly-world-2-20261123` (`60b95b5a`, contains `claude/webgpu-first-load-slices-20261123`). All 1,128 commits behind `main`, clean `merge-tree` [reader-checked].
-- Dependencies: the owner's merge (FS-D11). Assets: none.
-- Steps: one PR per branch, each merged with current `main` and re-tested; the morph-key fix checked on the create-character flow in a real browser.
-- Tests: each branch's own tests plus all `tests/webgpu*`; `game3d-low-poly-world-2`, `webgpu-precompile-slices`, `game3d-swap-shared-morph` for part 2.
-- Done when: each PR is green against the baseline and the owner merges it. `claude/three-empire-war-20261121` and `claude/wolfveil-cave-mouths-20261123` are not in this package: they build on deleted caves (FS-D2).
+### WP-FS-02 Live re-check of the five merged WebGPU and performance branches — Blocked (FS-01)
+- Merged by the owner's account on 2026-11-27 18:27 (FALLEN_SKY_RECORD B5). What is left is the live part: the morph-key fix on the create-character flow in a real browser, gate hops at 0 MB, slices on a cold load. Gate hops and the world need the platform mode off; the create-character check can run now.
+- Done when: a hand-back record with the observed results.
 
 ### WP-FS-03 Level cap remainder — Ready for the approved part
 - Requirement: weapon skill points continue to 155 (owner, [mem `level-cap-155-20261119.md`]); hero cap 155 already in `main` (`02e89b96`).

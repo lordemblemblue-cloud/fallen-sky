@@ -2,7 +2,7 @@
 
 The authoritative development record, backlog and missing-information report for the owner's three games, written 2026-11-27 as steps 1–9 of the owner's recovery directive (sent 2026-11-27; saved in the hub session's notes as `project-recovery/OWNER_DIRECTIVE_20261127.md`).
 
-Baseline: `lordemblemblue-cloud/fallen-sky` `main` at **`ab03f50a`** (merge of PR #420, 2026-11-27 18:03 -0500). Everything below describes that commit unless a row names a branch or PR.
+Baseline: `lordemblemblue-cloud/fallen-sky` `main` at **`ab03f50a`** (merge of PR #420, 2026-11-27 18:03 -0500). Everything below describes that commit unless a row names a branch or PR. While the record was being written, `main` moved to **`0b6ca52d`** (18:39): six of the seven hub-verified branches were merged and the War of Three Roads was kept switched off by the owner; the records were updated for those changes, and the test counts were re-run on `0b6ca52d` (see [BACKLOG.md](BACKLOG.md) §Testing).
 
 ## Files
 
@@ -32,7 +32,7 @@ Rules used:
 
 - **[code]** a file on `main`; **[doc]** a repo document; **[PR #n]** a pull request of `lordemblemblue-cloud/fallen-sky`; **[commit]** a commit; **[issue #n]**; **[note]** a Claude session's hand-over note in the hub's shared notes folder; **[mem]** a hub memory note (dated state; re-checked against `main` where the row says so); **[transcript]** a Claude Code session transcript on this machine.
 - **checked**: the recovery session or one of its read-only readers opened the code on `main` or ran the test itself. **claimed**: stated in a PR body, doc or note and not re-run.
-- Tests run for this record (2026-11-27, Node v26.13.0, Windows 11): `node --test --test-reporter=tap tests/` on `ab03f50a` = **3010 tests, 2851 pass, 159 fail** (43 s); per-file failures are in [BACKLOG.md](BACKLOG.md) §Testing.
+- Tests run for this record (2026-11-27, Node v26.13.0, Windows 11): `node --test --test-reporter=tap tests/` on `ab03f50a` = **3010 tests, 2851 pass, 159 fail** (43 s); on `0b6ca52d` = **3040 tests, 2884 pass, 156 fail** (44 s), with no new failing test and three that now pass (the two Three Roads tests, and one `duelist-server` quick-match test that passes when run alone on either commit). `server/game3d/tests/` and `server/game2/tests/` on `ab03f50a` = 1748 tests, 1610 pass, 88 fail (220 s). Per-file failures are in [BACKLOG.md](BACKLOG.md) §Testing.
 
 ## Precedence
 

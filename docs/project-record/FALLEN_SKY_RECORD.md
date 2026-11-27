@@ -9,7 +9,9 @@ Part A covers story, quests and world (the owner's first priority). Part B cover
 - **The default entry is a 24 m empty platform, not the world.** `FALLEN_SKY_PLATFORM_MODE = true` [code `src/components/game3d/worlds/temporaryPlatform.mjs:2`; checked], merged with PR #382 on 2026-11-25 (commit `a8e84cf0`). With it on, `GameView.jsx` forces the `temporary-platform` region and `GameWorld3D.jsx` (`flatPlatform`) suppresses enemies, quest NPCs, bosses, companions, Three Roads, weather, the admin Quest Test menu, checkpoint resume and world sync [reader-checked `GameView.jsx:132,293,372,804–812`]. The PR calls it "temporary, reversible"; its build, browser smoke test and deployment were not verified [PR #382 body].
 - **Caves, dungeons and the vortex were deleted on purpose on 2026-11-25** (commits `f939845d` "Remove legacy dungeon and cave scene geometry and reject old entries", −3,760 lines, and `8511617b` [checked]). The story-driven terrain hand-off explains the direction: "The owner is rebuilding the world; do not restore deleted caves, dungeons or world assets automatically", and the new story supersedes conflicting War of Three Roads story and map assumptions [doc `docs/game3d/threads-of-our-pain/CLAUDE_TERRAIN_HANDOFF.md` §"Read order and ownership"; AGENTS.md 2026-11-26 section, commit `e2c05717`].
 - **The campaign "The Threads of Our Pain" exists as documentation, not as playable content** (Part A).
-- Tests: full `tests/` run on `ab03f50a`: 3010 tests, 2851 pass, 159 fail, of which 129 are Fallen Sky files; about 45 fail because the cave geometry they test was deleted, about 45 are source-pattern tests of the older Clone UI; a few are real behaviour failures (skill damage curve, remote weapon combos, companion XP, two Three Roads tests) [checked; families from the reader's run]. Server folders: 1748 tests, 1610 pass, 88 fail; most failing files are network/TLS, PostgreSQL-readiness and market suites that appear to need services absent on this machine (not investigated) [checked].
+- **War of Three Roads: the owner answered on 2026-11-27, "Keep it switched off."** It stays in the game as it is, off unless `?threeRoads=1` or the admin test menu; nothing more of it is built; its chapters 3–6 stay unplayable. Still open: whether its systems and assets may be reused for The Threads of Our Pain (its request 4). The same day the owner said the old map is not used and the map is being recreated [doc `docs/game3d/three-empires/OWNER_REQUESTS.md`, commits `07138159`, `554d32bc`, merged into `main` at `0b6ca52d`].
+- **Update after the baseline:** at 18:27 the owner's account merged five of the seven hub-verified branches into `main`, and at 18:39 the Three Roads branch; `main` is now `0b6ca52d` (B5).
+- Tests: full `tests/` run on `ab03f50a`: 3010 tests, 2851 pass, 159 fail, of which 129 are Fallen Sky files; about 45 fail because the cave geometry they test was deleted, about 45 are source-pattern tests of the older Clone UI; a few are real behaviour failures (skill damage curve, remote weapon combos, companion XP) [checked; families from the reader's run]. On `0b6ca52d`: 3040 tests, 2884 pass, 156 fail, no new failure; the two Three Roads failures are fixed by the merged branch [checked]. Server folders: 1748 tests, 1610 pass, 88 fail; most failing files are network/TLS, PostgreSQL-readiness and market suites that appear to need services absent on this machine (not investigated) [checked].
 
 <!-- PART A (story, quests, world) is inserted below. -->
 
@@ -62,7 +64,6 @@ Blacksmith v2 core; enchantment VFX; gear-tier data, loot and tier-up (flag off)
 ### B3. Approved and implementation-ready
 
 - Weapon skill points to 155, the XP bank and par rows 110–155 from `claude/level-cap-155-20261119` (`5e98b0cd`, owner "carry on to 155"); needs a reconcile with `main`'s own cap change `02e89b96` first [mem; checked `WEAPON_SKILL_CAP = 100`].
-- The hub-verified WebGPU branches and low-poly part 2 (B5): approved and verified, waiting for the owner's merge.
 - Effects light pool: `claude/effects-dispose-20261119` (`6104562a`, 4 commits not in `main`) needs a new PR [mem `effects-dispose-20261119.md`].
 - Weapon charge and Weapon Animation Studio remainder: `claude/weapon-charge-20261119` (`bbb97df7`, 1 commit) [mem `weapon-charge-studio-20261119.md`].
 
@@ -73,25 +74,25 @@ Blacksmith v2 core; enchantment VFX; gear-tier data, loot and tier-up (flag off)
 - **Awaiting assets:** gear-tier models and icons; the Painted Fan weapon model; armor gaps (Nightscale/Frostwarden chests and pants show skin; Adam has no Moonfeather; Crescent Moon pieces unplaced) [mem `armor-pipeline-decisions.md`]; the original Luna mansion geometry (`buildLakesideManor.js` always throws) [issue #261]; real world art to replace the platform.
 - **Awaiting technical verification:** platform-mode build, smoke test and deploy; gliding and swimming on the female body, two clients and the owner's device; WebGPU physical-GPU benchmark and the preview/live matrix; the black-world race after character creation (fix candidate `claude/webgpu-morph-texture-key-20261123`, not in `main`) [note `webgpu-black-world-avatar-dispose-20261123.md`]; R142 SIGKILL tests on Windows; issue #260 (`usedTimes` crash, cause unproven); the death/respawn live check.
 
-### B5. The seven hub-verified branches (approved and verified by the hub, not merged)
+### B5. The seven hub-verified branches
 
-All are based on `96c0c70a` (2026-11-23), 1,128 commits behind `main`; none is an ancestor of `main`; `git merge-tree` is clean for six [reader-checked]. Each needs a fresh merge and test run before landing.
+At the baseline (`ab03f50a`) none was merged: all were based on `96c0c70a` (2026-11-23), about 1,128 commits behind, with a clean `git merge-tree` for six [reader-checked]. During this recovery the owner's account merged six of them [checked: `git merge-base --is-ancestor` against `origin/main` `0b6ca52d`].
 
-| Branch | Head | Ahead | Merge check | What it does | Note |
-|---|---|---|---|---|---|
-| `claude/webgpu-device-loss-recovery-20261123` | `cfeead4d` | 1 | clean | recover from a lost WebGPU device while the GPU process restarts | — |
-| `claude/webgpu-morph-texture-key-20261123` | `70710779` | 1 | clean | one built shader per shape-key geometry (fixes the destroyed morph texture behind the black world) | — |
-| `claude/webgpu-late-compile-stuck-only-20261123` | `9eda0d3f` | 1 | clean | background compile only when the GPU is stuck, at most 2 per frame | — |
-| `claude/webgpu-first-load-slices-20261123` | `62109065` | 7 | clean | cold-load shaders built in slices; shared morph geometry kept on body swap | contained in low-poly part 2 |
-| `claude/low-poly-world-2-20261123` | `60b95b5a` | 13 | clean | model-bytes cache (0 MB per gate hop), shared archer NPC parse, zombie draw groups 205 → 2, 150 s hop watchdog | merge instead of the slices branch; gate hops matter only once the platform mode is off |
-| `claude/three-empire-war-20261121` | `f792899e` | 3 | clean | Three Roads band 3 hall follows its cave mouth | band 3 needs caves (deleted) and Three Roads is off on the platform: likely superseded by the story rebuild |
-| `claude/wolfveil-cave-mouths-20261123` | `7754c5dd` | 4 | **conflict** (`WolfveilCaveAccessPlan.mjs`, `WolfveilDungeonPortals.js`) | cave mouths travel in and out | `main` deleted the cave geometry it builds on: superseded unless the owner says caves return |
+| Branch | Head | What it does | State on `main` `0b6ca52d` |
+|---|---|---|---|
+| `claude/webgpu-first-load-slices-20261123` | `62109065` | cold-load shaders built in slices; shared morph geometry kept on body swap | merged 18:27 (`fe1fe750`) |
+| `claude/webgpu-late-compile-stuck-only-20261123` | `9eda0d3f` | background compile only when the GPU is stuck, a few per frame | merged 18:27 (`64070750`) |
+| `claude/webgpu-morph-texture-key-20261123` | `70710779` | one built shader per shape-key geometry (fixes the destroyed morph texture behind the black world) | merged 18:27 (`308b49f6`) |
+| `claude/low-poly-world-2-20261123` | `60b95b5a` | model-bytes cache (0 MB per gate hop), shared archer NPC parse, zombie draw groups 205 → 2, 150 s hop watchdog | merged 18:27 (`032897d9`) |
+| `claude/webgpu-device-loss-recovery-20261123` | `cfeead4d` | recover from a lost WebGPU device while the GPU process restarts | merged 18:27 (`90430f32`) |
+| `claude/three-empire-war-20261121` | `3e772b07` | band 3 hall follows its mouth; tests in line with `main`; "on hold" and the owner's answer | merged 18:39 (`0b6ca52d`), Three Roads kept switched off |
+| `claude/wolfveil-cave-mouths-20261123` | `7754c5dd` | cave mouths travel in and out | **not merged**; conflicts (`WolfveilCaveAccessPlan.mjs`, `WolfveilDungeonPortals.js`); it re-grades the paths `main` removed on 2026-11-25, so merging it would bring back what the rebuild took out: superseded unless the owner says caves return (FS-D2) |
 
-Suggested landing order if the owner approves: device-loss, morph-key, late-compile, then low-poly part 2 (which brings the slices).
+The merged five still need their live re-checks once a world is reachable (gate hops and shader warm-up matter only off the platform).
 
 ### B6. Known bugs and open PRs
 
-- Failing behaviour tests: skill-curve cast path returns `WEAPON_NOT_EQUIPPED` (4); `duel-system-backend` (6; reads `Deno.env`); `game3d-three-roads-world` hook count and `three-roads-script` walkable ground (1 each); remote weapon combos (4) and weapon montage (1); `companion-shared-player-xp` (1); Faction 3 wing rig (5); `games-hub-gpu-beta` (1). `WEAPON_SKILL_CAP` 100 versus hero cap 155. The full per-file list is in [BACKLOG.md](BACKLOG.md) §Testing.
+- Failing behaviour tests: skill-curve cast path returns `WEAPON_NOT_EQUIPPED` (4); `duel-system-backend` (6; reads `Deno.env`); remote weapon combos (4) and weapon montage (1); `companion-shared-player-xp` (1); Faction 3 wing rig (5); `games-hub-gpu-beta` (1). `WEAPON_SKILL_CAP` 100 versus hero cap 155. The full per-file list is in [BACKLOG.md](BACKLOG.md) §Testing.
 - Open PRs: #425 (R143–R145 fixtures; evidence only); #320 (admin Quest Test teleport for Three Roads; partly landed, disabled by the platform mode); #252 (frame-count guard already in `main`: likely superseded); #73 (old weapon summon port, 4 conflicts: stale); #44 and #3 (cave work: superseded by the deletion).
 - Issues: #298 (secure guest multiplayer), #261 (Luna mansion source absent), #260 (`usedTimes` crash), #71 (legacy migration; 21 of 94 Crescent Moon changes never migrated [mem `fallen-sky-migration.md`]).
 
@@ -109,7 +110,8 @@ Suggested landing order if the owner approves: device-loss, morph-key, late-comp
 | FS-D8 | Audit decisions D1–D5: backend target, Halo/wings economy, cape ladder, faction names and maps, ascension requirement set | [doc `SYSTEMS_AUDIT_2026-11-13.md`] |
 | FS-D9 | Guest multiplayer design: server-issued guest identity; guest progress versus account progression | [issue #298] |
 | FS-D10 | Luna mansion: does an authored source exist elsewhere, or is it rebuilt? | [issue #261] |
-| FS-D11 | Landing order of the seven branches (B5) | hub brief |
+| FS-D11 | The cave-mouths branch (the only one of the seven still unmerged): close it, or keep it for a cave return | B5 |
+| FS-D16 | War of Three Roads request 4: may its systems (ordered-step quests, staging, waves, the eight modelled people, the four low-poly kits, the voice pipeline) be reused for The Threads of Our Pain, and are the Sable Vey and Hesper models acceptable for the Threads' Sable and Hesper | [doc `docs/game3d/three-empires/OWNER_REQUESTS.md`] |
 | FS-D12 | WebGPU default-on without a speed test: keep; is physical-GPU QA required before deploy | [mem `webgpu-conversion-20261120.md`] |
 | FS-D13 | Crescent Moon stays DEV-only; real armor sets and art for the gear tiers | [mem `armor-pipeline-decisions.md`] |
 | FS-D14 | Reward authority: do the R140–R145 fixtures drive a real server implementation, and on which datastore | PR #420, #425 |

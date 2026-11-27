@@ -111,7 +111,7 @@ Reachability: on the default entry (the 24 m platform) every world-dependent ite
 ## Tasks that need the owner directly
 
 1. **MI-00:** export the ChatGPT, claude.ai and Gemini conversations (or the specific ones listed), and the Word manuscript.
-2. **Merges:** the seven hub-verified branches (FS-D11; recommended order in FALLEN_SKY_RECORD B5) and the open PRs listed in each record.
+2. **Merges:** six of the seven hub-verified branches were merged on 2026-11-27; the cave-mouths branch remains (FS-D11). The open PRs are listed in each record.
 3. **Fallen Sky:** FS-D1 (platform off when, with which world), FS-D2 (caves stay deleted), the story decisions in FALLEN_SKY_RECORD Part A, and FS-D3 to FS-D15.
 4. **Duelist:** DA-D1 to DA-D10, first DA-D2 (progression model) and DA-D3 (server deployment).
 5. **Fantasy Battle:** FB-D1 to FB-D8, first FB-D3 (release flag before QA) and FB-D2 (story canon).
