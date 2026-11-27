@@ -1,8 +1,10 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R80–R82 — completed provisional objective classification:** [R80 reconstructed D31–D40/S31–S40](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md), [R81 D41–D50/S41–S50](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md), [R82 S51–S55 and final coverage](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md). 105/105 IDs provisionally classified (50 discoveries, 55 adventures). R80 reconstructed from source, not recovered verbatim. Exact closing predicates, ending access, pending policy approvals and runtime validation remain open. R83/R84 precedence retained.
+
 > **R84 — unified New Game Plus contract:** [Progression, replay and difficulty](R84_UNIFIED_NEW_GAME_PLUS_PROGRESSION_CONTRACT.md). Owner rules consolidated, including retained levels/equipment, unlimited cycles, blue level suffix, 2x enemy XP and rebased challenge. Permanent ceiling, other rewards and exact stat curves remain open.
 
-> **R83 — priority canon reconciliation:** [Chronology, actor lifetimes and endings](R83_CANON_CHRONOLOGY_ACTOR_ENDING_RECONCILIATION.md). R64A/R65 ending precedence, separate local/presentation chronology, distinct families, phase/actor guards and unresolved writer blockers. R80 reported but not verified in PR #402; verified classifications remain 60/105 through R79. R81/R82 pending.
+> **R83 — priority canon reconciliation:** [Chronology, actor lifetimes and endings](R83_CANON_CHRONOLOGY_ACTOR_ENDING_RECONCILIATION.md). R64A/R65 ending precedence, separate local/presentation chronology, distinct families, phase/actor guards and unresolved writer blockers. R80 subsequently reconstructed and R81/R82 committed; see current 105/105 provisional classification above.
 
 > **R79 — third quest objective classification:** [D21–D30 / S21–S30](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md). 60/105 IDs provisionally classified. Preserve independent S27 evidence and repair receipts, S29 distinct-source threshold (R66 adapter proposed), S23/S25 dual lanes and actual S30 escort arrivals; exact phase gates and ending access unresolved.
 
