@@ -440,3 +440,34 @@ test('Chapter 1 narrative uses original and fallback interfaces without replacin
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  for(const marker of ['GROVE_STORY.journal','GROVE_STORY.offer','GROVE_STORY.completion','GROVE_STORY.warning','GROVE_STORY.recruit','groveStoryState(profile)?.serviceNote','groveStoryState(profile)?.history',"candidate.id==='wilds_grove_01'","eligible&&selected.id==='groveArcher'&&!member.recruited","acceptGroveQuest(p)","claimGroveQuest(p)"])assert.ok(page.includes(marker),marker);
 });
+
+
+import {roadQuest,changeRoadQuest,validCampaign} from '../src/components/fantasybattle/core/campaignQuests.mjs';
+import {createProfile as newRoadProfile, isProfile as isRoadProfile, exportBackup as exportRoadBackup, parseBackup as parseRoadBackup, rewardVictory as roadVictory} from '../src/components/fantasybattle/core/adventureState.mjs';
+test('Pilgrim Road progression is bounded, backward compatible and derives objectives from recorded victories',()=>{
+ const legacy=newRoadProfile('Road test');
+ assert.ok(isRoadProfile(legacy));assert.equal(roadQuest(legacy).state,'locked');
+ assert.throws(()=>changeRoadQuest(legacy,'accept'));
+ const unlocked={...legacy,quests:{grove:'claimed'},world:{...legacy.world,completedEncounters:['wilds_grove_01']}};
+ assert.equal(roadQuest(unlocked).state,'available');
+ const active=changeRoadQuest(unlocked,'accept');
+ assert.equal(roadQuest(active).state,'active');
+ assert.throws(()=>changeRoadQuest(active,'accept'));assert.throws(()=>changeRoadQuest(active,'claim'));
+ const first=roadVictory(active,{id:'wilds_pilgrimage_01',category:'Normal'}).profile;
+ assert.equal(roadQuest(first).count,1);
+ const both=roadVictory(first,{id:'wilds_pilgrimage_02',category:'Normal'}).profile;
+ assert.equal(roadQuest(both).state,'complete');
+ const claimed=changeRoadQuest(both,'claim');
+ assert.equal(roadQuest(claimed).state,'claimed');assert.ok(isRoadProfile(claimed));
+ assert.deepEqual(claimed.inventory,both.inventory);assert.equal(claimed.gold,both.gold);assert.equal(claimed.xp,both.xp);
+ assert.throws(()=>changeRoadQuest(claimed,'claim'));
+ assert.deepEqual(parseRoadBackup(exportRoadBackup(claimed)).quests,claimed.quests);
+ assert.equal(roadQuest(parseRoadBackup(exportRoadBackup(legacy))).state,'locked');
+ assert.equal(roadQuest(changeRoadQuest({...both,quests:{grove:'claimed'}},'accept')).state,'complete');
+ assert.equal(validCampaign({...active,quests:{...active.quests,campaign:{version:1,pilgrimRoad:'claimed'}}}),false);
+ for(const bad of [{version:2,pilgrimRoad:'active'},{version:1,pilgrimRoad:'active',extra:true},null,[]])assert.equal(isRoadProfile({...active,quests:{...active.quests,campaign:bad}}),false);
+});
+test('Chapter 2 uses original journal and existing transaction guard',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['roadQuest(profile)','roadVisible','roadSelected','fa-journal-expanded','onRoadAction','transact(p=>changeRoadQuest(p,action)','Pilgrim Road objectives'])assert.ok(page.includes(marker),marker);
+});
