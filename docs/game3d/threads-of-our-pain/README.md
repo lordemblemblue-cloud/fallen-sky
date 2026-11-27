@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R112 — production readiness and agent acceptance:** [From story to production](R112_PRODUCTION_READINESS_AND_AGENT_ACCEPTANCE_GATES.md). Freshly verified 125 unique voice-selection rows across R106–R110, eight proposed workstreams, six integration waves, eight P01 opening-slice gates and eight representative quest cases. Survey/design only pending authority and decisions; no build or release. Next R113 opening-slice source-to-acceptance worksheet.
+
 > **R111 — chronology and reality-law writer decision packet:** [The laws between realities](R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md). Candidate A1 preservation rather than first creation of the link; local/experienced/presentation order and causal edges distinguished; S42/S54 bounded exceptions, five dialogue clarifications and eight prioritized owner decisions. Not approved; chronology-dependent shipping blocked pending decision. Next R112 production readiness and decision gates.
 
 > **R110 — completed optional voice and cinematic selection:** [The final voices](R110_D41-D50_S41-S55_FINAL_OPTIONAL_VOICE_SELECTION.md). D41–D50/S41–S55, 25 performance selections and staging deltas. Optional voice QA 105/105; main voice QA 20/20; combined 125/125 documented. Next R111 chronology/owner decision packet. Draft, not recorded or built.
