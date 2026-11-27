@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  compileLateObjectsInBackground, settleBackgroundPipeline, LATE_COMPILE_WAIT_MS,
+  compileLateObjectsInBackground, settleBackgroundPipeline, LATE_COMPILE_WAIT_MS, LATE_COMPILE_STUCK_MS,
+  LATE_COMPILE_MAX_FORCED,
 } from '../src/lib/webgpuSceneRenderer.js';
 
 // The parts of three r171's WebGPURenderer that compileLateObjectsInBackground patches, as r171 has them:
@@ -44,10 +45,12 @@ function fakeRenderer(makeAsync) {
     },
     updateForRender(renderObject) { this.getForRender(renderObject); },
   };
-  const renderer = { __sceneState: { backgroundCompile: true }, _pipelines: pipelines, backend, _currentRenderBundle: null };
+  const renderer = { __sceneState: { backgroundCompile: true }, _pipelines: pipelines, backend, _currentRenderBundle: null,
+    info: { render: { frame: 0 } } };
   const frame = (renderObjects) => { // one frame, drawn the way r171 draws each object
     drawn.length = 0;
     for (const renderObject of renderObjects) { pipelines.updateForRender(renderObject); backend.draw(renderObject); }
+    renderer.info.render.frame++;
     return [...drawn];
   };
   return { renderer, device, frame };
@@ -129,4 +132,39 @@ test('settleBackgroundPipeline: success, invalid, other failure, and a direct ma
   assert.deepEqual(await settleBackgroundPipeline(Promise.reject(new Error('lost')), () => ({ direct: 1 }), report), { direct: 1 });
   assert.equal(await settleBackgroundPipeline(Promise.reject(new Error('lost')), () => { throw new Error('no device'); }, report), null);
   assert.deepEqual(reported, ['bad', 'no device']);
+});
+
+test('a busy GPU is not forced: while background compiles keep finishing, a waiting one is left to finish', () => {
+  let clock = 0;
+  const { renderer, device, frame } = fakeRenderer(() => () => new Promise(() => {}));
+  compileLateObjectsInBackground(renderer, { now: () => clock });
+  const waiting = person('elder');
+  // others finish now and then (state.backgroundPipelineAt, set by the device wrapper as each finishes)
+  for (let t = 0; t < 3000; t += FRAME_MS) {
+    clock = t;
+    if (Math.round(t) % 600 < FRAME_MS) renderer.__sceneState.backgroundPipelineAt = clock;
+    assert.deepEqual(frame([waiting]), [], `forced at ${Math.round(t)} ms while others were finishing`);
+  }
+  assert.equal(device.direct, 0);
+  // they stop finishing: stuck, so it is made directly once nothing has finished for LATE_COMPILE_STUCK_MS
+  const lastFinished = renderer.__sceneState.backgroundPipelineAt;
+  let drawn = [];
+  while (!drawn.length && clock < lastFinished + 5000) { clock += FRAME_MS; drawn = frame([waiting]); }
+  assert.deepEqual(drawn, ['elder']);
+  assert.ok(clock - lastFinished >= LATE_COMPILE_STUCK_MS && clock - lastFinished < LATE_COMPILE_STUCK_MS + 3 * FRAME_MS,
+    `made ${Math.round(clock - lastFinished)} ms after the last one finished`);
+  assert.equal(device.direct, 1);
+});
+
+test('when many are stuck, only a few are made directly per frame', () => {
+  let clock = 0;
+  const { renderer, device, frame } = fakeRenderer(() => () => new Promise(() => {}));
+  compileLateObjectsInBackground(renderer, { now: () => clock });
+  const kinds = ['tree', 'rock', 'grass', 'river', 'cart'].map((name) => ({ object: { name }, shaderKey: name }));
+  assert.deepEqual(frame(kinds), []);
+  clock += LATE_COMPILE_WAIT_MS;
+  const counts = [];
+  for (let i = 0; i < 4; i++) { counts.push(frame(kinds).length); clock += FRAME_MS; }
+  assert.deepEqual(counts, [LATE_COMPILE_MAX_FORCED, 2 * LATE_COMPILE_MAX_FORCED, 5, 5]);
+  assert.equal(device.direct, 5);
 });

@@ -66,8 +66,19 @@ test('the old body releases everything the world teardown releases for the actor
   }
   assert.match(release, /restoreMountedRider\(\);/);
   assert.match(release, /mixer\.uncacheRoot\(old\)/);
-  assert.match(release, /disposeAvatarModel\(old\)/);
+  assert.match(release, /disposeAvatarModel\(old, \{ keepGeometry: keepSharedMorphGeometry\(scene\) \}\)/);
   assert.match(release, /model = null; modelRef\.current = null; playerModelRef\.current = null;/);
+});
+
+test('a swap while riding dismounts first, the way F does, so the new character can walk', () => {
+  const dismount = between('const dismountForSwap = (old) => {', '    // A new body on the character screens');
+  for (const step of ['if (!isMountedRef.current) return;', 'restoreMountedRider();', 'isMountedRef.current = false;',
+    'setIsMounted(false);', 'setMounted(false);', 'setAXEMountRiding(false);']) assert.ok(dismount.includes(step), step);
+  const swap = between('const swapPlayerAvatar = (url) => {', '    swapPlayerAvatarRef.current = swapPlayerAvatar;');
+  const order = ['dismountForSwap(old);', 'const swap = { position: old.position.clone()', 'releasePlayerAvatar(old);']
+    .map((s) => swap.indexOf(s));
+  assert.ok(order.every((at) => at > 0) && order[0] < order[1] && order[1] < order[2],
+    'set down beside the mount before the new body takes the old one\'s place');
 });
 
 test('a swap is cancelled by the world teardown and announced like the first body', () => {

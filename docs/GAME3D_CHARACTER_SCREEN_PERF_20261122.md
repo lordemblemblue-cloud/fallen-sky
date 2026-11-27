@@ -157,3 +157,117 @@ once settled (WebGPU ~29 ms, WebGL ~18 ms).
   failing, the same failing names as main (108).
 - Still open: the 13–23 s first-load block on WebGPU, which is mostly the precompile's synchronous shader build.
   Slicing it is the next step; check with the WebGPU session first, since it owns that code.
+
+## Follow-up 2026-11-23: cold WebGPU load (branch `claude/webgpu-first-load-slices-20261123`)
+
+**Measured** on main 96c0c70a: cold load of `/gameview`, dev build, hidden pane, with the world renderer instrumented.
+- The world never held its frames. Its **first frame at renderer ready built 267 shaders in one 22.2 s
+  `render()` call**.
+- Later first-draw frames took 0.5–2.9 s.
+- The avatar-ready precompile added 84 builds, in blocks of 6.5 s and 3.4 s.
+- 489 node-shader builds took **36.9 s of main thread** (about 75 ms each; terrain, grass cards and the river cost
+  150–256 ms each).
+
+**Changed (`e05c5ec0`):**
+- `precompileSceneObjects(…, { sliceMs, onProgress })` builds shaders in slices (`compileSceneInSlices`):
+  - For each slice the camera sees only layer 31 (`PRECOMPILE_SLICE_LAYER`, unused by the game), and the batch and
+    every light the camera sees are put on it, so the light set in each shader key is unchanged.
+  - `compileAsync` then builds only that batch, the camera and every object get their layers back in the same task, and
+    an ordinary task yields to the browser.
+  - It uses layers rather than `visible`, because scenery `visible` setters run the area loader's callbacks, and keeping
+    the same camera keeps the render objects shared with real frames.
+  - A sliced run ends with `shadowMap.needsUpdate = true`. Its first slice drew the static sun shadow with only that
+    batch's casters, so the next frame redraws it whole.
+  - Both changes come from the WebGPU session's review (`032aa812`).
+  - The batch size follows the running cost per object (1 to 16 objects), and at most 6 slices compile pipelines in the
+    GPU process at once.
+  - Frames stay held. Without `sliceMs` nothing changes, and calls on one renderer run one after another.
+- GameWorld3D runs a sliced precompile of the constructed scene as soon as the WebGPU renderer is ready, before the
+  first frame. The avatar-ready precompile is sliced too.
+- Both report `game3dWorldCompileProgress`. GameView's two 30 s entry timers count 30 s without progress rather than
+  30 s in total.
+
+**Live:** one cold WebGPU load ran with the early precompile.
+- It built 963 renderables (382 pipelines) in 25.8 s, and the world came up on WebGPU.
+- The first frames after it peaked at 1.1–1.4 s, instead of 22 s.
+- That run yielded with `scheduler.yield()`, which resumes ahead of queued tasks, so the page still showed as one
+  25.6 s block. The ordinary-task yield and the in-flight cap that replaced it are **checked by tests only**:
+  - After the next runs, the browser pane had **no GPU at all** (no WebGPU adapter, no WebGL2 context, on any
+    origin). Chrome does that after GPU process crashes, and it lasts until the app restarts.
+  - The run before that block used classic WebGL, which never reaches the sliced code. So it looks like the pane's GPU
+    process giving out under many heavy reloads, but I can't rule out the sliced build's burst of about 380
+    pipeline compiles in the first run. That is why at most 6 slices now compile at once.
+- **Before merging:** reload a cold WebGPU load once the app has restarted, and check that the start screen answers
+  clicks while the shaders build and that the world appears without errors.
+
+**Tests:** `tests/webgpu-precompile-slices.test.mjs` (8 tests) uses three's own scene objects. Whole suite: main
+96c0c70a ran 2499 tests with 109 failing; this branch ran 2507 tests with the same 109 failing names.
+
+**Not checked live:** a body swap on WebGL, while mounted, or while holding a bow. The pane had no GPU.
+
+### Live checks 2026-11-23, after the app restart (head before this section: `f5b5e851`)
+
+**Cold WebGPU load on this branch** (dev build, hidden pane, 60 Hz frame pump):
+- The sliced build ran 1,125 objects for about 43 s between the first and last slice; the early precompile reported 35 s and 106 pipelines.
+- **Longest main-thread block during the build: 3.2 s.** 9 blocks were over 1 s and 23 over 0.5 s; the single slowest shader build was 1.8 s. Before: one 22.2 s block, then 6.5 s and 3.4 s.
+- **The start screen answered a click** (ENTER SERVER) 1.5 s into the build, in 1.28 s.
+- The world appeared and announced ready at 81 s from load, about the same total as before. No errors, no device loss, no failure flag.
+
+**Body swap checks:**
+- **WebGL:** swapping Adam to Eve kept the world (no teardown, same renderer and scene). The new body loaded in 0.89 s, the ready event came 2.1 s after Create character, ENTER WORLD took 0.70 s, and Eve walked 5.7 m in 1.5 s.
+- **While mounted (bug found and fixed):** swapping while riding left the world's riding state set, and the new character could not walk in any direction, even after mounting and dismounting again.
+  - `dismountForSwap` now dismounts the way F does before the new body takes the old one's place.
+  - After the fix, swapping while riding on WebGL leaves the companion store not mounted, ENTER WORLD takes 0.72 s, and Adam walks 6.1 m.
+- **Holding a bow:** a new character has its own loadout (a sword), so the old character's bow is rightly not carried over. Equipping the Training Bow on the swapped body puts it in that body's left hand. Before the swap, the bow was also put away while riding, as designed.
+
+The test origin's stored renderer choice and failure flag were removed afterwards.
+
+### Black world after a body swap (WebGPU session's report, fixed in this branch)
+
+**Report:** the WebGPU session's live run on f5b5e851 went black after ENTER WORLD in 1 run of 2. Every frame was
+rejected with "Destroyed texture [257x1 px, 14 layer, RGBA32Float] used in a submit": the shape-key (morph) texture
+of an `EYE_Iris` mesh.
+
+**Cause:** in three r171, meshes share one node shader per cache key. That key covers the attribute layout and morph
+count, not which geometry it is (`RenderObject.getMaterialCacheKey`/`getGeometryCacheKey`), and `MorphNode.setup` bakes
+the morph texture of the first geometry built into the shared shader.
+- The town has a fused-body NPC ("Character") with the default Eve body's exact meshes.
+- If the player's Eve was built first, the NPC draws with the player's morph textures. When a swap disposed the old
+  body, those textures were destroyed, and every frame was rejected.
+- Whether it happens depends on which mesh was built first, which is why only some runs went black.
+- The torn-down world's leftover avatar load that the report pointed at only disposes its own freshly parsed copy.
+  Instrumented, none of its geometries was used by any mesh in the live world.
+
+**Fix:** `releasePlayerAvatar` now passes `keepGeometry: keepSharedMorphGeometry(scene)` to `disposeAvatarModel`. Any
+morph geometry whose layout a live mesh shares is kept; everything else is freed. The kept memory is reclaimed when the
+world's GPU device is destroyed at teardown.
+
+**Live check:** on a fresh origin I swapped Adam to Eve, then Eve to Adam.
+- The second swap kept Eve's body (40,997 and 272 vertices, 45 keys) and her irises, the layouts the NPC shares, and
+  freed only two hair meshes.
+- In the world afterwards: no validation errors, 45 frames per second, and Adam walked 5.1 m.
+
+**Still open:** the same three behaviour means any two morph meshes with the same layout share one shape-key texture
+and its influences. Examples are the companion's three Artemis body parts, or the NPC and the player when the NPC was
+built second. A general fix, keying node shaders by geometry for morph meshes in `webgpuSceneRenderer.js`, has been
+proposed to the WebGPU session.
+
+### Slice batches capped (WebGPU session's suggestion, 2026-11-23)
+
+A slice now takes at most 8 objects (was 16), and at most 2 kinds of object whose shaders are not built yet
+(`sliceObjectKind`: material type, textures and flags, attribute layout, object type, and the geometry itself for
+shape-key meshes, which matches the WebGPU session's morph node key). Before, a batch grown on already-built objects
+could run into several new shaders at once.
+
+Same method as above, one cold WebGPU load:
+
+| | Before | After |
+|---|---|---|
+| Sliced build duration | 43.5 s (early precompile 35.2 s) | 20.0 s (early precompile 17.0 s) |
+| Largest single compile slice | 1.78 s | 0.68 s |
+| 95th-percentile compile slice | 0.37 s | 0.14 s |
+| Main-thread blocks over 1 s / over 0.5 s during the build | 9 / 23 | 3 / 6 |
+| Longest block during the build | 3.2 s | 2.9 s (not a compile slice: other main-thread work in that window) |
+
+Afterwards the world was ready on WebGPU at 64 s from load, running at 46 frames per second, with no validation
+errors. Part of the shorter build may come from warmer caches, since this was the fourth load of the day on this origin.
