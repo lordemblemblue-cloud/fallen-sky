@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R107 — completed main-campaign voice and cinematic selection:** [The voices of those we remember](R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md). M11–M20 ten proposed performance packets and terrain deltas; R106–R107 cover 20/20 main IDs. Preserve distinct families, evidence/consent, M17/M18 reveal order, R98 encounter phases and R65 ending precedence. Next R108 optional dialogue differentiation. Draft, not recorded or built.
+
 > **R106 — opening voice and cinematic selection:** [Giving every character a voice](R106_M01-M10_VOICE_AND_CINEMATIC_SELECTION_PASS.md). M01–M10 primary and editorial sources checked; ten proposed performance packets, selection matrix and terrain deltas. Preserve deliberate M05 repetition/death and M10 physical overlap, avoid stacked alternatives. Voice QA 10/20; next M11–M20. Draft, not recorded or built.
 
 > **R105 — campaign pacing and regional content register:** [Making the world feel alive](R105_CAMPAIGN_PACING_AND_REGIONAL_CONTENT_REGISTER.md). Verified planning partition of 105 unique optional IDs into ten content families, eight campaign pacing bands and seven proposed connective scene packets. Not actual spatial density or new unlocks; survey and chronology pending. Next R106 voice/cinematic QA M01–M10. Draft only.
