@@ -40,6 +40,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M02 | The Broken Seal | [Expanded main quest](M02.md) | Ready for proposed blockout; unverified |
 | D19 | The Missing Emblem | [Expanded script](D19_S23.md) | Ready for proposed blockout; unverified |
 | S23 | Names in Stone | [Expanded optional quest and terrain brief](D19_S23.md) | Ready for proposed blockout; unverified |
+| M03 | The Fractured Beast | [Expanded main quest and boss specification](M03.md) | Ready for proposed blockout; unverified |
+| D20 | The Watchman's Lantern | [Expanded discovery](D20_S24.md) | Ready for proposed blockout; unverified |
+| S24 | The Night Watch's Debt | [Expanded optional quest and terrain brief](D20_S24.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -98,3 +101,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R22
 
 [M02](M02.md) preserves the Goddess's protective warning, lunar fragment and independently moving wolf shadow; full transformation and combat remain M03, older life stays hidden. [D19/S23](D19_S23.md) retains Hollow Mountain, paired emblem, personal chisel, inscription evidence and independent memorial worksite quest; missing text and cause of damage remain unresolved. 22/50 discoveries, 12/55 optional quests, 2/20 main quests expanded; all 75 outlines preserved. Master v1.8 R22 saved in Library, 1,932 prior paragraphs retained. Next M03 and D20/S24. D02/D03/D05/D06/M07 pending reconciliation; S13/S19 separate. Claude return surveyed anchors, actual layout, traversal and performance checks. Terrain unbuilt; no code, merge, deployment or credits.
+
+## Revision R23
+
+[M03](M03.md) adds the full first boss encounter, three proposed combat phases, barrier defense, accessible telegraphs, retries and transition to M04 without premature older-life reveal. [D20/S24](D20_S24.md) preserves the sanctuary pass, flame alignment, hidden lookout, spare lantern, Night-watch cloak, rusted token and independent guard relief quest with recovery intervals. 23/50 discoveries, 13/55 optional quests, 3/20 main quests expanded; all 75 outlines retained. Master v1.9 R23 saved to Library, 158 pages; all 2,024 previous paragraphs preserved and 149 prior page images byte-identical. Nine new pages reviewed at overview scale. Next M04 — The Forgotten War, D21 — The Gate of Water / S27 — Tameri's Water (catalog verified); S25/S26 remain separate. Pending D02/D03/D05/D06/M07 reconciliation; S13/S19 separate. Claude return surveyed anchors, encounter clearances, actual layout, traversal and performance checks. Terrain/combat unimplemented and unverified by this task; no code, merge, deployment or credits.
