@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R78 — second quest objective classification:** [D11–D20 / S11–S20](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md). 40/105 IDs provisionally classified. Preserve genuine S16 deliveries, S17 toy repair, S18 escorts, S19 two-lane completion and S13 authored notice reuse; exact phase gates and ending access remain unresolved.
+
 > **R77 — first quest objective classification:** [D01–D10 / S01–S10](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md). 20/105 IDs provisionally classified; persistent versus event-exclusive lanes, actual closure predicates and NG+ recovery. S06 has an authored post-M14 retrospective, not a replay of the live meeting. Exact phase gates and runtime access largely unresolved.
 
 > **R76E — NG+ enemy scaling and XP:** [Late-game opening baseline, escalating encounters and double enemy experience](R76E_NEW_GAME_PLUS_ENEMY_SCALING.md). Opening enemies approach original late-game strength, midpoint approaches original endgame, and late encounters escalate further. Enemy XP 2x; compare 1.5x–2x tuning candidates without compounding blindly. Exact stat curves and gold/material rewards remain open.
