@@ -635,6 +635,30 @@ function TreasureReveal({profile,discovery,loot,encounter,original,layout,onItem
   return <Panel rect={layout[0]}><h2>Treasure Discovered</h2><p>{verified?discovery.label:'Discovery result'}</p>{cards}<p>{description}</p>{controls}</Panel>;
 }
 
+// Acquired items are read-only and tied to the originating reward screen.
+function ItemAcquisition({profile,encounter,result,hud,discovery,loot,origin,original,layout,onInventory,onContinue}){
+  const battle=Boolean(profile&&origin==='14'&&encounter&&!encounter.practice&&result&&hud?.winner==='player');
+  const treasure=Boolean(profile&&origin==='31'&&!encounter&&discovery?.kind==='landmark'&&profile.rewardedDiscoveries.includes(discovery.id));
+  const earned=(battle?(result.loot||[]):treasure?loot:[]).filter(l=>Object.hasOwn(ITEMS,l.id)&&Number.isInteger(l.count)&&l.count>0);
+  const [selectedId,setSelectedId]=useState(null);
+  const selected=earned.find(l=>l.id===selectedId)||earned[0];
+  const item=selected?ITEMS[selected.id]:null;
+  const cards=earned.map(l=><Btn key={l.id} className="fa-acquisition-card" primary={selected?.id===l.id} aria-pressed={selected?.id===l.id} onClick={()=>setSelectedId(l.id)}><ItemArt id={l.id}/><strong>{ITEMS[l.id].name}</strong><span>+{l.count}</span></Btn>);
+  const details=item?<><div className="fa-acquisition-selected-icon"><ItemArt id={selected.id}/></div><div className="fa-acquisition-selected-name"><h3>{item.name}</h3><small>{item.kind}</small></div><div className="fa-acquisition-values"><p>Acquired: +{selected.count}</p><p>Currently owned: {profile.inventory[selected.id]||0}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}{item.sell>0&&<p>Sell value: {item.sell} gold</p>}</div></>:<p className="fa-acquisition-empty-detail">No recorded items to inspect.</p>;
+  const count=earned.reduce((sum,l)=>sum+l.count,0);
+  const source=battle?encounter.label:treasure?discovery.label:'No reward event';
+  const message=count?'Already added to inventory. No additional claim is required.':'No newly acquired items.';
+  const controls=<><Btn className="fa-acquisition-inventory" disabled={!profile||Boolean(encounter)} onClick={onInventory}>Inventory</Btn><Btn primary className="fa-acquisition-continue" onClick={onContinue}>Continue</Btn></>;
+  if(original)return <div className="fa-original-acquisition">
+    <h2 className="fa-acquisition-title">Items Acquired</h2>
+    <p className="fa-acquisition-source">{source}</p>
+    <section className="fa-acquisition-cards" aria-label="Acquired items">{cards}{!earned.length&&<p>No items awarded</p>}</section>
+    <section className="fa-acquisition-detail" aria-label="Selected item details">{details}<p className="fa-acquisition-detail-note">{message}</p></section>
+    <div className="fa-acquisition-count" role="status">{count} {count===1?'item':'items'} recorded</div>{controls}
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Items Acquired</h2><p>{source}</p></Panel><Panel rect={layout[1]}>{cards}{details}<p>{message}</p></Panel><Panel rect={layout[2]}>{controls}</Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -806,7 +830,6 @@ export default function SapphireAdventure(){
   const gearMembers=[{id:'hero',name:profile?.name||'Leader'},...ROSTER.filter(m=>memberFor(profile,m.id).recruited)];
   const wearer=gearMembers.some(m=>m.id===gearWearer)?gearWearer:'hero',worn=gearFor(profile,wearer),gearCompare=profile?gearComparison(profile,wearer,itemId):null;
   const listItems=(filter=()=>true)=>Object.entries(ITEMS).filter(([k,item])=>filter(item,k)).map(([k,item])=><Btn key={k} className="fa-item-row" primary={itemId===k} aria-pressed={itemId===k} onClick={()=>setItemId(k)}><ItemArt id={k}/><span className="fa-item-label"><strong>{item.name}</strong><small>{item.kind==='gear'?(item.slot==='armor'?'Armor':'Mantle'):item.kind==='weapon'?'Weapon':item.kind==='consumable'?'Consumable':'Material'}</small></span><span className="fa-item-count">×{inv[k]||0}</span></Btn>);
-  const lootList=loot.length?loot.map(l=><div className="fa-loot-row" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>;
   const validSlots=slots.slots.filter(s=>s.status==='valid');
   const selectedSave=validSlots.find(s=>s.id===selected);
   const statPanel=<StatRows stats={{Level:level,Experience:profile?profile.xp%100+' / 100':'—','Current HP':profile?.hp??'—','Maximum HP':stats.maxHp,Attack:stats.atk,Defense:stats.def,Speed:stats.spd,'Unspent points':profile?pointsFor(profile):0}}/>;
@@ -1006,7 +1029,7 @@ export default function SapphireAdventure(){
     case '35':content=pane(0,<><h2>{encounter?'Preparing the battleground…':'Loading the world…'}</h2><progress aria-label="Loading world"/><p>{encounter?'Waiting for the regional battleground and combat renderer.':'Waiting for the 3D renderer and saved world position.'}</p><Btn onClick={leaveTitle}>Cancel</Btn></>);break;
     case '36':content=<BossIntroduction key={candidate?.id||'none'} profile={profile} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onEnter={()=>{const s=current.current;if(s.profile&&s.running&&!s.encounter&&s.candidate&&s.candidate.id===candidate?.id&&s.id==='36')startBattle(s.candidate);}}/>;break;
     case '37':content=<>{pane(0,<h2>Local gameplay events</h2>)}{pane(1,<>{notifications.length?notifications.map((n,i)=><p key={n.time+'-'+i}>{n.message}</p>):<p>No notifications.</p>}</>)}{pane(2,<p>Notifications are generated by actual game events.</p>)}</>;break;
-    case '38':content=<>{pane(0,<><h2>Items Acquired</h2><PaintedIllustration name="item-acquired"/></>)}{pane(1,<>{lootList}<p>Already added to your inventory.</p></>)}{pane(2,<>{!encounter&&<Btn onClick={()=>go('06')}>Inventory</Btn>}<Btn primary onClick={back}>Continue</Btn></>)}</>;break;
+    case '38':content=<ItemAcquisition profile={profile} encounter={encounter} result={result} hud={hud} discovery={discovery} loot={loot} origin={stack[stack.length-2]} original={original} layout={screen.layout} onInventory={()=>{if(current.current.profile&&!current.current.encounter)go('06');}} onContinue={back}/>;break;
     case '39':content=<>{pane(0,listItems((item,k)=>item.kind==='weapon'&&inv[k]>0))}{pane(1,<><h2>Equipped</h2><p>{ITEMS[profile?.equipped]?.name}</p>{compare&&<StatRows stats={compare.current}/>}</>)}{pane(2,<><h2>Selected</h2><p>{selectedItem?.name}</p>{compare&&<StatRows stats={compare.candidate}/>}</>)}{pane(3,<><p>Attack difference: {compare?compare.candidate.atk-compare.current.atk:'—'}</p><Btn primary disabled={!compare||Boolean(encounter)} onClick={()=>{if(transact(p=>equipItem(p,itemId),'Weapon equipped'))back();}}>Equip</Btn></>)}</>;break;
     case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>{const f=pending?.action;setPending(null);back();f?.();}}>Confirm</Btn>,<Btn onClick={()=>{setPending(null);back();}}>Cancel</Btn>)}</>);break;
     case '41':content=pane(0,<p role="status">{saveStatus||'No save operation in progress.'}</p>);break;

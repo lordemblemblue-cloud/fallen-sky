@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','18','19','20','23','25','26','27','30','31','32','35','36','40','42','43','44','45','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','18','19','20','23','25','26','27','30','31','32','35','36','38','40','42','43','44','45','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -271,4 +271,15 @@ test('original treasure reveal only shows recorded discovery rewards',()=>{
  for(const forbidden of ['collectLoot(','rewardVictory(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
  assert.match(page,/case '31':content=<TreasureReveal/);
  assert.ok(page.includes('setLoot(awarded.loot)'));
+});
+
+test('original acquisition reads only the originating reward and never awards it again',()=>{
+ assert.equal(stagedOriginalFor('38').wideOnly,true);
+ assert.ok(templateUrl('38').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function ItemAcquisition('),page.indexOf('function SaveToast('));
+ for(const marker of ["origin==='14'","origin==='31'","hud?.winner==='player'","!encounter.practice","profile.rewardedDiscoveries.includes(discovery.id)","result.loot||[]","Object.hasOwn(ITEMS,l.id)","profile.inventory[selected.id]","No additional claim is required","disabled={!profile||Boolean(encounter)}"])assert.ok(section.includes(marker),marker);
+ for(const forbidden of ['collectLoot(','rewardVictory(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
+ assert.match(page,/case '38':content=<ItemAcquisition/);
+ assert.ok(page.includes('origin={stack[stack.length-2]}'));
 });
