@@ -304,7 +304,7 @@ test('original blacksmith previews only supported enhancement and rechecks confi
  const section=page.slice(page.indexOf('function BlacksmithShop('),page.indexOf('function SaveToast('));
  for(const marker of ['profile?.equipped','15+level*10','level<5','gold>=cost','ore>=1','disabled={!allowed}','onEnhance(id,level,cost)','Not available in this build','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '17':"));
- for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.equipped!==weapon','p.enhancements[weapon]!==level','enhanceWeapon(p)'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.equipped!==weapon','enhancementLevel(p,weapon)!==level','enhanceWeapon(p)'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original crafting uses the actual tonic recipe and guards its confirmation',()=>{
@@ -637,3 +637,31 @@ test('expanded gear respects party level, individual ownership and two-piece bon
  assert.equal(gearMetadata('__proto__'),null);
 });
 function baseWithGold(p){return {...p,gold:500};}
+
+import {WEAPONS,weaponEligible,enhancementLevel} from '../src/components/fantasybattle/core/weaponCatalog.mjs';
+import {equipItem as equipTestWeapon,enhanceWeapon as enhanceTestWeapon,comparison as testWeaponComparison} from '../src/components/fantasybattle/core/adventureState.mjs';
+test('expanded bows preserve old saves and independent enhancements with level and cost guards',()=>{
+ const legacy=newRoadProfile('Bow test');
+ assert.ok(isRoadProfile(legacy));assert.equal(enhancementLevel(legacy,'astralBow'),0);
+ const stock={...legacy,gold:1000,inventory:{...legacy.inventory,sapphireOre:10}};
+ const owned=testBuy(stock,'pilgrimBow');
+ assert.ok(isRoadProfile(owned));assert.equal(weaponEligible(owned,'pilgrimBow'),false);
+ assert.equal(testWeaponComparison(owned,'pilgrimBow'),null);
+ assert.throws(()=>equipTestWeapon(owned,'pilgrimBow'));
+ const ready={...owned,xp:100};
+ const equipped=equipTestWeapon(ready,'pilgrimBow');
+ assert.equal(testWeaponComparison(ready,'pilgrimBow').candidate.atk,testMemberStats(equipped,'hero').atk);
+ const upgraded=enhanceTestWeapon(equipped);
+ assert.equal(upgraded.gold,equipped.gold-15);assert.equal(upgraded.inventory.sapphireOre,equipped.inventory.sapphireOre-1);
+ assert.equal(enhancementLevel(upgraded,'pilgrimBow'),1);assert.equal(enhancementLevel(upgraded,'starterBow'),0);
+ assert.equal(testMemberStats(upgraded,'hero').atk,testMemberStats(equipped,'hero').atk+2);
+ assert.equal(enhancementLevel(equipTestWeapon(upgraded,'starterBow'),'pilgrimBow'),1);
+ assert.throws(()=>testSell(upgraded,'pilgrimBow'));
+ assert.ok(isRoadProfile(upgraded));assert.deepEqual(parseRoadBackup(exportRoadBackup(upgraded)).enhancements,upgraded.enhancements);
+ assert.equal(isRoadProfile({...upgraded,xp:0}),false);
+ assert.equal(isRoadProfile({...upgraded,enhancements:{...upgraded.enhancements,pilgrimBow:6}}),false);
+ assert.equal(isRoadProfile({...upgraded,enhancements:{...upgraded.enhancements,unknownBow:1}}),false);
+ let capped=upgraded;for(let i=1;i<5;i++)capped=enhanceTestWeapon(capped);
+ assert.equal(enhancementLevel(capped,'pilgrimBow'),5);assert.throws(()=>enhanceTestWeapon(capped));
+ assert.equal(WEAPONS.astralBow.requiredLevel,4);
+});
