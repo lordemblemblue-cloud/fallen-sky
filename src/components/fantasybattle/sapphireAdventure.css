@@ -768,3 +768,26 @@
 .fa-original-discovery .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:2px}
 .fa-original-discovery .fa-discovery-continue{left:23%;top:85.6%;width:28%;height:8%}
 .fa-original-discovery .fa-discovery-map{left:53%;top:85.6%;width:24%;height:8%;color:#142448;text-shadow:none}
+
+/* 13 — preserve alpha in the original NPC dialogue art to reveal the live world. */
+.fa-ui.page[data-staged-original="true"][data-screen="13"]{inset:50% auto auto 50%;width:min(100vw,177.68vh);height:min(100vh,56.28vw);transform:translate(-50%,-50%);overflow:hidden;background:linear-gradient(0deg,#080d1a62,transparent 52%)}
+.fa-ui[data-staged-original="true"][data-screen="13"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="13"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-dialogue{position:absolute;inset:0;pointer-events:none;color:#fff6df;font-size:clamp(10px,min(1.35vw,2.4vh),20px);text-shadow:0 1px 3px #081329}
+.fa-original-dialogue h2,.fa-original-dialogue h3,.fa-original-dialogue p{margin:.12em 0}
+.fa-dialogue-title{position:absolute;left:3%;top:12.2%;width:18%;height:4.8%;display:grid;place-items:center;text-align:center;font-size:1.6em;font-variant:small-caps}
+.fa-dialogue-subtitle{position:absolute;left:4.5%;top:17.4%;width:15.6%;height:2.8%;display:grid;place-items:center;text-align:center;font-size:.72em}
+.fa-dialogue-nav{position:absolute;left:3.6%;top:25.7%;width:17.5%;height:33.8%;display:grid;grid-template-rows:repeat(5,minmax(0,1fr));gap:4.4%}
+.fa-original-dialogue .fa-button{pointer-events:auto;min-height:0;min-width:0;border:0;box-shadow:none;background:transparent;color:inherit;font:inherit;padding:.12em .3em;line-height:1.1;border-radius:15px}
+.fa-original-dialogue .fa-button:hover:not(:disabled),.fa-original-dialogue .fa-button[aria-pressed=true]{background:#193d8290;box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-dialogue .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:1px}
+.fa-original-dialogue .fa-button:disabled{opacity:.55;cursor:not-allowed}
+.fa-dialogue-nav .fa-button{padding-left:24%;font-size:.9em}
+.fa-dialogue-location{position:absolute;left:87.4%;top:2.4%;width:10.6%;height:5.2%;display:grid;place-items:center;text-align:center;font-size:.76em;overflow-wrap:anywhere}
+.fa-dialogue-speaker{position:absolute;left:30.7%;top:51.2%;width:14.1%;height:6.4%;display:grid;place-items:center;text-align:center;font-size:.98em;overflow-wrap:anywhere}
+.fa-dialogue-message{position:absolute;left:30.5%;top:59.3%;width:55%;height:10.7%;overflow:auto;pointer-events:auto;padding:.4em .5em;font-size:1em;line-height:1.25}
+.fa-dialogue-options{position:absolute;left:31%;top:70.7%;width:50.8%;height:18.8%;display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:4.7%}
+.fa-original-dialogue .fa-dialogue-options .fa-button{padding-left:12%;text-align:left;justify-content:flex-start;white-space:normal}
+.fa-dialogue-fallback-nav,.fa-dialogue-fallback-options{display:flex;flex-wrap:wrap;gap:.35em}
+.fa-ui[data-screen="13"]:not([data-staged-original="true"]) .fa-panel{height:auto;max-height:65%;overflow:auto}
+@media(max-aspect-ratio:4/3){.fa-ui[data-screen="13"]:not([data-staged-original="true"]) .fa-panel{max-height:none}}

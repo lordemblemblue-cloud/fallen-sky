@@ -404,6 +404,28 @@ function RegionDiscovery({discovery,world,profile,original,layout,onContinue,onM
   return <><Panel rect={layout[0]}><h2>{heading}</h2><RegionMap world={world} profile={profile} small/></Panel><Panel rect={layout[1]}><h3>{label}</h3>{info}{controls}</Panel></>;
 }
 
+// The original transparent conversation plate frames the actual world.
+ // Service labels and availability come from the current world interaction.
+function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,back}){
+  const [group,setGroup]=useState('services');
+  const available=Boolean(profile&&serviceAvailable);
+  const questAvailable=profile?.quests.grove==='available';
+  const options=group==='services'?[['16','Merchant',true],['17','Blacksmith',true],['22','Crafting',true]]:[['33','Rest and recover',true],['43','View quest offer',questAvailable],['26','Companion recruitment',true]];
+  const choices=options.map(([id,label,enabled])=><Btn key={id} disabled={!available||!enabled} onClick={()=>go(id)}>{label}{id==='43'&&!questAvailable?' · Unavailable':''}</Btn>);
+  const navigation=<><Btn primary={group==='services'} aria-pressed={group==='services'} onClick={()=>setGroup('services')}>Services</Btn><Btn primary={group==='preparation'} aria-pressed={group==='preparation'} onClick={()=>setGroup('preparation')}>Preparation</Btn><Btn disabled={!profile} onClick={()=>go('30')}>Relationships</Btn><Btn disabled={!profile} onClick={()=>go('08')}>Quest journal</Btn><Btn onClick={back}>Leave</Btn></>;
+  const message=!available?'Approach a gold service marker in the world to interact.':group==='services'?'Choose a service to trade, enhance equipment or craft supplies.':'Rest, review available quests or recruit companions before your next encounter.';
+  if(original)return <div className="fa-original-dialogue">
+    <h2 className="fa-dialogue-title">Conversation</h2>
+    <div className="fa-dialogue-subtitle">World interaction</div>
+    <nav className="fa-dialogue-nav" aria-label="Conversation navigation">{navigation}</nav>
+    <div className="fa-dialogue-location">{world?.region||'World not loaded'}</div>
+    <h3 className="fa-dialogue-speaker">{service?.label||'World interaction'}</h3>
+    <section className="fa-dialogue-message" aria-live="polite"><p>{message}</p></section>
+    <section className="fa-dialogue-options" aria-label="Available interaction choices">{choices}</section>
+  </div>;
+  return <Panel rect={layout[0]}><h2>{service?.label||'World interaction'}</h2><p>{world?.region||'World not loaded'}</p><p>{message}</p><div className="fa-dialogue-fallback-nav">{navigation}</div><div className="fa-dialogue-fallback-options">{choices}</div></Panel>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -755,7 +777,7 @@ export default function SapphireAdventure(){
       <Btn className="fa-painted-button fa-save-encrypted" disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Encrypted</Btn>
       <Btn className="fa-painted-button fa-save-back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
     </div>:<>{pane(0,<><h2>Save</h2><p>Save your current exploration position.</p></>)}{pane(1,<>{SLOT_IDS.map(s=>{const r=slots.slots.find(x=>x.id===s);return <Btn key={s} onClick={()=>setSelected(s)} primary={selected===s}>Slot {s} · {r?.status==='valid'?r.profile.name:r?'Damaged':'Empty'}</Btn>;})}</>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}{encounter&&<p>Manual saves are disabled during combat.</p>}</>)}</>;break;
-    case '13':content=pane(0,<><h2>{service?.label||'World interaction'}</h2><p>{serviceAvailable?'Rest, trade or prepare for the next encounter.':'Approach a gold service marker in the world.'}</p>{serviceAvailable&&nav(['16','17','22','33','43','26'])}<Btn onClick={back}>Leave</Btn></>);break;
+    case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '16':content=<>{pane(0,<><h2>Merchant</h2><p>Gold: {profile?.gold||0}</p>{!serviceAvailable&&<p>Visit a service marker to trade.</p>}</>)}{pane(1,listItems((item)=>item.buy>0))}{pane(2,<><h2>{selectedItem?.name}</h2><p>Buy: {selectedItem?.buy||0} gold · Sell: {selectedItem?.sell||0} gold</p>{selectedItem?.kind==='gear'&&<><ItemArt id={itemId}/><StatRows stats={{Attack:selectedItem.atk,Defense:selectedItem.def,Speed:selectedItem.spd}}/><p>Equipped copies: {gearCount(profile,itemId)}</p></>}<Btn disabled={!serviceAvailable||!selectedItem?.buy||profile.gold<selectedItem.buy} onClick={()=>requestConfirm('Buy '+selectedItem.name+'?',()=>transact(p=>buyItem(p,itemId),'Item purchased'))}>Buy</Btn><Btn disabled={!serviceAvailable||!selectedItem?.sell||!inv[itemId]||(selectedItem.kind==='gear'&&inv[itemId]<=gearCount(profile,itemId))||(profile?.equipped===itemId&&inv[itemId]===1)} onClick={()=>requestConfirm('Sell '+selectedItem.name+'?',()=>transact(p=>sellItem(p,itemId),'Item sold'))}>Sell</Btn></>)}</>;break;
     case '17':content=<>{pane(0,<><h2>Blacksmith</h2><p>Gold: {profile?.gold||0} · Ore: {inv.sapphireOre||0}</p>{!serviceAvailable&&<p>Visit a service marker.</p>}</>)}{pane(1,<><h2>{ITEMS[profile?.equipped]?.name}</h2><p>Enhancement +{profile?.enhancements?.[profile?.equipped]||0} / 5</p><p>Cost: {15+(profile?.enhancements?.[profile?.equipped]||0)*10} gold and 1 ore.</p></>)}{pane(2,<><p>Attack after enhancement: {stats.atk+2}</p><Btn disabled={!serviceAvailable||!inv.sapphireOre||(profile?.enhancements?.[profile?.equipped]||0)>=5} onClick={()=>requestConfirm('Enhance equipped bow?',()=>transact(enhanceWeapon,'Weapon enhanced'))}>Enhance</Btn></>)}</>;break;
     case '21':content=<>{pane(0,nav(['06','22']))}{pane(1,listItems((item,k)=>item.kind!=='weapon'&&inv[k]>0))}{pane(2,<><h2>{selectedItem?.name}</h2><p>Owned: {inv[itemId]||0}</p>{itemId==='recoveryTonic'&&<Btn disabled={!inv.recoveryTonic||Boolean(encounter)} onClick={()=>go('46')}>Use Tonic</Btn>}</>)}</>;break;
