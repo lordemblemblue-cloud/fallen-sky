@@ -46,3 +46,19 @@ test('boss party formation and legal deterministic tactics',()=>{
  assert.equal(B.chooseAiAction(b,'rival','boss'),'chargedShot');assert.ok(tacticFor('boss').includes('Radiant Shot'));
  assert.equal(enemyFormation({category:'Normal'},1).length,1);
 });
+
+import {MELEE_SKILLS,approachWeight} from '../src/components/fantasybattle/core/meleeSkills.mjs';
+import {validateSkill,SkillPlayer} from '../src/components/fantasybattle/core/skillTimeline.mjs';
+test('weapon kits restrict actions and preserve legacy archers',()=>{
+ const stat={maxHp:200,atk:12,def:10,spd:11}; const units=[{...stat,id:'tank',team:'player',combatClass:'warden'},{...stat,id:'scout',team:'player',combatClass:'scout'},{...stat,id:'rival',team:'enemy'}];const b=B.createBattle({seed:2,units});
+ assert.deepEqual(B.legalActions(b,'tank').map(a=>a.id),B.CLASS_KITS.warden);assert.ok(!B.isLegal(b,'tank','quickShot'));assert.ok(!B.isLegal(b,'scout','swordSlash'));assert.ok(B.isLegal(b,'rival','quickShot'));assert.throws(()=>B.resolveRound(b,{tank:'quickShot',scout:'guard',rival:'guard'}));
+ const choices={tank:'swordSlash',scout:'daggerFlurry',rival:'quickShot'};const next=B.resolveRound(b,choices);assert.deepEqual(next,B.resolveRound(b,choices));assert.equal(next.round.steps.find(s=>s.actor==='scout').hits.length,3);assert.equal(B.unitById(next.battle,'tank').focus,2);
+});
+test('bulwark mitigates more damage than the normal guard and resets each round',()=>{
+ const u={maxHp:300,atk:12,def:10,spd:11};const rival={...u,id:'rival',team:'enemy'};const base={...u,id:'tank',team:'player'};
+ const a=B.resolveRound(B.createBattle({seed:2,units:[{...base,combatClass:'warden'},rival]}),{tank:'bulwark',rival:'quickShot'});const b=B.resolveRound(B.createBattle({seed:2,units:[base,rival]}),{tank:'guard',rival:'quickShot'});
+ assert.ok(B.unitById(a.battle,'tank').hp>B.unitById(b.battle,'tank').hp);assert.equal(B.unitById(a.battle,'tank').guarding,false);assert.equal(B.unitById(a.battle,'tank').guardFactor,undefined);
+});
+test('melee animation timelines have exactly one impact per potential hit and no projectiles',()=>{
+ for(const s of MELEE_SKILLS){assert.ok(validateSkill(s).ok);assert.equal(s.events.filter(e=>e.effect==='meleeImpact').length,B.ACTIONS[s.id].hits);assert.ok(!s.events.some(e=>e.type==='spawnArrow'));const player=new SkillPlayer([s]);player.play(s.id);const fired=player.update(s.totalDuration+1).events;assert.equal(fired.length,B.ACTIONS[s.id].hits);assert.equal(player.current,null);assert.equal(approachWeight(0,s.totalDuration),0);assert.equal(approachWeight(s.totalDuration,s.totalDuration),0);}
+});

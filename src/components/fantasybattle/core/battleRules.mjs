@@ -17,10 +17,23 @@ export const ACTIONS = Object.freeze({
     summary: 'Heavy hit. Acts last. Costs 2 Focus.' }),
   volley: Object.freeze({ id: 'volley', name: 'Triple Volley', skill: 'volley', hotkey: '3', kind: 'attack', power: 11, hits: 3, accuracy: 0.8, critChance: 0.08, priority: 0, focusCost: 1, focusGain: 0,
     summary: 'Three arrows, each rolls to hit. Costs 1 Focus.' }),
+  swordSlash: Object.freeze({id:'swordSlash',name:'Silver Cleave',skill:'swordSlash',hotkey:'1',kind:'attack',power:17,hits:1,accuracy:0.96,critChance:0.08,priority:1,focusCost:0,focusGain:1,summary:'A reliable sword strike. +1 Focus.'}),
+  shieldBash: Object.freeze({id:'shieldBash',name:'Shield Bash',skill:'shieldBash',hotkey:'2',kind:'attack',power:29,hits:1,accuracy:0.95,critChance:0.08,priority:2,focusCost:2,focusGain:0,summary:'An early shield strike. Costs 2 Focus.'}),
+  swordFlurry: Object.freeze({id:'swordFlurry',name:'Twin Cleave',skill:'swordFlurry',hotkey:'3',kind:'attack',power:11,hits:2,accuracy:0.9,critChance:0.1,priority:0,focusCost:1,focusGain:0,summary:'Two sword strikes. Costs 1 Focus.'}),
+  daggerJab: Object.freeze({id:'daggerJab',name:'Mist Jab',skill:'daggerJab',hotkey:'1',kind:'attack',power:14,hits:1,accuracy:0.96,critChance:0.16,priority:2,focusCost:0,focusGain:1,summary:'A quick dagger strike. +1 Focus.'}),
+  daggerLunge: Object.freeze({id:'daggerLunge',name:'Veil Lunge',skill:'daggerLunge',hotkey:'2',kind:'attack',power:34,hits:1,accuracy:0.88,critChance:0.28,priority:0,focusCost:2,focusGain:0,summary:'A precise high-critical strike. Costs 2 Focus.'}),
+  daggerFlurry: Object.freeze({id:'daggerFlurry',name:'Mist Flurry',skill:'daggerFlurry',hotkey:'3',kind:'attack',power:9,hits:3,accuracy:0.86,critChance:0.14,priority:1,focusCost:1,focusGain:0,summary:'Three independent dagger hits. Costs 1 Focus.'}),
+  bulwark: Object.freeze({id:'bulwark',name:'Bulwark',skill:'guard',hotkey:'4',kind:'guard',priority:3,focusCost:0,focusGain:2,guardFactor:0.3,summary:'Reduces damage taken by 70% this round. +2 Focus.'}),
   guard: Object.freeze({ id: 'guard', name: 'Guard', skill: 'guard', hotkey: '4', kind: 'guard', priority: 3, focusCost: 0, focusGain: 2, guardFactor: 0.5,
     summary: 'Acts first. Halves damage this round. +2 Focus.' }),
 });
 export const ACTION_ORDER = Object.freeze(['quickShot', 'chargedShot', 'volley', 'guard']);
+export const CLASS_KITS=Object.freeze({
+  archer:ACTION_ORDER,
+  warden:Object.freeze(['swordSlash','shieldBash','swordFlurry','bulwark']),
+  scout:Object.freeze(['daggerJab','daggerLunge','daggerFlurry','guard'])
+});
+export const actionsForClass=id=>Object.hasOwn(CLASS_KITS,id)?CLASS_KITS[id]:ACTION_ORDER;
 
 /** mulberry32 step on an explicit state: returns [value in [0, 1), next state]. */
 export function rngNext(state) {
@@ -46,7 +59,7 @@ export function createBattle({ seed = 1, units } = {}) {
     ids.add(u.id);
     for (const key of ['maxHp', 'atk', 'def', 'spd']) if (!(Number(u[key]) > 0)) throw new Error(`unit ${u.id}: ${key} must be > 0`);
     return { id: u.id, name: u.name || u.id, team: u.team, maxHp: u.maxHp, hp: u.hp ?? u.maxHp, atk: u.atk, def: u.def, spd: u.spd,
-      focus: Math.min(MAX_FOCUS, u.focus ?? 1), guarding: false, ko: false };
+      focus: Math.min(MAX_FOCUS, u.focus ?? 1), actions: Array.isArray(u.actions)?actionsForClass(u.combatClass).filter(id=>u.actions.includes(id)):[...actionsForClass(u.combatClass)], guarding: false, ko: false };
   });
   if (new Set(list.map((u) => u.team)).size < 2) throw new Error('a battle needs two teams');
   return { round: 1, rng: (seed >>> 0) || 1, units: list, phase: 'choose', winner: null, history: [] };
@@ -64,7 +77,7 @@ export function opponentsOf(battle, id) {
 /** Every action with whether this unit may take it now. */
 export function legalActions(battle, unitId) {
   const unit = unitById(battle, unitId);
-  return ACTION_ORDER.map((id) => {
+  return (unit?.actions || ACTION_ORDER).map((id) => {
     const a = ACTIONS[id];
     let reason = null;
     if (!unit || unit.ko) reason = 'down';
@@ -106,6 +119,7 @@ export function chooseAiAction(battle, unitId, strategy='balanced') {
   const unit = unitById(battle, unitId);
   const r = rngNext((battle.rng ^ 0x9e3779b9 ^ (battle.round * 7919)) >>> 0)[0];
   const legal = new Set(legalActions(battle, unitId).filter((a) => a.enabled).map((a) => a.id));
+  if (!legal.has('quickShot')) { const kit=unit.actions||ACTION_ORDER; return kit.find(id=>legal.has(id)&&ACTIONS[id].focusCost>0)||kit.find(id=>legal.has(id)); }
   const hurt = unit.hp / unit.maxHp < 0.35;
   if(strategy==='boss'){if(battle.round%3===1&&legal.has('guard'))return 'guard';if(legal.has('chargedShot'))return 'chargedShot';return 'quickShot';}
   if(strategy==='warden'){if(battle.round%2===1&&legal.has('guard'))return 'guard';if(legal.has('volley'))return 'volley';return 'quickShot';}
@@ -147,6 +161,7 @@ export function resolveRound(battle, choices) {
     const step = { actor: actorId, action: action.id, target: target.id, hits: [] };
     if (action.kind === 'guard') {
       actor.guarding = true;
+      actor.guardFactor = action.guardFactor;
     } else {
       for (let i = 0; i < action.hits; i += 1) {
         if (target.ko) break;
@@ -154,7 +169,7 @@ export function resolveRound(battle, choices) {
         const crit = hit && roller.next() < action.critChance;
         const variance = roller.next();
         const hpBefore = target.hp;
-        const damage = hit ? computeDamage({ power: action.power, atk: actor.atk, def: target.def, variance, crit, guarded: target.guarding, guardFactor: ACTIONS.guard.guardFactor }) : 0;
+        const damage = hit ? computeDamage({ power: action.power, atk: actor.atk, def: target.def, variance, crit, guarded: target.guarding, guardFactor: target.guardFactor ?? ACTIONS.guard.guardFactor }) : 0;
         target.hp = Math.max(0, target.hp - damage);
         if (target.hp === 0) target.ko = true;
         step.hits.push({ index: i, hit, crit, damage, guarded: hit && target.guarding, hpBefore, hpAfter: target.hp, ko: target.ko });
@@ -164,7 +179,7 @@ export function resolveRound(battle, choices) {
     step.focus = [focusBefore, actor.focus];
     steps.push(step);
   }
-  for (const u of next.units) u.guarding = false;
+  for (const u of next.units) { u.guarding = false; delete u.guardFactor; }
   next.rng = roller.state;
   const teamsStanding = new Set(next.units.filter((u) => !u.ko).map((u) => u.team));
   if (teamsStanding.size <= 1) {

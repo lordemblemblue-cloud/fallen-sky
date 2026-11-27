@@ -24,8 +24,8 @@ export function selectAppearance(p,id){
 export const COMPANION=Object.freeze({id:'groveArcher',name:'Grove Archer',tint:0x9fe8ce,role:'Archer',maxHp:85,atk:9,def:9,spd:9,requiredEncounter:'wilds_grove_01'});
 export const ROSTER=Object.freeze([
  COMPANION,
- Object.freeze({id:'pilgrimWarden',name:'Pilgrim Warden',role:'Defensive archer',tint:0xf1d4a0,maxHp:135,atk:8,def:16,spd:7,requiredEncounter:'wilds_pilgrimage_02'}),
- Object.freeze({id:'mistScout',name:'Mist Scout',role:'Swift archer',tint:0xc7a8fa,maxHp:75,atk:11,def:8,spd:16,requiredEncounter:'wilds_waterfall_01'})
+ Object.freeze({id:'pilgrimWarden',name:'Pilgrim Warden',role:'Sword & shield tank',combatClass:'warden',tint:0xf1d4a0,maxHp:135,atk:8,def:16,spd:7,requiredEncounter:'wilds_pilgrimage_02'}),
+ Object.freeze({id:'mistScout',name:'Mist Scout',role:'Dual dagger skirmisher',combatClass:'scout',tint:0xc7a8fa,maxHp:75,atk:11,def:8,spd:16,requiredEncounter:'wilds_waterfall_01'})
 ]);
 const blankMember=m=>({recruited:false,active:false,hp:m.maxHp,bond:0});
 export const partyFor=p=>p?.party||{...blankMember(COMPANION),front:'hero'};

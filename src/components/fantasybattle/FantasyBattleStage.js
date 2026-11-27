@@ -15,6 +15,7 @@
 import * as THREE from 'three';
 import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady } from '@/lib/webgpuSceneRenderer.js';
 import { buildRig, createPuppetState, stepPuppet, socketPosition, setLookTarget as lookAt, triggerExpression as expressionOf } from './core/puppetCore.mjs';
+import { MELEE_SKILLS, isMeleeSkill, approachWeight } from './core/meleeSkills.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
 import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, unitById, computeDamage } from './core/battleRules.mjs';
 import { PuppetView, loadTextures, prepareTexture } from './render/puppetView.js';
@@ -40,18 +41,19 @@ function normalizeSkills(data) {
 }
 
 export class Fighter {
-  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase }) {
+  constructor(stage, { id, name, rig, textures, arrowTexture, tint, x, y=0, scale=1, facing, seed, renderBase, combatClass }) {
     this.stage = stage;
     this.id = id;
     this.name = name;
     this.rig = rig;
     this.x = x;
     this.y = y;
+    this.homeX=x;this.homeY=y;this.combatClass=combatClass;
     this.scale = scale;
     this.facing = facing;
     this.state = createPuppetState(rig, { seed });
-    this.skills = new SkillPlayer(skillDoc.skills);
-    this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase });
+    this.skills = new SkillPlayer(combatClass?[...skillDoc.skills,...MELEE_SKILLS]:skillDoc.skills);
+    this.view = new PuppetView({ rig, textures, arrowTexture, tint, renderBase, combatClass });
     this.view.group.position.set(x, y, 0);
     this.view.group.scale.set(facing*scale, scale, 1);
     this.lookWorld = null;
@@ -93,6 +95,14 @@ export class Fighter {
       lookAt(this.state.life, (target[0] - head[0]) / range, (target[1] - (head[1] - 50)) / range);
     }
     const out = this.skills.update(dt);
+    const run=this.skills.current;
+    const target=run?.options?.target;
+    if(target&&isMeleeSkill(run.id)){
+      const w=approachWeight(run.t,run.compiled.totalDuration);
+      this.x=this.homeX+(target.homeX-this.facing*125-this.homeX)*w;
+      this.y=this.homeY+(target.homeY-this.homeY)*w;
+    }else{this.x=this.homeX;this.y=this.homeY;}
+    this.view.group.position.set(this.x,this.y,0);
     stepPuppet(this.rig, this.state, dt, this.skills.evaluate());
     this.view.flash = Math.max(0, this.view.flash - dt * 3.5);
     this.view.update(this.state);
@@ -190,7 +200,7 @@ export class FantasyBattleStage {
       const ally=u.team==='player', group=ally?allies:enemies, idx=group.findIndex(a=>a.id===u.id), sign=ally?-1:1;
       const x=sign*(group.length===1?430:compact?220+(idx%2)*330:210+idx*390);
       const y=compact&&idx>=2?185:0;
-      return [u.id,new Fighter(this,{id:u.id,name:u.name,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
+      return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,rig:this.rig,textures:this.textures,arrowTexture,tint:u.tint??(ally?0xffffff:0xb9a6e8),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
     }));
     for (const f of Object.values(this.fighters)) {
       const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
@@ -309,7 +319,14 @@ export class FantasyBattleStage {
       case 'onHitFrame': e.run.hitWindowEnd = e.time + (e.activeFor ?? 0.8); break;
       case 'expression': fighter.triggerExpression(e.name, e.hold ?? 0.8); break;
       case 'spawnEffect':
-        if (e.effect === 'ward') {
+        if (e.effect === 'meleeImpact') {
+          const target=e.run.options?.target;
+          const result=e.run.options?.hits?.shift();
+          if(!target||!result)break;
+          const hb=target.hurtbox();
+          if(result.hit)this.arrowLanded(fighter,target,{result,head:[hb.x,hb.y],impact:{shake:e.heavy?5:2,hitStop:e.heavy?0.09:0.035}},e.run);
+          else this.number(hb.x,hb.y+40,'MISS','miss');
+        } else if (e.effect === 'ward') {
           this.fx.ward(fighter.id, fighter.x, fighter.hurtbox().y + 10, fighter.facing);
           if (!(this.roundGuards?.has(fighter.id))) this.wait(e.duration ?? 0.9).then(() => this.fx.clearWard(fighter.id));
         }
@@ -520,7 +537,7 @@ export class FantasyBattleStage {
   }
 
   async playRound(round) {
-    this.roundGuards = new Set(round.steps.filter((s) => s.action === 'guard' && !s.skipped).map((s) => s.actor));
+    this.roundGuards = new Set(round.steps.filter((s) => ACTIONS[s.action].kind === 'guard' && !s.skipped).map((s) => s.actor));
     for (const step of round.steps) {
       if (this.disposed) return;
       this.activeActor = step.actor;
@@ -532,6 +549,8 @@ export class FantasyBattleStage {
       const hits = step.hits.filter((h) => h.hit).length;
       if (ACTIONS[step.action].kind === 'attack') this.log(`${actor.name}: ${ACTIONS[step.action].name}, ${hits}/${step.hits.length} hit${step.hits.length > 1 ? 's' : ''}.`);
       else this.log(`${actor.name} guards.`);
+      // A previously hit actor may still be in hit-react recovery; start the committed action now.
+      actor.skills.stop();
       actor.playSkill(ACTIONS[step.action].skill, null, { hits: step.hits.map((h) => ({ ...h })), target, step });
       const run = actor.skills.current;
       await this.waitUntil(() => actor.skills.current !== run && !this.fx.arrows.some((a) => a.meta?.run === run));
@@ -561,7 +580,7 @@ export class FantasyBattleStage {
   /** Keys 1-3 (bow skills) and 4/G (guard): choose in battle, play in practice. */
   handleKey(key) {
     const k = key.toLowerCase() === 'g' ? '4' : key;
-    const action = ACTION_ORDER.find((id) => ACTIONS[id].hotkey === k);
+    const action = this.mode==='battle'?this.legal().find(a=>a.action.hotkey===k&&a.enabled)?.id:ACTION_ORDER.find((id) => ACTIONS[id].hotkey === k);
     if (!action) return false;
     if (this.mode === 'battle') this.chooseAction(action);
     else this.practice(ACTIONS[action].skill);

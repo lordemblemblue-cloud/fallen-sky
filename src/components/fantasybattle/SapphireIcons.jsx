@@ -8,6 +8,13 @@ const paths={
  quickShot:<><path d="M7 44L51 11l-5 15 10-2-14 13" fill="none" stroke="#d4faff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/><path d="M9 32l22-18M16 48l19-13" stroke="#448ce0" strokeWidth="3" strokeLinecap="round"/></>,
  chargedShot:<><circle cx="32" cy="32" r="23" fill="none" stroke="#78c9ed" strokeWidth="2"/><path d="M10 49L53 10l-4 16 10-3-15 16" stroke="#fff1c4" strokeWidth="3" fill="none"/><path d="M32 8l3 13 12-4-10 10 10 8-13-3-4 14-2-14-13 3 10-9-9-10 12 4Z" fill="url(#gem)"/></>,
  volley:<>{[0,1,2].map((i)=><path key={i} d={'M'+(8+i*9)+' '+(41+i*6)+' L'+(43+i*5)+' '+(10+i*9)+' l-2 11 9-3'} stroke={i===1?'#fff0c4':'#a5e7ff'} strokeWidth="2.7" fill="none" strokeLinecap="round" strokeLinejoin="round"/>)}</>,
+  swordSlash:<><path d="M13 52L45 10l9-3-1 10-32 39z" fill="#a5e7ff" stroke="#eacb8f"/><path d="M12 40l14 12M10 57l8-9" stroke="#eacb8f" strokeWidth="4"/></>,
+  shieldBash:<><path d="M12 12l26-5 15 12-5 25-23 13L12 40z" fill="#2859b8" stroke="#eacb8f" strokeWidth="3"/><path d="M25 22h27m-9-8 12 8-12 8" fill="none" stroke="#fff1c4" strokeWidth="3"/></>,
+  swordFlurry:<><path d="M6 52L48 8l-5 18M18 57L57 17l-3 18" fill="none" stroke="#c5f2ff" strokeWidth="5"/></>,
+  daggerJab:<><path d="M12 48l22-34 21-7-8 21-31 25z" fill="#d1b5ff" stroke="#fff1c4"/><path d="M10 41l14 12" stroke="#eacb8f" strokeWidth="4"/></>,
+  daggerLunge:<><path d="M8 49L53 9l-8 23-26 21z" fill="#d1b5ff" stroke="#fff1c4"/><path d="M8 35l18-17M26 55l17-12" stroke="#a28de4" strokeWidth="3"/></>,
+  daggerFlurry:<>{[0,1,2].map(i=><path key={i} d={'M'+(7+i*8)+' '+(43+i*5)+'l28-30 10-4-4 11-28 29z'} fill="#d1b5ff" stroke="#fff1c4"/>)}</>,
+  bulwark:<><path d="M32 5L56 15v20Q53 49 32 59 11 49 8 35V15Z" fill="#2859b8" stroke="#eacb8f" strokeWidth="3"/><path d="M32 12v39M15 25h34" stroke="#fff1c4" strokeWidth="4"/></>,
  guard:<><path d="M32 6l22 9v19q0 14-22 24Q10 48 10 34V15Z" fill="url(#gem)" stroke="#eacb8f" strokeWidth="2.5"/><path d="M32 14l12 7v13q0 9-12 17-12-8-12-17V21z" stroke="#cbf7ff" strokeWidth="1.5" fill="none"/><path d="M32 22l4 10-4 10-4-10z" fill="#fff1c4"/></>
 };
 import {useId} from 'react';

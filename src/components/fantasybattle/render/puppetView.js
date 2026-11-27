@@ -48,8 +48,9 @@ export class PuppetView {
    * @param {number} [o.tint]     colour multiplied into every layer (the rival's shade)
    * @param {number} [o.renderBase]
    */
-  constructor({ rig, textures, arrowTexture, tint = 0xffffff, renderBase = 100 }) {
+  constructor({ rig, textures, arrowTexture, tint = 0xffffff, renderBase = 100, combatClass }) {
     this.rig = rig;
+    this.combatClass=combatClass;
     this.textures = textures;
     this.renderBase = renderBase;
     this.group = new THREE.Group();
@@ -86,6 +87,14 @@ export class PuppetView {
     this.debug = { wireframe: false, pivots: false };
     this.wire = null;
     this.pivots = null;
+    this.meleeWeapons=[];
+    if(combatClass==='warden'||combatClass==='scout'){
+      const make=(points,color,socket)=>{const shape=new THREE.Shape();points.forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));shape.closePath();const mesh=new THREE.Mesh(new THREE.ShapeGeometry(shape),new THREE.MeshBasicMaterial({color,side:THREE.DoubleSide,transparent:true,depthTest:false,depthWrite:false}));mesh.renderOrder=renderBase+80;this.group.add(mesh);this.meleeWeapons.push({mesh,socket});};
+      if(combatClass==='warden'){
+        make([[-11,-26],[11,-26],[11,5],[31,5],[31,15],[10,15],[15,150],[0,184],[-15,150],[-10,15],[-31,15],[-31,5],[-11,5]],0xdcefff,'bowGrip');
+        make([[-42,55],[42,55],[38,-18],[0,-55],[-38,-18]],0x9d804f,'nock');
+      }else{for(const socket of ['bowGrip','nock'])make([[-8,-20],[8,-20],[8,0],[19,0],[19,7],[9,7],[12,72],[0,102],[-12,72],[-9,7],[-19,7],[-19,0],[-8,0]],0xd8c7ff,socket);}
+    }
     this.layerIds = Object.fromEntries(rig.layers.map((l) => [l.id, l.index]));
   }
 
@@ -141,12 +150,17 @@ export class PuppetView {
       if (layer.role === 'face') map = this.overrides.get(layer.id) || this.textures.get(face.face) || map;
       else if (layer.role === 'faceFade') { map = face.fadeFrom ? this.textures.get(face.fadeFrom) : null; opacity = face.fadeOpacity; }
       else if (layer.role === 'blink') opacity = face.blink;
-      mesh.visible = !!map && opacity > 0.003;
+      mesh.visible = !!map && opacity > 0.003 && !(this.meleeWeapons.length&&['bow','quiver'].includes(layer.id));
       if (material.map !== map) { material.map = map; material.needsUpdate = true; }
       material.opacity = opacity * this.opacity;
       material.color.copy(this._color);
     }
-    this.updateString(state, rank);
+    if(this.meleeWeapons.length){
+      this.string.visible=false;this.arrow.visible=false;this.lastArrow=null;
+      for(const [i,{mesh,socket}] of this.meleeWeapons.entries()){
+        const [x,y]=socketPosition(rig,state,socket);mesh.position.set(x,y,0);mesh.rotation.z=this.combatClass==='warden'&&i===1?0:((state.params.meleeAngle??-35)+(i===1?22:0))*Math.PI/180;mesh.material.opacity=this.opacity;
+      }
+    }else this.updateString(state, rank);
     if (this.debug.wireframe && this.wire) this.updateWire(state);
     if (this.debug.pivots && this.pivots) this.updatePivots(state);
   }
@@ -229,6 +243,7 @@ export class PuppetView {
     for (const { geo, material } of this.layers) { geo.dispose(); material.dispose(); }
     this.string.geometry.dispose(); this.string.material.dispose();
     this.arrow.geometry.dispose(); this.arrow.material.dispose();
+    for(const {mesh} of this.meleeWeapons){mesh.geometry.dispose();mesh.material.dispose();}
     if (this.wire) { this.wire.geometry.dispose(); this.wire.material.dispose(); }
     if (this.pivots) { this.pivots.geometry.dispose(); this.pivots.material.dispose(); }
     for (const tex of this.overrides.values()) tex.dispose?.();
