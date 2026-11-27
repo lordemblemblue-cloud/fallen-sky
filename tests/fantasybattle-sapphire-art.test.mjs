@@ -442,7 +442,7 @@ test('Chapter 1 narrative uses original and fallback interfaces without replacin
 });
 
 
-import {roadQuest,changeRoadQuest,validCampaign,campaignQuest,changeCampaignQuest,CAMPAIGN_QUESTS,campaignPrompt,campaignServiceNote,trackedCampaign} from '../src/components/fantasybattle/core/campaignQuests.mjs';
+import {roadQuest,changeRoadQuest,validCampaign,campaignQuest,changeCampaignQuest,CAMPAIGN_QUESTS,campaignPrompt,campaignServiceNote,trackedCampaign,campaignArc} from '../src/components/fantasybattle/core/campaignQuests.mjs';
 import {createProfile as newRoadProfile, isProfile as isRoadProfile, exportBackup as exportRoadBackup, parseBackup as parseRoadBackup, rewardVictory as roadVictory} from '../src/components/fantasybattle/core/adventureState.mjs';
 test('Pilgrim Road progression is bounded, backward compatible and derives objectives from recorded victories',()=>{
  const legacy=newRoadProfile('Road test');
@@ -570,4 +570,38 @@ test('Sanctuary main quest requires both recorded encounters, not optional trial
 test('Sanctuary narrative and actual boss phase intent are rendered without a second reward path',()=>{
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  for(const marker of ["candidate.id==='wilds_sanctuary_guard'","candidate.id==='wilds_sanctuary_boss'","sanctuaryIntro","sanctuaryCleared","!encounter.practice","profile.world.completedEncounters.includes('wilds_sanctuary_boss')","i.phaseName","tacticFor(e.strategy,e.archetype)"])assert.ok(page.includes(marker),marker);
+});
+
+test('Final Astral quest completes the six-chapter arc without requiring optional trials',()=>{
+ const base=newRoadProfile('Astral test');
+ assert.deepEqual(campaignArc(base),{completed:0,total:6,complete:false});
+ const prior={...base,quests:{grove:'claimed',campaign:{version:1,pilgrimRoad:'claimed',waterfall:'claimed',heights:'claimed',sanctuary:'claimed'}},world:{...base.world,completedEncounters:['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02','wilds_waterfall_01','wilds_heights_01','wilds_heights_02','wilds_sanctuary_guard','wilds_sanctuary_boss']}};
+ assert.ok(isRoadProfile(prior));assert.deepEqual(campaignArc(prior),{completed:5,total:6,complete:false});
+ assert.equal(campaignQuest(prior,'astral').state,'available');
+ assert.equal(campaignQuest(prior,'moonveilKeeper').state,'available');
+ const active=changeCampaignQuest(prior,'astral','accept');
+ const first=roadVictory(active,{id:'wilds_moonveil_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(first,'astral').count,1);
+ const second=roadVictory(first,{id:'wilds_astral_01',category:'Normal'}).profile;
+ assert.equal(campaignQuest(second,'astral').count,2);assert.throws(()=>changeCampaignQuest(second,'astral','claim'));
+ const third=roadVictory(second,{id:'wilds_astral_elite',category:'Elite'}).profile;
+ assert.equal(campaignQuest(third,'astral').state,'complete');assert.equal(campaignArc(third).complete,false);
+ const final=changeCampaignQuest(third,'astral','claim');
+ assert.deepEqual(campaignArc(final),{completed:6,total:6,complete:true});
+ assert.match(campaignPrompt(final),/arc complete/);
+ assert.equal(campaignQuest(final,'moonveilKeeper').state,'available');
+ assert.deepEqual(final.inventory,third.inventory);assert.equal(final.gold,third.gold);assert.equal(final.xp,third.xp);
+ assert.ok(isRoadProfile(final));assert.deepEqual(parseRoadBackup(exportRoadBackup(final)).quests,final.quests);
+ assert.throws(()=>changeCampaignQuest(final,'astral','claim'));
+ const trial=changeCampaignQuest(final,'moonveilKeeper','accept');
+ assert.equal(trackedCampaign(trial).q.id,'moonveilKeeper');assert.equal(campaignArc(trial).complete,true);
+ const elite=roadVictory(trial,{id:'wilds_moonveil_elite',category:'Elite'}).profile;
+ const all=changeCampaignQuest(elite,'moonveilKeeper','claim');
+ assert.equal(campaignArc(all).completed,6);assert.equal(campaignQuest(all,'moonveilKeeper').state,'claimed');
+ assert.ok(isRoadProfile(all));assert.deepEqual(parseRoadBackup(exportRoadBackup(all)).quests,all.quests);
+ assert.equal(isRoadProfile({...second,quests:{...second.quests,campaign:{...second.quests.campaign,astral:'claimed'}}}),false);
+});
+test('Final chapter UI displays arc progress and verified encounter narrative',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['campaignArc(profile)','arcLabel',"candidate.id==='wilds_moonveil_01'","candidate.id==='wilds_moonveil_elite'","candidate.id==='wilds_astral_01'","candidate.id==='wilds_astral_elite'","astralCleared","profile.world.completedEncounters.includes('wilds_astral_elite')"])assert.ok(page.includes(marker),marker);
 });
