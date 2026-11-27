@@ -23,7 +23,24 @@ export const CAVE_QUEST=Object.freeze({
  completion:'The shrine network repeats old messages out of order. That explains the bell heard before it rang.',
  objectives:Object.freeze([Object.freeze({id:'wilds_cave_01',label:'Defeat the cave spirit'})])
 });
-export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST]);
+export const HEIGHTS_QUEST=Object.freeze({
+ id:'heights',title:'The Heights',prerequisite:'waterfall',
+ offer:'The shrine relays are repeating old warnings. Clear the two encounters guarding the upper path.',
+ description:'A warning repeated long enough becomes a command. The relay stations point toward the sanctuary.',
+ completion:'The upper path is clear. The sanctuary is still broadcasting the emergency signal.',
+ objectives:Object.freeze([
+  Object.freeze({id:'wilds_heights_01',label:'Clear the first Heights encounter'}),
+  Object.freeze({id:'wilds_heights_02',label:'Clear the second Heights encounter'})
+ ])
+});
+export const ELITE_TRIAL=Object.freeze({
+ id:'heightsTrial',title:'Trial of the Silent Watch',prerequisite:'waterfall',optional:true,
+ offer:'An elite guardian remains at the Heights. Challenge it only when your party is ready.',
+ description:'The guardian was trained to test those approaching the sanctuary. Its trial is not required to reach the shrine.',
+ completion:'The guardian has fallen silent. The watch once tested resolve, not obedience.',
+ objectives:Object.freeze([Object.freeze({id:'wilds_heights_elite',label:'Defeat the Heights elite guardian'})])
+});
+export const CAMPAIGN_QUESTS=Object.freeze([ROAD_QUEST,WATERFALL_QUEST,CAVE_QUEST,HEIGHTS_QUEST,ELITE_TRIAL]);
 const defeated=(p,id)=>p?.world?.completedEncounters?.includes(id)===true;
 const discovered=(p,id)=>p?.world?.discoveries?.includes(id)===true;
 // Only catalogued objective IDs are used; no dialogue or asset can grant progress.
