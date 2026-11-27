@@ -1,5 +1,7 @@
 # R63 — Ending consequences and postgame access decision package
 
+> Historical proposal — ending portions superseded by [R64A owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md). Do not implement independent survivor-preserving worlds, mandatory memory erasure, or permanent M05 postgame death from this draft. Unconflicted save/reward suggestions remain candidates.
+
 27 November 2026. Sources: R39–R41 recovered source, R42 S55, R46 D50, R54 ending pass, R61 continuity ledger, R62 character/quest audit. This document refines the existing candidates and identifies approval gates. It is not a third ending, new canon, an implemented save service or owner approval.
 
 ## 1. Fixed narrative rules
