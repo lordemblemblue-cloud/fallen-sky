@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R92 — source-grounded M13–M15 editorial delta:** [Names, civilian access and the cost of division](R92_M13-M15_SOURCE_GROUNDED_SCENE_REFINEMENTS.md). Six proposed dialogue alternatives and terrain constraints for the existing Sanctuary, Three Arrows and Gate Fields chapters. Preserve earlier scripts, phase gates and rewards; no implementation or owner approval. Next M16–M18.
+
 > **R88 — narrative strength audit:** [Targeted emotional and structural refinements](R88_NARRATIVE_STRENGTH_AUDIT_AND_REFINEMENTS.md). Proposed improvements to hero motivation, antagonist method, distinct families, political stakes, ending payoffs and optional variety. Critical original-life chronology remains a writer decision; draft alternatives do not change approved canon. Future focused editorial passes can run alongside R87 construction prompts for unaffected regions.
 
 > **R87 construction series:** [Low-poly-first environment standard](R87_LOW_POLY_ENVIRONMENTAL_CONSTRUCTION_STANDARD.md), [Wolfveil M01–M03 detailed prompts](R87A_LOW_POLY_WOLFVEIL_M01_M03_CONSTRUCTION_PROMPTS.md), and [16-stage code-first preview, three quality tiers and parallel-agent workflow](R87B_CODE_FIRST_REGION_PREVIEW_AND_QUALITY_VARIANTS.md). Start with low-poly, review previews before integration, and compare Claude/Gemini pilot results before assigning distinct regions concurrently. Further detailed packets pending; no terrain implemented.
