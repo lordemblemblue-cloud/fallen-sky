@@ -1,4 +1,6 @@
-# Claude unified story library — R85
+# Claude unified story library — R86
+
+> **R86 — verified repository development handoff:** [Repository verification and development handoff](R86_REPOSITORY_VERIFICATION_AND_DEVELOPMENT_HANDOFF.md). Verified 125/125 unique story IDs, 68/68 primary source files, 105/105 unique optional classification rows and all 117 distinct pre-R86 central relative link targets. Documentation inventory complete; unresolved writer decisions, latest Word manuscript QA, implementation, balancing and runtime/security tests remain open. PR #402 is the unmerged documentation candidate.
 
 > **R85 — master implementation handbook:** [Story Bible and Claude production contract](R85_MASTER_STORY_BIBLE_IMPLEMENTATION_HANDBOOK.md). Current source precedence, all 20 main chapters, 105 provisional optional classifications, endings, NG+, terrain/quest/cinematic work packets, security/performance and implementation gates. Parsed index confirms 125 unique IDs and 68 distinct primary source paths; R86 must verify source files and headings. Latest Word manuscript unavailable for full text/visual QA; no implementation or publish.
 
@@ -55,4 +57,4 @@ This is the repository-readable entry point for the entire story and subsequent 
 - [R67 opening character/phase register](R67_ACTOR_PHASE_REGISTER.md).
 - [R68 late character/phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md).
 
-Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. Continue with R86 source verification and the R85 unresolved decision gates; preserve owner-approved requirements above.
+Read R67 and R68 together; R68 extends, never replaces R67. Apply R64A/R65 before staging any older finale script; R66 resolves affected quest constraints subject to mechanics approval. Source text remains historical provenance. 125/125 expanded narrative entries, not gameplay implementation. 105/105 targeted availability reviews, exact windows pending. No verified terrain claim. Return surveyed anchors and tests under the terrain handoff. The Word master is an editable parallel artifact, not a prerequisite for Claude. R86 repository verification is complete; continue with the R85 unresolved decision and implementation gates, preserving owner-approved requirements above.
