@@ -182,7 +182,7 @@ export class FantasyBattleStage {
     const arrowTexture = this.textures.get('arrow');
     this.fx = new FxSystem(this.scene, arrowTexture);
     this.fighters = {
-      hero: new Fighter(this, { id: 'hero', name: this.units[0].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xffffff, x: -430, facing: 1, seed: 11, renderBase: 100 }),
+      hero: new Fighter(this, { id: 'hero', name: this.units[0].name, rig: this.rig, textures: this.textures, arrowTexture, tint: this.units[0].tint ?? 0xffffff, x: -430, facing: 1, seed: 11, renderBase: 100 }),
       rival: new Fighter(this, { id: 'rival', name: this.units[1].name, rig: this.rig, textures: this.textures, arrowTexture, tint: 0xb9a6e8, x: 430, facing: -1, seed: 29, renderBase: 300 }),
     };
     for (const f of Object.values(this.fighters)) {
