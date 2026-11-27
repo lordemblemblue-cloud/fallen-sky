@@ -165,8 +165,8 @@ export function parseBackup(raw){
   let data;try{data=JSON.parse(raw);}catch{throw Error('Save backup is not valid JSON.');}
   if(data?.format!=='fantasy-battle-guest-save'||data.version!==1||!isProfile(data.profile))throw Error('This is not a valid Fantasy Battle save backup.');
   // Pick supported fields to avoid preserving unknown or injected properties.
-  const p=data.profile,w=p.world;
-  return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',party:{...partyFor(p)},xp:p.xp,hp:p.hp,gold:p.gold,
+  const p=data.profile,w=p.world,a=partyFor(p);
+  return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',party:{recruited:a.recruited,active:a.active,front:a.front,hp:a.hp,bond:a.bond},xp:p.xp,hp:p.hp,gold:p.gold,
     inventory:Object.fromEntries(Object.keys(ITEMS).map(k=>[k,p.inventory[k]])),equipped:p.equipped,
     enhancements:{starterBow:p.enhancements.starterBow,sapphireBow:p.enhancements.sapphireBow},
     rewardedDiscoveries:[...p.rewardedDiscoveries],attributes:Object.fromEntries(STAT_KEYS.map(k=>[k,p.attributes[k]])),
