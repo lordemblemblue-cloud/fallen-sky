@@ -141,3 +141,36 @@ test('practice and capped reward quantities cannot create invalid inventory or d
  assert.deepEqual(t.loot,[]);assert.ok(A.isProfile(t.profile));
  assert.equal(A.collectLoot(t.profile,'d').profile,t.profile);
 });
+
+test('bulk trade quotes and transactions agree, bound quantities and protect equipped copies',()=>{
+ const p={...A.createProfile('Trader'),gold:1000};
+ const q=A.tradeQuote(p,'buy','sapphirePlate',3);
+ assert.equal(q.total,300);assert.ok(q.ok);
+ let next=A.buyItem(p,'sapphirePlate',3);assert.equal(next.gold,700);assert.equal(next.inventory.sapphirePlate,3);
+ next=A.equipGear(next,'hero','armor','sapphirePlate');
+ assert.throws(()=>A.sellItem(next,'sapphirePlate',3));
+ next=A.sellItem(next,'sapphirePlate',2);
+ assert.equal(next.inventory.sapphirePlate,1);assert.equal(next.gold,784);assert.ok(A.isProfile(next));
+ for(const qty of [0,-1,1.5,100,Infinity,'2',null]){assert.equal(A.tradeQuote(p,'buy','sapphirePlate',qty).ok,false);assert.throws(()=>A.buyItem(p,'sapphirePlate',qty));}
+ assert.equal(A.tradeQuote(p,'buy','__proto__').ok,false);
+ assert.throws(()=>A.sellItem({...next,gold:10000000},'recoveryTonic'));
+ assert.throws(()=>A.buyItem({...p,inventory:{...p.inventory,sapphirePlate:99999}},'sapphirePlate',2));
+ assert.equal(p.gold,1000);
+});
+test('six recipes are level-gated, atomic, save compatible and cannot yield a resale profit',()=>{
+ const p={...A.createProfile('Smith'),gold:1000,inventory:{...A.createProfile('Inventory').inventory,sapphireOre:100}};
+ assert.equal(Object.keys(A.RECIPES).length,6);
+ for(const r of Object.values(A.RECIPES)){
+  const item=A.ITEMS[r.id];assert.ok(item);assert.ok(r.ore*A.ITEMS.sapphireOre.sell+r.gold>=item.sell);
+  const ready={...p,xp:(r.level-1)*100};
+  const q=A.craftQuote(ready,r.id,2);assert.ok(q.ok);
+  const next=A.craftItem(ready,r.id,2);assert.equal(next.gold,ready.gold-q.gold);assert.equal(next.inventory.sapphireOre,100-q.ore);assert.equal(next.inventory[r.id],(ready.inventory[r.id]??0)+2);
+  assert.ok(A.isProfile(next));assert.deepEqual(A.parseBackup(A.exportBackup(next)),next);
+  if(r.level>1)assert.throws(()=>A.craftItem(p,r.id));
+ }
+ assert.throws(()=>A.craftItem(p,'__proto__'));assert.throws(()=>A.craftItem(p,'recoveryTonic',0));
+ assert.throws(()=>A.craftItem({...p,inventory:{...p.inventory,recoveryTonic:100000}},'recoveryTonic'));
+ assert.throws(()=>A.craftItem({...p,gold:0},'sapphireBow'));
+ assert.throws(()=>A.craftItem({...p,inventory:{...p.inventory,sapphireOre:0}},'recoveryTonic'));
+ assert.equal(p.inventory.sapphireOre,100);
+});
