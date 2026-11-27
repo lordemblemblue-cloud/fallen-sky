@@ -403,3 +403,29 @@
 .fa-eq-compare div{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;text-align:right;gap:.25em}.fa-eq-compare div span:first-child{text-align:left}
 .fa-eq-equip,.fa-eq-remove,.fa-eq-back{position:absolute!important;top:84%;height:5.4%;border-radius:20px}
 .fa-eq-equip{left:46%;width:15%;background:#162d56d9!important}.fa-eq-remove{left:63%;width:13%}.fa-eq-back{left:78%;width:11%}
+
+/* 27 — original Sapphire Blossom Appearance plate. Only live palette controls
+   are exposed; unused sample slots are not interactive. */
+.fa-ui.page[data-staged-original="true"][data-screen="27"]{inset:50% auto auto 50%;width:min(100vw,177.78vh);height:min(100vh,56.25vw);transform:translate(-50%,-50%);overflow:hidden;background:#142448}
+.fa-ui[data-staged-original="true"][data-screen="27"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="27"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-wardrobe{position:absolute;inset:0;color:#fff6df;pointer-events:none;font-size:clamp(10px,min(1.24vw,2.2vh),18px);text-shadow:0 1px 3px #081329}
+.fa-original-wardrobe h2,.fa-original-wardrobe h3,.fa-original-wardrobe p{margin:.2em 0}
+.fa-original-wardrobe .fa-button{pointer-events:auto;min-height:0;min-width:0;padding:.12em .2em;border:0;background:#142448a0;box-shadow:none;color:inherit;font:inherit;line-height:1.1;overflow:hidden}
+.fa-original-wardrobe .fa-button[aria-pressed="true"],.fa-original-wardrobe .fa-button.primary{box-shadow:inset 0 0 0 2px #efd594;background:#193d82df}
+.fa-original-wardrobe .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:1px}
+.fa-wardrobe-title{position:absolute;left:10.2%;top:2.2%;width:20%;text-align:center;font-size:1.8em}
+.fa-wardrobe-categories{position:absolute;left:2%;top:18%;width:15.2%;height:57%;padding:.4em;text-align:center;background:#142448e8;border-radius:8px;overflow:auto;pointer-events:auto}
+.fa-wardrobe-categories strong{display:block;font-size:1.2em;margin:.3em 0 1.2em}.fa-wardrobe-categories small{display:block;line-height:1.4;margin-top:1.3em}
+.fa-wardrobe-viewer{position:absolute;left:24%;top:9%;width:21.5%;height:79%;display:grid;place-items:center;overflow:hidden}
+.fa-wardrobe-viewer .fa-archer-portrait{width:100%;height:100%;max-height:100%;object-fit:contain;filter:none}
+.fa-wardrobe-name{position:absolute;left:23%;top:90%;width:22%;height:6%;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fa-wardrobe-grid-title{position:absolute;left:48%;top:14.6%;width:30%;text-align:center;font-size:1.1em}
+.fa-wardrobe-grid{position:absolute;left:49.3%;top:22%;width:28.2%;height:13%;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:2%}
+.fa-wardrobe-grid .fa-button{font-size:.75em;white-space:normal;overflow-wrap:anywhere;gap:.25em}.fa-wardrobe-grid .fa-swatch{width:38%;aspect-ratio:1;height:auto;flex:none}
+.fa-wardrobe-details{position:absolute;left:57.4%;top:65%;width:19%;height:12.5%;overflow:auto;pointer-events:auto;font-size:.85em}
+.fa-wardrobe-current,.fa-wardrobe-preview,.fa-wardrobe-note{position:absolute;left:80.3%;width:17.7%;overflow:auto;pointer-events:auto;text-align:center;font-size:.86em}
+.fa-wardrobe-current{top:15.6%;height:14%}.fa-wardrobe-preview{top:31%;height:11.5%}.fa-wardrobe-note{top:43%;height:29%;padding:.3em;background:#142448b0}
+.fa-original-wardrobe .fa-large-swatch{display:block;width:1.6em;height:1.6em;border-radius:50%;border:1px solid #efd594;margin:.3em auto}
+.fa-wardrobe-apply,.fa-wardrobe-reset,.fa-wardrobe-back{position:absolute!important;border-radius:14px;height:5.6%}
+.fa-wardrobe-apply{left:67%;top:86%;width:11%;background:#193d82!important}.fa-wardrobe-reset{left:84%;top:86%;width:10%}.fa-wardrobe-back{left:80%;top:74%;width:9.2%;height:4.5%}

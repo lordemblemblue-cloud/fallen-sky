@@ -66,6 +66,34 @@ function useStagedOriginal(id){
   },[url]);
   return url&&loaded===url?entry:null;
 }
+// The original picture is decoration only; draft palettes never change the live profile.
+function Wardrobe({profile,encounter,original,back,chooseAppearance,layout}){
+  const saved=Object.hasOwn(APPEARANCES,profile?.appearance)?profile.appearance:'silver';
+  const [preview,setPreview]=useState(saved);
+  const selected=APPEARANCES[preview];
+  const locked=!profile||Boolean(encounter);
+  const dirty=preview!==saved;
+  const choices=Object.entries(APPEARANCES).map(([key,a])=><Btn key={key} primary={preview===key} aria-pressed={preview===key} disabled={locked} onClick={()=>setPreview(key)}><span className="fa-swatch" style={{background:a.swatch}} aria-hidden="true"/><span>{a.name}</span></Btn>);
+  const portrait=profile?<ArcherPortrait profile={{...profile,appearance:preview}}/>:<p>No active character.</p>;
+  const detail=<><strong>{selected.name}</strong><p>Cosmetic palette only. No changes to equipment or statistics.</p><small>{dirty?'Preview — not applied':'Current appearance'}</small></>;
+  const apply=<Btn primary className="fa-wardrobe-apply" disabled={locked||!dirty} onClick={()=>chooseAppearance(preview)}>Apply</Btn>;
+  const reset=<Btn className="fa-wardrobe-reset" disabled={locked||!dirty} onClick={()=>setPreview(saved)}>Reset</Btn>;
+  if(original)return <div className="fa-original-wardrobe">
+    <h2 className="fa-wardrobe-title">Appearance</h2>
+    <section className="fa-wardrobe-categories" aria-label="Appearance options"><strong>Wardrobe</strong><p>Color palettes</p><small>Other cosmetic categories are not available in this build.</small></section>
+    <div className="fa-wardrobe-viewer" aria-label="Character appearance preview">{portrait}</div>
+    <div className="fa-wardrobe-name">{profile?.name||'No character'}</div>
+    <h3 className="fa-wardrobe-grid-title">Available palettes</h3>
+    <section className="fa-wardrobe-grid" aria-label="Available cosmetic palettes">{choices}</section>
+    <section className="fa-wardrobe-details" aria-label="Selected appearance">{detail}</section>
+    <section className="fa-wardrobe-current" aria-label="Applied appearance"><strong>Applied appearance</strong><span className="fa-large-swatch" style={{background:APPEARANCES[saved].swatch}}/><p>{APPEARANCES[saved].name}</p></section>
+    <section className="fa-wardrobe-preview" aria-label="Preview color"><strong>Preview color</strong><span className="fa-large-swatch" style={{background:selected.swatch}}/><p>{selected.name}</p></section>
+    <section className="fa-wardrobe-note"><strong>Customization</strong><p>Only palette tint is supported. Hairstyle, accessories, effects and mounts are not implemented.</p>{encounter&&<p>Customization is locked during combat.</p>}</section>
+    {apply}{reset}<Btn className="fa-wardrobe-back" onClick={back}>Back</Btn>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Wardrobe</h2>{choices}</Panel><Panel rect={layout[1]}>{portrait}<small>Existing archer · palette preview</small></Panel><Panel rect={layout[2]}>{detail}<div className="fa-large-swatch" style={{background:selected.swatch}}/>{apply}{reset}</Panel><Panel rect={layout[3]}><Btn onClick={back}>Back</Btn></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -426,7 +454,7 @@ export default function SapphireAdventure(){
     case '24':content=<>{pane(0,nav(['29']))}{pane(1,<>{world?.encounters?.length?world.encounters.map(e=><Btn key={e.id} primary={seenEnemy?.id===e.id} onClick={()=>setEnemyId(e.id)}>{e.label} · {e.completed?'Defeated':'Discovered'}</Btn>):<p>No enemies discovered.</p>}</>)}{pane(2,seenEnemy?<><h2>{seenEnemy.label}</h2>{enemyFormation(seenEnemy,1).map(e=><div key={e.id}><EnemyPortrait enemy={e}/><StatRows stats={{HP:e.maxHp,Attack:e.atk,Defense:e.def,Speed:e.spd}}/><p>{tacticFor(e.strategy,e.archetype)}</p></div>)}<small>Base stats; formation scales with party size.</small></>:<p>Explore to discover enemy entries.</p>)}</>;break;
     case '25':content=<>{pane(0,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><Btn key={r.id} primary={destination?.id===r.id} onClick={()=>setDestination(r)}>{r.name}</Btn>)}</>)}{pane(1,<RegionMap world={world} profile={profile}/>)}{pane(2,<><h2>{destination?.name||'Choose discovered region'}</h2><Btn disabled={!destination||Boolean(encounter)} onClick={()=>requestConfirm('Travel to '+destination.name+'?',()=>{if(transact(p=>travelTo(p,destination),'Arrived at '+destination.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}})}>Travel</Btn></>)}</>;break;
     case '26':content=<>{pane(0,<><h2>Companions</h2>{ROSTER.map(m=><Btn key={m.id} primary={m.id===companionId} onClick={()=>setCompanionId(m.id)}>{m.name}</Btn>)}</>)}{pane(1,<><ArcherPortrait companion={selectedCompanion}/><h2>{selectedCompanion.name}</h2><p>{selectedCompanion.role} · individual layered prototype rig</p>{actionsForClass(selectedCompanion.combatClass).filter(id=>selectedCompanion.combatClass||id!=='chargedShot').map(id=><div className="fa-skill" key={id}><SkillArt id={id}/><strong>{ACTIONS[id].name}</strong><small>{ACTIONS[id].summary}</small></div>)}</>)}{pane(2,<><StatRows stats={{HP:memberStats(profile,selectedCompanion.id).maxHp,Attack:memberStats(profile,selectedCompanion.id).atk,Defense:memberStats(profile,selectedCompanion.id).def,Speed:memberStats(profile,selectedCompanion.id).spd}}/><p>Unlock: {({'wilds_grove_01':'Whispering Grove Spirit','wilds_pilgrimage_02':'Ruined Arch Warden','wilds_waterfall_01':'Waterfall Mist Spirit'})[selectedCompanion.requiredEncounter]}</p><Btn primary disabled={!profile||member.recruited||Boolean(encounter)||!profile.world.completedEncounters.includes(selectedCompanion.requiredEncounter)} onClick={()=>requestConfirm('Recruit '+selectedCompanion.name+'?',()=>transact(p=>recruitCompanion(p,selectedCompanion.id),selectedCompanion.name+' joined'))}>{member.recruited?'Recruited':'Recruit'}</Btn><Btn onClick={()=>go('11')}>Party</Btn></>)}</>;break;
-    case '27':content=<>{pane(0,<><h2>Wardrobe</h2>{Object.entries(APPEARANCES).map(([key,a])=><Btn key={key} primary={(profile?.appearance||'silver')===key} disabled={!profile||Boolean(encounter)} onClick={()=>chooseAppearance(key)}><span className="fa-swatch" style={{background:a.swatch}}/>{a.name}</Btn>)}</>)}{pane(1,<><ArcherPortrait profile={profile}/><small>Existing archer · palette preview</small></>)}{pane(2,<><h2>{appearanceFor(profile).name}</h2><div className="fa-large-swatch" style={{background:appearanceFor(profile).swatch}}/><p>Color palette only. Applies to the existing archer rig and exploration avatar. No statistic changes.</p></>)}{pane(3,<Btn onClick={back}>Back</Btn>)}</>;break;
+     case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
     case '28':content=<>{pane(0,nav(['24','29']))}{pane(1,<StatRows stats={{'Regions discovered':profile?.world.visitedRegions.length||0,'Encounters defeated':profile?.world.completedEncounters.length||0,'Hidden discoveries':profile?.world.discoveries.length||0}}/>)}{pane(2,<p>Milestone tracking is live. Achievement rewards have not been defined.</p>)}</>;break;
     case '29':content=<>{pane(0,nav(['24','07']))}{pane(1,<>{world?.regions.filter(r=>profile?.world.visitedRegions.includes(r.id)).map(r=><p key={r.id}>{r.name}</p>)||<p>No discoveries.</p>}</>)}{pane(2,<p>Only discovered map regions are shown. Story and lore records will appear when authored.</p>)}</>;break;
     case '30':content=<>{pane(0,<><h2>Companions</h2>{ROSTER.filter(m=>memberFor(profile,m.id).recruited).map(m=><Btn key={m.id} primary={companionId===m.id} onClick={()=>setCompanionId(m.id)}>{m.name}</Btn>)}</>)}{pane(1,<><ArcherPortrait companion={selectedCompanion}/><h2>{member.recruited?selectedCompanion.name:'Not recruited'}</h2></>)}{pane(2,<><h2>Bond</h2><progress value={member.bond} max={100}/><p>{member.bond}/100 · {!member.recruited?'Not recruited':member.bond>=75?'Trusted':member.bond>=25?'Familiar':'New companion'}</p><p>Gain 5 bond per new victory together. Practice and repeat rewards do not count.</p><small>Story events and bond abilities are not yet authored.</small></>)}{pane(3,<Btn onClick={()=>go('26')}>Recruitment</Btn>)}</>;break;
