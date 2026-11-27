@@ -85,6 +85,36 @@ test.before(async () => {
 });
 
 for (const rigId of Object.keys(RIGS)) {
+  test(`${rigId}: one-handed sword idle keeps free wrist, knuckle and elbow outside the body`, () => {
+    const model = bodies[rigId];
+    const rest = captureRestPose(model);
+    const { weapon, q } = gripOf('fantasy_sword', rigId);
+    const clips = bakeWeaponComboClips(model, weapon.class, { right: q }, { rest, reach: weapon.length });
+    try {
+      assert.ok(clips.idleSword);
+      const points = sample(model, clips.idleSword, () => {
+        const p = (name) => bone(model, 'mixamorig' + name).getWorldPosition(new THREE.Vector3());
+        const shoulder = p('LeftArm');
+        const outward = shoulder.clone().sub(p('RightArm')).normalize();
+        return ['LeftForeArm', 'LeftHand', 'LeftHandMiddle1'].map((name) =>
+          p(name).sub(shoulder).dot(outward));
+      }, 60);
+      for (const [elbow, wrist, knuckle] of points) {
+        assert.ok(elbow > 0.015, `free elbow clearance: ${elbow}`);
+        assert.ok(wrist > 0.055, `free wrist clearance: ${wrist}`);
+        assert.ok(knuckle > 0.025, `free knuckle clearance: ${knuckle}`);
+      }
+    } finally {
+      for (const [joint, pose] of rest) {
+        joint.position.copy(pose.position);
+        joint.quaternion.copy(pose.quaternion);
+      }
+      model.updateMatrixWorld(true);
+    }
+  });
+}
+
+for (const rigId of Object.keys(RIGS)) {
   for (const [weaponId, kind] of [['fantasy_sword', 'swordCombo'], ['odachi', 'swordCombo'], ['fantasy_bow', 'bowCombo']]) {
     test(`${rigId} ${weaponId}: three ${kind} hits, seamless, anatomical and facing forward`, () => {
       const model = bodies[rigId];

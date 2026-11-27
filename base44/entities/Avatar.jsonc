@@ -79,7 +79,14 @@
     },
     "user_id": {
       "type": "string",
-      "description": "The ID of the user this avatar belongs to. Each user has one avatar."
+      "description": "The ID of the user this avatar belongs to. Each user has one avatar.",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "name": {
       "type": "string",
@@ -105,22 +112,70 @@
     },
     "level": {
       "type": "number",
-      "default": 1
+      "default": 1,
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "experience": {
       "type": "number",
-      "default": 0
+      "default": 0,
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "social_influence": {
       "type": "number",
-      "default": 0
+      "default": 0,
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "reputation_badges": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "default": []
+      "default": [],
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "model_url": {
       "type": "string",
@@ -224,7 +279,21 @@
     "face_model_url": {
       "type": "string",
       "default": "",
-      "description": "Generated personal face/head model layered onto the selected base body."
+      "description": "Generated personal face/head model layered onto the selected base body.",
+      "rls": {
+        "read": {
+          "$or": [
+            {
+              "created_by_id": "{{user.id}}"
+            },
+            {
+              "user_condition": {
+                "role": "admin"
+              }
+            }
+          ]
+        }
+      }
     },
     "base_body_gender": {
       "type": "string",
@@ -251,21 +320,57 @@
       "items": {
         "type": "string"
       },
-      "default": []
+      "default": [],
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "unlocked_abilities": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "default": []
+      "default": [],
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "active_companions": {
       "type": "array",
       "items": {
         "type": "string"
       },
-      "default": []
+      "default": [],
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "morph_targets": {
       "type": "object",
@@ -289,10 +394,34 @@
       "enum": [
         "pending",
         "complete"
-      ]
+      ],
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "setup_version": {
-      "type": "number"
+      "type": "number",
+      "rls": {
+        "create": {
+          "user_condition": {
+            "role": "admin"
+          }
+        },
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "personality": {
       "type": "string",

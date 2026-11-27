@@ -1,4 +1,5 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { startClanUpgrade } from '../../shared/startClanUpgrade.ts';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.63';
 import { normalizeCrest, crestDataUri } from '../../shared/clanCrest.ts';
 
 export const corsHeaders = {
@@ -59,6 +60,8 @@ Deno.serve(async (req) => {
             if (name.trim().length < 2 || name.trim().length > 40 || (tag && !/^[A-Za-z0-9]{2,6}$/.test(tag))) {
                 return Response.json({ success: false, error: 'Use a 2–40 character name and a 2–6 letter or number tag.' }, { status: 400, headers: corsHeaders });
             }
+            const recentClan = await base44.asServiceRole.entities.Division.filter({leaderId:user.id}, '-created_date', 1);
+            if (Date.now() - Date.parse(recentClan[0]?.created_date) < 60000) return Response.json({ error: 'Please wait before creating another clan' }, { status:429, headers:corsHeaders });
             const emblemDesign = data.emblemDesign ? normalizeCrest(data.emblemDesign) : null;
             const newDivision = await base44.asServiceRole.entities.Division.create({
                 name: name.trim(),
@@ -145,21 +148,25 @@ Deno.serve(async (req) => {
                  return new Response(JSON.stringify({ error: 'Not authorized to invite' }), { status: 403, headers: corsHeaders });
             }
             
-            // Resolve email to ID
-            const users = await base44.asServiceRole.entities.User.filter({ email: inviteeEmail });
+            if (typeof inviteeEmail !== 'string' || inviteeEmail.length > 254 || typeof divisionId !== 'string') {
+                return Response.json({ error: 'Invalid invitation' }, { status: 400, headers: corsHeaders });
+            }
+            const accepted = () => Response.json({ success: true }, { headers: corsHeaders });
+            // Keep delivery private regardless of whether the destination exists.
+            const users = await base44.asServiceRole.entities.User.filter({ email: inviteeEmail.trim().toLowerCase() });
             if (users.length === 0) {
-                 return new Response(JSON.stringify({ error: 'User not found' }), { status: 404, headers: corsHeaders });
+                 return accepted();
             }
             const invitee = users[0];
 
             // Check if already invited or member
-            const existingInvite = await base44.entities.ClanInvite.filter({ divisionId, inviteeId: invitee.id, status: 'pending' });
+            const existingInvite = await base44.asServiceRole.entities.ClanInvite.filter({ divisionId, inviteeId: invitee.id, status: 'pending' });
             if (existingInvite.length > 0) {
-                return new Response(JSON.stringify({ error: 'Invite already pending' }), { status: 400, headers: corsHeaders });
+                return accepted();
             }
             
             // Create Invite
-            await base44.entities.ClanInvite.create({
+            await base44.asServiceRole.entities.ClanInvite.create({
                 divisionId,
                 inviterId: user.id,
                 inviteeId: invitee.id,
@@ -167,17 +174,17 @@ Deno.serve(async (req) => {
                 createdAt: new Date().toISOString()
             });
 
-            return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            return accepted();
         }
 
         // --- JOIN EVENT ---
         if (action === 'join_event') {
             const { eventId } = data;
-            const event = await base44.entities.ClanEvent.get(eventId);
+            const event = await base44.asServiceRole.entities.ClanEvent.get(eventId);
             if (!event) return new Response(JSON.stringify({ error: 'Event not found' }), { status: 404, headers: corsHeaders });
 
             // Verify clan membership
-            const member = await base44.entities.ClanMember.filter({ divisionId: event.divisionId, userId: user.id });
+            const member = await base44.entities.ClanMember.filter({ clan_id: event.divisionId, user_id: user.id });
             if (!member.length) {
                 return new Response(JSON.stringify({ error: 'Must be a clan member to join event' }), { status: 403, headers: corsHeaders });
             }
@@ -192,7 +199,7 @@ Deno.serve(async (req) => {
             }
 
             participants.push(user.id);
-            await base44.entities.ClanEvent.update(eventId, { participants });
+            await base44.asServiceRole.entities.ClanEvent.update(eventId, { participants });
 
             return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
@@ -207,7 +214,12 @@ Deno.serve(async (req) => {
                  return new Response(JSON.stringify({ error: 'Not authorized' }), { status: 403, headers: corsHeaders });
             }
 
-            await base44.entities.Division.update(divisionId, updates);
+            const profile = {};
+            for (const key of ['name', 'description', 'emblem_url', 'banner_url']) {
+                if (typeof updates?.[key] === 'string' && updates[key].length <= 1000) profile[key] = updates[key].trim();
+            }
+            if (!Object.keys(profile).length) return Response.json({ error: 'No supported profile updates' }, { status: 400, headers: corsHeaders });
+            await base44.entities.Division.update(divisionId, profile);
             return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
@@ -460,8 +472,17 @@ Deno.serve(async (req) => {
             if (target[0].role === 'leader') {
                  return new Response(JSON.stringify({ error: 'Cannot change leader role this way' }), { status: 400, headers: corsHeaders });
             }
+            // Never accept a caller-defined leader role, even when the actor is
+            // a verified clan leader. Officers and members are the only
+            // supported targets for this delegation action.
+            if (newRole !== 'member' && newRole !== 'officer') {
+                return new Response(JSON.stringify({ error: 'Invalid promotion role' }), { status: 400, headers: corsHeaders });
+            }
 
-            await base44.entities.ClanMember.update(target[0].id, { role: newRole });
+            // The ClanMember entity now rejects direct client role updates.
+            // This service-role operation is guarded by the verified leader
+            // membership and target's clan above.
+            await base44.asServiceRole.entities.ClanMember.update(target[0].id, { role: newRole });
 
             return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
@@ -469,18 +490,18 @@ Deno.serve(async (req) => {
         // --- MODERATION: DELETE MESSAGE ---
         if (action === 'delete_message') {
             const { messageId } = data;
-            const message = await base44.entities.ClanMessage.get(messageId);
+            const message = await base44.asServiceRole.entities.ClanMessage.get(messageId);
             if (!message) return new Response(JSON.stringify({ error: 'Message not found' }), { status: 404, headers: corsHeaders });
 
             // If own message, allow delete. If not, check Officer+
-            if (message.author !== user.id) {
+            if (message.userId !== user.id) {
                 const actor = await base44.entities.ClanMember.filter({ clan_id: message.divisionId, user_id: user.id });
                 if (!actor.length || (actor[0].role !== 'leader' && actor[0].role !== 'officer')) {
                     return new Response(JSON.stringify({ error: 'Not authorized' }), { status: 403, headers: corsHeaders });
                 }
             }
 
-            await base44.entities.ClanMessage.delete(messageId);
+            await base44.asServiceRole.entities.ClanMessage.delete(messageId);
             return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
@@ -493,6 +514,9 @@ Deno.serve(async (req) => {
                  return new Response(JSON.stringify({ error: 'Not authorized' }), { status: 403, headers: corsHeaders });
             }
 
+            if (typeof targetUserId !== 'string' || !targetUserId) return Response.json({ error: 'Invalid member' }, {status:400, headers:corsHeaders});
+            const targets = await base44.entities.ClanMember.filter({ clan_id: divisionId, user_id: targetUserId });
+            if (!targets.length) return Response.json({ error: 'Clan member not found' }, {status:404, headers:corsHeaders});
             // Create Moderation Action
             await base44.entities.ModerationAction.create({
                 type: 'mute',
@@ -520,6 +544,7 @@ Deno.serve(async (req) => {
 
         // --- DEPOSIT TO VAULT ---
         if (action === 'deposit_vault') {
+      if (user.role !== 'admin') return Response.json({ error: 'Administrator access required for manual vault credits' }, { status: 403, headers: corsHeaders });
             const { divisionId, item } = data;
             const member = await base44.entities.ClanMember.filter({ clan_id: divisionId, user_id: user.id });
             // The vault records real guild contributions. There is no
@@ -556,10 +581,12 @@ Deno.serve(async (req) => {
                 return new Response(JSON.stringify({ error: 'Item not found' }), { status: 404, headers: corsHeaders });
             }
             const member = await base44.entities.ClanMember.filter({ clan_id: vaultItem.clan_id, user_id: user.id });
-            if (!member.length) {
-                return new Response(JSON.stringify({ error: 'Not a member' }), { status: 403, headers: corsHeaders });
+            if (!['leader', 'officer'].includes(member[0]?.role)) {
+                return new Response(JSON.stringify({ error: 'Clan officer access required' }), { status: 403, headers: corsHeaders });
             }
-            const take = Math.max(1, Math.min(quantity || 1, vaultItem.quantity));
+            const requested = quantity ?? 1;
+            if (!Number.isSafeInteger(requested) || requested < 1) return Response.json({ error: 'Invalid quantity' }, { status: 400, headers: corsHeaders });
+            const take = Math.min(requested, vaultItem.quantity);
             if (take >= vaultItem.quantity) {
                 await base44.asServiceRole.entities.ClanVaultItem.delete(vaultItemId);
             } else {
@@ -570,47 +597,14 @@ Deno.serve(async (req) => {
 
         // --- START UPGRADE ---
         if (action === 'start_upgrade') {
-            const { divisionId, upgradeKey, upgradeName, category, buildSeconds, costFavor, costAetherium } = data;
+            const { divisionId, upgradeKey } = data;
             const actor = await base44.entities.ClanMember.filter({ clan_id: divisionId, user_id: user.id });
             if (!actor.length || (actor[0].role !== 'leader' && actor[0].role !== 'officer')) {
                 return new Response(JSON.stringify({ error: 'Not authorized' }), { status: 403, headers: corsHeaders });
             }
 
-            // Find existing upgrade row (or create one)
-            const existing = await base44.asServiceRole.entities.ClanUpgrade.filter({ clan_id: divisionId, upgrade_key: upgradeKey });
-            if (existing.length > 0) {
-                const u = existing[0];
-                if (u.status === 'in_progress') {
-                    return new Response(JSON.stringify({ error: 'Already in progress' }), { status: 400, headers: corsHeaders });
-                }
-                if (u.tier >= (u.max_tier || 5)) {
-                    return new Response(JSON.stringify({ error: 'Max tier reached' }), { status: 400, headers: corsHeaders });
-                }
-                await base44.asServiceRole.entities.ClanUpgrade.update(u.id, {
-                    status: 'in_progress',
-                    progress_seconds: 0,
-                    build_seconds: buildSeconds || 3600,
-                    cost_favor: costFavor || 0,
-                    cost_aetherium: costAetherium || 0,
-                    started_at: new Date().toISOString()
-                });
-            } else {
-                await base44.asServiceRole.entities.ClanUpgrade.create({
-                    clan_id: divisionId,
-                    upgrade_key: upgradeKey,
-                    upgrade_name: upgradeName,
-                    category: category || 'tactics',
-                    tier: 1,
-                    max_tier: 5,
-                    status: 'in_progress',
-                    progress_seconds: 0,
-                    build_seconds: buildSeconds || 3600,
-                    cost_favor: costFavor || 0,
-                    cost_aetherium: costAetherium || 0,
-                    started_at: new Date().toISOString()
-                });
-            }
-            return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            const upgrade = await startClanUpgrade(base44.asServiceRole.entities, divisionId, upgradeKey);
+            return Response.json({ success: true, upgrade }, { headers: corsHeaders });
         }
 
         // --- CLAIM GUILD HALL ---
@@ -648,18 +642,17 @@ Deno.serve(async (req) => {
             if (isAnnouncement && member[0].role !== 'leader' && member[0].role !== 'officer') {
                 return new Response(JSON.stringify({ error: 'Only officers can announce' }), { status: 403, headers: corsHeaders });
             }
-            await base44.asServiceRole.entities.ClanMessage.create({
-                divisionId,
-                channelId: channelId || '',
-                author: user.full_name || user.username || 'Player',
-                authorAvatar: user.avatar_url || '',
-                content: content || '',
-                userId: user.id,
-                role: member[0].role,
-                isAnnouncement: !!isAnnouncement,
-                isPinned: false
+            const rank = {member:0, officer:1, leader:2};
+            const channels = await base44.asServiceRole.entities.ClanChannel.filter({ divisionId });
+            const channel = channels.find(ch => ch.divisionId === divisionId && (!channelId || ch.id === channelId)
+                && (rank[member[0].role] ?? -1) >= ({none:0, officer:1, leader:2}[ch.role_restriction || 'none'] ?? 2));
+            if (!channel) return Response.json({ error: 'Channel unavailable' }, {status:403, headers:corsHeaders});
+            const recent = await base44.asServiceRole.entities.ClanMessage.filter({ divisionId, userId:user.id }, '-created_date', 1);
+            if (Date.now() - Date.parse(recent[0]?.created_date) < 900) return Response.json({error:'Please wait before sending another message'}, {status:429, headers:corsHeaders});
+            const sent = await base44.functions.invoke('secureClanAccess', {
+                operation: 'postMessage', divisionId, entityData: { channelId: channel.id, content, isAnnouncement }
             });
-            return new Response(JSON.stringify({ success: true }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            return Response.json(sent.data, { status:sent.status || 200, headers:corsHeaders });
         }
 
         return new Response(JSON.stringify({ error: 'Invalid action' }), { status: 400, headers: corsHeaders });
@@ -668,7 +661,7 @@ Deno.serve(async (req) => {
         console.error("Clan function error:", error);
         return new Response(JSON.stringify({ error: error.message }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 500,
+            status: error.status || 500,
         });
     }
 });

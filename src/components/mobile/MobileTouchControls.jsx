@@ -6,6 +6,8 @@ import {
 } from './mobileTouchModel.mjs';
 import { createStandardGamepadReader } from './mobileGamepad.mjs';
 import { requestLandscapeOnGesture, showLandscapeSuggestion } from './mobileLandscape.mjs';
+import { describeDuelistTouchSkill } from './duelistTouchSkill.mjs';
+import DuelistTouchArtwork from './DuelistTouchArtwork.jsx';
 import './mobileTouchControls.css';
 
 const clamp = (v, low, high) => Math.max(low, Math.min(high, v));
@@ -27,11 +29,15 @@ const readPositions = (game, landscape) => {
 export default function MobileTouchControls({
   game = 'duelist', disabled = false, onMove, onLook, onActionDown, onActionUp,
   specialReady = true, specialCharge = null, lockActive = false,
+  classId = null, abilityStatus = null, willValue = null,
 }) {
   const root = useRef(null);
   const pointer = useRef(null);
   const lookPointer = useRef(null);
   const held = useRef(new Set());
+  // Multiple fingers can share one action. A lost pointer must never keep an
+  // ability held (or make it impossible to tap again).
+  const actionPointers = useRef(new Map());
   const actionSources = useRef(new Map());
   const callbacks = useRef({});
   callbacks.current = { onMove, onLook, onActionDown, onActionUp,
@@ -138,6 +144,7 @@ export default function MobileTouchControls({
   const releaseAll = () => {
     for (const action of held.current) sourceAction(action, 'touch', false);
     held.current.clear();
+    actionPointers.current.clear();
     callbacks.current.onMove?.({ x: 0, y: 0 });
     pointer.current = null;
     lookPointer.current = null;
@@ -147,15 +154,53 @@ export default function MobileTouchControls({
     if (disabled || !supported || editing || portraitBlocked) {
       for (const action of held.current) sourceAction(action, 'touch', false);
       held.current.clear();
+      actionPointers.current.clear();
       callbacks.current.onMove?.({ x: 0, y: 0 });
       pointer.current = null;
+      lookPointer.current = null;
+      setStick({ x: 0, y: 0 });
     }
   }, [disabled, supported, editing, portraitBlocked]);
   useEffect(() => () => {
     for (const [id] of actionSources.current) callbacks.current.onActionUp?.(id);
     actionSources.current.clear();
     held.current.clear();
+    actionPointers.current.clear();
     callbacks.current.onMove?.({ x: 0, y: 0 });
+  }, []);
+
+  // iOS/Android may cancel or drop pointer capture when a finger leaves a
+  // button, the OS steals the gesture, or the overlay re-renders. Recover all
+  // orphaned touches at window level in addition to the element handlers.
+  useEffect(() => {
+    const finish = event => {
+      setDragged(current => current?.pointerId === event.pointerId ? null : current);
+      if (pointer.current?.id === event.pointerId) {
+        pointer.current = null;
+        setStick({ x: 0, y: 0 });
+        callbacks.current.onMove?.({ x: 0, y: 0 });
+      }
+      if (lookPointer.current?.id === event.pointerId) lookPointer.current = null;
+      for (const [id, owners] of actionPointers.current) {
+        if (!owners.delete(event.pointerId)) continue;
+        if (owners.size) continue;
+        actionPointers.current.delete(id);
+        held.current.delete(id);
+        sourceAction(id, 'touch', false);
+      }
+    };
+    const stop = () => { releaseAll(); setDragged(null); };
+    const visibility = () => { if (document.visibilityState === 'hidden') stop(); };
+    window.addEventListener('pointerup', finish);
+    window.addEventListener('pointercancel', finish);
+    window.addEventListener('blur', stop);
+    document.addEventListener('visibilitychange', visibility);
+    return () => {
+      window.removeEventListener('pointerup', finish);
+      window.removeEventListener('pointercancel', finish);
+      window.removeEventListener('blur', stop);
+      document.removeEventListener('visibilitychange', visibility);
+    };
   }, []);
 
   // Even when a match/class-picker disables actions, keep the required
@@ -170,17 +215,23 @@ export default function MobileTouchControls({
     const y = clamp(((event.clientY - r.top) / r.height) * 100, 7, 93);
     setLayout(prev => ({ key: layoutKey, positions: { ...prev.positions, [id]: { x, y } } }));
   };
+  const capture = event => {
+    try { event.currentTarget.setPointerCapture?.(event.pointerId); }
+    catch { /* global pointerup/cancel handlers still recover the gesture */ }
+  };
   const startDrag = (id, event) => {
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    capture(event);
     setDragged({ id, pointerId: event.pointerId });
     moveEdited(id, event);
   };
   const onEditMove = (id, event) => {
     if (dragged?.id === id && dragged.pointerId === event.pointerId) moveEdited(id, event);
   };
-  const endDrag = () => setDragged(null);
+  const endDrag = event => {
+    if (!event || dragged?.pointerId === event.pointerId) setDragged(null);
+  };
 
   const joystickMove = event => {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -196,12 +247,19 @@ export default function MobileTouchControls({
     if (disabled || portraitBlocked) return;
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    // An interrupted gesture can lose its pointerup without a usable cancel.
+    // A new finger must be able to reclaim the joystick if the old capture
+    // is already gone; never strand the player until a page reload.
+    if (pointer.current && pointer.current.id !== event.pointerId) {
+      if (event.currentTarget.hasPointerCapture?.(pointer.current.id)) return;
+      callbacks.current.onMove?.({ x: 0, y: 0 });
+    }
+    capture(event);
     pointer.current = { kind: 'move', id: event.pointerId };
     joystickMove(event);
   };
   const joystickEnd = event => {
-    if (editing) return endDrag();
+    if (editing) return endDrag(event);
     if (pointer.current?.kind === 'move' && pointer.current.id === event.pointerId) {
       pointer.current = null;
       setStick({ x: 0, y: 0 });
@@ -213,23 +271,33 @@ export default function MobileTouchControls({
     if (disabled || portraitBlocked) return;
     event.preventDefault();
     event.stopPropagation();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
     if (!callbacks.current.canUse(id)) return;
-    if (!held.current.has(id)) {
+    capture(event);
+    const owners = actionPointers.current.get(id) || new Set();
+    if (owners.has(event.pointerId)) return;
+    const first = owners.size === 0;
+    owners.add(event.pointerId);
+    actionPointers.current.set(id, owners);
+    if (first) {
       held.current.add(id);
       sourceAction(id, 'touch', true);
     }
   };
   const actEnd = (id, event) => {
-    if (editing) return endDrag();
-    if (held.current.delete(id)) sourceAction(id, 'touch', false);
+    if (editing) return endDrag(event);
+    const owners = actionPointers.current.get(id);
+    if (owners?.delete(event.pointerId) && owners.size === 0) {
+      actionPointers.current.delete(id);
+      held.current.delete(id);
+      sourceAction(id, 'touch', false);
+    }
     event.stopPropagation();
   };
   const lookDown = event => {
     if (disabled || portraitBlocked || editing || lookPointer.current) return;
     if (event.pointerType === 'mouse') return;
     event.preventDefault();
-    event.currentTarget.setPointerCapture?.(event.pointerId);
+    capture(event);
     lookPointer.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
   };
   const lookMove = event => {
@@ -262,7 +330,7 @@ export default function MobileTouchControls({
         aria-label="Landscape required for mobile gameplay">
         <div className="mobile-orientation-symbol" aria-hidden="true">↻</div>
         <strong>TURN YOUR PHONE SIDEWAYS</strong>
-        <p>Rotate your phone 90° to play. Both games require a sideways screen during mobile gameplay.</p>
+        <p>Rotate your phone 90° to play. Games need a sideways screen on mobile.</p>
         <div className="mobile-orientation-choices">
           <button type="button" onClick={askLandscape}>TRY LANDSCAPE</button>
         </div>
@@ -270,25 +338,30 @@ export default function MobileTouchControls({
       </div>}
       <div className="mobile-look-zone" data-testid="mobile-look-zone" aria-label="Swipe to look around"
         onPointerDown={lookDown} onPointerMove={lookMove} onPointerUp={lookUp} onPointerCancel={lookUp}/>
-      <div className="mobile-control-toolbar">
-        {controllerConnected && <span className="mobile-gamepad-connected">CONTROLLER CONNECTED</span>}
-        <button type="button" aria-pressed={editing} onClick={() => { releaseAll(); setEditing(v => !v); }}
-          className="mobile-control-editor">{editing ? 'DONE' : 'MOVE CONTROLS'}</button>
-        {editing && <button type="button" className="mobile-control-editor" onClick={() => {
-          setLayout({ key: layoutKey, positions: defaultMobileTouchLayout(game, landscape) });
-        }}>RESET</button>}
-      </div>
+      {(game !== 'duelist' || expanded || editing || controllerConnected) &&
+        <div className="mobile-control-toolbar">
+          {controllerConnected && <span className="mobile-gamepad-connected">CONTROLLER CONNECTED</span>}
+          {(game !== 'duelist' || expanded || editing) && <button type="button" aria-pressed={editing} onClick={() => { releaseAll(); setEditing(v => !v); }}
+            className="mobile-control-editor">{editing ? 'DONE' : 'MOVE CONTROLS'}</button>}
+          {editing && <button type="button" className="mobile-control-editor" onClick={() => {
+            setLayout({ key: layoutKey, positions: defaultMobileTouchLayout(game, landscape) });
+          }}>RESET</button>}
+        </div>}
       {editing && <div className="mobile-control-instructions">Drag each control to reposition it · Done saves the layout</div>}
       <div className="mobile-move-stick" role="group" aria-label="Virtual movement joystick"
         style={{ '--touch-x': `${locate('joystick').x}%`, '--touch-y': `${locate('joystick').y}%` }}
         onPointerDown={joystickStart}
         onPointerMove={event => editing ? onEditMove('joystick', event) : pointer.current?.id === event.pointerId ? joystickMove(event) : null}
-        onPointerUp={joystickEnd} onPointerCancel={joystickEnd}>
+        onPointerUp={joystickEnd} onPointerCancel={joystickEnd} onLostPointerCapture={joystickEnd}>
         <span className="mobile-move-stick-thumb" style={{ transform: `translate(${stick.x * 31}px, ${-stick.y * 31}px)` }}/>
       </div>
       {items.map(([id, label]) => {
         if (secondary.includes(id) && !expanded && !editing) return null;
         const position = locate(id);
+        const skill = game === 'duelist' ? describeDuelistTouchSkill(classId, id) : null;
+        const status = skill?.slot ? abilityStatus?.[skill.slot - 1] : null;
+        const cooldown = Math.max(0, Number(status?.ready) || 0);
+        const lowWill = status && Number.isFinite(willValue) && Number(status.cost) > willValue;
         return <button key={id} type="button"
           data-testid={`mobile-action-${id}`} data-action={id}
           className="mobile-touch-action" data-special={id === 'special' || id === 'ultimate'}
@@ -297,17 +370,32 @@ export default function MobileTouchControls({
           aria-pressed={id === 'lock' ? !!lockActive : undefined}
           data-active={id === 'lock' && !!lockActive ? 'true' : undefined}
           data-unready={id === 'special' && !specialReady ? 'true' : undefined}
-          aria-label={id === 'lock' ? 'Auto lock target' :
-            label === 'ULT' ? 'Ultimate ability' : label}
+          data-cooling={cooldown > 0 ? 'true' : undefined}
+          data-low-will={lowWill ? 'true' : undefined}
+          title={skill ? `${skill.name} · ${skill.type} — ${skill.text}` : undefined}
+          aria-label={skill ? `${skill.name}, ${skill.type}${cooldown > 0 ? `, cooldown ${cooldown.toFixed(1)} seconds` : lowWill ? ', not enough Will' : ''}` :
+            id === 'lock' ? 'Auto lock target' : label === 'ULT' ? 'Ultimate ability' : label}
           onPointerDown={event => actStart(id, event)}
           onPointerMove={event => editing && onEditMove(id, event)}
           onPointerUp={event => actEnd(id, event)}
           onPointerCancel={event => actEnd(id, event)}
+          onLostPointerCapture={event => actEnd(id, event)}
           onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); sourceAction(id, 'keyboard', true); } }}
           onKeyUp={event => { if (event.key === 'Enter' || event.key === ' ') sourceAction(id, 'keyboard', false); }}>
-          <span className="mobile-action-label">{label}</span>
-          {((id === 'special' && game === 'duelist') || (id === 'ultimate' && game === 'fallen')) &&
-            Number.isFinite(specialCharge) && <span className="mobile-action-charge">{Math.round(specialCharge)}%</span>}
+          {skill ? <>
+            <span className="mobile-duelist-ability-name">{skill.name}</span>
+            <DuelistTouchArtwork skillId={skill.id}/>
+            <span className="mobile-duelist-ability-number" aria-hidden="true">{skill.ultimate ? 'ULT' : label}</span>
+            {skill.ultimate && Number.isFinite(specialCharge) &&
+              <span className="mobile-duelist-ability-charge">{Math.round(specialCharge)}%</span>}
+            {cooldown > 0 && <span className="mobile-duelist-ability-cooldown" aria-hidden="true">
+              {cooldown >= 10 ? Math.ceil(cooldown) : cooldown.toFixed(1)}s</span>}
+            <span className="mobile-duelist-ability-type" aria-hidden="true">{skill.type}</span>
+          </> : <>
+            <span className="mobile-action-label">{label}</span>
+            {((id === 'special' && game === 'duelist') || (id === 'ultimate' && game === 'fallen')) &&
+              Number.isFinite(specialCharge) && <span className="mobile-action-charge">{Math.round(specialCharge)}%</span>}
+          </>}
         </button>;
       })}
     </div>

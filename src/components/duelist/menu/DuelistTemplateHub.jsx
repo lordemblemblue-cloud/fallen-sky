@@ -1,3 +1,5 @@
+import OnlineArenaPreview from './OnlineArenaPreview.jsx';
+import {mapPicture} from './mapPictures.mjs';
 // Live Duelist Adventure menu UI. The two vector frames contain NO embedded words or character imagery.
 // Everything interactive is accessible React, driven by the actual game catalog / stored class progression.
 import { useEffect, useState } from 'react';
@@ -16,12 +18,16 @@ import { MODE_TABS, TEMPLATE_MODES, templateTab, templateMode, firstTemplateMode
 import { useLobby } from './useLobby.js';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
 import { SettingsContent } from './MenuPages.jsx';
+import PracticeSettings from '../client/PracticeSettings.jsx';
+import { cleanPracticeSettings, PRACTICE_DEFAULTS } from '../core/practiceSettings.mjs';
 import { SettingsReferenceMenu } from './DuelistReferenceMenus.jsx';
 import DuelistCharacterMenu from './DuelistCharacterMenu.jsx';
 import DuelistStoryMenu from './DuelistStoryMenu.jsx';
 import './duelistTemplateUI.css';
 import './duelistDarkBlueTheme.css';
 import './duelistMobileUI.css';
+import './duelistPlayReference.css';
+import './duelistSapphire.css';
 
 const MODE_ICONS = { swords: Swords, flag: Flag, truck: Truck, users: Users, target: Target,
   zap: Zap, circle: CircleDot, shield: Shield, trophy: Trophy, search: Search, eye: Eye, settings: Settings };
@@ -56,25 +62,26 @@ function TemplateSurface({ kind = 'mode', id, title, eyebrow, subtitle, close, c
     </section>
   );
 }
-function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, onPrefs, launch, close }) {
+function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, onPrefs, launch, openServers, close }) {
   const tab = templateTab(category);
-  const options = TEMPLATE_MODES[category];
+  const normalOrder = ['duel', 'tdm', 'ffa', 'ctf', 'control', 'transport', 'football'];
+  const options = category === 'normal' ? normalOrder.map(id => templateMode(category, id)) : TEMPLATE_MODES[category];
   const mode = templateMode(category, selected);
   const supported = Boolean(mode.route && MENU_MODES[mode.route]);
   const startSolo = templateLaunch(category, mode.id);
-  const canOnline = category === 'normal' && supported && MENU_MODES[mode.route]?.online && lobby.online;
+  const canOnline = category === 'normal' && supported && MENU_MODES[mode.route]?.online;
   const selectedIcon = mode.symbol;
 
   return (
-    <TemplateSurface id="duelist-play-drawer" kind="mode" title="Choose your game mode"
-      eyebrow="DUELIST ADVENTURE" subtitle={category === 'normal' && lobby.online ? "Tap a mode to join its live match. Other players can join the same room." : "Select a category, then choose a battle."} close={close}>
+    <TemplateSurface id="duelist-play-drawer" kind="mode" title={category === 'practice' ? 'Practice Mode' : 'Choose Game Mode'}
+      eyebrow="DUELIST ADVENTURE" subtitle={category === 'normal' && lobby.online ? "Select a mode, then browse its live servers." : "Select a category, then choose a battle."} close={close}>
       <div className="dxt-mode-layout">
         <nav className="dxt-mode-categories" aria-label="Play category">
           {MODE_TABS.map(item => {
             const Icon = TAB_ICONS[item.id];
             return <button key={item.id} type="button" className="dxt-category" data-active={category === item.id}
               aria-pressed={category === item.id} onClick={() => onCategory(item.id)}>
-              <Icon aria-hidden="true"/><span>{item.title}</span>
+              <Icon aria-hidden="true"/><span className="dxt-category-copy">{item.title}{['ranked','custom'].includes(item.id) && <small>Coming Soon</small>}</span>
             </button>;
           })}
         </nav>
@@ -84,21 +91,22 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
             {options.map(item => <button key={item.id} type="button"
               className="dxt-tile" data-active={selected === item.id} aria-pressed={selected === item.id}
               onClick={() => onSelect(item.id)}>
-                <ModeIcon symbol={item.symbol}/><span>{item.title}</span>
-                {!item.route && <small>PLANNED</small>}
+                {mapPicture(item.route) && <img className="dxt-tile-art" src={mapPicture(item.route)} alt="" loading="lazy" decoding="async" draggable={false}/>}
+                <span className="dxt-tile-shade" aria-hidden="true"/>
+                <span className="dxt-tile-copy"><ModeIcon symbol={item.symbol}/><span>{item.title}{!item.route && <small>Coming Soon</small>}</span></span>
               </button>)}
           </div>
         </div>
         <aside className="dxt-mode-detail" aria-label="Selected game mode information">
-          <div className="dxt-detail-art" aria-hidden="true"><ModeIcon symbol={selectedIcon}/></div>
+          <div className="dxt-detail-art" aria-hidden="true" data-map-picture={Boolean(mapPicture(mode.route))}>{mapPicture(mode.route) ? <OnlineArenaPreview mode={mode.route} compact/> : <ModeIcon symbol={selectedIcon}/>}<span className="dxt-arena-label">{mapPicture(mode.route) ? 'Arena Preview' : 'Mode Preview'}</span></div>
           <div className="dxt-detail-copy">
             <span className="dxt-eyebrow">{tab.title} / {mode.count || 'MODE'}</span>
-            <h3>{mode.title}</h3><p>{mode.description}</p>
+            <h3><ModeIcon symbol={selectedIcon}/>{mode.title}</h3><p>{mode.description}</p>
             <div className="dxt-detail-metadata">
               <span><Users aria-hidden="true"/> {mode.count || 'Mode'}</span>
               <span><Shield aria-hidden="true"/> {category === 'ranked' ? 'Ranked planned' : category === 'practice' ? 'Bot training' : category === 'custom' ? 'Private planned' : 'Casual'}</span>
             </div>
-            {startSolo && <div className="dxt-detail-settings">
+            {startSolo && <div className="dxt-detail-settings" data-practice={category === 'practice'}>
               <label>Bot difficulty<select value={prefs.level} onChange={e => onPrefs({ level: e.target.value })}>
                 {LEVELS.map(([id, label]) => <option key={id} value={id}>{label}</option>)}
               </select></label>
@@ -106,18 +114,24 @@ function ModeSelector({ category, selected, onCategory, onSelect, lobby, prefs, 
                 {Object.entries(BODIES).map(([id, character]) => <option key={id} value={id}>{character.name}</option>)}
               </select></label>
             </div>}
+            {category === 'practice' && supported && <>
+              {mode.route === 'practice' && <label>Practice bots <select value={prefs.bots} onChange={e=>onPrefs({bots:Number(e.target.value)})}>{[0,1,2,3].map(n=><option key={n} value={n}>{n}</option>)}</select></label>}
+              <PracticeSettings value={prefs.practiceSettings} onChange={(id,value)=>onPrefs({practiceSettings:{...cleanPracticeSettings(prefs.practiceSettings),[id]:value}})} onReset={()=>onPrefs({practiceSettings:{...PRACTICE_DEFAULTS}})}/>
+            </>}
             {!supported || category === 'ranked' || category === 'custom' ?
               <p className="dxt-unavailable" role="status">This option is a visual preview. Its matchmaking or lobby backend is not available yet.</p>
               : null}
             <div className="dxt-detail-actions">
-              {startSolo ? <button type="button" className="dxt-action dxt-action--secondary"
-                onClick={() => launch(mode.id, false)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PRACTICE'}</button>
+              {startSolo ? <button type="button" className={'dxt-action ' + (category === 'practice' ? 'dxt-action--primary' : 'dxt-action--secondary')}
+                onClick={() => launch(mode.id)}><Target aria-hidden="true"/> {category === 'practice' ? 'START TRAINING' : 'PLAY OFFLINE'}</button>
                 : <button type="button" className="dxt-action dxt-action--secondary" disabled><LockKeyhole aria-hidden="true"/> UNAVAILABLE</button>}
-              <button type="button" className="dxt-action dxt-action--primary" onClick={() => launch(mode.id, true)}
-                disabled={!canOnline} title={!canOnline ? 'No active online matchmaking for this category' : 'Join online'}>
-                <Play aria-hidden="true"/> {category === 'custom' ? 'CREATE' : category === 'practice' ? 'ONLINE OFF' : 'QUEUE'}
-              </button>
+              {category === 'practice' && supported && <button type="button" className="dxt-action dxt-action--secondary" onClick={()=>openServers('practice')}><Users aria-hidden="true"/> SHARED PRACTICE</button>}
+              {category === 'normal' && <button type="button" className="dxt-action dxt-action--primary" onClick={() => openServers(mode.route)}
+                disabled={!canOnline} title={!canOnline ? 'Choose a supported casual mode' : 'Browse live servers for this mode'}>
+                <Users aria-hidden="true"/> BROWSE SERVERS
+              </button>}
             </div>
+            {supported && <p className="dxt-play-hint">{category === 'practice' ? 'Solo training or join a shared practice room' : 'Join a room directly. No queue.'}</p>}
             {supported && category === 'normal' &&
               <Link className="dxt-mode-help" to="/duelist-next/$page" params={{ page: mode.route }}>
                 Rules &amp; game mode details <ArrowRight size={15} aria-hidden="true"/>
@@ -231,6 +245,14 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
   const lobby = useLobby();
   const [prefs, onPrefs] = usePrefs();
   const [panel, setPanel] = useState(initialPanel);
+  const [hqTestAllowed, setHqTestAllowed] = useState(false);
+  const [hqTest, setHqTest] = useState(true);
+  const [hqStatus, setHqStatus] = useState(null);
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get('hqTest');
+    setHqTestAllowed(mode === '1');
+    setHqTest(mode !== '0');
+  }, []);
   const [category, setCategory] = useState('normal');
   const [mode, setMode] = useState(firstTemplateMode('normal'));
   const fighter = BODIES[prefs.fighter]?.name || 'Duelist';
@@ -241,21 +263,17 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
     setPanel(id);
   };
   const changeCategory = id => { setCategory(id); setMode(firstTemplateMode(id)); };
-  const launch = (id, online) => {
-    const search = templateLaunch(category, id, online, lobby.online);
-    if (!search || (online && !MENU_MODES[search.mode]?.online)) return;
-    navigate({ to: '/duelist-next/play', search: { ...search, from: 'duelist' } });
+  const launch = (id) => {
+    const search = templateLaunch(category, id);
+    if (!search) return;
+    navigate({ to: '/duelist-next/play', search: { ...search, ...(category === 'practice' ? { training: 1 } : {}), from: 'duelist' } });
   };
-  // Normal public modes are one-tap quick joins. Keep the existing server-owned
-  // room allocation (including bot replacement); only the menu entry changes.
-  // Without a reachable match server, selecting a card still shows its details
-  // and leaves offline Practice available, never a fake online match.
-  const chooseMode = id => {
-    setMode(id);
-    const selected = templateMode(category, id);
-    if (category === 'normal' && lobby.online && selected?.route && MENU_MODES[selected.route]?.online) {
-      launch(id, true);
-    }
+  // Selecting a mode only changes its details. Online play always goes through
+  // the real server browser, where a player chooses an exact room ID.
+  const chooseMode = id => setMode(id);
+  const openServers = modeId => {
+    if (modeId !== 'practice' && !MENU_MODES[modeId]?.online) return;
+    navigate({ to: '/duelist-next/$page', params: { page: 'online-play' }, search: { mode: modeId } });
   };
   useEffect(() => {
     if (!panel) return undefined;
@@ -269,8 +287,8 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
     return () => window.removeEventListener('keydown', keydown);
   }, [panel, initialPanel, navigate]);
   return (
-    <main className={'dxt-page' + (isReferencePanel ? ' dxt-page--reference' : '')}>
-      {!isReferencePanel && <DuelistHangarStage fighter={prefs.fighter} classId={prefs.classId}/>}
+    <main className={'dxt-page' + (isReferencePanel ? ' dxt-page--reference' : '') + (panel === 'play' ? ' dxt-page--play-reference' : '')}>
+      {!isReferencePanel && <DuelistHangarStage fighter={prefs.fighter} classId={prefs.classId} headquarters={hqTest && !panel} onHqStatus={setHqStatus}/>}
       {panel && !isReferencePanel && <button type="button" className="dxt-stage-scrim" tabIndex={-1} onClick={close} aria-label="Close menu"/>}
       {!isReferencePanel && <header className="dxt-header">
         <div className="dxt-header-player"><span className="dxt-player-symbol"><UserRound size={20}/></span>
@@ -281,13 +299,24 @@ export default function DuelistTemplateHub({ initialPanel = null }) {
       {!panel && <section className="dxt-home" aria-label="Duelist Adventure home">
         <div className="dxt-home-intro"><span>ENTER THE ARENA</span><h2>MASTER THE BLADE. SHAPE THE VEIL.</h2>
           <p>Choose a character and enter a match.</p>
+          {hqTestAllowed && <div role="region" aria-label="Experimental headquarters test" style={{marginBottom: 12, maxWidth: 310, background: '#12263acc', padding: 10, borderRadius: 8, fontSize: 12}}>
+            <strong>EXPERIMENTAL HQ V4 · TEST ONLY</strong>
+            <p aria-live="polite">{!hqTest ? 'Original hangar active' : hqStatus?.state === 'active' ? `${hqStatus.backend || 'GPU initializing'} · ${hqStatus.qualityProfile} · ${hqStatus.staticTriangles + hqStatus.dynamicTriangles} HQ triangles · ${hqStatus.npcCount} walking NPCs · ${hqStatus.idleGuestCount || 0} idle guests · ${Math.round(hqStatus.frameMs)} ms latest host frame` : hqStatus?.state === 'fallback' ? `HQ fallback${hqStatus.message ? ': ' + hqStatus.message : ''}` : 'Initializing shared renderer…'}</p>
+            <button type="button" className="dxt-action dxt-action--secondary" onClick={() => {setHqStatus(null);setHqTest(v=>!v);}}>{hqTest ? 'RESTORE ORIGINAL HANGAR' : 'ENABLE HQ TEST'}</button>
+            <a href="/duelist-hq-v4-test.html" style={{display:'block',marginTop:8}}>Standalone GPU checks / export report</a>
+          </div>}
           <button type="button" className="dxt-action dxt-action--primary" onClick={() => setPanel('play')}>
             <Play aria-hidden="true"/> CHOOSE GAME MODE
           </button>
+          <Link to="/duelist-next/$page" params={{ page: 'online-play' }}
+            className="dxt-action dxt-action--secondary" style={{ marginTop: 12 }}>
+            <Users aria-hidden="true"/> ONLINE PLAY · SERVER LIST
+          </Link>
         </div>
       </section>}
+      {panel === 'play' && <div className="dxt-play-hero-art" aria-hidden="true"/>}
       {panel === 'play' && <ModeSelector category={category} selected={mode} onCategory={changeCategory}
-        onSelect={chooseMode} lobby={lobby} prefs={prefs} onPrefs={onPrefs} launch={launch} close={close}/>}
+        onSelect={chooseMode} lobby={lobby} prefs={prefs} onPrefs={onPrefs} launch={launch} openServers={openServers} close={close}/>}
       {panel === 'character' && <DuelistCharacterMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}
       {panel === 'story' && <DuelistStoryMenu lobby={lobby} prefs={prefs} close={close}/>}
       {panel === 'settings' && <SettingsReferenceMenu prefs={prefs} onPrefs={onPrefs} close={close}/>}

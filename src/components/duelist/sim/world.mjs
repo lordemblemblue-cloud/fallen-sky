@@ -1,3 +1,5 @@
+import {ctfZone,ctfRestricted} from './importedCtfLayout.mjs';
+import { escortEnemyZone } from './importedEscortLayout.mjs';
 // Duelist Adventure arena simulation: bodies in a circular arena, or in a mission's rooms (a level: walls,
 // doors and cover, sim/level.mjs), driven by the rules core.
 // Headless and deterministic (the caller passes dt): the match server runs it as the authority, the
@@ -11,9 +13,13 @@ import {
   stagger, controlImmune, hitDominated, targetable, classAbilityMove,
 } from '../core/index.mjs';
 import { resolveCircle, clearLine, rayDistance } from './level.mjs';
+import {conduitPadAt,conduitLiveSupport} from './conduitLiveLayout.mjs';
+import { arenaGrounded, moveArenaBody, arenaLineClear, arenaRayFraction, arenaBodyBlockers, ARENA_BODY_HEIGHT, recoverArenaFootprint } from './modeArenaLayout.mjs';
 import { spendStamina } from '../core/vitals.mjs';
 import { stickDirection } from '../core/cuts.mjs';
 
+export function inCtfSpawn(world,fighter,body=world.bodies.get(fighter?.id)){return !!(world.arenaLayout?.ctfImported&&fighter&&body&&(ctfZone('red',body)||ctfZone('blue',body)));}
+function ctfCombatAllowed(world,a,b){return !inCtfSpawn(world,a)&&!inCtfSpawn(world,b);}
 export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apart
 // Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
 // d * KNOCKBACK_DECAY m/s and it travels about d metres.
@@ -33,8 +39,8 @@ export const ROOM_HEADROOM = 2.2;
 export const ACTIVE_RELIC = Object.freeze({ anchorWindow: 12, teleportCooldown: 28, stasisSeconds: 1.5, stasisCooldown: 35 });
 
 // zones: places an ability made (a Sanctuary dome: { id, kind, owner, team, x, z, radius, until })
-export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null } = {}) {
-  return { time: 0, arenaRadius, friendlyFire, level, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1,
+export function createWorld({ arenaRadius = 18, friendlyFire = false, level = null, arenaLayout = null } = {}) {
+  return { time: 0, arenaRadius, friendlyFire, level, arenaLayout, fighters: new Map(), bodies: new Map(), projectiles: [], nextProjectile: 1,
     zones: [], nextZone: 1 };
 }
 
@@ -42,16 +48,16 @@ export function createWorld({ arenaRadius = 18, friendlyFire = false, level = nu
  * vitals: maximums that differ from a duelist's ({ hp, will, shield, stamina }). A fighter with no Will has
  * no Veil at all (an ordinary person: every blow reaches armor and body, and a grip holds them).
  */
-export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
+export function addFighter(world, { id, team = null, weapon = 'sword', x = 0, y = 0, z = 0, yaw = 0, vitals = null, classId = null, level = 1, matchBoost = 0 } = {}) {
   const fighter = createFighter({ id, team, weapon, vitals, classId, level, matchBoost });
   if (fighter.vitals.max.will <= 0) fighter.vitals.collapsed = true;
   world.fighters.set(id, fighter);
-  world.bodies.set(id, newBody(x, z, yaw));
+  world.bodies.set(id, newBody(x, z, yaw, y));
   return fighter;
 }
 
 /** A fallen (or any) fighter back at a spawn with fresh vitals; nothing reaches it for `protect` seconds. */
-export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined, matchBoost = undefined } = {}) {
+export function respawnFighter(world, id, { x = 0, y = 0, z = 0, yaw = 0, protect = 0, weapon = null, classId = undefined, level = undefined, matchBoost = undefined } = {}) {
   const old = world.fighters.get(id);
   if (!old) return null;
   const fighter = createFighter({ id, team: old.team, weapon: weapon ?? old.weapon, classId: classId === undefined ? old.classId : classId,
@@ -60,7 +66,7 @@ export function respawnFighter(world, id, { x = 0, z = 0, yaw = 0, protect = 0, 
   fighter.meter = old.meter;
   fighter.protectedUntil = world.time + protect;
   world.fighters.set(id, fighter);
-  world.bodies.set(id, newBody(x, z, yaw));
+  world.bodies.set(id, newBody(x, z, yaw, y));
   for (const f of world.fighters.values()) { if (f.heldBy === id) f.heldBy = null; if (f.seizedBy === id) f.seizedBy = null; }
   return fighter;
 }
@@ -73,9 +79,9 @@ export function removeFighter(world, id) {
   for (let i = world.projectiles.length - 1; i >= 0; i--) if (world.projectiles[i].owner === id) world.projectiles.splice(i, 1);
 }
 
-function newBody(x, z, yaw) {
+function newBody(x, z, yaw, y=0) {
   return {
-    x, z, y: 0, yaw, vy: 0,
+    x, z, y, yaw, vy: 0,
     // Client prediction and the match server share this transient state. It resets on landing.
     // jumped: in the air from a jump; airJumpAt: when the second jump was made; airDashReady: a dash is left for
     // this jump (each jump gives one)
@@ -100,6 +106,8 @@ export function strikeDirection(body) {
   return stickDirection(ahead, right);
 }
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const airborne = (world, body, min = 0.01) => world.arenaLayout ? !arenaGrounded(world.arenaLayout, body, BODY_RADIUS) : body.y > min;
+const visible = (world, a, b) => (!world.level || clearLine(world.level,a,b)) && (!world.arenaLayout || arenaLineClear(world.arenaLayout,a,b));
 // a move whose arc is not centred on the facing (the backhand reaches the sword side and behind): radians to the left
 const arcTurn = (move) => (move.arcTurn || 0) * Math.PI / 180;
 export const hostile = (world, a, b) => a !== b && (world.friendlyFire || a.team === null || a.team !== b.team);
@@ -152,6 +160,7 @@ export function step(world, dt, inputs = {}) {
       } else body.yaw = input.face;
     }
     for (const command of input.presses || []) {
+      if(inCtfSpawn(world,fighter,body)&&!['roll','dash','jump','blockDown','blockUp','resist'].includes(command))continue;
       if (command === 'itemActive') {
         activateItemRelic(world, fighter, body, now, effects);
         continue;
@@ -159,8 +168,8 @@ export function step(world, dt, inputs = {}) {
       if (now < (fighter.activeRelicUntil ?? -Infinity)) continue; // Stasis cannot attack, dodge or capture
       // In the air, Dash is the air dash: one for each jump (the jump's own, then the second jump's). Packets cannot
       // ask for '#airDash' directly; the world checks the jump and the height.
-      if (command === 'dash' && (body.jumped || body.y > AIR_DASH.minHeight)) {
-        if (!restrained && body.jumped && body.airDashReady && body.y > AIR_DASH.minHeight && airborneAction(fighter)) {
+      if (command === 'dash' && (body.jumped || airborne(world, body, AIR_DASH.minHeight))) {
+        if (!restrained && body.jumped && body.airDashReady && airborne(world, body, AIR_DASH.minHeight) && airborneAction(fighter)) {
           if (fighter.action?.id === 'airDash') { fighter.events.push({ type: 'interrupt', id: 'airDash', by: 'airDash', at: now }); fighter.action = null; }
           const result = press(fighter, '#airDash', now);
           if (result.accepted) {
@@ -173,8 +182,8 @@ export function step(world, dt, inputs = {}) {
         continue; // never turn an airborne press into a ground dash
       }
       // In the air, Jump is the second jump: as high as the first, once, and it gives another dash.
-      if (command === 'jump' && (body.jumped || body.y > 0.01)) {
-        if (body.jumped && body.y > AIR_JUMP.minHeight && body.airJumpAt == null && !restrained &&
+      if (command === 'jump' && (body.jumped || airborne(world, body))) {
+        if (body.jumped && airborne(world, body, AIR_JUMP.minHeight) && body.airJumpAt == null && !restrained &&
             now >= fighter.riseUntil && airborneAction(fighter) &&
             !effectOn(fighter, 'levitate', now) && spendStamina(fighter.vitals, MOVES.jump.stamina, now)) {
           if (fighter.action?.id === 'airDash') { fighter.events.push({ type: 'interrupt', id: 'airDash', by: 'jump', at: now }); fighter.action = null; }
@@ -195,18 +204,21 @@ export function step(world, dt, inputs = {}) {
         effects.push({ type: 'abilityRefused', by: id, ability: abilityId, reason: 'no-target' });
         continue;
       }
-      const before = fighter.action?.id;
+      const before = fighter.action;
       const res = press(fighter, command, now, command === 'light' ? { direction: strikeDirection(body) } : undefined);
-      if (res.accepted && res.id && res.id !== before) startMotion(body, fighter, res.id, world);
+      if (res.accepted && res.id && fighter.action !== before) startMotion(body, fighter, res.id, world);
     }
   }
   // 2. the rules advance; moves that start from the buffer get their root motion too
   const pending = [];
   for (const [id, fighter] of world.fighters) {
     const body = world.bodies.get(id);
+    const beforeUpdate=fighter.action;
     update(fighter, dt, now, actionRate(fighter, now));
+    // A buffered roll may start on the exact tick its predecessor ends. The ID is
+    // identical, but its root-motion accumulator must start fresh.
+    if(fighter.action && fighter.action!==beforeUpdate)startMotion(body,fighter,fighter.action.id,world);
     for (const event of takeEvents(fighter)) {
-      if (event.type === 'start' && body.motion?.id !== event.id) startMotion(body, fighter, event.id, world);
       if (event.type === 'start') {
         const started = moveById(event.id);
         if (started && (started.kind === 'attack' || (started.kind === 'power' && !started.effect)) && effectOn(fighter, 'cloak', now)) {
@@ -218,18 +230,56 @@ export function step(world, dt, inputs = {}) {
     }
   }
   // 3. bodies move
-  for (const [id, fighter] of world.fighters) moveBody(world, fighter, world.bodies.get(id), dt, now);
+  for (const [id, fighter] of world.fighters) {
+    const body=world.bodies.get(id);
+    if (!world.arenaLayout) { moveBody(world,fighter,body,dt,now); continue; }
+    if(world.arenaLayout?.conduitImported){
+      if(fighter.vitals.dead||fighter.heldBy||fighter.seizedBy){body.conduitFlight=null;}
+      else if(!body.conduitFlight&&arenaGrounded(world.arenaLayout,body,BODY_RADIUS)&&body.vy<=0){
+        const pad=conduitPadAt(body);
+        if(pad){const t=1.45;body.conduitFlight={vx:(pad.targetX-body.x)/t,vy:(pad.targetY-body.y+11*t*t)/t,vz:(pad.targetZ-body.z)/t,left:t};body.motion=null;body.jumped=false;body.airDashReady=false;}
+      }
+      if(body.conduitFlight){
+        const flight=body.conduitFlight,stepTime=Math.min(dt,flight.left);
+        const moved=moveArenaBody(world.arenaLayout,body,flight.vx*stepTime,flight.vz*stepTime,flight.vy*stepTime-11*stepTime*stepTime,BODY_RADIUS,false);
+        flight.vy-=22*stepTime;flight.left-=stepTime;body.vy=flight.vy;body.moving=true;
+        if(moved.hit||moved.landed&&flight.vy<0||flight.left<=1e-6){body.conduitFlight=null;if(moved.landed||moved.ceiling)body.vy=0;}
+        continue;
+      }
+    }
+    const before={x:body.x,y:body.y,z:body.z};
+    moveBody(world,fighter,body,dt,now);
+    const delta={x:body.x-before.x,y:body.y-before.y,z:body.z-before.z};
+    Object.assign(body,before);
+    const result=moveArenaBody(world.arenaLayout,body,delta.x,delta.z,delta.y,BODY_RADIUS,!fighter.heldBy && !fighter.seizedBy && !body.jumped);
+    if(world.arenaLayout?.escortImported && (fighter.team==='red'||fighter.team==='blue') && escortEnemyZone(fighter.team,world.escortStage??0,body) && !escortEnemyZone(fighter.team,world.escortStage??0,before)){Object.assign(body,before);body.vy=0;}
+    if(world.arenaLayout?.ctfImported&&ctfRestricted(fighter.team,body,world.ctfCarriers?.has(id))&&!ctfRestricted(fighter.team,before,world.ctfCarriers?.has(id))){Object.assign(body,before);body.vy=0;}
+    if(result.ceiling || result.landed && body.vy<0)body.vy=0;
+    if(arenaGrounded(world.arenaLayout,body,BODY_RADIUS) && body.vy<=0 && fighter.action?.id!=='jump'){
+      body.jumped=false;body.airJumpAt=null;body.airDashReady=false;
+    }
+  }
+  const beforeSeparate=world.arenaLayout ? new Map([...world.bodies].map(([id,b])=>[id,{x:b.x,y:b.y,z:b.z}])) : null;
   separate(world);
-  for (const body of world.bodies.values()) keepInside(world, body);
+  for (const [id,body] of world.bodies) {
+    if(beforeSeparate){
+      const before=beforeSeparate.get(id),dx=body.x-before.x,dz=body.z-before.z;
+      Object.assign(body,before);
+      moveArenaBody(world.arenaLayout,body,dx,dz,0,BODY_RADIUS,false);
+      const f=world.fighters.get(id);if(world.arenaLayout?.ctfImported&&ctfRestricted(f?.team,body,world.ctfCarriers?.has(id))&&!ctfRestricted(f?.team,before,world.ctfCarriers?.has(id)))Object.assign(body,before);
+    }
+    keepInside(world,body);
+  }
   // 4. landed moves reach whoever is in range and arc
   for (const { fighter, body, event } of pending) {
     if (event.type === 'hit') {
+      if(inCtfSpawn(world,fighter,body))continue;
       if (moveById(event.id)?.effect) applyEffectMove(world, fighter, body, event.id, effects, now);
       else if (isShot(event.id)) spawnProjectile(world, fighter, body, event.id, effects);
       else resolveReach(world, fighter, body, event.id, effects, now, event.index || 0);
     } else if (event.type === 'tick') {
       const held = [...world.fighters.values()].find((f) => f.heldBy === fighter.id);
-      if (held) collect(effects, strike(fighter, held, 'grip', { now, dt: event.dt, defenderFacesAttacker: true }), fighter, held);
+      if (held&&ctfCombatAllowed(world,fighter,held)) collect(effects, strike(fighter, held, 'grip', { now, dt: event.dt, defenderFacesAttacker: true }), fighter, held);
     } else if (event.type === 'end' || event.type === 'dropped' || event.type === 'interrupt') {
       // the grip ends by throwing (gripThrow lands next and lets go) or by dropping its target
       if ((event.id === 'grip' || event.type === 'dropped') && fighter.action?.id !== 'gripThrow') releaseHeld(world, fighter);
@@ -256,9 +306,19 @@ export function step(world, dt, inputs = {}) {
  * never out of a stagger, a grip or a fall. Reports { type: 'special', by, special, cost } for the match to charge
  * the seat's meter, or { type: 'specialRefused', by, reason }.
  */
+// Meter can contain multiple charges (or refill immediately in training). It is
+// not an activation lock. A cast and its lasting effect must finish first.
+export function specialActivationLocked(fighter, now) {
+  return !!fighter && (!!fighter.action?.move?.special || (fighter.specialActiveUntil ?? -Infinity) > now);
+}
+
 function trySpecial(world, fighter, body, now, effects) {
   const def = classById(fighter.classId);
   if (!def || fighter.vitals.dead) return;
+  if (specialActivationLocked(fighter, now)) {
+    effects.push({ type: 'specialRefused', by: fighter.id, reason: 'special-active' });
+    return;
+  }
   const special = def.special;
   const move = moveFor(fighter, special.id); // applies trusted class mastery and current match boost
   const reach = move.reach ?? move.range ?? special.reach;
@@ -272,11 +332,11 @@ function trySpecial(world, fighter, body, now, effects) {
   const seekArc = cloaked ? move.blink.arc : move.arc;
   if (special.target === 'enemy') {
     const near = [...world.fighters.values()]
-      .filter((o) => hostile(world, fighter, o) && !o.vitals.dead && targetable(o, world.bodies.get(o.id), fighter, body, now))
+      .filter((o) => hostile(world, fighter, o) && ctfCombatAllowed(world,fighter,o) && !o.vitals.dead && targetable(o, world.bodies.get(o.id), fighter, body, now))
       .map((o) => ({ o, b: world.bodies.get(o.id) }))
       .filter(({ o, b }) => distance(b, body) <= seekReach + BODY_RADIUS
         && (o.id === fighter.lock || insideArc(body, body.yaw + arcTurn(move), b, seekArc))
-        && (!world.level || clearLine(world.level, body, b)))
+        && visible(world,body,b) && (!world.arenaLayout || Math.abs(body.y-b.y)<2))
       // the one the fighter is locked on to first, then the nearest
       .sort((p, q) => (q.o.id === fighter.lock) - (p.o.id === fighter.lock) || distance(p.b, body) - distance(q.b, body));
     for (const { o, b } of near) {
@@ -320,10 +380,11 @@ function face(body, other) {
 function blinkBehind(world, fighter, body, target, move, now, effects) {
   const tb = world.bodies.get(target.id);
   const back = forwardOf(tb.yaw);
-  const from = { x: body.x, z: body.z };
+  const from = { x: body.x, z: body.z }, previousY=body.y;
   body.x = tb.x - back.x * move.blink.behind;
   body.z = tb.z - back.z * move.blink.behind;
-  body.y = 0; body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
+  body.y = world.arenaLayout ? tb.y : 0; body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
+  if(world.arenaLayout && arenaBodyBlockers(world.arenaLayout,{...body,radius:BODY_RADIUS,height:ARENA_BODY_HEIGHT}).length){body.x=from.x;body.z=from.z;body.y=previousY;}
   keepInside(world, body);
   endEffect(fighter, 'cloak');
   effects.push({ type: 'uncloak', fighter: fighter.id });
@@ -342,9 +403,10 @@ export function chosenTarget(world, fighter, body, move, side, now = world.time)
   const qualifies = (o) => {
     if (!o || o === fighter || o.vitals.dead) return false;
     if (side === 'enemy' ? !hostile(world, fighter, o) : hostile(world, fighter, o)) return false;
+    if(side==='enemy'&&!ctfCombatAllowed(world,fighter,o))return false;
     const ob = world.bodies.get(o.id);
     if (!ob || distance(body, ob) > reach) return false;
-    if (world.level && !clearLine(world.level, body, ob)) return false;
+    if (!visible(world, body, ob) || (world.arenaLayout && Math.abs(body.y-ob.y)>1.8)) return false;
     return side === 'ally' || targetable(o, ob, fighter, body, now);
   };
   const locked = fighter.lock ? world.fighters.get(fighter.lock) : null;
@@ -369,6 +431,9 @@ const airborneAction = (fighter) => !fighter.action || fighter.action.id === 'ju
 function applyEffectMove(world, fighter, body, id, effects, now) {
   const move = moveFor(fighter, id);
   const until = now + (move.effectSeconds || 0);
+  // The effect has actually landed; retain its original expiry even if the
+  // casting animation finishes or practice refills the meter.
+  if (move.special && move.effectSeconds > 0) fighter.specialActiveUntil = until;
   const give = (f, kind, data = {}) => {
     addEffect(f, kind, until, data);
     effects.push({ type: 'effect', effect: kind, by: fighter.id, target: f.id, until });
@@ -428,7 +493,7 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
       break;
     }
     case 'sanctuary': {
-      const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z,
+      const zone = { id: world.nextZone++, kind: 'sanctuary', owner: fighter.id, team: fighter.team, x: body.x, z: body.z, ...(world.arenaLayout ? {y:body.y} : {}),
         radius: move.radius ?? SPECIAL_BALANCE.sanctuaryRadius, heal: move.healPerSecond ?? SPECIAL_BALANCE.sanctuaryHealPerSecond, until };
       world.zones.push(zone);
       effects.push({ type: 'zone', ...zone, seconds: move.effectSeconds });
@@ -442,7 +507,7 @@ function applyEffectMove(world, fighter, body, id, effects, now) {
 export function shelterOf(world, fighter, now = world.time) {
   const b = world.bodies.get(fighter.id);
   if (!b) return null;
-  return world.zones.find((z) => z.kind === 'sanctuary' && z.until > now && Math.hypot(b.x - z.x, b.z - z.z) <= z.radius
+  return world.zones.find((z) => z.kind === 'sanctuary' && z.until > now && Math.hypot(b.x - z.x, b.z - z.z) <= z.radius && (!world.arenaLayout || Math.abs(b.y-(z.y??0))<1.8 && arenaLineClear(world.arenaLayout,b,z))
     && (z.team !== null && z.team !== undefined ? z.team === fighter.team : z.owner === fighter.id)) || null;
 }
 /** Does an allied Sanctuary shelter this fighter right now? */
@@ -468,7 +533,7 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
   if (passive.activeAnchor) {
     if (fighter.activeAnchorAt && fighter.activeAnchorAt.until > now) {
       const mark = fighter.activeAnchorAt;
-      body.x = mark.x; body.z = mark.z; body.y = 0; body.vy = 0; body.motion = null;
+      body.x = mark.x; body.z = mark.z; body.y = world.arenaLayout ? (mark.y ?? 0) : 0; body.vy = 0; body.motion = null;
       fighter.action = null; fighter.buffer = null;
       fighter.activeAnchorAt = null;
       fighter.activeRelicCooldownUntil = now + ACTIVE_RELIC.teleportCooldown;
@@ -477,7 +542,7 @@ export function activateItemRelic(world, fighter, body, now, effects = []) {
     }
     if (now < (fighter.activeRelicCooldownUntil ?? -Infinity)) return { ok: false, reason: 'cooldown' };
     if (fighter.action) return { ok: false, reason: 'busy' };
-    fighter.activeAnchorAt = { x: body.x, z: body.z, until: now + ACTIVE_RELIC.anchorWindow };
+    fighter.activeAnchorAt = { x: body.x, z: body.z, ...(world.arenaLayout ? {y:body.y} : {}), until: now + ACTIVE_RELIC.anchorWindow };
     effects.push({ type: 'relicAnchor', by: fighter.id, until: fighter.activeAnchorAt.until });
     return { ok: true, effect: 'anchor' };
   }
@@ -506,7 +571,7 @@ function startMotion(body, fighter, id, world = null) {
       const d = Math.hypot(tb.x - body.x, tb.z - body.z); // (startMotion has a local named distance)
       face(body, tb);
       const dir = forwardOf(body.yaw);
-      body.motion = { id, dir, from: move.startup, to: move.startup + move.active, distance: Math.max(0, Math.min(move.seek, d - move.landShort)), done: 0 };
+      body.motion = { id, dir, from: move.startup, to: move.startup + move.active, distance: Math.max(0, Math.min(move.seek, d - move.landShort)), done: 0, baseY: body.y };
       return;
     }
   }
@@ -521,7 +586,7 @@ function startMotion(body, fighter, id, world = null) {
   const from = move.kind === 'movement' ? 0 : move.startup;
   // a jump keeps the speed the body had as it left the ground; a roll or a dash covers its own distance
   const distance = move.air ? (body.speed || 0) * move.active : move.rootMotion * (id === 'roll' ? rollReach(fighter) : 1);
-  body.motion = { id, dir, from, to: from + move.active, distance, done: 0 };
+  body.motion = { id, dir, from, to: from + move.active, distance, done: 0, baseY: body.y };
 }
 
 function moveBody(world, fighter, body, dt, now) {
@@ -544,7 +609,7 @@ function moveBody(world, fighter, body, dt, now) {
       const k = Math.min(1, dt * (3 / Math.max(0.05, seize.pull)));
       body.x += (holder.x + f.x * seize.distance - body.x) * k;
       body.z += (holder.z + f.z * seize.distance - body.z) * k;
-      body.y += (0 - body.y) * k;
+      body.y += ((world.arenaLayout ? holder.y : 0) - body.y) * k;
       body.vy = 0; body.kx = 0; body.kz = 0; body.motion = null;
       body.yaw = Math.atan2(holder.x - body.x, holder.z - body.z);
       body.moving = false; body.speed = 0;
@@ -558,7 +623,7 @@ function moveBody(world, fighter, body, dt, now) {
       const f = forwardOf(holder.yaw);
       body.x = holder.x + f.x * GRIP_HOLD.distance;
       body.z = holder.z + f.z * GRIP_HOLD.distance;
-      body.y += (GRIP_HOLD.lift - body.y) * Math.min(1, dt * 10);
+      body.y += ((world.arenaLayout ? holder.y : 0) + GRIP_HOLD.lift - body.y) * Math.min(1, dt * 10);
       body.vy = 0;
       body.kx = 0; body.kz = 0;
       body.moving = false; body.speed = 0;
@@ -580,11 +645,12 @@ function moveBody(world, fighter, body, dt, now) {
     const span = Math.max(1e-6, to - from);
     const progress = Math.max(0, Math.min(1, (a.t - from) / span));
     const target = progress * d;
-    const stepDist = target - body.motion.done;
-    body.motion.done = target;
+    // Never apply negative root travel from an older or rounded action clock.
+    const stepDist = Math.max(0,target - body.motion.done);
+    body.motion.done = Math.max(body.motion.done,target);
     vx += (dir.x * stepDist) / dt;
     vz += (dir.z * stepDist) / dt;
-    if (a.move.leap && !a.move.air) { body.y = 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
+    if (a.move.leap && !a.move.air) { body.y = (world.arenaLayout ? (body.motion.baseY ?? 0) : 0) + 4 * a.move.leap * progress * (1 - progress); body.vy = 0; }
     if (a.move.hop && progress >= 1) body.motion = null; // landed: the slam
   } else {
     body.motion = null;
@@ -631,20 +697,22 @@ function moveBody(world, fighter, body, dt, now) {
   body.moving = Math.hypot(vx, vz) > 0.1;
   const leaping = !!(a?.move.leap && !a.move.air && body.motion && !body.motion.clip && a.id === body.motion.id);
   if (effectOn(fighter, 'levitate', now)) {
-    body.y += (EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
+    const support=world.arenaLayout?.conduitImported?conduitLiveSupport(body.x,body.z,body.y+.05,-Infinity,.4):null;
+    const floor=world.arenaLayout?.conduitImported?(Number.isFinite(support)?support:body.y-EFFECTS.levitate.height):world.arenaLayout?Math.max(0,body.y-EFFECTS.levitate.height):0;
+    body.y += (floor + EFFECTS.levitate.height - body.y) * Math.min(1, dt * 4);
     body.vy = 0;
   } else if (leaping) {
     // the arc is drawn by the root motion above
-  } else if (a?.id === 'airDash' && a.t <= a.move.active && body.y > 0) {
+  } else if (a?.id === 'airDash' && a.t <= a.move.active && (world.arenaLayout?.conduitImported?airborne(world,body):body.y>0)) {
     // Pause vertical movement during the short horizontal burst, then resume normal gravity.
     body.vy = 0;
-  } else if (body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
+  } else if (world.arenaLayout?.imported || body.y > 0 || body.vy > 0) { // falling back down after a throw, a release or a float
     body.vy -= GRAVITY * dt;
-    body.y = Math.max(0, body.y + body.vy * dt);
-    if (body.y === 0) body.vy = 0;
+    body.y = world.arenaLayout?.imported ? body.y + body.vy * dt : Math.max(0, body.y + body.vy * dt);
+    if (body.y === 0 && !world.arenaLayout?.conduitImported) body.vy = 0;
   }
   if (world.level && body.y > ROOM_HEADROOM) { body.y = ROOM_HEADROOM; body.vy = Math.min(body.vy, 0); }
-  if (body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
+  if (!world.arenaLayout && body.jumped && body.y <= 0.001 && a?.id !== 'jump') {
     body.jumped = false;
     body.airJumpAt = null;
     body.airDashReady = false;
@@ -655,6 +723,8 @@ function moveBody(world, fighter, body, dt, now) {
 // the arena's edge, or the rooms' walls
 function keepInside(world, body) {
   if (world.level) { resolveCircle(world.level, body, BODY_RADIUS); return; }
+  if(world.arenaLayout?.imported)return;
+  if(world.arenaLayout?.footprint){recoverArenaFootprint(world.arenaLayout,body,BODY_RADIUS);return;}
   const r = Math.hypot(body.x, body.z);
   const limit = world.arenaRadius - BODY_RADIUS;
   if (r > limit) { body.x *= limit / r; body.z *= limit / r; }
@@ -667,6 +737,7 @@ function separate(world) {
     for (let j = i + 1; j < list.length; j++) {
       const a = world.bodies.get(list[i].id);
       const b = world.bodies.get(list[j].id);
+      if(world.arenaLayout && Math.abs(a.y-b.y)>=ARENA_BODY_HEIGHT)continue;
       const d = distance(a, b);
       const min = BODY_RADIUS * 2;
       if (d >= min) continue;
@@ -683,12 +754,12 @@ function separate(world) {
 export function targetsInReach(world, attacker, body, move, single) {
   const found = [];
   for (const other of world.fighters.values()) {
-    if (!hostile(world, attacker, other) || other.vitals.dead) continue;
+    if (!hostile(world, attacker, other) || other.vitals.dead || !ctfCombatAllowed(world,attacker,other)) continue;
     const ob = world.bodies.get(other.id);
     const d = distance(body, ob);
     if (d > move.range + BODY_RADIUS) continue;
     if (!insideArc(body, body.yaw + arcTurn(move), ob, move.arc)) continue;
-    if (world.level && !clearLine(world.level, body, ob)) continue; // nothing reaches through a wall
+    if (!visible(world, body, ob) || (world.arenaLayout && Math.abs(body.y-ob.y)>1.8)) continue; // nothing reaches through a wall
     found.push({ fighter: other, d });
   }
   found.sort((p, q) => p.d - q.d);
@@ -700,7 +771,7 @@ function resolveReach(world, attacker, body, id, effects, now, index = 0) {
   // the throw reaches the one being held, wherever it hangs
   if (id === 'gripThrow') {
     const held = [...world.fighters.values()].find((f) => f.heldBy === attacker.id);
-    if (held) collect(effects, strike(attacker, held, id, { now }), attacker, held, world);
+    if (held&&ctfCombatAllowed(world,attacker,held)) collect(effects, strike(attacker, held, id, { now }), attacker, held, world);
     return;
   }
   if (move.execute) {
@@ -708,7 +779,7 @@ function resolveReach(world, attacker, body, id, effects, now, index = 0) {
     // the Execution's second hit: the blade is out, the body is pushed away
     if (index > 0) {
       attacker.specialTarget = null;
-      if (target && move.shove) {
+      if (target && move.shove&&ctfCombatAllowed(world,attacker,target)) {
         const tb = world.bodies.get(target.id);
         const f = forwardOf(body.yaw);
         tb.kx += f.x * move.shove * KNOCKBACK_DECAY;
@@ -719,7 +790,7 @@ function resolveReach(world, attacker, body, id, effects, now, index = 0) {
       return;
     }
     if (!move.shove) attacker.specialTarget = null;
-    if (target && !target.vitals.dead && distance(world.bodies.get(target.id), body) <= move.range + BODY_RADIUS + 0.8) {
+    if (target && !target.vitals.dead && ctfCombatAllowed(world,attacker,target) && distance(world.bodies.get(target.id), body) <= move.range + BODY_RADIUS + 0.8) {
       collect(effects, strike(attacker, target, id, { now }), attacker, target, world);
       target.seizedBy = null;
     }
@@ -773,9 +844,9 @@ function spawnProjectile(world, fighter, body, id, effects) {
   const move = moveFor(fighter, id);
   const dir = forwardOf(body.yaw);
   const p = { id: world.nextProjectile++, owner: fighter.id, move: id, x: body.x + dir.x * 0.6, z: body.z + dir.z * 0.6,
-    dir, speed: move.projectileSpeed || PROJECTILE_SPEED[id] || 60, left: move.range };
+    y: (world.arenaLayout ? body.y : 0) + PROJECTILE_HEIGHT, dir, speed: move.projectileSpeed || PROJECTILE_SPEED[id] || 60, left: move.range };
   world.projectiles.push(p);
-  effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, dir, speed: p.speed });
+  effects.push({ type: 'projectile', id: p.id, owner: fighter.id, move: id, x: p.x, z: p.z, ...(world.arenaLayout ? {y:p.y} : {}), dir, speed: p.speed });
 }
 
 function stepProjectiles(world, dt, now, effects) {
@@ -785,6 +856,10 @@ function stepProjectiles(world, dt, now, effects) {
     const owner = world.fighters.get(p.owner);
     // a wall, a crate or a closed door stops it
     let wall = false;
+    if(world.arenaLayout){
+      const t=arenaRayFraction(world.arenaLayout,p,{x:p.x+p.dir.x*travel,y:p.y,z:p.z+p.dir.z*travel});
+      if(t<1){travel*=t;wall=true;}
+    }
     if (world.level) {
       const toWall = rayDistance(world.level, p, p.dir, travel);
       if (toWall < travel) { travel = toWall; wall = true; }
@@ -793,12 +868,13 @@ function stepProjectiles(world, dt, now, effects) {
     let hit = null;
     let best = Infinity;
     for (const other of world.fighters.values()) {
-      if (!owner || !hostile(world, owner, other) || other.vitals.dead) continue;
+      if (!owner || !hostile(world, owner, other) || other.vitals.dead||!ctfCombatAllowed(world,owner,other)) continue;
       const b = world.bodies.get(other.id);
+      if(world.arenaLayout && (p.y<b.y || p.y>b.y+ARENA_BODY_HEIGHT))continue;
       const rx = b.x - p.x;
       const rz = b.z - p.z;
       const along = rx * p.dir.x + rz * p.dir.z;
-      if (along < -BODY_RADIUS || along > travel + BODY_RADIUS) continue;
+      if (along < -BODY_RADIUS || along > travel + (wall && world.arenaLayout ? 0 : BODY_RADIUS)) continue;
       const side = Math.abs(rx * p.dir.z - rz * p.dir.x);
       if (side <= BODY_RADIUS + 0.05 && along < best) { best = along; hit = other; }
     }

@@ -1,3 +1,5 @@
+import {createConduitArena} from './maps/conduitArena.mjs';
+import {createIndustrialCtfArena,applyIndustrialCtfLighting} from './maps/industrialCtfArena.mjs';
 // Duelist Adventure (new build): one match in the arena (practice, duel, free for all, team deathmatch or
 // capture the flag), played in the browser against bots (client/localSource.mjs) or online on the match
 // server (net/client.mjs); or the story mission in its depot (client/missionSource.mjs). All are "sources"
@@ -16,10 +18,15 @@ import { createCrystalSword, attachToHand } from './crystalWeapon.mjs';
 import { createSidearm, createAimLine } from './sidearm.mjs';
 import { dressGuard } from './guardKit.mjs';
 import { createFighterAnimator } from './animator.mjs';
+import { applyControlPointDaylight } from './maps/controlPointDaylight.mjs';
+import { createDuelistControlPointArena } from './maps/controlPointArena.mjs';
 import { createArena, createSceneLighting } from './arena.mjs';
+import { createModeArchitecture } from './modeArchitecture.mjs';
+import { arenaRayFraction, arenaLineClear } from '../sim/modeArenaLayout.mjs';
 import { createDepot, createMarkerOverlay, DEPOT } from './depot.mjs';
 import { createDuelVfx } from './vfx.mjs';
 import { createControls, createFollowCamera } from './controls.mjs';
+import { specialActivationLocked } from '../sim/world.mjs';
 import MobileTouchControls from '../../mobile/MobileTouchControls.jsx';
 import { isMobileTouchDevice } from '../../mobile/mobileTouchModel.mjs';
 import { keysFrom, keyLabel, helpLine } from './bindings.mjs';
@@ -31,10 +38,11 @@ import { createDirector } from './director.mjs';
 import { createNameTags, createCtfProps, fighterColor, TEAM_COLORS } from './matchProps.mjs';
 import { createFootballProps } from './footballProps.mjs';
 import { createEscortProps } from './escortProps.mjs';
+import {createEscortArena,applyEscortDaylight} from './maps/escortArena.mjs';
 import { createControlProps } from './controlProps.mjs';
 import { createLocalSource } from './localSource.mjs';
 import { createMissionSource } from './missionSource.mjs';
-import { createOnlineSource } from '../net/client.mjs';
+import { createOnlineSource, hasResumableDuelistSeat } from '../net/client.mjs';
 import { Countdown, RespawnNote, Result } from './MatchHud.jsx';
 import DuelistHud from './DuelistHud.jsx';
 import { createHudFeed } from './hudFeed.mjs';
@@ -43,6 +51,8 @@ import { takePortrait } from './portrait.mjs';
 import ClassPicker from './ClassPicker.jsx';
 import { classChoiceSecondsLeft, shouldShowMatchClassPicker, CLASS_CHOICE_PROMPT_SECONDS } from './matchClassEntry.mjs';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
+import PracticeSettings from './PracticeSettings.jsx';
+import PracticeDemonstration from './PracticeDemonstration.jsx';
 import ShopPanel from './ShopPanel.jsx';
 import StorySupplyPanel from './StorySupplyPanel.jsx';
 import MatchLoadingScreen from './MatchLoadingScreen.jsx';
@@ -75,6 +85,7 @@ import { getAppParams } from '@/lib/app-params';
 import './duelist.css';
 import '../menu/duelistDarkBlueTheme.css';
 import '../menu/duelistMobileUI.css';
+import '../menu/duelistSapphire.css';
 
 const POWERS = ['push', 'pull', 'grip', 'breach', 'dash', 'resist']; // the on-screen buttons, labelled with their keys
 const EVASIONS = ['Front_Roll', 'Back_Flip', 'Flip_Left', 'Flip_Right'];
@@ -157,7 +168,41 @@ async function createActor(scene, seat, weaponColor, classId = null) {
  * botLevel: trainee | duelist | master. online + serverUrl: play on the match server instead of in the browser
  * (story: with a crew; room is a crew's code, 'new' for a room of your own, or null for any open crew).
  */
-export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1,
+// A live room may already be fighting. Confirm the initial class before
+// opening a connection or spawning a vulnerable player. Subsequent in-match
+// class changes still use the server's normal next-spawn policy.
+export default function DuelistGame(props) {
+  if (props.online && props.mode !== 'story') {
+    return <OnlineClassEntry key={JSON.stringify([props.serverUrl, props.mode, props.matchId, props.room])} {...props} />;
+  }
+  return <DuelistMatch {...props} />;
+}
+
+function OnlineClassEntry(props) {
+  const [selected, setSelected] = useState(() =>
+    hasResumableDuelistSeat(props.mode, props.room, props.matchId) ? (classById(props.classId)?.id || 'duelist') : null);
+  const [seconds, setSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
+  useEffect(() => {
+    if (selected) return undefined;
+    const openedAt = Date.now();
+    const timer = window.setInterval(() => setSeconds(classChoiceSecondsLeft(openedAt, Date.now())), 200);
+    return () => window.clearInterval(timer);
+  }, [selected]);
+  if (selected) return <DuelistMatch {...props} classId={selected} entryClassConfirmed />;
+  const bound = keysFrom(props.keys || {});
+  const classKeys = ['ability1', 'ability2', 'ability3', 'ability4', 'special'].map(a => keyLabel(bound[a], { short: true }));
+  return <div className="duelist-game" data-mobile-ui={typeof window !== 'undefined' && isMobileTouchDevice(window) ? 'true' : undefined}>
+    <ClassPicker current={props.classId} fighter={props.you} keys={classKeys}
+      progress={props.progress} initialChoice secondsLeft={seconds}
+      joiningRoom onPick={id => {
+        if (!classById(id)) return;
+        props.onClassChange?.(id); // save a preference only; the server validates the actual join class
+        setSelected(id);
+      }} />
+  </div>;
+}
+
+function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel = 'duelist', you: youBody = 'maskedWarrior', foe: foeBody = 'huntress', bots = 1, testMode = false, practiceMode = false, practiceSettings = null, testBots = false,
   online = false, serverUrl = null, sensitivity = 1, room = null, matchId = null, mission = 'contraband', onLeave = null, onNext = null,
   onMission = null, keys = null, voicesOn = true, classId = 'duelist', onClassChange = null, progress = null, onProgress = null }) {
   const bound = keysFrom(keys || {});
@@ -166,11 +211,15 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const sourceRef = useRef(null);
   const [picking, setPicking] = useState(false); // explicit reopen after initial confirmation
   // Do not let the automatic match/round countdown dismiss class selection.
-  const [entryClass, setEntryClass] = useState({ generation: 0, confirmed: false });
+  const [entryClass, setEntryClass] = useState({ generation: 0, confirmed: entryClassConfirmed });
   const [pendingClassPick, setPendingClassPick] = useState(null);
   const [choiceSeconds, setChoiceSeconds] = useState(CLASS_CHOICE_PROMPT_SECONDS);
-  const initialChosenRef = useRef(false);
+  const initialChosenRef = useRef(entryClassConfirmed);
   const [shopOpen, setShopOpen] = useState(false);
+  const [trainingOpen, setTrainingOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [demonstration, setDemonstration] = useState(null);
+  const savedPractice = useRef(null);
   const controlsRef = useRef(null);
   const mountRef = useRef(null);
   const [hud, setHud] = useState(null);
@@ -202,8 +251,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     if (!mount) return undefined;
     let disposed = false;
     setStatus('loading');
-    initialChosenRef.current = false;
-    setEntryClass({ generation, confirmed: false });
+    const resume = !demonstration && savedPractice.current;
+    const confirmed = !!demonstration || (resume ? resume.confirmed : entryClassConfirmed);
+    initialChosenRef.current = confirmed;
+    setEntryClass({ generation, confirmed });
     setPendingClassPick(null);
     setPicking(false);
     setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
@@ -227,8 +278,10 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     const story = mode === 'story';
     const seed = 1 + ((Date.now() / 1000) % 100000 | 0) + generation * 7919;
     const source = story && !online ? createMissionSource({ id: mission, seed, youBody })
-      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, classId, onChange: (s, detail) => setNet({ status: s, detail }) })
-        : createLocalSource({ mode, botLevel, bots, seed, youBody, foeBody, classId, progress: progressRef.current });
+      : online ? createOnlineSource({ url: serverUrl, token: getAppParams().token, name: '', body: youBody, mode, mission, room, matchId, classId, practiceSettings, onChange: (s, detail) => setNet({ status: s, detail }) })
+        : demonstration ? createLocalSource({ mode:'practice', bots:1, practiceMode:true, seed, youBody, foeBody, classId:demonstration.classId, demonstration })
+        : resume ? resume.source : createLocalSource({ mode, botLevel, bots, testMode, practiceMode, practiceSettings, testBots, seed, youBody, foeBody, classId, progress: progressRef.current });
+    if (resume) savedPractice.current = null;
     const { world } = source;
     sourceRef.current = source;
     // a mission's rooms (matches are fought in the open arena); online they follow the crew to its next mission
@@ -240,16 +293,40 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     // the arena is sized by the mode (online, the mode is known once a match is found); a mission has its depot
     let arenaMode = null;
     let arena = null;
+    let architecture = null;
     let warp = null;
     const warpHolder = { ring: (...a) => warp?.ring(...a), hold: (...a) => warp?.hold(...a) };
     const arenaHolder = { arc: (...a) => arena?.arc(...a) };
     const ensureArena = (m) => {
-      const key = level ? `mission:${source.def?.id}` : m;
+      const key = level ? `mission:${source.def?.id}` : `${m}:${world.arenaLayout?.id || 'flat'}`;
       if (arenaMode === key) return;
       arenaMode = key;
+      architecture?.dispose(); architecture = null;
       if (arena) { arena.dispose(); arena.group.removeFromParent(); }
-      arena = level ? createDepot({ level, def: source.def, scene, lights }) : createArena({ radius: MODES[m]?.arena || 18 });
+      if (!level && world.arenaLayout?.conduitImported) {
+        const imported=createConduitArena(scene,{quality:'low',enableLights:true});
+        arena={group:imported.root,dispose(){imported.dispose();},arc(){},update(dt,{view}={}){imported.updateVisuals(world.time);const states=view?.conduitPickups;for(const p of states??[])imported.setPickupAvailable(p.id,p.available);}};return;
+      }
+      if (!level && world.arenaLayout?.ctfImported) {
+        const imported=createIndustrialCtfArena(scene,{textureResolution:1024});
+        const lighting=applyIndustrialCtfLighting({scene,camera,renderer,lights});
+        arena={group:imported.root,dispose(){lighting.dispose();imported.dispose();},arc(){},update(dt){lighting.update(dt);imported.update(dt,source.flags?.(),id=>bodyOf(world,id));}};return;
+      }
+      if (!level && world.arenaLayout?.escortImported) {
+        const imported=createEscortArena(scene);
+        const daylight=applyEscortDaylight({scene,camera,renderer,lights,environment:imported.environment});
+        arena={group:imported.root,dispose(){daylight.dispose();imported.dispose();},arc(){},update(dt){daylight.update(dt);const stage=source.view()?.escort?.stage??0;if(stage!==imported.map.currentMatchStage)imported.map.setMatchStage(stage);}};return;
+      }
+      if (!level && world.arenaLayout?.imported) {
+        const imported = createDuelistControlPointArena(THREE);
+        imported.setLayerVisibility('trusses',false);
+        const daylight=applyControlPointDaylight({scene,camera,renderer,lights,materials:imported.materials});
+        const updatePoints=points=>{for(const cp of imported.capturePoints){const point=points?.find(p=>p.id===cp.letter);if(!point)continue;const color=point.contested?0xfbbf24:point.owner==='red'?0xef4444:point.owner==='blue'?0x3b82f6:0xdbeafe;cp.outerRingMesh.material=point.contested?imported.materials.contestedCaptureEmissive:point.owner==='red'?imported.materials.redTeamEmissive:point.owner==='blue'?imported.materials.blueTeamEmissive:imported.materials.neutralCaptureEmissive;const progressColor=new THREE.Color(point.capturing==='red'?0xef4444:point.capturing==='blue'?0x3b82f6:color);for(let i=0;i<24;i++)cp.segmentInstancedMesh.setColorAt(i,i<Math.round(point.progress*24)?progressColor:new THREE.Color(0x101724));cp.segmentInstancedMesh.instanceColor.needsUpdate=true;}};
+        arena={group:imported.root,dispose(){daylight.dispose();imported.dispose();},arc(){},update(dt){daylight.update(dt);},updatePoints};scene.add(arena.group);return;
+      }
+      arena = level ? createDepot({ level, def: source.def, scene, lights }) : createArena({ radius: MODES[m]?.arena || 18, footprint: world.arenaLayout?.footprint });
       scene.add(arena.group);
+      if(!level && world.arenaLayout){architecture=createModeArchitecture(m, world.arenaLayout);if(architecture?.layout.id===world.arenaLayout.id)arena.group.add(architecture.group);else {architecture?.dispose();architecture=null;}}
     };
     ensureArena(source.mode || mode);
     let markers = level ? createMarkerOverlay(mount) : null;
@@ -259,6 +336,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     audioRef.current = audio;
     setMuted(audio.muted);
     const toggleBattleShop = () => {
+      if (demonstration) return;
       const currentView = source.view?.();
       if (!currentView || currentView.phase === 'over' || currentView.phase === 'complete' || currentView.phase === 'failed') return;
       // The cursor must be free to interact with the shop. Closing leaves it free until the
@@ -268,7 +346,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     };
     const controls = createControls(renderer.domElement, { keys: bound, sensitivity, onShopToggle: toggleBattleShop });
     controlsRef.current = controls;
-    controls.setPaused(shopOpen);
+    controls.setPaused(shopOpen || demoOpen || !!demonstration);
     // the comms lines, spoken as they appear on screen (and the radio's click)
     const voices = createVoices({ audio, enabled: voicesOn });
     voicesRef.current = voices;
@@ -372,7 +450,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         const dx = b.x - at.x;
         const dz = b.z - at.z;
         const d = Math.hypot(dx, dz);
-        if (d > range || (level && !clearLine(level, at, b))) continue;
+        if (d > range || (level && !clearLine(level, at, b)) || (world.arenaLayout && !arenaLineClear(world.arenaLayout,at,b))) continue;
         const off = Math.abs(Math.atan2(Math.sin(Math.atan2(dx, dz) - aim), Math.cos(Math.atan2(dx, dz) - aim)));
         const score = off * 3 + d / range;
         if (!best || score < best.score) best = { id: f.id, score };
@@ -389,7 +467,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         if (f.id === me() || f.vitals.dead || outOfFight(f) || !hostile(world, mine, f)) continue;
         const b = bodyOf(world, f.id);
         const d = Math.hypot(b.x - at.x, b.z - at.z);
-        if (d > range || (best && d >= best.d) || (level && !clearLine(level, at, b))) continue;
+        if (d > range || (best && d >= best.d) || (level && !clearLine(level, at, b)) || (world.arenaLayout && !arenaLineClear(world.arenaLayout,at,b))) continue;
         best = { id: f.id, d };
       }
       return best?.id || null;
@@ -397,8 +475,9 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
     // indoors the camera stays in the room: pulled in front of whatever is between it and the fighter's head
     const head = new THREE.Vector3();
     const clampCamera = (target, point) => {
-      if (!level) return;
+      if (!level && !world.arenaLayout) return;
       head.set(target.x, target.y + HEAD, target.z);
+      if(world.arenaLayout && !level){const t=arenaRayFraction(world.arenaLayout,head,point,0.12);if(t<1)point.lerpVectors(head,point,Math.max(0,t-0.03));return;}
       const dx = point.x - head.x;
       const dz = point.z - head.z;
       const d = Math.hypot(dx, dz);
@@ -414,6 +493,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
       point.y = Math.min(point.y, DEPOT.height - 0.3);
     };
+    // Conduit has three real elevations, including a basement below world zero.
+    const interiorRay = (from, to, pad) => arenaRayFraction(world.arenaLayout, from, to, pad);
     const lockedBody = () => {
       const f = lockId ? world.fighters.get(lockId) : null;
       if (!f || f.vitals.dead || outOfFight(f)) { lockId = null; return null; }
@@ -512,7 +593,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       else if (e.type === 'door') audio.play('door', arena.doorAt?.(e.id) || null);
       else if (e.type === 'failed') audio.play('loss');
       else if (e.type === 'complete') audio.play('victory');
-      else if (e.type === 'retry' || e.type === 'respawn') { if (e.type === 'retry') director.reset(); if (e.type === 'retry' || e.id === me()) follow.snap(); }
+      else if (e.type === 'retry' || e.type === 'respawn' || e.type === 'positionRecovered') { if (e.type === 'retry') director.reset(); if (e.type === 'retry' || e.id === me()) follow.snap(); }
     };
 
     // In rooms, only people the camera or your fighter could see are drawn and animated: a line to the body
@@ -575,14 +656,14 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       // the players' bodies must be there to start; a mission's people step in as they are built
       const ready = source.status === 'ready' && mineId && seatList.length > 0 && seatList.every((s) => actors[s.id] || s.kind === 'enemy' || s.kind === 'ally');
       if (ready) {
-        if (!level && source.mode && source.mode !== arenaMode) ensureArena(source.mode);
-        if (!ctf && source.mode === 'ctf') {
+        if (!level && source.mode) ensureArena(source.mode);
+        if (!ctf && source.mode === 'ctf'&&!world.arenaLayout?.ctfImported) {
           const z = MODES.ctf.arena - CTF.baseInset;
           ctf = createCtfProps(scene, { red: { home: { x: 0, z: -z } }, blue: { home: { x: 0, z } } });
         }
         if (!football && source.mode === 'football') football = createFootballProps(scene, MODES.football.arena);
         if (!escort && source.mode === 'escort') escort = createEscortProps(scene);
-        if (!control && source.mode === 'control') control = createControlProps(scene, MODES.control.arena);
+        if (!control && source.mode === 'control' && !world.arenaLayout?.imported) control = createControlProps(scene, MODES.control.arena);
         const readInput = () => {
           if (pilot && source.mission) return pilot.think(source.mission, pilot.state);
           const at = bodyOf(world, mineId);
@@ -601,7 +682,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         const { effects, events } = !online && !source.mission && !initialChosenRef.current
           ? { effects: [], events: [] }
           : source.step(dt, readInput);
-        escort?.update(source.escortDistance?.() ?? 0);
+        escort?.update(source.escortDistance?.() ?? 0,dt,source.view()?.escort);
         football?.update(source.ball?.(), dt);
         for (const e of events) onMatchEvent(e);
         // a heavy hit holds the picture for a few hundredths of a second (the rules run on)
@@ -655,7 +736,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           actor.at.set(body.x, body.y, body.z);
           actor.group.position.copy(actor.at);
           actor.group.rotation.set(0, actor.yaw, 0);
-          if (drawing) actor.animator.update(dt, { fighter, body, now: world.time, working: working.get(id) || null, impact: actor.impactPose, clash: actor.clashAt ?? null });
+          if (drawing) actor.animator.update(dt, { fighter, body, now: world.time, arenaLayout: world.arenaLayout, working: working.get(id) || null, impact: actor.impactPose, clash: actor.clashAt ?? null });
           const will = fighter.vitals.max.will > 0 ? fighter.vitals.will / fighter.vitals.max.will : 0;
           actor.sword.setWill(will, fighterVeil(fighter));
           const a = fighter.action;
@@ -667,7 +748,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
               const dir = forwardOf(body.yaw);
               const reach = level ? Math.min(a.move.range, rayDistance(level, body, dir, a.move.range)) : a.move.range;
               const muzzle = actor.sword.muzzle();
-              actor.aim.show({ x: muzzle.x, y: PROJECTILE_HEIGHT, z: muzzle.z }, body.yaw, reach, winding);
+              actor.aim.show({ x: muzzle.x, y: (world.arenaLayout ? body.y : 0) + PROJECTILE_HEIGHT, z: muzzle.z }, body.yaw, reach, winding);
             } else actor.aim.hide();
           }
           actor.sword.update(show);
@@ -700,19 +781,22 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
         const at = bodyOf(world, mineId);
         const target = lockedBody();
         // watched while the game plays your fighter: the camera turns with the body
-        if (pilot && at) { const y = controls.yaw(); controls.setYaw(y + Math.atan2(Math.sin(at.yaw - y), Math.cos(at.yaw - y)) * Math.min(1, dt * 2.5)); }
-        const followYaw = target && at ? Math.atan2(target.x - at.x, target.z - at.z) : controls.yaw();
+        if ((pilot || demonstration) && at) { const y = controls.yaw(); controls.setYaw(y + Math.atan2(Math.sin(at.yaw - y), Math.cos(at.yaw - y)) * Math.min(1, dt * 2.5)); }
+        // In Conduit, target lock remains a combat aid, not a camera override.
+        const freeInterior = !!world.arenaLayout?.conduitImported && !level;
+        const followYaw = target && at && !freeInterior ? Math.atan2(target.x - at.x, target.z - at.z) : controls.yaw();
         if (at) {
           if (follow.distanceTo(at) > 8) follow.snap();
-          follow.update(dt, { target: at, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target, clamp: clampCamera });
+          follow.update(dt, { target: at, yaw: followYaw + viewOffset, pitch: controls.pitch(), lockOn: target, clamp: clampCamera, interiorRay: freeInterior ? interiorRay : null });
           if (level) {
             // the key light follows the crew through the rooms; a camera pressed against you looks through you
             lights.sun.position.set(at.x + 5, 20, at.z + 3);
             lights.sun.target.position.set(at.x, 0, at.z);
-            if (actors[mineId]) actors[mineId].group.visible = camera.position.distanceTo(head.set(at.x, at.y + HEAD, at.z)) > 0.85;
           }
+          // Close orbit becomes a clear near-first-person view rather than looking through our own mesh.
+          if ((level || freeInterior) && actors[mineId]) actors[mineId].group.visible = camera.position.distanceTo(head.set(at.x, at.y + HEAD, at.z)) > 0.85;
         }
-        if (target && at) controls.setYaw(followYaw);
+        if (target && at && !freeInterior) controls.setYaw(followYaw);
         if (markers) markers.update(lastView?.phase === 'live' ? lastView.markers.filter((m) => !m.follow) : [], camera, at);
         if (lastView && !!lastView.alarm !== alarmOn) { alarmOn = !!lastView.alarm; if (alarmOn) audio.play('alarm'); }
         if (fixedShot) { camera.position.fromArray(fixedShot.position); camera.lookAt(...fixedShot.target); }
@@ -734,8 +818,8 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           const view = source.view();
           const inMatch = !!view && !view.mission;
           if (inMatch) feed.view(view, clock, hudContext());
-          control?.update(view?.controlPoints);
-          if (level) lastView = view;
+          control?.update(view?.controlPoints);arena.updatePoints?.(view?.controlPoints);
+          if (level || world.arenaLayout?.conduitImported) lastView = view;
           const line = view?.comms || null;
           const said = line ? `${line.speaker}\n${line.text}` : null;
           if (said !== lineShown) {
@@ -767,6 +851,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
             classLevel: mine?.classId ? mine.level : null, // the level this life is fought at (a new one comes with the next spawn)
             specialMeter: mine?.classId ? (Number.isFinite(mine.meter) ? mine.meter : view?.me?.specialMeter ?? 0) : null,
             specialKey: keyLabel(controls.keys.special, { short: true }),
+            specialState: online ? source.specialState?.() : specialActivationLocked(mine, world.time) ? 'active' : null,
             dead: !!mine?.vitals.dead,
             meId: mineId,
             kills: inMatch ? feed.kills(clock).slice() : null,
@@ -779,7 +864,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       } else if (source.status !== 'reconnecting') {
         // nothing to follow yet (while reconnecting the picture simply holds still)
         const start = source.def?.start || { x: 0, z: 0 };
-        follow.update(dt, { target: { x: start.x, y: 0, z: start.z }, yaw: controls.yaw(), pitch: controls.pitch(), clamp: clampCamera });
+        follow.update(dt, { target: { x: start.x, y: 0, z: start.z }, yaw: controls.yaw(), pitch: controls.pitch(), clamp: clampCamera, interiorRay: world.arenaLayout?.conduitImported && !level ? interiorRay : null });
       }
       arena.update(dt, { view: lastView });
       warp.update(dt);
@@ -822,6 +907,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       markers?.dispose();
       window.removeEventListener('pointerdown', wake);
       window.removeEventListener('keydown', wake);
+      architecture?.dispose();
       arena.dispose();
       for (const actor of Object.values(actors)) actor.dispose();
       renderer.dispose();
@@ -832,7 +918,7 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
       }
       if (window.__duelist?.world === world) delete window.__duelist;
     };
-  }, [mode, botLevel, youBody, foeBody, bots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn]);
+  }, [mode, botLevel, youBody, foeBody, bots, testMode, practiceMode, testBots, generation, online, serverUrl, sensitivity, room, matchId, mission, keysKey, voicesOn, entryClassConfirmed, demonstration]);
 
   const view = hud?.view;
   const quest = view?.mission ? view : null; // a story mission's view; otherwise a match's
@@ -843,14 +929,14 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   const current = hud?.classId || classId;
   const classAnswer = sourceRef.current?.classAnswer || null;
   const initialConfirmed = entryClass.generation === generation && entryClass.confirmed;
-  const showPicker = shouldShowMatchClassPicker({
+  const showPicker = !demonstration && shouldShowMatchClassPicker({
     match, mission: !!quest, confirmed: initialConfirmed, manuallyOpened: picking,
   });
   // Inputs stay inactive while selecting a class. Explicitly reopening the
   // picker pauses controls too, including for online matches.
   useEffect(() => {
-    controlsRef.current?.setPaused(shopOpen || showPicker);
-  }, [shopOpen, showPicker]);
+    controlsRef.current?.setPaused(shopOpen || showPicker || trainingOpen || demoOpen || !!demonstration);
+  }, [shopOpen, showPicker, trainingOpen, demoOpen, demonstration]);
   // Five seconds tells the player to decide, but zero NEVER makes a choice or closes the menu.
   useEffect(() => {
     if (!match || quest || initialConfirmed || match.phase === 'over') return undefined;
@@ -895,22 +981,25 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
   return (
     <div className="duelist-game" data-mobile-ui={typeof window !== 'undefined' && isMobileTouchDevice(window) ? 'true' : undefined} ref={mountRef}>
       <MobileTouchControls game="duelist"
+        classId={hud?.classId}
+        abilityStatus={hud?.abilities}
+        willValue={hud?.you?.willValue}
         specialReady={!!hud?.classId && Number.isFinite(hud?.specialMeter) &&
-          hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead}
+          hud.specialMeter + 1e-6 >= (CLASSES[hud.classId]?.special?.cost ?? 100) && !hud.dead && !hud.specialState}
         specialCharge={hud?.specialMeter}
         lockActive={!!hud?.lockOn}
-        disabled={!hud || !!showPicker || shopOpen || waiting || hud.dead ||
+        disabled={!hud || !!showPicker || shopOpen || demoOpen || !!demonstration || waiting || hud.dead ||
           match?.phase === 'over' || quest?.phase === 'complete' || quest?.phase === 'failed'}
         onMove={move => controlsRef.current?.setTouchMove(move)}
         onLook={(dx, dy) => controlsRef.current?.look(dx, dy)}
         onActionDown={action => controlsRef.current?.touchActionDown(action)}
         onActionUp={action => controlsRef.current?.touchActionUp(action)} />
       <DuelistHud hud={hud} fighter={youBody} portrait={portrait} story={!!quest} pickerOpen={!!showPicker} onPower={(id) => pressRef.current?.(id)}
-        onClass={match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
+        onClass={!demonstration && match && match.phase !== 'over' ? () => { if (document.pointerLockElement) document.exitPointerLock?.(); setPicking(true); } : null}
         help={helpLine(bound, { story: mode === 'story', abilityNames: hud?.classId ? CLASSES[hud.classId].abilities.map((a) => a.name) : null })} />
-      {match && initialConfirmed && <Countdown view={match} fightFlash={fightFlash} />}
-      {match && <RespawnNote view={match} />}
-      {match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
+      {match && (initialConfirmed || (online && match.mode==='escort' && match.phase==='countdown')) && <Countdown view={match} fightFlash={fightFlash} />}
+      {!demonstration && match && <RespawnNote view={match} />}
+      {!demonstration && match && <Result view={match} myTeam={hud.myTeam} online={online} onAgain={again} />}
       {quest && <Objective view={quest} />}
       {quest && <Crew view={quest} />}
       {quest && <Prompt view={quest} keyName={keyLabel(bound.interact, { short: true })} />}
@@ -935,13 +1024,19 @@ export default function DuelistGame({ mode = 'practice', botLevel = 'duelist', y
           {bound.itemActive ? keyLabel(bound.itemActive, {short:true}) + ' · ' : ''}Use relic
         </button>
       )}
-      {match && <button type="button" className="duelist-shop-toggle" onClick={() => {
+      {!demonstration && match?.me?.training && <PracticeSettings live value={match.me.training} onOpenChange={setTrainingOpen} onChange={(id,value)=>sourceRef.current?.setPracticeOption?.(id,value)}/>}
+      {!online && (demonstration || (match?.me?.training && !testMode && (mode==='practice'||mode==='duel'))) && <PracticeDemonstration open={demoOpen} selection={demonstration} keys={bound} disabled={status!=='ready' || !!showPicker}
+        onOpenChange={open=>{if(document.pointerLockElement)document.exitPointerLock?.();if(!open&&demonstration)setDemonstration(null);setDemoOpen(open);}}
+        onPlay={selection=>{if(!demonstration)savedPractice.current={source:sourceRef.current,confirmed:initialChosenRef.current};setShopOpen(false);setTrainingOpen(false);setDemonstration(selection);}}
+        onStop={()=>setDemonstration(null)}/>}
+      {!demonstration && match && <button type="button" className="duelist-shop-toggle" onClick={() => {
         if (document.pointerLockElement) document.exitPointerLock?.();
         setShopOpen(true);
-      }}>{keyLabel(bound.shop, { short: true })} · Shop · {Math.floor(match.me?.gold ?? 0)} gold</button>}
+      }}>{keyLabel(bound.shop, { short: true })} · Shop · {match.me?.unlimitedGold ? '∞' : Math.floor(match.me?.gold ?? 0)} gold</button>}
       {shopOpen && match && match.phase !== 'over' && <ShopPanel
         me={match.me} answer={sourceRef.current?.shopAnswer || null}
-        onBuy={(id) => sourceRef.current?.buyItem?.(id)}
+        onBuy={(id, tier, combine) => sourceRef.current?.buyItem?.(id, tier, combine)}
+        onSell={match.me?.training ? id => sourceRef.current?.sellItem?.(id) : null}
         onClose={() => setShopOpen(false)} />}
       {quest && quest.phase === 'live' && <button type="button" className="duelist-shop-toggle"
         onClick={() => { if (document.pointerLockElement) document.exitPointerLock?.(); setShopOpen(true); }}>

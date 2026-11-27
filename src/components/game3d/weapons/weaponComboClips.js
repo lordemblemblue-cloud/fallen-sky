@@ -270,7 +270,10 @@ const breathing = (name, base, seconds, { bend = 1.5, drop = 0.008, lift = 0.01 
 };
 const WIDE_FEET = { l: [0.22, -0.17, 8], r: [-0.18, 0.19, -30] };
 export const IDLE_SWORD = breathing('idleSword', { spine: [0, 3, 0], hips: [0.02, 0],
-  r: { arm: [0.2, -0.4, 0.14], blade: [0.72, 0.3, 0.3] }, l: { arm: [0.08, -0.5, -0.02] } }, 2.4);
+  r: { arm: [0.2, -0.4, 0.14], blade: [0.72, 0.3, 0.3] },
+  // The unarmed wrist must hang outside the hip, not towards the torso. Keep the elbow
+  // outward as well; these shoulder-relative targets scale to both fused rigs.
+  l: { arm: [0.08, -0.48, 0.15], pole: [-0.12, -0.26, 0.65] } }, 2.4);
 export const IDLE_SWORD_TWO_HAND = breathing('idleSwordTwoHand', { ...TWO_HAND_READY, feet: WIDE_FEET }, 2.0);
 export const IDLE_DAGGERS = breathing('idleDaggers', DAGGER_READY, 2.0, { drop: 0.01 });
 export const IDLE_BOW = breathing('idleBow', { spine: [3, 3, 0], hips: [0.02, 3],

@@ -1,22 +1,19 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Compass, LocateFixed, Map, MapPin, Mountain, Swords, X } from 'lucide-react';
+import { BookOpen, Compass, LocateFixed, Map, MapPin, Swords, X } from 'lucide-react';
 import { getPlayerPosition, subscribePlayerPosition } from '../playerPositionStore';
 import { getLunarCaveMapEnemies, subscribeLunarCaveMapEnemies } from '../dungeons/LunarCaveMapStore.mjs';
 import { getWolfveilLiveMap, subscribeWolfveilLiveMap } from './WolfveilLiveMapStore.mjs';
 import { LUNAR_CAVE_CHAMBERS,LUNAR_CAVE_PASSAGES,LUNAR_CAVE_WATER_END,LUNAR_CAVE_ROOM_RADIUS,LUNAR_CAVE_PASSAGE_HALF_WIDTH } from '../dungeons/LunarCaveLayout.mjs';
 import { ASTRAL_PADS,ASTRAL_BRIDGES,ASTRAL_PAD_RADIUS,ASTRAL_BRIDGE_HALF_WIDTH } from '../dungeons/AstralDungeonLayout.mjs';
-import {WOLFVEIL_CAVE_APPROACHES} from '../wolfveil/WolfveilCaveAccessPlan.mjs';
 import { getQuestState, subscribeQuests } from '../useQuestStore';
 import { AXE_FIRST_REGION } from '../axe/world/AXEFirstRegionLayout';
 import { getMapMarkers, getMapScale, getMapZone, getQuestNavigationTarget, projectMapPosition } from './worldMapData';
-import WolfveilUndergroundMapPanel from './WolfveilUndergroundMapPanel';
 import WolfveilWorldMapLayers from './WolfveilWorldMapLayers';
 import './AXEWorldMapOverlay.css';
 
 const FILTERS = [
   { id:'quest', label:'Quests', icon:BookOpen },
   { id:'mob', label:'Mobs', icon:Swords },
-  { id:'cave', label:'Caves', icon:Mountain },
   { id:'portal', label:'Portals', icon:Compass },
   { id:'npc', label:'NPCs', icon:MapPin },
 ];
@@ -34,7 +31,6 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
   const [focus,setFocus]=useState({x:500,y:500});
   const [flags,setFlags]=useState({quest:true,mob:true,cave:true,portal:true,npc:true});
   const [selected,setSelected]=useState(null);
-  const [view,setView]=useState('surface'); // surface chart or the Wolfveil cave network
   const [zoneDetail,setZoneDetail]=useState(null); // Wolfveil field / mob area chosen on the map
   useEffect(()=>subscribeQuests(setQuests),[]);
   useEffect(()=>subscribeLunarCaveMapEnemies(setDungeonEnemies),[]);
@@ -98,29 +94,20 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
     }
   };
   const coords=pos=>projectMapPosition(region,pos[0],pos[2]);
-  const regionText=isAstral?'Moonfall Expanse':isDungeon?'Lunar Cave Dungeon':region==='forest'?'First Territory':'Wolfveil Valley';
-  const chartInfo=isAstral?'Four central metal platforms with eight interconnected side rings and flowing energy boundaries. All bridges and live high-level monsters appear here; loot requires server verification.':
+  const regionText=region==='temporary-platform'?'Temporary Platform':isAstral?'Moonfall Expanse':isDungeon?'Lunar Cave Dungeon':region==='forest'?'First Territory':'Wolfveil Valley';
+  const chartInfo=region==='temporary-platform'?'A small empty staging platform. The overworld is temporarily unloaded.':isAstral?'Four central metal platforms with eight interconnected side rings and flowing energy boundaries. All bridges and live high-level monsters appear here; loot requires server verification.':
     isDungeon?'The stone corridors, five battle halls and monster dots reflect this dungeon instance. Red markers show living enemies from Game 3D.':
-    region==='forest'?'Caves and travel portals marked “charted” are mapped reserves, not active transport.':
+    region==='forest'?'Travel portals marked “charted” are mapped reserves, not active transport.':
     'Gold rings are open fighting grounds (level, no monsters). Red rings are mob areas. Smaller red dots are living enemies, and quest NPCs use their real positions. Mountains ring the valley.';
   return <div className="axe-world-map-backdrop" role="presentation" onPointerDown={e=>e.stopPropagation()}>
     <section className="axe-world-map-dialog" role="dialog" aria-modal="true" aria-label="World map"
       onKeyDown={e=>e.stopPropagation()}>
       <header className="axe-world-map-heading">
-        <div><Map size={25}/><span><strong>WORLD MAP</strong><small>{region==='wolfveil'&&view==='underground'
-          ? 'Wolfveil Underground · Cave Network'
-          : regionText+' · '+getMapZone(region,position)}</small></span></div>
-        {region==='wolfveil'&&<nav className="axe-world-map-views" aria-label="Map layer">
-          {[['surface','Surface'],['underground','Underground']].map(([id,label])=>
-            <button key={id} type="button" aria-pressed={view===id}
-              onClick={()=>{setView(id);setSelected(null);}}>{label}</button>)}
-        </nav>}
+        <div><Map size={25}/><span><strong>WORLD MAP</strong><small>{regionText+' · '+getMapZone(region,position)}</small></span></div>
         <span className="axe-world-map-coordinates">X {Math.round(position.x)} · Z {Math.round(position.z)}</span>
         <button type="button" onClick={onClose} aria-label="Close world map"><X size={23}/></button>
       </header>
-      {region==='wolfveil'&&view==='underground'
-        ? <WolfveilUndergroundMapPanel position={position}/>
-        : <div className="axe-world-map-main">
+      <div className="axe-world-map-main">
         <nav className="axe-world-map-filters" aria-label="Map markers">
           <h3>SHOW ON MAP</h3>
           {FILTERS.map(({id,label,icon:Icon})=><button type="button" key={id}
@@ -194,29 +181,7 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
                 </g>;
               })}
             </g>}
-            {region==='wolfveil'&&<g aria-label="Four cave approach trails and walk-in entrances">
-              {WOLFVEIL_CAVE_APPROACHES.map(approach=>{
-                const points=approach.points.map(point=>{
-                  const p=projectMapPosition('wolfveil',point.x,point.z+70);
-                  return p.x+','+p.y;
-                }).join(' ');
-                const end=projectMapPosition('wolfveil',
-                  approach.entrance.x,approach.entrance.z+70);
-                return <g key={approach.id}>
-                  <polyline points={points} fill="none" stroke="#6a6258"
-                    strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" strokeOpacity=".9"/>
-                  <polyline points={points} fill="none" stroke="#e2c58c"
-                    strokeWidth="4.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1={projectMapPosition('wolfveil',approach.points.at(-1).x,
-                    approach.points.at(-1).z+70).x}
-                    y1={projectMapPosition('wolfveil',approach.points.at(-1).x,
-                      approach.points.at(-1).z+70).y}
-                    x2={end.x} y2={end.y} stroke="#b7e1d6" strokeWidth="3"/>
-                  <circle cx={end.x} cy={end.y} r="7"
-                    fill="#e8c784" stroke="#102b35" strokeWidth="2"/>
-                </g>;
-              })}
-            </g>}
+
             {zones.map(zone=>{
               const center=coords(zone.center);
               return <g key={zone.id}><circle cx={center.x} cy={center.y}
@@ -290,11 +255,9 @@ export default function AXEWorldMapOverlay({ region='wolfveil', onClose }) {
             <span><i className="axe-map-dot-point"/> Landmarks / travel</span>
           </div>
         </aside>
-      </div>}
+      </div>
       <footer className="axe-world-map-foot">
-        <span>{region==='wolfveil'&&view==='underground'
-          ? 'Every chamber starts dimmed · explored rooms light up as you walk them.'
-          :isDungeon?'North-up cave chart · corridors, rooms and living monsters update as you move.':'Silver-blue navigation trail follows your tracked quest when a valid objective location is known.'}</span>
+        <span>{'Silver-blue navigation trail follows your tracked quest when a valid objective location is known.'}</span>
         <span>Click a marker for details · M / Esc to close</span>
       </footer>
     </section>

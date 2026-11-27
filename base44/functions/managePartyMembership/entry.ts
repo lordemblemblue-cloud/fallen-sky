@@ -54,22 +54,16 @@ Deno.serve(async (req) => {
                         return Response.json({ success: false, error: 'Party is restricted to assigned members' }, { status: 403 });
                     }
                 }
-                if (updatedMembers.length >= Number(party.maxSize || 5)) {
-                    return Response.json({ error: 'Party is full' }, { status: 409 });
-                }
-                updatedMembers.push(user.id);
-                
-                // Sync presence
-                presenceUpdate = {
-                    current_activity: {
-                        type: 'party',
-                        id: partyId,
-                        clanId: party.clanId || null,
-                        gameId: party.gameId,
-                        role: 'member'
-                    }
-                };
-                break;
+                const invites = await base44.asServiceRole.entities.PartyInvite.filter({
+                    party_id: partyId, invitee_id: user.id, status: 'pending'
+                }, '-created_date', 1);
+                if (!invites[0]) return Response.json({ error: 'Party invitation required' }, { status: 403 });
+                // Forward with the caller's session. The canonical handler rechecks
+                // recipient, expiry, capacity and current membership before writing.
+                const accepted = await base44.functions.invoke('partySystem', {
+                    action: 'accept_invite', data: { inviteId: invites[0].id }
+                });
+                return Response.json(accepted.data, { status: accepted.status || 200 });
 
             case 'leave':
                 if (!updatedMembers.includes(user.id)) {

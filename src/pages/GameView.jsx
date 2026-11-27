@@ -2,9 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { base44 } from '@/api/base44Client';
 import CharacterLoginScreen from '../components/game3d/CharacterLoginScreen';
+import FallenSkyBetaNotice from '../components/game3d/FallenSkyBetaNotice';
 import WorldEntryCurtain from '../components/game3d/WorldEntryCurtain';
 import { worldCheckpointStore } from '../components/game3d/worldCheckpointStore';
+import { questTestDestination } from '../components/game3d/threeroads/questTestDestinations.mjs';
+import { setQuestTestRuntimePreview } from '../components/game3d/threeroads/questTestRuntime.mjs';
 import GameWorld3D from '../components/game3d/GameWorld3D';
+import {FALLEN_SKY_PLATFORM_MODE,PLATFORM_REGION,isPlatformRegion} from '../components/game3d/worlds/temporaryPlatform.mjs';
 import MobileTouchControls from '../components/mobile/MobileTouchControls';
 import { createFallenTouchBridge } from '../components/mobile/fallenMobileTouchBridge.mjs';
 import {WOLFVEIL_AREA_IDS,wolfveilAreaAtWorld} from '../components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
@@ -125,7 +129,7 @@ export default function GameView() {
   const [worldEntryCycle,setWorldEntryCycle]=useState(0);
   const [playIntroCamera,setPlayIntroCamera]=useState(false);
   const [creatorOnLogin, setCreatorOnLogin] = useState(false);
-  const [worldRegion,setWorldRegion]=useState('wolfveil');
+  const [worldRegion,setWorldRegion]=useState(FALLEN_SKY_PLATFORM_MODE?PLATFORM_REGION:'wolfveil');
   // A five-area gate swaps to a new GameWorld3D scene, just like a dungeon portal.
   const [worldArea,setWorldArea]=useState('town');
   const [portalLanding,setPortalLanding]=useState(null);
@@ -134,6 +138,7 @@ export default function GameView() {
   const [portalSpawnAtGate,setPortalSpawnAtGate]=useState(false);
   const vortexOriginRef=useRef(null); // remember portal source across dungeon remount
   const [workflowSpawn, setWorkflowSpawn] = useState(null);
+  const questTestSessionRef = useRef(null);
   const [resumeCheckpoint, setResumeCheckpoint] = useState(null);
   const services = useAXEServiceMode();
   const [storeOpen, setStoreOpen] = useState(false);
@@ -282,10 +287,89 @@ export default function GameView() {
   useEffect(() => () => teardownCombatMusic(), []);
 
 
+  // Admin-only Three Roads test travel. This is an in-memory preview switch,
+  // not a persistent URL/storage override; it resets on refresh or navigation.
+  useEffect(() => {
+    if (FALLEN_SKY_PLATFORM_MODE || phase !== 'world' || user?.role !== 'admin') return;
+    const move = (target, returning = false) => {
+      const area = wolfveilAreaAtWorld(target);
+      if (!WOLFVEIL_AREA_IDS.includes(area)) {
+        toast.error('Quest Test location is not available in this build.');
+        return false;
+      }
+      services.controller.close();
+      setPauseMenuOpen(false);
+      setStoreOpen(false);
+      setProgressionOpen(false);
+      setPortalReturn(false);
+      setPortalSpawnAtGate(false);
+      setPortalLanding(returning
+        ? { x: target.x, y: target.y, z: target.z, yaw: target.yaw }
+        : null);
+      setResumeCheckpoint(null);
+      setWorldEntryError('');
+      setWorldArea(area);
+      lastWolfveilAreaRef.current = area;
+      setWorldRegion('wolfveil');
+      // A first-entry workflow target is validated against the loaded real
+      // terrain and the occupied-footprint guard by GameWorld3D.
+      setWorkflowSpawn(returning ? null : `X ${target.x}, Z ${target.z}`);
+      worldReadyRef.current = false;
+      setWorldReady(false);
+      setWorldEntryStatus('loading');
+      // Also remount when teleporting between places inside the same area.
+      setWorldEntryCycle(cycle => cycle + 1);
+      return true;
+    };
+    const onTravel = event => {
+      const id = event?.detail?.destinationId;
+      if (id === 'return') {
+        const session = questTestSessionRef.current;
+        if (!session) { toast.error('Previous position unavailable.'); return; }
+        if (move(session.origin, true)) {
+          setQuestTestRuntimePreview(null);
+          questTestSessionRef.current = null;
+        }
+        return;
+      }
+      if (worldRegion !== 'wolfveil') {
+        toast.error('Enter the Wolfveil overworld before selecting a test destination.');
+        return;
+      }
+      const destination = questTestDestination(id);
+      if (!destination) { toast.error('Unknown Quest Test destination.'); return; }
+      if (!questTestSessionRef.current) {
+        // Capture the real current spot BEFORE enabling test mode, so returning
+        // never depends on a guessed location or a later test checkpoint.
+        window.dispatchEvent(new Event('game3dCheckpointFlush'));
+        const origin = worldCheckpointStore.read();
+        if (origin?.region !== 'wolfveil') {
+          toast.error('No safe return location saved. Enter Wolfveil and try again.');
+          return;
+        }
+        questTestSessionRef.current = { origin };
+      }
+      setQuestTestRuntimePreview(!!destination.preview);
+      if (!move(destination)) setQuestTestRuntimePreview(null);
+    };
+    window.addEventListener('game3dQuestTestTravel', onTravel);
+    return () => window.removeEventListener('game3dQuestTestTravel', onTravel);
+  }, [phase, user?.role, worldRegion, services.controller]);
+
+  // Login/logout and route navigation must always leave regular play intact.
+  useEffect(() => {
+    if (phase === 'world' && user?.role === 'admin') return;
+    if (questTestSessionRef.current) {
+      questTestSessionRef.current = null;
+      setQuestTestRuntimePreview(null);
+    }
+  }, [phase, user?.role]);
+  useEffect(() => () => setQuestTestRuntimePreview(null), []);
+
   // Real portal crossings remount the same engine in a separate map scene.
   // The original Wolfveil terrain and its protected Luna mansion stay intact.
   useEffect(()=>{
-    if(phase!=='world')return;
+    if(FALLEN_SKY_PLATFORM_MODE||phase!=='world')return;
     const onPortalTravel=(event)=>{
       const detail=event.detail||{};
       const target=detail.target;
@@ -294,7 +378,7 @@ export default function GameView() {
         WOLFVEIL_AREA_IDS.includes(detail.area)&&detail.area!==worldArea&&
         landing&&[landing.x,landing.y,landing.z].every(Number.isFinite)&&
         wolfveilAreaAtWorld(landing)===detail.area;
-      if(!areaTravel&&(!['wolfveil','lunar-cave','astral-dungeon','wolfveil-caves'].includes(target)||
+      if(!areaTravel&&(target!=='wolfveil'||
         target===worldRegion))return;
       services.controller.close();
       setPauseMenuOpen(false);
@@ -675,6 +759,7 @@ export default function GameView() {
         entryCinematic={playIntroCamera}
         initialWorkflowTarget={workflowSpawn} workflowAllowed={user?.role==='admin'} portalReturn={portalReturn} portalSpawnAtGate={portalSpawnAtGate}
         resumeCheckpoint={resumeCheckpoint} />
+      {phase === 'world' && <FallenSkyBetaNotice context="world" />}
       {/* Keep GPU governor/warmup, but relocate its floating GPU/FPS button to native Graphics settings. */}
       <Game3DPerformanceBootstrap region={worldRegion} showPanel={false} />
       <MobileTouchControls game="fallen"
@@ -716,15 +801,15 @@ export default function GameView() {
               });
             }}
             onRetryWorld={()=>{worldReadyRef.current=false;setWorldReady(false);setWorldEntryError('');setWorldEntryCycle(cycle=>cycle+1);}}
-            workflowEnabled={user?.role==='admin'} openCreator={creatorOnLogin}
+            workflowEnabled={!FALLEN_SKY_PLATFORM_MODE&&user?.role==='admin'} openCreator={creatorOnLogin}
             onPlay={(region='wolfveil',target=null)=>{
               setCreatorOnLogin(false);
               setWorldEntryError('');
-              const requestedRegion=['forest','astral-dungeon','lunar-cave'].includes(region)?region:'wolfveil';
+              const requestedRegion=region==='forest'?region:'wolfveil';
                // Standard Play resumes this character's last stored world and coordinates.
                // An explicit preview/workflow target always takes precedence.
-               const resume = requestedRegion==='wolfveil' && !target ? worldCheckpointStore.read() : null;
-               const nextRegion = resume?.region || requestedRegion;
+               const resume = !FALLEN_SKY_PLATFORM_MODE && requestedRegion==='wolfveil' && !target ? worldCheckpointStore.read() : null;
+               const nextRegion = FALLEN_SKY_PLATFORM_MODE?PLATFORM_REGION:(resume?.region || requestedRegion);
                setResumeCheckpoint(resume);
                const nextArea=nextRegion==='wolfveil'?(wolfveilAreaAtWorld(resume)||'town'):'town';
                const switchingArea=nextRegion==='wolfveil'&&nextArea!==worldArea;
@@ -733,10 +818,10 @@ export default function GameView() {
                setPortalLanding(null);
               // Wolfveil is ALREADY rendered below this menu; do not remount it.
               // Loading curtain applies only if a model or another region is pending.
-              setWorldEntryStatus(nextRegion==='wolfveil'&&!switchingArea&&worldReadyRef.current?'idle':'loading');
+              setWorldEntryStatus(nextRegion===worldRegion&&!switchingArea&&worldReadyRef.current?'idle':'loading');
               setPlayIntroCamera(false); // The gateway fades directly into gameplay, without an orbit cinematic.
               setPortalReturn(false);
-              if(nextRegion!=='wolfveil'||switchingArea){
+              if(nextRegion!==worldRegion||switchingArea){
                 worldReadyRef.current=false;
                 setWorldReady(false);
               }
@@ -750,7 +835,7 @@ export default function GameView() {
       ) : (
         <>
       <AXEVerifiedQuestbookMount172 />
-      <AXEQuestTrailMount region={worldRegion} enabled={!services.active && !services.expanded} />
+      <AXEQuestTrailMount region={worldRegion} enabled={!isPlatformRegion(worldRegion)&&!services.active && !services.expanded} />
       {/* Service group/subpage selector is visible only while a workspace is active;
            it disappears entirely after C, K or Escape closes the workspace. */}
       <GameHUD region={worldRegion} serviceMode={services.active} servicesExpanded={services.expanded}
@@ -770,8 +855,8 @@ export default function GameView() {
       {services.active && <AXEServiceWorkspace mode={services} onClose={() => services.controller.close()} />}
       {!services.active && services.message && <div className="axe-service-session-notice" role="status">{services.message}</div>}
       {/* World boss UI removed in the systems/animation test scene. */}
-      <MultiplayerSystem envUrl="game_world_lowpoly" surface="game-world" />
-      <GameWorldServerManager showHud={communityHUD.online && !services.active && !services.expanded} />
+      {!isPlatformRegion(worldRegion)&&<MultiplayerSystem envUrl="game_world_lowpoly" surface="game-world" />}
+      {!isPlatformRegion(worldRegion)&&<GameWorldServerManager region={worldRegion} area={worldRegion==='wolfveil'&&wolfveilAreaScenesEnabled()?worldArea:null} showHud={communityHUD.online && !services.active && !services.expanded} />}
       {/* Equipped weapon is the canonical source for mastery/class/role identity. */}
       <AXEWeaponIdentityMount />
       {/* Wuxia blueprint: Shift+1 / Shift+2 draw the two quick-slot weapons. */}
@@ -788,7 +873,7 @@ export default function GameView() {
       />
       {/* Host-authoritative enemy/boss sync — elects one host per channel,
           broadcasts world snapshots, and applies them on non-hosts. */}
-      <WorldSyncMount />
+      {!isPlatformRegion(worldRegion)&&<WorldSyncMount />}
       {/* AXE Prompt 003 — logical region/POI/travel streaming follows the live player position. */}
       {/* AXEWorldStreamingMount is paused while Game 3D runs the self-contained forest biome prototype. */}
       {/* AXE Prompt 004 — first 2.4 km macro-region blockout. */}
@@ -844,14 +929,14 @@ export default function GameView() {
       <MiniGamesHub userId={user?.id} showLauncher={communityHUD.miniGames} suppressed={services.active || services.expanded ||
         storeOpen || progressionOpen || pauseMenuOpen || friendsListOpen || clanOverlayOpen} />
       <Game3DCompetitionInbox enabled={phase==='world'} userId={user?.id} />
-      <DuelSystem userId={user?.id} />
-      <DuelMarkers localUserId={user?.id} />
+      {!isPlatformRegion(worldRegion)&&<DuelSystem userId={user?.id} />}
+      {!isPlatformRegion(worldRegion)&&<DuelMarkers localUserId={user?.id} />}
 
       {/* Slice B — feature-flagged. Default OFF, no effect on existing systems. */}
-      <NetworkBridgeMount />
+      {!isPlatformRegion(worldRegion)&&<NetworkBridgeMount />}
       <NetworkBridgeHUD />
       {/* Slice C — feature-flagged. Default OFF, runs alongside legacy WebRTC remotes. */}
-      <NetworkRemotesMount />
+      {!isPlatformRegion(worldRegion)&&<NetworkRemotesMount />}
       <LegacyRemotesVisibilityToggle />
       <NetworkRemotesDebugOverlay />
       <NetworkValidationTelemetry />
@@ -859,17 +944,17 @@ export default function GameView() {
       <RenderStatsOverlay />
 
       {/* Loot drop layer — spawns world items on enemy death, handles E-to-pickup */}
-      <GameWorldLootLayer />
+      {!isPlatformRegion(worldRegion)&&<GameWorldLootLayer />}
 
       {/* Exploration discoveries — material nodes and elite finds out in the land, E to gather;
           the server grants the reward for a character it keeps */}
-      <ExplorationDiscoveryMount />
+      {!isPlatformRegion(worldRegion)&&<ExplorationDiscoveryMount />}
 
       {/* Hostile rogue-player AIs — kill them for gold, XP, loot, and PvP title kills */}
-      <EnemyPlayerSpawner />
+      {!isPlatformRegion(worldRegion)&&<EnemyPlayerSpawner />}
 
       {/* HP bars (level + random name + liquid-glass HP) above each rogue AI */}
-      <RogueAIHPBarLayer />
+      {!isPlatformRegion(worldRegion)&&<RogueAIHPBarLayer />}
 
       {/* Shop consumable effects — applies buffs/heals when items are used from the shop */}
       <ShopEffectsBridge />
@@ -894,7 +979,7 @@ export default function GameView() {
       <SkillActivationToastListener />
       <LevelUpToastListener />
       {/* Names the Wolfveil area the player has just walked into */}
-      {phase==='world' && <Game3DAreaNotice />}
+      {phase==='world' && !isPlatformRegion(worldRegion) && <Game3DAreaNotice />}
 
       {/* Combat activity cannot start music or keep combat timers alive
           while the world remains mounted behind the character login menu. */}

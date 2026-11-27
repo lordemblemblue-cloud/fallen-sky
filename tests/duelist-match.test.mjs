@@ -3,7 +3,7 @@
 // a bot's place; a bot takes a leaving player's).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, MODES, CTF, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, stepMatch, joinMatch, leaveMatch, matchView, MODES, CTF, COUNTDOWN, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
 import { bodyOf } from '../src/components/duelist/sim/world.mjs';
 import { isInvulnerable, knockDown } from '../src/components/duelist/core/index.mjs';
 
@@ -59,9 +59,9 @@ test('team deathmatch counts defeats per team', () => {
 
 test('capture the flag: take theirs, drop it when knocked down, a team mate returns it, carry it home to score', () => {
   const m = createMatch({ mode: 'ctf', seed: 2, players: [{ id: 'r', team: 'red' }, { id: 'b', team: 'blue' }, { id: 'r2', team: 'red' }], seats: 3 });
-  play(m, COUNTDOWN + 0.1);
+  play(m, matchCountdownSeconds(m.mode) + 0.1);
   const { world } = m;
-  const put = (id, at) => Object.assign(bodyOf(world, id), { x: at.x, z: at.z });
+  const put = (id, at) => Object.assign(bodyOf(world, id), { x: at.x, y:at.y??4.8, z: at.z });
   put('b', { x: 8, z: 0 });
   // red takes the blue flag
   put('r', m.flags.blue.home);
@@ -72,7 +72,7 @@ test('capture the flag: take theirs, drop it when knocked down, a team mate retu
   play(m, 0.05);
   assert.equal(m.flags.blue.state, 'dropped');
   // blue touches its own dropped flag: home again
-  put('b', { x: m.flags.blue.x, z: m.flags.blue.z });
+  put('b', { x: m.flags.blue.x, z: m.flags.blue.z,y:m.flags.blue.y });
   play(m, 0.1);
   assert.equal(m.flags.blue.state, 'home');
   put('b', { x: 8, z: 0 });
@@ -93,9 +93,9 @@ test('capture the flag: take theirs, drop it when knocked down, a team mate retu
   knockDown(world.fighters.get('r2'), world.time);
   play(m, 0.05);
   assert.equal(m.flags.blue.state, 'dropped');
-  for (const id of ['r', 'r2', 'b']) put(id, { x: id === 'b' ? 10 : -10, z: id === 'r' ? 6 : -6 });
+  for (const id of ['r', 'r2', 'b']) put(id, { x: id === 'b' ? 10 : -10, z: id === 'r' ? 2.7 : -2.7 });
   play(m, CTF.autoReturn + 0.5, () => {
-    for (const id of ['r', 'r2', 'b']) put(id, { x: id === 'b' ? 10 : -10, z: id === 'r' ? 6 : -6 });
+    for (const id of ['r', 'r2', 'b']) put(id, { x: id === 'b' ? 10 : -10, z: id === 'r' ? 2.7 : -2.7 });
     return {};
   });
   assert.equal(m.flags.blue.state, 'home');

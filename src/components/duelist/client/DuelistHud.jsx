@@ -94,7 +94,7 @@ function Special({ hud, onPower }) {
   if (!cls) return null;
   const value = specialPercent(hud.specialMeter);
   const cost = cls.special.cost;
-  const ready = value !== null && hud.specialMeter + 1e-6 >= cost && !hud.dead;
+  const ready = value !== null && hud.specialMeter + 1e-6 >= cost && !hud.dead && !hud.specialState;
   const Icon = SPECIAL_ICONS[cls.special.id] || Sparkles;
   // a special that costs less than the whole meter marks each charge on it
   const marks = cost < 100 ? Array.from({ length: Math.floor(100 / cost + 1e-6) - 1 }, (_, i) => ((i + 1) * cost) / 100) : [];
@@ -112,7 +112,7 @@ function Special({ hud, onPower }) {
           <b style={{ width: `${value ?? 0}%` }} />
           {marks.map((k) => <i key={k} style={{ left: `${k * 100}%` }} />)}
         </div>
-        <span className="dh-special-key"><kbd>{hud.specialKey}</kbd>{ready ? 'Ready' : ''}</span>
+        <span className="dh-special-key"><kbd>{hud.specialKey}</kbd>{hud.specialState === 'pending' ? 'Activating…' : hud.specialState === 'active' ? 'Active' : ready ? 'Ready' : ''}</span>
       </div>
     </section>
   );
@@ -207,7 +207,7 @@ function CtfBoard({ view, myTeam, flagStates }) {
   const need = view.scoreToWin || 3;
   return (
     <div className="dh-part dh-board dh-ctf" data-testid="duelist-board-ctf">
-      <span className="dh-timer">{clock(view.clockLeft)}</span>
+      <span className="dh-timer">{view.overtime?"OVERTIME":clock(view.clockLeft)}</span>
       {['blue', 'red'].map((t) => (
         <Side key={t} team={t} mine={myTeam === t}><span className="dh-score">{view.teamScores?.[t] ?? 0}<small>/ {need}</small></span></Side>
       ))}
@@ -306,7 +306,7 @@ function Scoreboard({ view, me, myTeam, flagStates }) {
       <progress aria-label="Delivery progress" value={view.escort.progress} max={100}/>
       <span>{Math.floor(view.escort.progress)}%</span>
       <small>{view.phase === 'over' ? view.winner === 'red' ? 'Delivered' : 'Defense held' :
-        view.escort.contested ? 'Contested' : view.escort.moving ? 'Advancing' : 'Carrier stopped'}</small>
+        !view.escort.pointACaptured ? (view.escort.contested?'Point A contested':'Capture Point A '+Math.floor(view.escort.captureProgress||0)+'%') : (view.escort.contested ? 'Contested' : view.escort.moving ? 'Advancing' : 'Carrier stopped')+' · CP '+(view.escort.stage||0)+'/2'}</small>
     </div>;
     case 'ctf': return <CtfBoard view={view} myTeam={myTeam} flagStates={flagStates} />;
     case 'control': return <ControlBoard view={view} myTeam={myTeam} />;
@@ -326,6 +326,19 @@ function Banner({ banner, slot }) {
       <span>{banner.text}</span>
     </div>
   );
+}
+
+// Same text-free sapphire PNG for every kill and milestone. The text remains live,
+// readable and independent of the texture, and never intercepts gameplay input.
+function KillAnnouncement({ banner }) {
+  if (!banner) return null;
+  return <div key={banner.id} className="dh-kill-announcement" role="status" aria-live="polite"
+    style={{ '--dh-life': `${banner.until - banner.at}s` }}>
+    <div className="dh-kill-announcement-copy">
+      <strong>{banner.text}</strong>
+      {banner.subtitle && <small>{banner.subtitle}</small>}
+    </div>
+  </div>;
 }
 
 /**
@@ -372,6 +385,7 @@ export default function DuelistHud({ hud, fighter = 'maskedWarrior', portrait = 
           <Scoreboard view={view} me={hud.meId} myTeam={hud.myTeam} flagStates={hud.flagStates} />
           <Banner banner={hud.banners?.objective} slot="objective" />
           <Banner banner={hud.banners?.event} slot="event" />
+          {!pickerOpen && <KillAnnouncement banner={hud.banners?.kill} />}
         </section>
       )}
       {help && !captured && <div className="dh-help">{help}</div>}

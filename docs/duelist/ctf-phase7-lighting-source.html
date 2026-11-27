@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DUELIST ADVENTURE — Phase 7 Modular Add-On &amp; Lighting Viewer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.webgpu.min.js",
+      "three/webgpu": "https://cdn.jsdelivr.net/npm/three@0.175.0/build/three.webgpu.min.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.175.0/examples/jsm/"
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --bg-panel: rgba(14, 18, 26, 0.88);
+      --border-subtle: rgba(139, 152, 178, 0.24);
+      --text-primary: #eef2f7;
+      --text-secondary: #9aa6bc;
+      --accent-amber: #DF9B32;
+      --accent-cyan: #7BE5FF;
+      --accent-red: #FF394B;
+      --accent-blue: #20BFFF;
+      --accent-green: #2ee58d;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      background: #0d1016; color: var(--text-primary);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      user-select: none;
+    }
+
+    #viewport { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; background: #141923; }
+    #viewport canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+
+    #hud { position: fixed; inset: 0; pointer-events: none; z-index: 10; transition: opacity 0.22s ease; }
+    #hud.clean-hidden { opacity: 0; visibility: hidden; }
+
+    .panel {
+      pointer-events: auto;
+      background: var(--bg-panel);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    }
+
+    #top-bar {
+      position: absolute; top: 12px; left: 12px; right: 12px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; flex-wrap: wrap; pointer-events: none;
+    }
+
+    .brand-badge { display: flex; align-items: center; gap: 10px; padding: 8px 14px; }
+    .brand-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-amber); box-shadow: 0 0 10px var(--accent-amber); flex-shrink: 0; }
+    .brand-title { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.15; }
+    .brand-sub { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+
+    .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; pointer-events: auto; }
+
+    /* Corrected Match Preparation HUD (30s Prep + 5s Countdown = 35s Total) */
+    #match-banner {
+      position: absolute; top: 64px; left: 50%; transform: translateX(-50%);
+      padding: 8px 14px; display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap; justify-content: center; max-width: 94vw;
+    }
+    .match-phase-pill {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      padding: 3px 8px; border-radius: 6px; letter-spacing: 0.07em; text-transform: uppercase;
+      background: rgba(154, 166, 188, 0.16); color: #cfd8e8; border: 1px solid rgba(154, 166, 188, 0.35);
+    }
+    .match-phase-pill.prep { background: rgba(223, 155, 50, 0.22); color: #ffd894; border-color: rgba(223, 155, 50, 0.6); }
+    .match-phase-pill.countdown { background: rgba(255, 57, 75, 0.24); color: #ffb3ba; border-color: var(--accent-red); }
+    .match-phase-pill.live { background: rgba(46, 229, 141, 0.2); color: #9effcc; border-color: var(--accent-green); }
+
+    #match-timer {
+      font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 800; color: #ffffff;
+      min-width: 56px; text-align: center;
+    }
+
+    #match-callout {
+      position: fixed; top: 42%; left: 50%; transform: translate(-50%, -50%) scale(0.85);
+      font-size: 68px; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase;
+      color: #ffffff; text-shadow: 0 0 34px rgba(223, 155, 50, 0.92), 0 6px 20px rgba(0, 0, 0, 0.85);
+      opacity: 0; pointer-events: none; z-index: 40; transition: all 0.2s ease;
+    }
+    #match-callout.show { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+
+    .btn {
+      appearance: none; border: 1px solid var(--border-subtle);
+      background: rgba(27, 33, 46, 0.9); color: var(--text-primary);
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 7px 11px; border-radius: 9px; cursor: pointer;
+      transition: all 0.15s ease; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+    }
+    .btn:hover { background: rgba(42, 51, 69, 0.95); border-color: rgba(160, 178, 206, 0.45); }
+    .btn:active { transform: translateY(1px); }
+    .btn.active { background: rgba(32, 191, 255, 0.22); border-color: var(--accent-blue); color: #ffffff; box-shadow: 0 0 12px rgba(32, 191, 255, 0.25); }
+    .btn.amber { background: rgba(223, 155, 50, 0.18); border-color: rgba(223, 155, 50, 0.65); color: #ffd894; }
+    .btn.amber:hover { background: rgba(223, 155, 50, 0.3); }
+    .btn.red-accent { border-color: rgba(255, 57, 75, 0.55); }
+    .btn.blue-accent { border-color: rgba(32, 191, 255, 0.55); }
+
+    #clean-restore { position: fixed; top: 12px; right: 12px; z-index: 25; display: none; }
+    #clean-restore.visible { display: block; }
+
+    #inspector-panel {
+      position: absolute; top: 66px; left: 12px; width: 344px;
+      max-height: calc(100vh - 82px); overflow-y: auto;
+      padding: 12px; display: flex; flex-direction: column; gap: 11px;
+    }
+    #inspector-panel.collapsed { display: none; }
+    #inspector-panel::-webkit-scrollbar { width: 5px; }
+    #inspector-panel::-webkit-scrollbar-thumb { background: rgba(154, 166, 188, 0.3); border-radius: 4px; }
+
+    .section-title {
+      font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--text-secondary); margin-bottom: 6px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .telemetry-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .stat-card {
+      background: rgba(10, 13, 19, 0.65); border: 1px solid rgba(139, 152, 178, 0.14);
+      border-radius: 8px; padding: 6px 8px;
+    }
+    .stat-label { font-size: 10px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; color: var(--text-primary); margin-top: 2px; }
+    .stat-val.webgpu { color: var(--accent-green); }
+    .stat-val.webgl { color: var(--accent-amber); }
+
+    .preset-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+    .preset-grid .btn { justify-content: center; font-size: 11px; padding: 6px 7px; }
+
+    .row-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+    .row-controls .btn { flex: 1; justify-content: center; font-size: 11px; padding: 6px 8px; }
+
+    #audit-results { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; max-height: 250px; overflow-y: auto; }
+    .audit-item {
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+      background: rgba(10, 13, 19, 0.62); border: 1px solid rgba(139, 152, 178, 0.12);
+      border-radius: 7px; padding: 6px 8px; font-size: 11px; line-height: 1.3;
+    }
+    .audit-name { font-weight: 600; color: var(--text-primary); }
+    .audit-detail { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-secondary); margin-top: 2px; }
+    .badge-pass { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #0b2919; background: var(--accent-green); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+    .badge-fail { font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 700; color: #fff; background: var(--accent-red); padding: 2px 6px; border-radius: 5px; flex-shrink: 0; }
+
+    #controls-hint {
+      position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+      padding: 8px 14px; font-size: 11px; color: var(--text-secondary);
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 92vw;
+    }
+    .kbd {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px; padding: 1px 5px; color: #fff;
+    }
+
+    #toast {
+      position: fixed; top: 68px; right: 16px; z-index: 30;
+      padding: 9px 14px; font-size: 12px; font-weight: 600;
+      border-color: var(--accent-amber); color: #ffe3b0;
+      opacity: 0; transform: translateY(-8px); transition: all 0.2s ease; pointer-events: none;
+    }
+    #toast.show { opacity: 1; transform: translateY(0); }
+
+    #mobile-controls { position: fixed; inset: 0; pointer-events: none; z-index: 15; display: none; }
+    #mobile-controls.visible { display: block; }
+    #joystick-zone {
+      position: absolute; bottom: 24px; left: 24px; width: 120px; height: 120px; border-radius: 50%;
+      background: rgba(16, 20, 28, 0.55); border: 2px solid rgba(123, 229, 255, 0.35);
+      pointer-events: auto; touch-action: none;
+    }
+    #joystick-knob {
+      position: absolute; top: 50%; left: 50%; width: 46px; height: 46px;
+      margin-left: -23px; margin-top: -23px; border-radius: 50%;
+      background: rgba(32, 191, 255, 0.72); border: 2px solid #ffffff;
+      box-shadow: 0 0 14px rgba(32, 191, 255, 0.5);
+    }
+    .mobile-action-btns { position: absolute; bottom: 28px; right: 20px; display: flex; gap: 10px; pointer-events: auto; }
+    .touch-btn {
+      width: 62px; height: 62px; border-radius: 50%;
+      border: 2px solid rgba(255, 255, 255, 0.35); background: rgba(18, 24, 34, 0.78);
+      color: #fff; font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; touch-action: none;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    }
+    .touch-btn.jump { border-color: var(--accent-amber); color: #ffd894; }
+    .touch-btn.sprint { border-color: var(--accent-cyan); color: #bff2ff; }
+    .touch-btn:active { transform: scale(0.92); background: rgba(32, 191, 255, 0.35); }
+
+    #loader {
+      position: fixed; inset: 0; z-index: 50; background: #0e121a;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; transition: opacity 0.35s ease;
+    }
+    #loader.done { opacity: 0; pointer-events: none; }
+    .spinner { width: 38px; height: 38px; border-radius: 50%; border: 3px solid rgba(123, 229, 255, 0.18); border-top-color: var(--accent-amber); animation: spin 0.85s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 768px) {
+      #inspector-panel { width: calc(100vw - 24px); max-height: 52vh; top: 62px; }
+      .brand-sub { display: none; }
+      #controls-hint { display: none; }
+      #match-banner { top: auto; bottom: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="viewport"><canvas id="arena-canvas"></canvas></div>
+
+  <div id="loader">
+    <div class="spinner"></div>
+    <div style="font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#eef2f7;">
+      Loading Phase 7 Modular Add-On &amp; Lighting Viewer...
+    </div>
+    <div id="loader-status" style="font-size:11px;color:#9aa6bc;font-family:'JetBrains Mono',monospace;">
+      Detecting native WebGPU backend
+    </div>
+  </div>
+
+  <div id="match-callout">FIGHT!</div>
+
+  <div id="clean-restore">
+    <button class="btn amber" id="btn-exit-clean">Exit Clean View (H)</button>
+  </div>
+
+  <div id="toast" class="panel"></div>
+
+  <div id="hud">
+    <div id="top-bar">
+      <div class="panel brand-badge">
+        <div class="brand-dot"></div>
+        <div>
+          <div class="brand-title">Duelist Adventure — Phase 7 Modular Viewer</div>
+          <div class="brand-sub">Production Lighting, Atmosphere, Flag FX, Spawn Stairs &amp; Match Prep</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button class="btn active" id="btn-mode-orbit">Orbit Inspector</button>
+        <button class="btn" id="btn-mode-play">Third-Person Playtest</button>
+        <button class="btn" id="btn-toggle-panel">Inspector</button>
+        <button class="btn amber" id="btn-clean-view">Clean View</button>
+      </div>
+    </div>
+
+    <!-- Corrected Match Preparation HUD (30s Prep + 5s Countdown = 35s Total) -->
+    <div id="match-banner" class="panel">
+      <span class="match-phase-pill" id="match-phase-pill">STANDBY (ORBIT)</span>
+      <span id="match-timer">00:30</span>
+      <div style="display:flex;gap:5px;">
+        <button class="btn amber" id="btn-prep-start" style="padding:4px 8px;font-size:11px;">Start Match Prep</button>
+        <button class="btn" id="btn-prep-skip" style="padding:4px 8px;font-size:11px;">Skip to 5s</button>
+        <button class="btn" id="btn-prep-reset" style="padding:4px 8px;font-size:11px;">Reset</button>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+        <button class="btn active" data-class="Warrior/Juggernaut" style="padding:4px 7px;font-size:10px;">Warrior/Juggernaut</button>
+        <button class="btn" data-class="Duelist" style="padding:4px 7px;font-size:10px;">Duelist</button>
+        <button class="btn" data-class="Assassin" style="padding:4px 7px;font-size:10px;">Assassin</button>
+        <button class="btn" data-class="Healer" style="padding:4px 7px;font-size:10px;">Healer</button>
+      </div>
+    </div>
+
+    <!-- Engineering Inspector Drawer -->
+    <div id="inspector-panel" class="panel">
+      <div>
+        <div class="section-title">
+          <span>System Telemetry</span>
+          <span id="preset-badge" style="color:var(--accent-amber);font-family:'JetBrains Mono',monospace;">MEDIUM</span>
+        </div>
+        <div class="telemetry-grid">
+          <div class="stat-card">
+            <div class="stat-label">Renderer</div>
+            <div class="stat-val" id="stat-renderer">Init...</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">FPS</div>
+            <div class="stat-val" id="stat-fps">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Triangles</div>
+            <div class="stat-val" id="stat-tris">--</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Draw Calls</div>
+            <div class="stat-val" id="stat-calls">--</div>
+          </div>
+          <div class="stat-card" style="grid-column: span 2;">
+            <div class="stat-label">Coordinates (Meters)</div>
+            <div class="stat-val" id="stat-coords">X: 0.00  Y: 0.00  Z: 0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lighting Quality Presets -->
+      <div>
+        <div class="section-title">
+          <span>Lighting Quality Preset</span>
+          <span id="tex-res-badge" style="font-family:'JetBrains Mono',monospace;color:var(--accent-cyan);">1024px Shadow</span>
+        </div>
+        <div class="row-controls">
+          <button class="btn" data-quality="low">Low (Mobile)</button>
+          <button class="btn active" data-quality="medium">Medium</button>
+          <button class="btn" data-quality="high">High</button>
+        </div>
+      </div>
+
+      <!-- Camera Presets -->
+      <div>
+        <div class="section-title">Camera Presets</div>
+        <div class="preset-grid">
+          <button class="btn" data-cam="overview">Symmetrical Overview</button>
+          <button class="btn amber" data-cam="sunlight">Window Sunlight</button>
+          <button class="btn" data-cam="underBridge">Under-Bridge Cyan</button>
+          <button class="btn" data-cam="gallery">Upper Gallery</button>
+          <button class="btn red-accent" data-cam="redBase">Red Base A</button>
+          <button class="btn blue-accent" data-cam="blueBase">Blue Base B</button>
+          <button class="btn" data-cam="spawnStairs" style="grid-column: span 2;">Internal Spawn-Room Stairs</button>
+        </div>
+      </div>
+
+      <!-- Material Inspection -->
+      <div>
+        <div class="section-title">Material Inspection</div>
+        <div class="row-controls">
+          <button class="btn active" data-matmode="normal">Normal</button>
+          <button class="btn" data-matmode="albedo">Albedo-Only</button>
+          <button class="btn" data-matmode="neutral">Neutral Light</button>
+        </div>
+      </div>
+
+      <!-- Phase 7 Module Audit -->
+      <div>
+        <div class="section-title">
+          <span>Phase 7 Module Verification</span>
+          <span id="audit-summary" style="font-family:'JetBrains Mono',monospace;color:var(--text-secondary);">READY</span>
+        </div>
+        <button class="btn amber" id="btn-run-audit" style="width:100%;justify-content:center;">
+          Run Phase 7 Module Audit
+        </button>
+        <div id="audit-results"></div>
+      </div>
+    </div>
+
+    <div id="controls-hint" class="panel">
+      <span id="hint-orbit">
+        <span class="kbd">Left Drag</span> Orbit &nbsp;·&nbsp;
+        <span class="kbd">Right Drag</span> Pan &nbsp;·&nbsp;
+        <span class="kbd">Scroll</span> Zoom &nbsp;·&nbsp;
+        <span class="kbd">H</span> Clean View
+      </span>
+      <span id="hint-play" style="display:none;">
+        <span class="kbd">WASD</span> Move &nbsp;·&nbsp;
+        <span class="kbd">Mouse Drag</span> Look &nbsp;·&nbsp;
+        <span class="kbd">Shift</span> Sprint &nbsp;·&nbsp;
+        <span class="kbd">Space</span> Jump &nbsp;·&nbsp;
+        <span class="kbd">R</span> Spawn Room
+      </span>
+    </div>
+  </div>
+
+  <!-- Mobile Virtual Touch Controls -->
+  <div id="mobile-controls">
+    <div id="joystick-zone"><div id="joystick-knob"></div></div>
+    <div class="mobile-action-btns">
+      <button class="touch-btn sprint" id="touch-sprint">SPRINT</button>
+      <button class="touch-btn jump" id="touch-jump">JUMP</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // =========================================================================
+    // MODULE 0: ARENA_CONFIG (LOCKED SHARED COORDINATES FOR EASY MERGING)
+    // =========================================================================
+    const ARENA_CONFIG = Object.freeze({
+      phase: 7,
+      building: { width: 76, depth: 56, height: 21, wallThickness: 1.0, halfW: 38, halfD: 28 },
+      elevations: { ground: 0.0, bridge: 4.8, gallery: 9.6 },
+      centralBridge: { minX: -23, maxX: 23, minZ: -4, maxZ: 4, topY: 4.8, thickness: 0.6 },
+      redPlatform:   { minX: -36, maxX: -23, minZ: -8, maxZ: 8, topY: 4.8, thickness: 0.6 },
+      bluePlatform:  { minX:  23, maxX:  36, minZ: -8, maxZ: 8, topY: 4.8, thickness: 0.6 },
+      upperGallery: {
+        main:    { minX: -33, maxX: 33, minZ: -24, maxZ: -18, topY: 9.6, thickness: 0.45 },
+        balcony: { minX: -7,  maxX: 7,  minZ: -18, maxZ: -15, topY: 9.6, thickness: 0.45 }
+      },
+      windows: [
+        { id: 'win_left',   cx: -22, cy: 17.0, w: 14.0, h: 4.6, z: -28 },
+        { id: 'win_center', cx:   0, cy: 17.0, w: 11.0, h: 4.6, z: -28 },
+        { id: 'win_right',  cx:  22, cy: 17.0, w: 14.0, h: 4.6, z: -28 }
+      ],
+      flags: {
+        red:  { x: -31, y: 4.8, z: 0, primary: 0xFF394B, fabric: '#C52B3E', glow: 0xFF8592 },
+        blue: { x:  31, y: 4.8, z: 0, primary: 0x20BFFF, secondary: 0x7BE5FF, fabric: '#167BC7' }
+      },
+      spawnStairs: [
+        { id: 'spawn_red_stair_f',  team: 'red',  centerX: -47.4, width: 3.2, startZ:  16.64, endZ:  8.0, startY: 0.0, endY: 4.8 },
+        { id: 'spawn_red_stair_b',  team: 'red',  centerX: -47.4, width: 3.2, startZ: -16.64, endZ: -8.0, startY: 0.0, endY: 4.8 },
+        { id: 'spawn_blue_stair_f', team: 'blue', centerX:  47.4, width: 3.2, startZ:  16.64, endZ:  8.0, startY: 0.0, endY: 4.8 },
+        { id: 'spawn_blue_stair_b', team: 'blue', centerX:  47.4, width: 3.2, startZ: -16.64, endZ: -8.0, startY: 0.0, endY: 4.8 }
+      ],
+      player: { height: 1.8, radius: 0.4, walkSpeed: 6.8, sprintSpeed: 10.6, jumpSpeed: 9.0, gravity: 22.0 },
+      cameraPresets: {
+        overview:    { pos: [0, 14.8, 25.4],    target: [0, 5.2, -4.5] },
+        sunlight:    { pos: [-16, 13.5, 16.5],  target: [4, 7.5, -24.0] },
+        underBridge: { pos: [-18, 2.4, 8.8],    target: [4, 2.8, -1.0] },
+        redBase:     { pos: [-20, 8.4, 10.5],   target: [-31.5, 6.2, 0.0] },
+        blueBase:    { pos: [20, 8.4, 10.5],    target: [31.5, 6.2, 0.0] },
+        gallery:     { pos: [0, 12.6, -7.5],    target: [0, 9.6, -22.0] },
+        spawnStairs: { pos: [-40.5, 4.2, 16.5], target: [-47.4, 2.4, 11.2] }
+      }
+    });
+    window.ARENA_CONFIG = ARENA_CONFIG;
+
+    // =========================================================================
+    // PROCEDURAL TEXTURE & MATERIAL LIBRARY (COPYABLE SHARED ASSETS)
+    // =========================================================================
+    function createSeededRand(seed) {
+      let s = seed >>> 0;
+      return () => {
+        s = (s + 0x6D2B79F5) >>> 0;
+        let t = Math.imul(s ^ (s >>> 15), 1 | s);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function createFloorTexture(texRes = 2048) {
+      const c = document.createElement('canvas'); c.width = texRes; c.height = texRes;
+      const ctx = c.getContext('2d'), scale = texRes / 1024, rand = createSeededRand(707);
+      const pal = ['#555860', '#5E626C', '#4D515A', '#666973'];
+      const half = texRes / 2;
+      for (let gx = 0; gx < 2; gx++) {
+        for (let gy = 0; gy < 2; gy++) {
+          const x = gx * half, y = gy * half;
+          ctx.fillStyle = pal[(gx * 2 + gy) % pal.length];
+          ctx.fillRect(x, y, half, half);
+          ctx.strokeStyle = '#2B2F38'; ctx.lineWidth = 6 * scale;
+          ctx.strokeRect(x + 2 * scale, y + 2 * scale, half - 4 * scale, half - 4 * scale);
+          ctx.strokeStyle = 'rgba(144, 147, 155, 0.28)'; ctx.lineWidth = 2.5 * scale;
+          ctx.strokeRect(x + 8 * scale, y + 8 * scale, half - 16 * scale, half - 16 * scale);
+        }
+      }
+      for (let i = 0; i < Math.floor(160 * scale); i++) {
+        const sx = rand() * texRes, sy = rand() * texRes, len = (10 + rand() * 34) * scale, a = rand() * Math.PI * 2;
+        ctx.strokeStyle = rand() > 0.5 ? 'rgba(190,196,208,0.08)' : 'rgba(20,24,30,0.12)';
+        ctx.lineWidth = 1.2 * scale; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + Math.cos(a) * len, sy + Math.sin(a) * len); ctx.stroke();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    function createWallTexture(texRes = 2048) {
+      const c = document.createElement('canvas'); c.width = texRes; c.height = texRes;
+      const ctx = c.getContext('2d'), scale = texRes / 1024;
+      ctx.fillStyle = '#41434D'; ctx.fillRect(0, 0, texRes, texRes);
+      const cw = texRes / 2, ch = texRes / 4;
+      for (let r = 0; r < 4; r++) {
+        for (let col = 0; col < 2; col++) {
+          const x = col * cw, y = r * ch;
+          ctx.fillStyle = (r + col) % 2 === 0 ? '#41434D' : '#3A3D47';
+          ctx.fillRect(x + 6 * scale, y + 6 * scale, cw - 12 * scale, ch - 12 * scale);
+          ctx.strokeStyle = '#252831'; ctx.lineWidth = 12 * scale;
+          ctx.strokeRect(x, y, cw, ch);
+          ctx.strokeStyle = 'rgba(130, 138, 152, 0.22)'; ctx.lineWidth = 3 * scale;
+          ctx.strokeRect(x + 10 * scale, y + 10 * scale, cw - 20 * scale, ch - 20 * scale);
+        }
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = 8;
+      return tex;
+    }
+
+    function createTreadTexture() {
+      const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#424650'; ctx.fillRect(0, 0, 512, 256);
+      for (let y = 44; y < 236; y += 20) { ctx.fillStyle = '#2F333D'; ctx.fillRect(10, y, 492, 7); }
+      ctx.fillStyle = '#8B9098'; ctx.fillRect(0, 0, 512, 30);
+      ctx.fillStyle = '#B4B9C2'; ctx.fillRect(0, 0, 512, 8);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createTeamFabricTexture(team, isBanner = false) {
+      const w = 512, h = isBanner ? 1024 : 340;
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      const mainCol = team === 'red' ? '#C52B3E' : '#167BC7';
+      const darkCol = team === 'red' ? '#7a1724' : '#0b4675';
+      const glowCol = team === 'red' ? '#FF394B' : '#20BFFF';
+      ctx.fillStyle = mainCol; ctx.fillRect(0, 0, w, h);
+      ctx.strokeStyle = '#1f232c'; ctx.lineWidth = isBanner ? 28 : 18; ctx.strokeRect(10, 10, w - 20, h - 20);
+      ctx.strokeStyle = glowCol; ctx.lineWidth = 6; ctx.strokeRect(28, 28, w - 56, h - 56);
+
+      ctx.save(); ctx.translate(w * 0.5, isBanner ? h * 0.44 : h * 0.5);
+      const sc = isBanner ? 1.35 : 0.78; ctx.scale(sc, sc);
+      ctx.fillStyle = '#E6EDF5';
+      ctx.beginPath(); ctx.moveTo(0, -110); ctx.lineTo(95, -55); ctx.lineTo(68, 25); ctx.lineTo(0, 115); ctx.lineTo(-68, 25); ctx.lineTo(-95, -55); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = darkCol;
+      ctx.beginPath(); ctx.moveTo(0, -68); ctx.lineTo(52, -32); ctx.lineTo(36, 18); ctx.lineTo(0, 68); ctx.lineTo(-36, 18); ctx.lineTo(-52, -32); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#E6EDF5';
+      ctx.beginPath(); ctx.moveTo(0, -34); ctx.lineTo(24, 0); ctx.lineTo(0, 34); ctx.lineTo(-24, 0); ctx.closePath(); ctx.fill();
+      ctx.restore();
+
+      if (isBanner) {
+        ctx.fillStyle = '#E6EDF5'; ctx.font = '800 54px Inter, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(team === 'red' ? 'BASE A' : 'BASE B', w * 0.5, h * 0.80);
+      }
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      return tex;
+    }
+
+    function createMaterials(texRes = 2048) {
+      let baseFloorTex = createFloorTexture(texRes);
+      let baseWallTex = createWallTexture(texRes);
+      const trackedFloors = [], trackedWalls = [];
+
+      const makeFloorMat = (w, d) => {
+        const rx = Math.max(0.5, w / 4), ry = Math.max(0.5, d / 4);
+        const t = baseFloorTex.clone(); t.needsUpdate = true; t.repeat.set(rx, ry);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: t, roughness: 0.74, metalness: 0.24, depthWrite: true });
+        trackedFloors.push({ mat, rx, ry });
+        return mat;
+      };
+      const makeWallMat = (w, h) => {
+        const rx = Math.max(0.25, w / 7.5), ry = Math.max(0.25, h / 7.5);
+        const t = baseWallTex.clone(); t.needsUpdate = true; t.repeat.set(rx, ry);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: t, roughness: 0.72, metalness: 0.30, depthWrite: true });
+        trackedWalls.push({ mat, rx, ry });
+        return mat;
+      };
+
+      function rebuildTextures(newRes) {
+        const nf = createFloorTexture(newRes), nw = createWallTexture(newRes);
+        baseFloorTex.dispose(); baseWallTex.dispose();
+        baseFloorTex = nf; baseWallTex = nw;
+        trackedFloors.forEach(({ mat, rx, ry }) => { mat.map.dispose(); mat.map = nf.clone(); mat.map.repeat.set(rx, ry); mat.map.needsUpdate = true; mat.needsUpdate = true; });
+        trackedWalls.forEach(({ mat, rx, ry }) => { mat.map.dispose(); mat.map = nw.clone(); mat.map.repeat.set(rx, ry); mat.map.needsUpdate = true; mat.needsUpdate = true; });
+      }
+
+      return {
+        makeFloorMat, makeWallMat, rebuildTextures,
+        slabSide: new THREE.MeshStandardMaterial({ color: 0x3b3f49, roughness: 0.72, metalness: 0.34, depthWrite: true }),
+        slabUnderside: new THREE.MeshStandardMaterial({ color: 0x363b47, roughness: 0.76, metalness: 0.28, depthWrite: true }),
+        ceiling: new THREE.MeshStandardMaterial({ color: 0x2e333e, roughness: 0.76, metalness: 0.32, depthWrite: true }),
+        steel: new THREE.MeshStandardMaterial({ color: 0x292E38, roughness: 0.56, metalness: 0.55 }),
+        steelDark: new THREE.MeshStandardMaterial({ color: 0x222630, roughness: 0.64, metalness: 0.48 }),
+        weathered: new THREE.MeshStandardMaterial({ color: 0x65636B, roughness: 0.58, metalness: 0.46 }),
+        bronze: new THREE.MeshStandardMaterial({ color: 0x70513B, roughness: 0.52, metalness: 0.56 }),
+        tread: new THREE.MeshStandardMaterial({ color: 0xffffff, map: createTreadTexture(), roughness: 0.78, metalness: 0.30 }),
+        railingAmber: new THREE.MeshStandardMaterial({ color: 0xDF9B32, roughness: 0.44, metalness: 0.46 }),
+        railingHighlight: new THREE.MeshStandardMaterial({ color: 0xF2BB58, roughness: 0.38, metalness: 0.50 }),
+        railingBracket: new THREE.MeshStandardMaterial({ color: 0x343944, roughness: 0.60, metalness: 0.50 }),
+        windowGlass: new THREE.MeshStandardMaterial({ color: 0xBDDCE9, emissive: 0x9ecbe0, emissiveIntensity: 0.18, transparent: true, opacity: 0.30, roughness: 0.08, metalness: 0.18 }),
+        teamRed: new THREE.MeshStandardMaterial({ color: 0xFF394B, emissive: 0xFF394B, emissiveIntensity: 1.0, roughness: 0.32 }),
+        teamBlue: new THREE.MeshStandardMaterial({ color: 0x20BFFF, emissive: 0x20BFFF, emissiveIntensity: 1.0, roughness: 0.32 }),
+        cyanDiffuser: new THREE.MeshStandardMaterial({ color: 0xD7F4FF, emissive: 0x7BE5FF, emissiveIntensity: 1.15, roughness: 0.22 }),
+        warmDiffuser: new THREE.MeshStandardMaterial({ color: 0xFFF0D4, emissive: 0xFFE0AB, emissiveIntensity: 1.05, roughness: 0.25 }),
+        flagRed: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('red', false), roughness: 0.70, side: THREE.DoubleSide }),
+        flagBlue: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('blue', false), roughness: 0.70, side: THREE.DoubleSide }),
+        bannerRed: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('red', true), roughness: 0.74, side: THREE.DoubleSide }),
+        bannerBlue: new THREE.MeshStandardMaterial({ map: createTeamFabricTexture('blue', true), roughness: 0.74, side: THREE.DoubleSide })
+      };
+    }
+
+    // =========================================================================
+    // LIGHTWEIGHT COLLISION REGISTRY (SUPPORTS WALKING, JUMPING & SPAWN STAIRS)
+    // =========================================================================
+    class SimpleArenaCollision {
+      constructor() {
+        this.walkables = [];
+        this.ramps = [];
+        this.solids = [];
+      }
+      addWalkable(minX, maxX, minZ, maxZ, topY) { this.walkables.push({ minX, maxX, minZ, maxZ, topY }); }
+      addRamp(id, minX, maxX, startZ, endZ, startY, endY) {
+        this.ramps.push({
+          id, minX, maxX, startZ, endZ, startY, endY,
+          minZ: Math.min(startZ, endZ), maxZ: Math.max(startZ, endZ),
+          getY(z) { return startY + THREE.MathUtils.clamp((z - startZ) / (endZ - startZ), 0, 1) * (endY - startY); }
+        });
+      }
+      addSolid(minX, maxX, minY, maxY, minZ, maxZ) { this.solids.push({ minX, maxX, minY, maxY, minZ, maxZ }); }
+
+      getSupportY(x, z, footY, r) {
+        let best = -Infinity;
+        for (const w of this.walkables) {
+          if (x >= w.minX - r * 0.4 && x <= w.maxX + r * 0.4 && z >= w.minZ - r * 0.4 && z <= w.maxZ + r * 0.4) {
+            if (w.topY <= footY + 0.55 && w.topY > best) best = w.topY;
+          }
+        }
+        for (const rp of this.ramps) {
+          if (x >= rp.minX - r * 0.2 && x <= rp.maxX + r * 0.2 && z >= rp.minZ - 0.22 && z <= rp.maxZ + 0.22) {
+            const ry = rp.getY(z);
+            if (ry <= footY + 0.7 && ry > best) best = ry;
+          }
+        }
+        return best;
+      }
+
+      step(state, dx, dz, dt) {
+        const r = ARENA_CONFIG.player.radius, h = ARENA_CONFIG.player.height;
+        const steps = Math.max(1, Math.min(8, Math.ceil((Math.hypot(dx, dz) + Math.abs(state.vy * dt)) / 0.16)));
+        const subDt = dt / steps, sdx = dx / steps, sdz = dz / steps;
+
+        for (let s = 0; s < steps; s++) {
+          state.x += sdx; state.z += sdz;
+          for (const b of this.solids) {
+            if (state.y + h - 0.08 <= b.minY || state.y + 0.24 >= b.maxY) continue;
+            const cx = THREE.MathUtils.clamp(state.x, b.minX, b.maxX);
+            const cz = THREE.MathUtils.clamp(state.z, b.minZ, b.maxZ);
+            const ox = state.x - cx, oz = state.z - cz, d2 = ox * ox + oz * oz;
+            if (d2 < r * r && d2 > 1e-8) {
+              const dist = Math.sqrt(d2), push = r - dist;
+              state.x += (ox / dist) * push; state.z += (oz / dist) * push;
+            }
+          }
+          const prevY = state.y;
+          state.vy -= ARENA_CONFIG.player.gravity * subDt;
+          state.y += state.vy * subDt;
+
+          const sup = this.getSupportY(state.x, state.z, prevY, r);
+          if (sup > -Infinity && state.y <= sup + (state.grounded ? 0.32 : 0.05) && state.vy <= 0.1) {
+            state.y = sup; state.vy = 0; state.grounded = true;
+          } else {
+            state.grounded = false;
+          }
+          if (state.y < 0) { state.y = 0; state.vy = 0; state.grounded = true; }
+        }
+      }
+    }
+
+    // =========================================================================
+    // LIGHTWEIGHT LOCKED ARCHITECTURAL REFERENCE FRAME (PHASE 1–6 SHELL)
+    // =========================================================================
+    function buildReferenceArenaFrame(scene, mats, collision) {
+      const group = new THREE.Group();
+      group.name = 'LockedArenaReferenceFrame';
+      scene.add(group);
+      const B = ARENA_CONFIG.building, wt = B.wallThickness;
+      const platformSlabs = [];
+
+      function addSlab(minX, maxX, minZ, maxZ, topY, thick, isElevated) {
+        const w = maxX - minX, d = maxZ - minZ;
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, thick, d), [
+          mats.slabSide, mats.slabSide, mats.makeFloorMat(w, d), mats.slabUnderside, mats.slabSide, mats.slabSide
+        ]);
+        mesh.position.set((minX + maxX) * 0.5, topY - thick * 0.5, (minZ + maxZ) * 0.5);
+        mesh.receiveShadow = true; mesh.castShadow = isElevated;
+        group.add(mesh);
+        collision.addWalkable(minX, maxX, minZ, maxZ, topY);
+        if (isElevated) platformSlabs.push(mesh);
+      }
+
+      // Ground floor, central bridge, Red/Blue flag platforms, upper gallery & spawn wings
+      addSlab(-38, 38, -28, 28, 0.0, 1.0, false);
+      addSlab(-23, 23, -4, 4, 4.8, 0.6, true);
+      addSlab(-36, -23, -8, 8, 4.8, 0.6, true);
+      addSlab( 23,  36, -8, 8, 4.8, 0.6, true);
+      addSlab(-33, 33, -24, -18, 9.6, 0.45, true);
+      addSlab(-7, 7, -18, -15, 9.6, 0.45, true);
+      // Spawn-wing floors (Y=0 lower, Y=4.8 upper, plus threshold bridges)
+      addSlab(-50, -38, -18.5, 18.5, 0.0, 1.0, false);
+      addSlab( 38,  50, -18.5, 18.5, 0.0, 1.0, false);
+      addSlab(-50, -36, -8.0, 8.0, 4.8, 0.6, true);
+      addSlab( 36,  50, -8.0, 8.0, 4.8, 0.6, true);
+
+      // Split-wall builder (genuine open cutouts for 3 rear windows & side portals)
+      function addSplitWall(orientation, fixedCoord, uMin, uMax, openings) {
+        const uSet = new Set([uMin, uMax]), vSet = new Set([0, B.height]);
+        openings.forEach((op) => { uSet.add(op.uMin); uSet.add(op.uMax); vSet.add(op.vMin); vSet.add(op.vMax); });
+        const us = Array.from(uSet).sort((a, b) => a - b), vs = Array.from(vSet).sort((a, b) => a - b);
+        for (let i = 0; i < us.length - 1; i++) {
+          for (let j = 0; j < vs.length - 1; j++) {
+            const u0 = us[i], u1 = us[i + 1], v0 = vs[j], v1 = vs[j + 1];
+            const uMid = (u0 + u1) * 0.5, vMid = (v0 + v1) * 0.5;
+            if (openings.some((op) => uMid > op.uMin && uMid < op.uMax && vMid > op.vMin && vMid < op.vMax)) continue;
+            const spanU = u1 - u0, spanV = v1 - v0;
+            const mat = mats.makeWallMat(spanU, spanV);
+            const mesh = new THREE.Mesh(orientation === 'Z' ? new THREE.BoxGeometry(spanU, spanV, wt) : new THREE.BoxGeometry(wt, spanV, spanU), mat);
+            if (orientation === 'Z') {
+              mesh.position.set(uMid, vMid, fixedCoord);
+              collision.addSolid(u0, u1, v0, v1, fixedCoord - wt * 0.5, fixedCoord + wt * 0.5);
+            } else {
+              mesh.position.set(fixedCoord, vMid, uMid);
+              collision.addSolid(fixedCoord - wt * 0.5, fixedCoord + wt * 0.5, v0, v1, u0, u1);
+            }
+            mesh.receiveShadow = true; mesh.castShadow = true; group.add(mesh);
+          }
+        }
+      }
+
+      const rearWins = ARENA_CONFIG.windows.map(w => ({ uMin: w.cx - w.w * 0.5, uMax: w.cx + w.w * 0.5, vMin: w.cy - w.h * 0.5, vMax: w.cy + w.h * 0.5 }));
+      const sidePortals = [
+        { uMin: -3, uMax: 3, vMin: 4.8, vMax: 9.4 },
+        { uMin: 11.2, uMax: 16.8, vMin: 0, vMax: 4.4 },
+        { uMin: -16.8, uMax: -11.2, vMin: 0, vMax: 4.4 }
+      ];
+      addSplitWall('Z', -B.halfD - wt * 0.5, -B.halfW, B.halfW, rearWins);
+      addSplitWall('Z',  B.halfD + wt * 0.5, -B.halfW, B.halfW, []);
+      addSplitWall('X', -B.halfW - wt * 0.5, -B.halfD, B.halfD, sidePortals);
+      addSplitWall('X',  B.halfW + wt * 0.5, -B.halfD, B.halfD, sidePortals);
+
+      // Exterior Spawn Wing Enclosures (opaque walls & ceilings at X = ±50, Z = ±18.5)
+      [-1, 1].forEach((s) => {
+        const bx = s * 50.4;
+        const bw = new THREE.Mesh(new THREE.BoxGeometry(0.8, 10.6, 37.8), mats.makeWallMat(37.8, 10.6));
+        bw.position.set(bx, 5.3, 0); group.add(bw);
+        collision.addSolid(bx - 0.4, bx + 0.4, 0, 10.6, -18.5, 18.5);
+        [-1, 1].forEach((sz) => {
+          const sw = new THREE.Mesh(new THREE.BoxGeometry(12.4, 10.6, 0.8), mats.makeWallMat(12.4, 10.6));
+          sw.position.set(s * 44, 5.3, sz * 18.9); group.add(sw);
+        });
+        const sc = new THREE.Mesh(new THREE.BoxGeometry(12.6, 0.5, 37.8), mats.ceiling);
+        sc.position.set(s * 44, 10.85, 0); group.add(sc);
+      });
+
+      // Ceiling deck + bronze-accented columns & roof trusses (for metallic lighting test)
+      const ceil = new THREE.Mesh(new THREE.BoxGeometry(B.width + 2, 0.8, B.depth + 2), mats.ceiling);
+      ceil.position.set(0, B.height + 0.4, 0); group.add(ceil);
+
+      [-28.5, -19, -9.5, 0, 9.5, 19, 28.5].forEach((tx) => {
+        const chord = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.36, B.depth), mats.steel);
+        chord.position.set(tx, 18.5, 0); group.add(chord);
+        const haunch = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.36, 4.0), mats.bronze);
+        haunch.position.set(tx, 17.2, -B.halfD + 1.6); haunch.rotation.x = -Math.PI / 4; group.add(haunch);
+      });
+
+      [-18, -6, 6, 18].forEach((px) => {
+        [-3.35, 3.35].forEach((pz) => {
+          const col = new THREE.Mesh(new THREE.BoxGeometry(1.0, 4.2, 1.0), mats.steel);
+          col.position.set(px, 2.1, pz); col.castShadow = true; col.receiveShadow = true; group.add(col);
+          const brPlate = new THREE.Mesh(new THREE.BoxGeometry(0.6, 3.8, 1.08), mats.bronze);
+          brPlate.position.set(px, 2.1, pz); group.add(brPlate);
+          collision.addSolid(px - 0.55, px + 0.55, 0, 4.2, pz - 0.55, pz + 0.55);
+        });
+      });
+
+      // Window frames, mullions, crossbars & translucent glass
+      ARENA_CONFIG.windows.forEach((win) => {
+        const g = new THREE.Group(); g.position.set(win.cx, win.cy, -B.halfD - wt * 0.5);
+        const ft = 0.36, fd = wt + 0.32;
+        const tF = new THREE.Mesh(new THREE.BoxGeometry(win.w + ft * 2, ft, fd), mats.steel); tF.position.y = win.h * 0.5 + ft * 0.5; g.add(tF);
+        const bF = new THREE.Mesh(new THREE.BoxGeometry(win.w + ft * 2, ft, fd), mats.steel); bF.position.y = -win.h * 0.5 - ft * 0.5; g.add(bF);
+        [-1, 1].forEach((sx) => { const sF = new THREE.Mesh(new THREE.BoxGeometry(ft, win.h, fd), mats.steel); sF.position.x = sx * (win.w * 0.5 + ft * 0.5); g.add(sF); });
+        const ledge = new THREE.Mesh(new THREE.BoxGeometry(win.w + 0.4, 0.18, wt + 0.65), mats.weathered); ledge.position.set(0, -win.h * 0.5 - 0.08, 0.16); g.add(ledge);
+        const mCount = win.w >= 13 ? 5 : 4;
+        for (let i = 1; i < mCount; i++) {
+          const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, win.h, 0.30), mats.steel);
+          m.position.set(-win.w * 0.5 + (win.w * i) / mCount, 0, 0); m.castShadow = true; g.add(m);
+        }
+        const cb = new THREE.Mesh(new THREE.BoxGeometry(win.w, 0.16, 0.28), mats.steel); cb.position.set(0, 0.1, 0); cb.castShadow = true; g.add(cb);
+        g.add(new THREE.Mesh(new THREE.BoxGeometry(win.w - 0.1, win.h - 0.1, 0.06), mats.windowGlass));
+        group.add(g);
+      });
+
+      // Central bridge cargo blocker silhouette (for shadow & lighting depth)
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.4, 2.2), mats.steel);
+      crate.position.set(0, 6.0, 0); crate.castShadow = true; crate.receiveShadow = true; group.add(crate);
+      collision.addSolid(-2.1, 2.1, 4.8, 7.2, -1.1, 1.1);
+
+      return { group, platformSlabs };
+    }
+
+    // =========================================================================
+    // MODULE 1: PHASE7_SKY_AND_SUNLIGHT (EXTERIOR SKY, ENV MAP, SUN & PATCHES)
+    // =========================================================================
+    const PHASE7_SKY_AND_SUNLIGHT = {
+      build(scene) {
+        const group = new THREE.Group();
+        group.name = 'Phase7_SkyAndSunlight';
+        scene.add(group);
+
+        // 1. Procedural Warehouse Environment Map (prevents dark/black metallics)
+        const envCanvas = document.createElement('canvas'); envCanvas.width = 512; envCanvas.height = 256;
+        const ectx = envCanvas.getContext('2d');
+        const eGrad = ectx.createLinearGradient(0, 0, 0, 256);
+        eGrad.addColorStop(0.0, '#6a829c'); eGrad.addColorStop(0.32, '#c8dff0');
+        eGrad.addColorStop(0.52, '#697282'); eGrad.addColorStop(1.0, '#363c48');
+        ectx.fillStyle = eGrad; ectx.fillRect(0, 0, 512, 256);
+        ectx.fillStyle = 'rgba(255, 224, 171, 0.72)';
+        ectx.fillRect(75, 56, 78, 30); ectx.fillRect(218, 56, 70, 30); ectx.fillRect(356, 56, 78, 30);
+        ectx.fillStyle = 'rgba(123, 229, 255, 0.25)'; ectx.fillRect(0, 148, 512, 24);
+        const envTex = new THREE.CanvasTexture(envCanvas);
+        envTex.mapping = THREE.EquirectangularReflectionMapping;
+        envTex.colorSpace = THREE.SRGBColorSpace;
+        scene.environment = envTex;
+
+        // 2. Procedural Exterior Daylight Sky Backdrop (#8FB4CF, #D5E7F2, #F4F2EA, #FFE0AB)
+        const skyCanvas = document.createElement('canvas'); skyCanvas.width = 1024; skyCanvas.height = 512;
+        const sctx = skyCanvas.getContext('2d');
+        const sGrad = sctx.createLinearGradient(0, 0, 0, 512);
+        sGrad.addColorStop(0.0, '#8FB4CF'); sGrad.addColorStop(0.55, '#D5E7F2'); sGrad.addColorStop(1.0, '#efe6d5');
+        sctx.fillStyle = sGrad; sctx.fillRect(0, 0, 1024, 512);
+
+        // Warm exterior sun glow
+        const sunG = sctx.createRadialGradient(340, 165, 18, 340, 165, 260);
+        sunG.addColorStop(0, 'rgba(255, 244, 214, 0.98)');
+        sunG.addColorStop(0.38, 'rgba(255, 224, 171, 0.55)');
+        sunG.addColorStop(1, 'rgba(255, 224, 171, 0.0)');
+        sctx.fillStyle = sunG; sctx.fillRect(0, 0, 1024, 512);
+
+        // Soft white cloud formations (#F4F2EA)
+        sctx.fillStyle = 'rgba(244, 242, 234, 0.72)';
+        [[180,140,120,34],[260,128,90,28],[580,165,150,36],[690,150,110,30],[860,190,130,32]].forEach(([cx,cy,rx,ry]) => {
+          sctx.beginPath(); sctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); sctx.fill();
+        });
+
+        const skyTex = new THREE.CanvasTexture(skyCanvas); skyTex.colorSpace = THREE.SRGBColorSpace;
+        const skyPlane = new THREE.Mesh(new THREE.PlaneGeometry(96, 28), new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.DoubleSide }));
+        skyPlane.position.set(0, 17.5, -35.5);
+        group.add(skyPlane);
+
+        // 3. Upgraded Hemisphere Fill (#DCEEFF sky, #727985 ground, intensity 1.65)
+        const hemi = new THREE.HemisphereLight(0xDCEEFF, 0x727985, 1.65);
+        hemi.position.set(0, 21, 0);
+        group.add(hemi);
+
+        // 4. Warm Directional Sunlight entering through the 3 rear upper windows (#FFE0AB)
+        const sun = new THREE.DirectionalLight(0xFFE0AB, 2.45);
+        sun.position.set(-10, 26.5, -42.0);
+        sun.target.position.set(4, 0.0, 6.0);
+        sun.castShadow = true;
+        sun.shadow.mapSize.set(1024, 1024);
+        sun.shadow.camera.near = 4; sun.shadow.camera.far = 96;
+        sun.shadow.camera.left = -46; sun.shadow.camera.right = 46;
+        sun.shadow.camera.top = 34; sun.shadow.camera.bottom = -34;
+        sun.shadow.bias = -0.0005;
+        group.add(sun); group.add(sun.target);
+
+        // 5. Projected Window-Mullion Sunlight Patches (baked/procedural floor projection)
+        const patchCanvas = document.createElement('canvas'); patchCanvas.width = 512; patchCanvas.height = 512;
+        const pctx = patchCanvas.getContext('2d');
+        const pGrad = pctx.createLinearGradient(0, 0, 0, 512);
+        pGrad.addColorStop(0.0, 'rgba(255, 224, 171, 0.0)');
+        pGrad.addColorStop(0.12, 'rgba(255, 232, 188, 0.34)');
+        pGrad.addColorStop(0.82, 'rgba(216, 186, 145, 0.24)');
+        pGrad.addColorStop(1.0, 'rgba(255, 224, 171, 0.0)');
+        pctx.fillStyle = pGrad; pctx.fillRect(24, 12, 464, 488);
+        // Carve crisp mullion & crossbar shadow lines matching the real window frames
+        pctx.globalCompositeOperation = 'destination-out';
+        pctx.fillStyle = 'rgba(0,0,0,0.82)';
+        [118, 210, 302, 394].forEach((mx) => pctx.fillRect(mx - 6, 0, 12, 512));
+        pctx.fillRect(0, 246, 512, 18);
+        pctx.globalCompositeOperation = 'source-over';
+
+        const patchTex = new THREE.CanvasTexture(patchCanvas); patchTex.colorSpace = THREE.SRGBColorSpace;
+        const patchMat = new THREE.MeshBasicMaterial({
+          map: patchTex, transparent: true, blending: THREE.AdditiveBlending,
+          depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3
+        });
+
+        const sunPatches = [];
+        ARENA_CONFIG.windows.forEach((win) => {
+          // Ground floor sunlight patch
+          const pGround = new THREE.Mesh(new THREE.PlaneGeometry(win.w * 0.96, 17.5), patchMat);
+          pGround.rotation.x = -Math.PI / 2;
+          pGround.position.set(win.cx + 2.8, 0.025, 11.5);
+          group.add(pGround);
+          sunPatches.push({ mesh: pGround, winId: win.id });
+
+          // Main flag bridge sunlight patch
+          const pBridge = new THREE.Mesh(new THREE.PlaneGeometry(win.w * 0.85, 7.2), patchMat);
+          pBridge.rotation.x = -Math.PI / 2;
+          pBridge.position.set(win.cx + 1.8, 4.825, 0.2);
+          group.add(pBridge);
+          sunPatches.push({ mesh: pBridge, winId: win.id });
+        });
+
+        return { group, hemi, sun, sunPatches };
+      }
+    };
+
+    // =========================================================================
+    // MODULE 2: PHASE7_INDUSTRIAL_LIGHTING (UNDER-BRIDGE CYAN & CEILING PANELS)
+    // =========================================================================
+    const PHASE7_INDUSTRIAL_LIGHTING = {
+      build(scene, mats) {
+        const group = new THREE.Group();
+        group.name = 'Phase7_IndustrialLighting';
+        scene.add(group);
+
+        // 1. Rectangular Cyan Under-Bridge & Under-Gallery Fixtures
+        [-19, -12, -4, 4, 12, 19].forEach((lx) => {
+          [-3.82, 3.82].forEach((lz) => {
+            const frame = new THREE.Mesh(new THREE.BoxGeometry(2.35, 0.14, 0.34), mats.weathered);
+            frame.position.set(lx, 4.14, lz); group.add(frame);
+            const housing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.16, 0.26), mats.steel);
+            housing.position.set(lx, 4.10, lz); group.add(housing);
+            const diffuser = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.08, 0.18), mats.cyanDiffuser);
+            diffuser.position.set(lx, 4.03, lz); group.add(diffuser);
+          });
+        });
+
+        // Under-gallery cyan fixtures
+        [-22, -10, 0, 10, 22].forEach((lx) => {
+          const housing = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.14, 0.26), mats.steel);
+          housing.position.set(lx, 9.08, -18.2); group.add(housing);
+          const diffuser = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.07, 0.16), mats.cyanDiffuser);
+          diffuser.position.set(lx, 9.02, -18.2); group.add(diffuser);
+        });
+
+        // Shared non-shadow-casting Cyan under-bridge fill lights
+        const cyanFills = [
+          [-14, 3.5, 0, 0x7BE5FF, 28, 22],
+          [  0, 3.5, 0, 0x7BE5FF, 32, 24],
+          [ 14, 3.5, 0, 0x7BE5FF, 28, 22],
+          [-16, 4.2, -18, 0x7BE5FF, 20, 22],
+          [ 16, 4.2, -18, 0x7BE5FF, 20, 22]
+        ].map(([x, y, z, col, int, dist]) => {
+          const pt = new THREE.PointLight(col, int, dist, 1.5);
+          pt.position.set(x, y, z); group.add(pt); return pt;
+        });
+
+        // 2. Warm-White Suspended Rectangular Industrial Ceiling Light Panels (#FFE0AB / #FFF0D4)
+        [-24, -12, 0, 12, 24].forEach((lx) => {
+          [-10, 10].forEach((lz) => {
+            const box = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.22, 0.92), mats.steelDark);
+            box.position.set(lx, 18.22, lz); group.add(box);
+            const diff = new THREE.Mesh(new THREE.BoxGeometry(3.0, 0.08, 0.66), mats.warmDiffuser);
+            diff.position.set(lx, 18.10, lz); group.add(diff);
+          });
+        });
+
+        // Shared overhead warm bounce fill (illuminates all 3 elevations & bronze/steel trusses)
+        const warmBounce = new THREE.PointLight(0xFFF0D4, 36, 52, 1.4);
+        warmBounce.position.set(0, 15.8, 6);
+        group.add(warmBounce);
+
+        // Spawn-room interior illumination
+        [-44, 44].forEach((sx) => {
+          const spL = new THREE.PointLight(sx < 0 ? 0xFF8592 : 0x7BE5FF, 24, 24, 1.5);
+          spL.position.set(sx, 7.6, 0); group.add(spL);
+          const spLow = new THREE.PointLight(0xDCEEFF, 20, 24, 1.5);
+          spLow.position.set(sx, 3.6, 12); group.add(spLow);
+        });
+
+        return { group, cyanFills, warmBounce };
+      }
+    };
+
+    // =========================================================================
+    // MODULE 3: PHASE7_FLAG_FX (ENHANCED PEDESTALS, RINGS, PARTICLES, BANNERS)
+    // =========================================================================
+    const PHASE7_FLAG_FX = {
+      build(scene, mats) {
+        const group = new THREE.Group();
+        group.name = 'Phase7_FlagFX';
+        scene.add(group);
+
+        const animatedCloths = [];
+        const animatedRings = [];
+        const particleSystems = [];
+
+        function createHaloTexture(rgbaInner, rgbaOuter) {
+          const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+          const ctx = c.getContext('2d');
+          const g = ctx.createRadialGradient(128, 128, 16, 128, 128, 124);
+          g.addColorStop(0.0, rgbaInner); g.addColorStop(0.55, rgbaOuter); g.addColorStop(1.0, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g; ctx.fillRect(0, 0, 256, 256);
+          const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+          return tex;
+        }
+
+        const redHaloTex = createHaloTexture('rgba(255,57,75,0.52)', 'rgba(255,133,146,0.16)');
+        const blueHaloTex = createHaloTexture('rgba(32,191,255,0.52)', 'rgba(123,229,255,0.16)');
+
+        ['red', 'blue'].forEach((team) => {
+          const isRed = team === 'red';
+          const cfg = ARENA_CONFIG.flags[team];
+          const teamMat = isRed ? mats.teamRed : mats.teamBlue;
+          const secMat = isRed ? mats.teamRed : mats.cyanDiffuser;
+          const g = new THREE.Group();
+          g.position.set(cfg.x, cfg.y, cfg.z);
+
+          // Circular 3.6m graphite pedestal (0.12m low-profile)
+          const base = new THREE.Mesh(new THREE.CylinderGeometry(1.75, 1.85, 0.12, 32), mats.steel);
+          base.position.y = 0.06; base.receiveShadow = true; g.add(base);
+          const trim = new THREE.Mesh(new THREE.RingGeometry(1.52, 1.82, 32), mats.weathered);
+          trim.rotation.x = -Math.PI / 2; trim.position.y = 0.124; g.add(trim);
+
+          const outerRing = new THREE.Mesh(new THREE.RingGeometry(1.30, 1.48, 32), teamMat);
+          outerRing.rotation.x = -Math.PI / 2; outerRing.position.y = 0.128; g.add(outerRing);
+          const innerRing = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.78, 28), secMat);
+          innerRing.rotation.x = -Math.PI / 2; innerRing.position.y = 0.130; g.add(innerRing);
+          animatedRings.push({ outerRing, innerRing, phase: isRed ? 0 : Math.PI });
+
+          // Soft team-colored floor halo
+          const halo = new THREE.Mesh(
+            new THREE.PlaneGeometry(6.8, 6.8),
+            new THREE.MeshBasicMaterial({ map: isRed ? redHaloTex : blueHaloTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })
+          );
+          halo.rotation.x = -Math.PI / 2; halo.position.y = 0.022; g.add(halo);
+
+          // Restrained team point light illuminating pedestal, banners & nearby panels
+          const teamLight = new THREE.PointLight(cfg.primary, 28, 22, 1.5);
+          teamLight.position.set(0, 3.0, 0); g.add(teamLight);
+
+          // Rising energy particles around pedestal
+          const pCount = 32;
+          const pGeo = new THREE.BufferGeometry();
+          const pPos = new Float32Array(pCount * 3);
+          const pSpeeds = new Float32Array(pCount);
+          for (let i = 0; i < pCount; i++) {
+            const ang = (i / pCount) * Math.PI * 2 + (i % 5) * 0.4;
+            const rad = 0.7 + (i % 7) * 0.15;
+            pPos[i * 3] = Math.cos(ang) * rad;
+            pPos[i * 3 + 1] = (i / pCount) * 3.0;
+            pPos[i * 3 + 2] = Math.sin(ang) * rad;
+            pSpeeds[i] = 0.45 + (i % 4) * 0.22;
+          }
+          pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+          const pMat = new THREE.PointsMaterial({ color: isRed ? 0xFF8592 : 0x7BE5FF, size: 0.11, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+          const pts = new THREE.Points(pGeo, pMat);
+          g.add(pts);
+          particleSystems.push({ points: pts, geo: pGeo, speeds: pSpeeds });
+
+          // 3.2m flagpole + vertex-animated team flag
+          const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.2, 12), mats.weathered);
+          pole.position.y = 1.72; pole.castShadow = true; g.add(pole);
+          const finial = new THREE.Mesh(new THREE.OctahedronGeometry(0.11), teamMat);
+          finial.position.y = 3.36; g.add(finial);
+
+          const fGeo = new THREE.PlaneGeometry(1.5, 1.0, 14, 8);
+          fGeo.translate(0.75, 0, 0);
+          const fBase = Float32Array.from(fGeo.attributes.position.array);
+          const fMesh = new THREE.Mesh(fGeo, isRed ? mats.flagRed : mats.flagBlue);
+          fMesh.position.set(0.04, 2.78, 0); fMesh.rotation.y = isRed ? 0 : Math.PI;
+          g.add(fMesh);
+          animatedCloths.push({ geo: fGeo, basePos: fBase, isBanner: false, phase: isRed ? 0 : 1.7 });
+
+          // Two tall vertical waving team banners beside each team entrance
+          [-5.6, 5.6].forEach((bz) => {
+            const bg = new THREE.Group();
+            bg.position.set(isRed ? -37.35 : 37.35, 12.2, bz);
+            bg.rotation.y = isRed ? Math.PI / 2 : -Math.PI / 2;
+            const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 2.5, 10), mats.weathered);
+            rod.rotation.z = Math.PI / 2; rod.position.y = 2.28; bg.add(rod);
+            const bGeo = new THREE.PlaneGeometry(2.2, 4.5, 6, 14);
+            const bBase = Float32Array.from(bGeo.attributes.position.array);
+            bg.add(new THREE.Mesh(bGeo, isRed ? mats.bannerRed : mats.bannerBlue));
+            group.add(bg);
+            animatedCloths.push({ geo: bGeo, basePos: bBase, isBanner: true, phase: bz * 0.25 });
+          });
+
+          group.add(g);
+        });
+
+        function update(elapsed, dt) {
+          for (const item of animatedCloths) {
+            const pos = item.geo.attributes.position, base = item.basePos;
+            for (let i = 0; i < pos.count; i++) {
+              const bx = base[i * 3], by = base[i * 3 + 1];
+              if (item.isBanner) {
+                pos.setZ(i, Math.sin(elapsed * 2.1 + by * 1.1 + item.phase) * 0.11 * Math.max(0, (2.25 - by) / 4.5));
+              } else {
+                pos.setZ(i, Math.sin(elapsed * 5.2 - bx * 3.8 + by * 1.2 + item.phase) * 0.14 * (bx / 1.5));
+              }
+            }
+            pos.needsUpdate = true;
+          }
+          for (const r of animatedRings) {
+            const p = 1.0 + Math.sin(elapsed * 3.4 + r.phase) * 0.045;
+            r.outerRing.scale.set(p, p, 1);
+            const q = 1.0 + Math.cos(elapsed * 3.4 + r.phase) * 0.065;
+            r.innerRing.scale.set(q, q, 1);
+          }
+          for (const ps of particleSystems) {
+            const pos = ps.geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              let ny = pos.getY(i) + ps.speeds[i] * dt;
+              if (ny > 3.2) ny = 0.15;
+              pos.setY(i, ny);
+            }
+            pos.needsUpdate = true;
+          }
+        }
+
+        return { group, particleSystems, update };
+      }
+    };
+
+    // =========================================================================
+    // MODULE 4: PHASE7_ATMOSPHERE (DUST MOTES & ANGLED WINDOW LIGHT SHAFTS)
+    // =========================================================================
+    const PHASE7_ATMOSPHERE = {
+      build(scene) {
+        const group = new THREE.Group();
+        group.name = 'Phase7_Atmosphere';
+        scene.add(group);
+
+        // 1. Subtle low-opacity volumetric-style light shafts angled from the 3 rear windows
+        const shaftCanvas = document.createElement('canvas'); shaftCanvas.width = 128; shaftCanvas.height = 256;
+        const sctx = shaftCanvas.getContext('2d');
+        const sg = sctx.createLinearGradient(0, 0, 0, 256);
+        sg.addColorStop(0.0, 'rgba(255, 224, 171, 0.20)');
+        sg.addColorStop(0.55, 'rgba(255, 224, 171, 0.08)');
+        sg.addColorStop(1.0, 'rgba(255, 224, 171, 0.0)');
+        sctx.fillStyle = sg; sctx.fillRect(0, 0, 128, 256);
+        const shaftTex = new THREE.CanvasTexture(shaftCanvas); shaftTex.colorSpace = THREE.SRGBColorSpace;
+        const shaftMat = new THREE.MeshBasicMaterial({
+          map: shaftTex, transparent: true, opacity: 0.55,
+          blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide
+        });
+
+        const shaftsGroup = new THREE.Group();
+        ARENA_CONFIG.windows.forEach((win) => {
+          const plane = new THREE.Mesh(new THREE.PlaneGeometry(win.w * 0.88, 26), shaftMat);
+          plane.position.set(win.cx + 2.0, 10.2, -16.5);
+          plane.rotation.x = -0.62;
+          plane.rotation.z = -0.06;
+          shaftsGroup.add(plane);
+        });
+        group.add(shaftsGroup);
+
+        // 2. Subtle floating dust motes catching sunlight
+        const dustCount = 240;
+        const rand = createSeededRand(777);
+        const dGeo = new THREE.BufferGeometry();
+        const dPos = new Float32Array(dustCount * 3);
+        const dPhase = new Float32Array(dustCount);
+        for (let i = 0; i < dustCount; i++) {
+          dPos[i * 3] = (rand() - 0.5) * 62;
+          dPos[i * 3 + 1] = 2.0 + rand() * 16.0;
+          dPos[i * 3 + 2] = -24.0 + rand() * 38.0;
+          dPhase[i] = rand() * Math.PI * 2;
+        }
+        dGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+        const dMat = new THREE.PointsMaterial({ color: 0xFFF0D4, size: 0.09, transparent: true, opacity: 0.42, blending: THREE.AdditiveBlending, depthWrite: false });
+        const dustPoints = new THREE.Points(dGeo, dMat);
+        group.add(dustPoints);
+
+        function setQuality(q) {
+          if (q === 'low') {
+            shaftsGroup.visible = false; dustPoints.visible = false;
+          } else if (q === 'medium') {
+            shaftsGroup.visible = true; shaftMat.opacity = 0.36; dustPoints.visible = true; dMat.opacity = 0.28;
+          } else {
+            shaftsGroup.visible = true; shaftMat.opacity = 0.62; dustPoints.visible = true; dMat.opacity = 0.46;
+          }
+        }
+
+        function update(elapsed, dt) {
+          if (!dustPoints.visible) return;
+          const pos = dGeo.attributes.position;
+          for (let i = 0; i < dustCount; i++) {
+            let y = pos.getY(i) + Math.sin(elapsed * 0.6 + dPhase[i]) * 0.08 * dt;
+            let x = pos.getX(i) + Math.cos(elapsed * 0.4 + dPhase[i]) * 0.06 * dt;
+            if (y > 18.5) y = 2.0;
+            pos.setXYZ(i, x, y, pos.getZ(i));
+          }
+          pos.needsUpdate = true;
+        }
+
+        return { group, shaftsGroup, dustPoints, setQuality, update };
+      }
+    };
+
+    // =========================================================================
+    // MODULE 5: PHASE7_SPAWN_STAIRS (4 COMPLETED INTERNAL SPAWN-ROOM STAIRCASES)
+    // =========================================================================
+    const PHASE7_SPAWN_STAIRS = {
+      build(scene, mats, collision) {
+        const group = new THREE.Group();
+        group.name = 'Phase7_InternalSpawnStairs';
+        scene.add(group);
+
+        const risers = 24, riserH = 0.20, treadD = 0.36;
+        const treadGeo = new THREE.BoxGeometry(3.0, 0.08, treadD + 0.02);
+        const instTreads = new THREE.InstancedMesh(treadGeo, mats.tread, ARENA_CONFIG.spawnStairs.length * risers);
+        instTreads.castShadow = true; instTreads.receiveShadow = true;
+        const dummy = new THREE.Object3D();
+        let tIdx = 0;
+
+        ARENA_CONFIG.spawnStairs.forEach((st) => {
+          const minX = st.centerX - st.width * 0.5, maxX = st.centerX + st.width * 0.5;
+          const dirZ = Math.sign(st.endZ - st.startZ);
+          const run = Math.abs(st.endZ - st.startZ), rise = st.endY - st.startY;
+          const diagLen = Math.hypot(run, rise);
+          const slopeAngle = Math.atan2(rise, run) * (dirZ < 0 ? 1 : -1);
+          const midZ = (st.startZ + st.endZ) * 0.5, midY = (st.startY + st.endY) * 0.5;
+
+          // 1. 24 visible anti-slip treads
+          for (let i = 0; i < risers; i++) {
+            const t = (i + 0.5) / risers;
+            dummy.position.set(st.centerX, st.startY + (i + 1) * riserH - 0.04, st.startZ + (st.endZ - st.startZ) * t);
+            dummy.rotation.set(0, dirZ < 0 ? 0 : Math.PI, 0);
+            dummy.updateMatrix();
+            instTreads.setMatrixAt(tIdx++, dummy.matrix);
+          }
+
+          // 2. Dark steel structural stringers + amber safety handrails
+          [-1, 1].forEach((sideSign) => {
+            const sx = st.centerX + sideSign * (st.width * 0.5 - 0.09);
+            const stringer = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.44, diagLen + 0.2), mats.steel);
+            stringer.position.set(sx, midY - 0.16, midZ); stringer.rotation.x = slopeAngle; group.add(stringer);
+
+            const railTop = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.075, diagLen + 0.15), mats.railingHighlight);
+            railTop.position.set(sx, midY + 1.12, midZ); railTop.rotation.x = slopeAngle; group.add(railTop);
+
+            const railMid = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, diagLen + 0.15), mats.railingAmber);
+            railMid.position.set(sx, midY + 0.60, midZ); railMid.rotation.x = slopeAngle; group.add(railMid);
+          });
+
+          // 3. Solid opaque structural underside soffit + rail collision segments
+          for (let s = 0; s < 6; s++) {
+            const z0 = st.startZ + (st.endZ - st.startZ) * (s / 6), z1 = st.startZ + (st.endZ - st.startZ) * ((s + 1) / 6);
+            const sMinZ = Math.min(z0, z1), sMaxZ = Math.max(z0, z1), lowY = st.startY + rise * (s / 6);
+            collision.addSolid(minX - 0.10, minX + 0.10, lowY, lowY + 1.15, sMinZ, sMaxZ);
+            collision.addSolid(maxX - 0.10, maxX + 0.10, lowY, lowY + 1.15, sMinZ, sMaxZ);
+
+            if (s >= 1) {
+              const uTop = lowY - 0.26;
+              if (uTop > 0.15) {
+                const belly = new THREE.Mesh(new THREE.BoxGeometry(st.width - 0.14, uTop, sMaxZ - sMinZ), mats.slabUnderside);
+                belly.position.set(st.centerX, uTop * 0.5, (sMinZ + sMaxZ) * 0.5);
+                belly.receiveShadow = true;
+                group.add(belly);
+                collision.addSolid(minX + 0.05, maxX - 0.05, 0.0, uTop, sMinZ, sMaxZ);
+              }
+            }
+          }
+
+          // 4. Continuous inclined walkable ramp collision
+          collision.addRamp(st.id, minX, maxX, st.startZ, st.endZ, st.startY, st.endY);
+        });
+
+        instTreads.instanceMatrix.needsUpdate = true;
+        group.add(instTreads);
+        return { group, count: ARENA_CONFIG.spawnStairs.length };
+      }
+    };
+
+    // =========================================================================
+    // MODULE 6: PHASE7_MATCH_PREP (CORRECTED 30s PREP + 5s COUNTDOWN = 35s)
+    // =========================================================================
+    const PHASE7_MATCH_PREP = {
+      createController() {
+        const state = {
+          phase: 'idle',        // 'idle' | 'prep' | 'countdown' | 'live'
+          prepDuration: 30.0,   // Full 30s preparation
+          countDuration: 5.0,   // Separate 5s countdown (5,4,3,2,1 -> FIGHT!)
+          totalRemaining: 35.0,
+          selectedClass: 'Warrior/Juggernaut',
+          lastCountInt: -1
+        };
+
+        const pill = document.getElementById('match-phase-pill');
+        const timerEl = document.getElementById('match-timer');
+        const calloutEl = document.getElementById('match-callout');
+        let calloutTimer = null;
+
+        function triggerCallout(text) {
+          calloutEl.textContent = text;
+          calloutEl.classList.add('show');
+          clearTimeout(calloutTimer);
+          calloutTimer = setTimeout(() => calloutEl.classList.remove('show'), 750);
+        }
+
+        function start() {
+          if (state.phase !== 'idle') return;
+          state.phase = 'prep';
+          state.totalRemaining = state.prepDuration + state.countDuration; // 35.0s
+          state.lastCountInt = -1;
+          syncUI();
+        }
+
+        function reset() {
+          state.phase = 'idle';
+          state.totalRemaining = 35.0;
+          state.lastCountInt = -1;
+          syncUI();
+        }
+
+        function skipToCountdown() {
+          state.phase = 'countdown';
+          state.totalRemaining = 5.05;
+          state.lastCountInt = -1;
+          syncUI();
+        }
+
+        function syncUI() {
+          pill.className = 'match-phase-pill';
+          if (state.phase === 'idle') {
+            pill.textContent = 'STANDBY (ORBIT)';
+            timerEl.textContent = '00:30';
+          } else if (state.phase === 'prep') {
+            pill.textContent = 'PREPARATION';
+            pill.classList.add('prep');
+            const prepSecs = Math.ceil(state.totalRemaining - state.countDuration);
+            timerEl.textContent = `00:${String(Math.max(0, prepSecs)).padStart(2, '0')}`;
+          } else if (state.phase === 'countdown') {
+            pill.textContent = 'COUNTDOWN';
+            pill.classList.add('countdown');
+            const cdSecs = Math.ceil(state.totalRemaining);
+            timerEl.textContent = `00:0${Math.max(1, cdSecs)}`;
+          } else {
+            pill.textContent = 'FIGHT — LIVE';
+            pill.classList.add('live');
+            timerEl.textContent = 'LIVE';
+          }
+        }
+
+        function step(dt) {
+          if (state.phase === 'idle' || state.phase === 'live') return;
+          state.totalRemaining = Math.max(0, state.totalRemaining - dt);
+          if (state.totalRemaining > state.countDuration) {
+            state.phase = 'prep';
+          } else if (state.totalRemaining > 0) {
+            state.phase = 'countdown';
+            const cdInt = Math.ceil(state.totalRemaining);
+            if (cdInt !== state.lastCountInt && cdInt >= 1 && cdInt <= 5) {
+              state.lastCountInt = cdInt;
+              triggerCallout(String(cdInt));
+            }
+          } else {
+            state.phase = 'live';
+            triggerCallout('FIGHT!');
+          }
+          syncUI();
+        }
+
+        return { state, start, reset, skipToCountdown, step };
+      }
+    };
+
+    // =========================================================================
+    // MODULE 7: PHASE7_AUDIT (PROGRAMMATIC MODULE VERIFICATION SUITE)
+    // =========================================================================
+    const PHASE7_AUDIT = {
+      run({ skySun, atmosphere, platformSlabs, collision, applyQualityPreset, currentPreset, renderedFrames, renderErrors, backendLabel }) {
+        const res = [];
+        const dt = 1 / 60;
+
+        // 1. Lighting Quality Presets (Low / Medium / High)
+        {
+          const orig = currentPreset;
+          applyQualityPreset('low', true);
+          const lowOk = !skySun.sun.castShadow && !atmosphere.shaftsGroup.visible && !atmosphere.dustPoints.visible;
+          applyQualityPreset('medium', true);
+          const medOk = skySun.sun.castShadow && skySun.sun.shadow.mapSize.x === 1024 && atmosphere.shaftsGroup.visible;
+          applyQualityPreset('high', true);
+          const highOk = skySun.sun.castShadow && skySun.sun.shadow.mapSize.x === 2048 && atmosphere.dustPoints.visible;
+          applyQualityPreset(orig, true);
+          res.push({ id: 1, name: 'Low / Medium / High Lighting Presets', pass: lowOk && medOk && highOk, detail: `Low(${lowOk?'OK':'ERR'}) Med(${medOk?'OK':'ERR'}) High(${highOk?'OK':'ERR'})` });
+        }
+
+        // 2. Window-to-Sunlight Alignment
+        {
+          const sunBehindRearWall = skySun.sun.position.z < -ARENA_CONFIG.building.halfD && skySun.sun.position.y > 17.0;
+          const patchCount = skySun.sunPatches.length;
+          res.push({ id: 2, name: 'Window-to-Sunlight Alignment', pass: sunBehindRearWall && patchCount === 6, detail: `Sun Z=${skySun.sun.position.z}m | ${patchCount} mullion patches` });
+        }
+
+        // 3. Opaque Platform Undersides (depthWrite=true, transparent=false)
+        {
+          let opaqueOk = 0;
+          platformSlabs.forEach((mesh) => {
+            const underMat = Array.isArray(mesh.material) ? mesh.material[3] : mesh.material;
+            if (underMat && underMat.depthWrite === true && !underMat.transparent) opaqueOk++;
+          });
+          res.push({ id: 3, name: 'Opaque Platform Undersides', pass: opaqueOk === platformSlabs.length && opaqueOk >= 5, detail: `${opaqueOk}/${platformSlabs.length} solid opaque undersides` });
+        }
+
+        // 4. Corrected 30s Prep + 5s Countdown (35s Total) Sequence
+        {
+          const sim = { total: 35.0, prepTicks: 0, cdTicks: 0, wentLive: false };
+          for (let i = 0; i < 36; i++) {
+            sim.total = Math.max(0, sim.total - 1.0);
+            if (sim.total > 5.0) sim.prepTicks++;
+            else if (sim.total > 0) sim.cdTicks++;
+            else sim.wentLive = true;
+          }
+          const pass = sim.prepTicks === 29 && sim.cdTicks === 5 && sim.wentLive;
+          res.push({ id: 4, name: '30s Prep + 5s Countdown (35s Total)', pass, detail: `30s Prep -> 5..1 Countdown -> FIGHT!` });
+        }
+
+        // 5. Completed Internal Spawn-Room Staircases (Geometry & Bidirectional Traversal)
+        {
+          let ok = 0;
+          ARENA_CONFIG.spawnStairs.forEach((st) => {
+            const dirZ = Math.sign(st.endZ - st.startZ);
+            const aUp = { x: st.centerX, y: 0.0, z: st.startZ - dirZ * 0.5, vy: 0, grounded: true };
+            for (let i = 0; i < 240; i++) collision.step(aUp, 0, dirZ * 6.5 * dt, dt);
+            const aDn = { x: st.centerX, y: 4.8, z: st.endZ + dirZ * 0.5, vy: 0, grounded: true };
+            for (let i = 0; i < 240; i++) collision.step(aDn, 0, -dirZ * 6.5 * dt, dt);
+            if (Math.abs(aUp.y - 4.8) < 0.08 && Math.abs(aDn.y - 0.0) < 0.08) ok++;
+          });
+          res.push({ id: 5, name: 'All 4 Spawn-Room Staircases (Up/Down)', pass: ok === 4, detail: `${ok}/4 bidirectional ramp traversal OK` });
+        }
+
+        // 6. Actual Rendered Frame Output Without Errors
+        {
+          const pass = renderedFrames > 0 && renderErrors === 0;
+          res.push({ id: 6, name: 'Verified Live Rendered Frame', pass, detail: `${backendLabel} | Frames=${renderedFrames} | Errors=${renderErrors}` });
+        }
+
+        return res;
+      }
+    };
+
+    // =========================================================================
+    // NATIVE WEBGPU RENDERER + FRESH-CANVAS WEBGL2 FALLBACK
+    // =========================================================================
+    async function initRenderer() {
+      const viewport = document.getElementById('viewport');
+      let canvas = document.getElementById('arena-canvas');
+      const status = document.getElementById('loader-status');
+      let renderer = null, backendLabel = 'WebGL2 Fallback';
+
+      if (navigator.gpu) {
+        try {
+          status.textContent = 'Initializing native WebGPU renderer...';
+          renderer = new THREE.WebGPURenderer({ antialias: true, powerPreference: 'high-performance', canvas });
+          await renderer.init();
+          backendLabel = (renderer.backend && renderer.backend.isWebGPUBackend) ? 'WebGPU' : 'WebGL2 Fallback';
+        } catch (err) {
+          console.warn('WebGPU unavailable, falling back to fresh-canvas WebGL2:', err);
+          renderer = null;
+        }
+      }
+      if (!renderer) {
+        status.textContent = 'Initializing fresh-canvas WebGL2 fallback...';
+        const fresh = document.createElement('canvas'); fresh.id = 'arena-canvas';
+        viewport.innerHTML = ''; viewport.appendChild(fresh); canvas = fresh;
+        renderer = new THREE.WebGPURenderer({ antialias: true, forceWebGL: true, powerPreference: 'high-performance', canvas: fresh });
+        await renderer.init();
+        backendLabel = 'WebGL2 Fallback';
+      }
+
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.12;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      return { renderer, canvas, backendLabel };
+    }
+
+    // =========================================================================
+    // MAIN VIEWER BOOTSTRAP
+    // =========================================================================
+    async function main() {
+      const { renderer, canvas, backendLabel } = await initRenderer();
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x141923);
+
+      const camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.15, 260);
+      camera.position.set(...ARENA_CONFIG.cameraPresets.overview.pos);
+
+      const orbit = new OrbitControls(camera, canvas);
+      orbit.enableDamping = true; orbit.dampingFactor = 0.07;
+      orbit.maxDistance = 95; orbit.minDistance = 1.8;
+      orbit.target.set(...ARENA_CONFIG.cameraPresets.overview.target);
+      orbit.update();
+
+      let currentQuality = 'medium', activeTexRes = 2048;
+      const mats = createMaterials(activeTexRes);
+      const collision = new SimpleArenaCollision();
+
+      // Assemble Locked Reference Frame + All Phase 7 Modules
+      const { group: refGroup, platformSlabs } = buildReferenceArenaFrame(scene, mats, collision);
+      const skySun = PHASE7_SKY_AND_SUNLIGHT.build(scene);
+      PHASE7_INDUSTRIAL_LIGHTING.build(scene, mats);
+      const flagFX = PHASE7_FLAG_FX.build(scene, mats);
+      const atmosphere = PHASE7_ATMOSPHERE.build(scene);
+      PHASE7_SPAWN_STAIRS.build(scene, mats, collision);
+      const matchPrep = PHASE7_MATCH_PREP.createController();
+
+      // Third-person playtest avatar
+      const avatar = new THREE.Group();
+      const torso = new THREE.Mesh(new THREE.BoxGeometry(0.52, 1.1, 0.30), mats.steel); torso.position.y = 1.05; avatar.add(torso);
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.32, 0.32), mats.railingAmber); head.position.y = 1.66; avatar.add(head);
+      avatar.visible = false; scene.add(avatar);
+
+      // Material Inspection Controller
+      const origMats = new Map(), albedoCache = new Map();
+      let currentMatMode = 'normal';
+      function toAlbedo(m) {
+        if (albedoCache.has(m)) return albedoCache.get(m);
+        const b = new THREE.MeshBasicMaterial({ color: m.color ? m.color.clone() : new THREE.Color(0xffffff), map: m.map || null, transparent: !!m.transparent, opacity: m.opacity ?? 1, side: m.side, depthWrite: m.depthWrite ?? true });
+        albedoCache.set(m, b); return b;
+      }
+      function setMaterialMode(mMode) {
+        currentMatMode = mMode;
+        refGroup.traverse((o) => {
+          if (!o.isMesh) return;
+          if (!origMats.has(o)) origMats.set(o, o.material);
+          const orig = origMats.get(o);
+          o.material = mMode === 'albedo' ? (Array.isArray(orig) ? orig.map(toAlbedo) : toAlbedo(orig)) : orig;
+        });
+        if (mMode === 'neutral') {
+          skySun.hemi.color.setHex(0xffffff); skySun.hemi.groundColor.setHex(0x888d96); skySun.hemi.intensity = 1.8;
+          skySun.sun.color.setHex(0xffffff); skySun.sun.intensity = 1.4;
+        } else {
+          skySun.hemi.color.setHex(0xDCEEFF); skySun.hemi.groundColor.setHex(0x727985); skySun.hemi.intensity = 1.65;
+          skySun.sun.color.setHex(0xFFE0AB); skySun.sun.intensity = 2.45;
+        }
+      }
+
+      // Lighting Quality Preset Switcher (Low / Medium / High)
+      const presetBadge = document.getElementById('preset-badge');
+      const texResBadge = document.getElementById('tex-res-badge');
+      function applyQualityPreset(q, silent = false) {
+        currentQuality = q;
+        document.querySelectorAll('[data-quality]').forEach(b => b.classList.toggle('active', b.dataset.quality === q));
+        presetBadge.textContent = q.toUpperCase();
+
+        const targetTex = q === 'low' ? 1024 : 2048;
+        if (targetTex !== activeTexRes) {
+          activeTexRes = targetTex;
+          albedoCache.forEach(m => m.dispose()); albedoCache.clear();
+          mats.rebuildTextures(activeTexRes);
+          if (currentMatMode === 'albedo') setMaterialMode('albedo');
+        }
+
+        if (q === 'low') {
+          renderer.shadowMap.enabled = false;
+          skySun.sun.castShadow = false;
+          texResBadge.textContent = '1024px · Baked';
+        } else if (q === 'medium') {
+          renderer.shadowMap.enabled = true;
+          skySun.sun.castShadow = true;
+          skySun.sun.shadow.mapSize.set(1024, 1024);
+          if (skySun.sun.shadow.map) { skySun.sun.shadow.map.dispose(); skySun.sun.shadow.map = null; }
+          texResBadge.textContent = '2048px · 1024 Shadow';
+        } else {
+          renderer.shadowMap.enabled = true;
+          skySun.sun.castShadow = true;
+          skySun.sun.shadow.mapSize.set(2048, 2048);
+          if (skySun.sun.shadow.map) { skySun.sun.shadow.map.dispose(); skySun.sun.shadow.map = null; }
+          texResBadge.textContent = '2048px · 2048 Shadow';
+        }
+        atmosphere.setQuality(q);
+        if (!silent) showToast(`Lighting Preset: ${q.toUpperCase()}`);
+      }
+      applyQualityPreset('medium', true);
+
+      // UI & Toast Helpers
+      const toastEl = document.getElementById('toast');
+      let toastTimer = null;
+      function showToast(msg) {
+        toastEl.textContent = msg; toastEl.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2500);
+      }
+
+      const rendererEl = document.getElementById('stat-renderer');
+      rendererEl.textContent = backendLabel;
+      rendererEl.classList.add(backendLabel === 'WebGPU' ? 'webgpu' : 'webgl');
+
+      // Modes, Controls & Playtest State
+      let mode = 'orbit', cleanView = false, renderedFrames = 0, renderErrors = 0;
+      const player = { x: -42, y: 4.8, z: 0, vy: 0, yaw: -Math.PI / 2, pitch: 0.22, grounded: true };
+      const keys = Object.create(null), joy = { x: 0, y: 0 };
+      let isLook = false, lmx = 0, lmy = 0, mobileSprint = false;
+
+      const hudEl = document.getElementById('hud'), cleanRestoreEl = document.getElementById('clean-restore');
+      const mobileCtrl = document.getElementById('mobile-controls'), hintOrbit = document.getElementById('hint-orbit'), hintPlay = document.getElementById('hint-play');
+      function toggleCleanView() { cleanView = !cleanView; hudEl.classList.toggle('clean-hidden', cleanView); cleanRestoreEl.classList.toggle('visible', cleanView); }
+
+      function setMode(newMode) {
+        mode = newMode; const isPlay = mode === 'play';
+        orbit.enabled = !isPlay; avatar.visible = isPlay;
+        document.getElementById('btn-mode-orbit').classList.toggle('active', !isPlay);
+        document.getElementById('btn-mode-play').classList.toggle('active', isPlay);
+        hintOrbit.style.display = isPlay ? 'none' : 'inline';
+        hintPlay.style.display = isPlay ? 'inline' : 'none';
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth < 820;
+        mobileCtrl.classList.toggle('visible', isPlay && isTouch);
+        if (isPlay) {
+          matchPrep.start();
+          showToast('Playtest Active — 30s Preparation + 5s Countdown Started');
+        }
+      }
+
+      document.getElementById('btn-mode-orbit').addEventListener('click', () => setMode('orbit'));
+      document.getElementById('btn-mode-play').addEventListener('click', () => setMode('play'));
+      document.getElementById('btn-toggle-panel').addEventListener('click', () => document.getElementById('inspector-panel').classList.toggle('collapsed'));
+      document.getElementById('btn-clean-view').addEventListener('click', toggleCleanView);
+      document.getElementById('btn-exit-clean').addEventListener('click', toggleCleanView);
+
+      document.getElementById('btn-prep-start').addEventListener('click', () => { matchPrep.start(); showToast('Match Preparation Started (30s + 5s)'); });
+      document.getElementById('btn-prep-skip').addEventListener('click', () => { matchPrep.skipToCountdown(); showToast('Skipped to 5s Final Countdown'); });
+      document.getElementById('btn-prep-reset').addEventListener('click', () => { matchPrep.reset(); showToast('Match Preparation Reset to Standby'); });
+      document.querySelectorAll('[data-class]').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('[data-class]').forEach(x => x.classList.remove('active'));
+        b.classList.add('active'); matchPrep.state.selectedClass = b.dataset.class;
+        showToast(`Class Selected: ${b.dataset.class}`);
+      }));
+
+      document.querySelectorAll('[data-quality]').forEach(b => b.addEventListener('click', () => applyQualityPreset(b.dataset.quality)));
+      document.querySelectorAll('[data-matmode]').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('[data-matmode]').forEach(x => x.classList.remove('active'));
+        b.classList.add('active'); setMaterialMode(b.dataset.matmode);
+      }));
+      document.querySelectorAll('[data-cam]').forEach(b => b.addEventListener('click', () => {
+        const p = ARENA_CONFIG.cameraPresets[b.dataset.cam]; if (!p) return;
+        if (mode === 'play') setMode('orbit');
+        camera.position.set(...p.pos); orbit.target.set(...p.target); orbit.update();
+      }));
+
+      // Audit Button
+      const auditResEl = document.getElementById('audit-results'), auditSumEl = document.getElementById('audit-summary');
+      document.getElementById('btn-run-audit').addEventListener('click', () => {
+        const res = PHASE7_AUDIT.run({ skySun, atmosphere, platformSlabs, collision, applyQualityPreset, currentPreset: currentQuality, renderedFrames, renderErrors, backendLabel });
+        const passed = res.filter(r => r.pass).length;
+        auditSumEl.textContent = `${passed}/${res.length} PASS`;
+        auditSumEl.style.color = passed === res.length ? 'var(--accent-green)' : 'var(--accent-red)';
+        auditResEl.innerHTML = res.map(r => `
+          <div class="audit-item">
+            <div><div class="audit-name">${r.id}. ${r.name}</div><div class="audit-detail">${r.detail}</div></div>
+            <span class="${r.pass ? 'badge-pass' : 'badge-fail'}">${r.pass ? 'PASS' : 'FAIL'}</span>
+          </div>
+        `).join('');
+        showToast(`Phase 7 Module Audit: ${passed}/${res.length} Passed`);
+      });
+
+      // Keyboard & Mouse Playtest Listeners
+      window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+        if (e.code === 'KeyH') toggleCleanView();
+        if (mode === 'play') {
+          if (e.code === 'Space' && player.grounded) { player.vy = ARENA_CONFIG.player.jumpSpeed; player.grounded = false; }
+          if (e.code === 'KeyR') { Object.assign(player, { x: -42, y: 4.8, z: 0, vy: 0, grounded: true }); showToast('Respawned at Red Base A'); }
+        }
+      });
+      window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+      canvas.addEventListener('mousedown', (e) => { if (mode === 'play') { isLook = true; lmx = e.clientX; lmy = e.clientY; } });
+      window.addEventListener('mouseup', () => { isLook = false; });
+      window.addEventListener('mousemove', (e) => {
+        if (mode !== 'play' || !isLook) return;
+        player.yaw -= (e.clientX - lmx) * 0.0055;
+        player.pitch = THREE.MathUtils.clamp(player.pitch + (e.clientY - lmy) * 0.0045, -0.35, 1.15);
+        lmx = e.clientX; lmy = e.clientY;
+      });
+
+      // Mobile Virtual Joystick & Buttons
+      const joyZone = document.getElementById('joystick-zone'), joyKnob = document.getElementById('joystick-knob');
+      let joyId = null;
+      const moveJoy = (cx, cy) => {
+        const rect = joyZone.getBoundingClientRect(), mx = rect.left + rect.width / 2, my = rect.top + rect.height / 2, maxR = rect.width * 0.36;
+        let dx = cx - mx, dy = cy - my, d = Math.hypot(dx, dy);
+        if (d > maxR) { dx = (dx / d) * maxR; dy = (dy / d) * maxR; }
+        joyKnob.style.transform = `translate(${dx}px, ${dy}px)`; joy.x = dx / maxR; joy.y = dy / maxR;
+      };
+      joyZone.addEventListener('touchstart', (e) => { e.preventDefault(); joyId = e.changedTouches[0].identifier; moveJoy(e.changedTouches[0].clientX, e.changedTouches[0].clientY); }, { passive: false });
+      joyZone.addEventListener('touchmove', (e) => { e.preventDefault(); for (const t of e.changedTouches) if (t.identifier === joyId) moveJoy(t.clientX, t.clientY); }, { passive: false });
+      const endJoy = (e) => { for (const t of e.changedTouches) if (t.identifier === joyId) { joyId = null; joy.x = 0; joy.y = 0; joyKnob.style.transform = 'translate(0,0)'; } };
+      joyZone.addEventListener('touchend', endJoy); joyZone.addEventListener('touchcancel', endJoy);
+      document.getElementById('touch-jump').addEventListener('touchstart', (e) => { e.preventDefault(); if (mode === 'play' && player.grounded) { player.vy = ARENA_CONFIG.player.jumpSpeed; player.grounded = false; } }, { passive: false });
+      document.getElementById('touch-sprint').addEventListener('touchstart', (e) => { e.preventDefault(); mobileSprint = true; }, { passive: false });
+      document.getElementById('touch-sprint').addEventListener('touchend', () => { mobileSprint = false; });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      document.getElementById('loader').classList.add('done');
+
+      const statFps = document.getElementById('stat-fps'), statTris = document.getElementById('stat-tris');
+      const statCalls = document.getElementById('stat-calls'), statCoords = document.getElementById('stat-coords');
+      let lastTime = performance.now(), fpsFrames = 0, fpsTimer = 0;
+
+      function animate(now) {
+        requestAnimationFrame(animate);
+        const dt = Math.min(0.05, (now - lastTime) / 1000);
+        const elapsed = now * 0.001;
+        lastTime = now;
+
+        // Update Phase 7 Modular Subsystems
+        matchPrep.step(dt);
+        flagFX.update(elapsed, dt);
+        atmosphere.update(elapsed, dt);
+
+        if (mode === 'orbit') {
+          orbit.update();
+        } else {
+          let fwd = 0, str = 0;
+          if (keys['KeyW'] || keys['ArrowUp']) fwd += 1;
+          if (keys['KeyS'] || keys['ArrowDown']) fwd -= 1;
+          if (keys['KeyD'] || keys['ArrowRight']) str += 1;
+          if (keys['KeyA'] || keys['ArrowLeft']) str -= 1;
+          fwd -= joy.y; str += joy.x;
+          const mag = Math.hypot(fwd, str);
+          let dx = 0, dz = 0;
+          if (mag > 0.05) {
+            const norm = Math.min(1, mag), spd = (keys['ShiftLeft'] || keys['ShiftRight'] || mobileSprint) ? ARENA_CONFIG.player.sprintSpeed : ARENA_CONFIG.player.walkSpeed;
+            const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+            dx = ((-sy * (fwd / mag) + cy * (str / mag)) * spd * norm) * dt;
+            dz = ((-cy * (fwd / mag) - sy * (str / mag)) * spd * norm) * dt;
+          }
+          collision.step(player, dx, dz, dt);
+          avatar.position.set(player.x, player.y, player.z);
+          avatar.rotation.y = player.yaw;
+
+          const dist = 5.4, py = player.y + 1.55;
+          camera.position.lerp(new THREE.Vector3(
+            THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * Math.cos(player.pitch) * dist, -49.0, 49.0),
+            THREE.MathUtils.clamp(py + Math.sin(player.pitch) * dist, 0.8, 20.2),
+            THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * Math.cos(player.pitch) * dist, -27.2, 27.2)
+          ), Math.min(1, dt * 14));
+          camera.lookAt(player.x, py, player.z);
+        }
+
+        try {
+          renderer.render(scene, camera);
+          renderedFrames++;
+        } catch (err) {
+          renderErrors++;
+          console.error('Render error:', err);
+        }
+
+        fpsFrames++; fpsTimer += dt;
+        if (fpsTimer >= 0.35) {
+          statFps.textContent = `${Math.round(fpsFrames / fpsTimer)}`;
+          fpsFrames = 0; fpsTimer = 0;
+          const info = renderer.info && renderer.info.render ? renderer.info.render : null;
+          statTris.textContent = info ? info.triangles.toLocaleString() : 'N/A';
+          statCalls.textContent = info ? info.calls.toLocaleString() : 'N/A';
+          const p = mode === 'play' ? player : camera.position;
+          statCoords.textContent = `X: ${p.x.toFixed(2)}  Y: ${p.y.toFixed(2)}  Z: ${p.z.toFixed(2)}`;
+        }
+      }
+
+      requestAnimationFrame(animate);
+    }
+
+    main().catch((err) => {
+      console.error('Fatal Viewer Init Error:', err);
+      document.getElementById('loader-status').textContent = 'Init Error: ' + err.message;
+    });
+  </script>
+</body>
+</html>

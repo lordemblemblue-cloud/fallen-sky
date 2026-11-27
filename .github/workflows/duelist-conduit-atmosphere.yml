@@ -1,0 +1,33 @@
+name: Conduit environmental motion
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/maps/conduitArena.mjs'
+      - 'src/components/duelist/client/maps/conduitAtmosphere.mjs'
+      - 'tests/duelist-conduit-atmosphere*.test.mjs'
+      - '.github/workflows/duelist-conduit-atmosphere.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check src/components/duelist/client/maps/conduitAtmosphere.mjs
+      - run: node --test tests/duelist-conduit-atmosphere.test.mjs
+  assembled-arena:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/duelist-conduit-import.test.mjs tests/duelist-conduit-atmosphere-integration.test.mjs

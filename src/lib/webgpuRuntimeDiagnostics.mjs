@@ -16,8 +16,9 @@ export function getWebGPURuntimeEvidence(renderer, { sceneId = null } = {}) {
   const device = backend === 'webgpu' ? renderer?.backend?.device : null;
   const deviceConfirmed = Boolean(device && typeof device.createCommandEncoder === 'function' && device.queue &&
     typeof device.queue.submit === 'function');
-  const frames = Number(renderer?.info?.render?.frame);
-  const frameCount = Number.isFinite(frames) && frames >= 0 ? Math.floor(frames) : 0;
+  // Never coerce untrusted or malformed counters into native frame evidence.
+  const reportedFrames = renderer?.info?.render?.frame;
+  const frameCount = Number.isSafeInteger(reportedFrames) && reportedFrames >= 0 ? reportedFrames : 0;
   const deviceLost = Boolean(state?.lost);
   // Only completed, counted gameplay draws can verify native WebGPU. A corrupt
   // counter (negative, fractional, infinite, string or accessor result) must not

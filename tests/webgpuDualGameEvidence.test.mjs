@@ -12,6 +12,7 @@ function report(sceneId, overrides = {}) {
     sceneId, checkedAt: now, tabUrl: sceneId === 'fallen-sky'
       ? 'https://example.test/gameview' : 'https://example.test/duelist-next/play',
     first: sample(10, 4), last: sample(12, 6),
+    documentCheck: { ok: true, reason: 'same-browser-document' },
     ok: true, reason: 'native-webgpu-gameplay-draws-advancing', ...overrides,
   };
 }
@@ -80,7 +81,6 @@ test('successful evidence is still explicitly not a visible-pixel or performance
 test('requires both games to be verified on the same deployment origin', () => {
   const cases = [
     'https://preview.example.test/duelist-next/play',
-    'http://example.test/duelist-next/play',
     'https://example.test:8443/duelist-next/play',
     'http://localhost:3000/duelist-next/play',
   ];
@@ -93,10 +93,61 @@ test('requires both games to be verified on the same deployment origin', () => {
   }
 });
 
+test('requires HTTPS for remote WebGPU evidence but permits local loopback QA', () => {
+  for (const host of ['example.test', 'preview.example.test', '192.0.2.20']) {
+    for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+      const path = sceneId === 'fallen-sky' ? '/gameview' : '/duelist-next/play';
+      const reports = pair().map((item) => item.sceneId === sceneId
+        ? { ...item, tabUrl: 'http://' + host + path } : item);
+      assert.equal(validateDualGameEvidence(reports).reason,
+        'insecure-evidence-origin:' + sceneId);
+    }
+  }
+  for (const host of ['localhost:3000', '127.0.0.1:3000', '[::1]:3000']) {
+    const reports = [
+      report('fallen-sky', { tabUrl: 'http://' + host + '/gameview' }),
+      report('duelist-adventure', { tabUrl: 'http://' + host + '/duelist-next/play' }),
+    ];
+    assert.equal(validateDualGameEvidence(reports).ok, true, host);
+  }
+  for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+    const path = sceneId === 'fallen-sky' ? '/gameview' : '/duelist-next/play';
+    const reports = pair().map((item) => item.sceneId === sceneId
+      ? { ...item, tabUrl: 'https://user:secret@example.test' + path } : item);
+    assert.equal(validateDualGameEvidence(reports).reason,
+      'insecure-evidence-origin:' + sceneId);
+  }
+});
+
 test('different playable paths on the same origin remain valid', () => {
   const decision = validateDualGameEvidence([
     report('fallen-sky', { tabUrl: 'https://example.test/gameview/arena?renderer=webgpu' }),
     report('duelist-adventure', { tabUrl: 'https://example.test/duelist-next/play?renderer=webgpu' }),
   ]);
   assert.equal(decision.ok, true);
+});
+
+test('both reports must prove their counter samples came from the same browser document', () => {
+  const badChecks = [
+    undefined,
+    null,
+    { ok: false, reason: 'browser-tab-navigated-or-reloaded' },
+    { ok: false, reason: 'initial-browser-tab-url-changed' },
+    { ok: false, reason: 'invalid-browser-document-identity' },
+    { ok: true, reason: 'browser-tab-navigated-or-reloaded' },
+    { ok: 'true', reason: 'same-browser-document' },
+    { ok: true },
+  ];
+  for (const sceneId of ['fallen-sky', 'duelist-adventure']) {
+    for (const documentCheck of badChecks) {
+      const reports = pair().map((item) => item.sceneId === sceneId
+        ? { ...item, documentCheck } : item);
+      // A forged top-level success and advancing counters must not override a
+      // missing/failed browser-document check from the native CDP probe.
+      const decision = validateDualGameEvidence(reports);
+      assert.equal(decision.ok, false, JSON.stringify({ sceneId, documentCheck }));
+      assert.equal(decision.reason, 'unverified-browser-document:' + sceneId);
+    }
+  }
+  assert.equal(validateDualGameEvidence(pair()).ok, true);
 });

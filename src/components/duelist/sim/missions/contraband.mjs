@@ -1,8 +1,7 @@
 // Contraband: the first co-op story mission (1 to 4 players). Original story, written for this game.
 //
-// The crew breaks into a Halvane Logistics freight depot to learn what its "medical supplies" are, finds the
-// three people running the shipments, and has to get the evidence out when the depot locks down. The records
-// then name the buyer: someone the crew knows, the teacher who trained them, a Will user.
+// The crew traces the clinic drug to a Halvane depot, uncovers arms sales to the Ash Legion,
+// and confronts the teacher whose seal is on every crate.
 //
 // The depot (metres; x east, z north): a loading dock across the south; a concourse in the middle with the
 // broker's suite to its west and the workshop to its east; north of those the vault, the archive hall and
@@ -129,9 +128,9 @@ const GROUPS = {
 };
 
 const crateLines = [
-  ['Ione', 'Packing foam. No medicine. Keep going.'],
-  ['Ione', 'Serial plates filed off. Somebody wanted these never to be traced.'],
-  ['Ione', 'Sidearms. Crystal-forged, and the rounds are cut to tear at a Veil. Nobody builds that to hunt ordinary people. These were made for us.'],
+  ['Ione', 'Blue glass. Same vials we picked up outside the clinic. Get a look at the rest.'],
+  ['Ione', 'That\'s a pistol grip. Under the medicine tray. What else is in there?'],
+  ['Ione', 'A whole case of crystal sidearms. That stamp on the lid... the Ash Legion took the south bridge with guns like these.'],
 ];
 const openCrate = (m, h) => { const [who, line] = crateLines[Math.min(crateLines.length, m.counters.crates || 1) - 1]; h.say(who, line); };
 const takeCore = (m, h) => {
@@ -152,10 +151,10 @@ const INTERACTABLES = [
 
 // what each of the three says when the crew walks in, and when they fall
 const THREE = [
-  { tag: 'dask', core: 'coreDask', group: 'workshop', seen: ['Dask', 'Veil-born, in my workshop. Good. I have wanted to see what these do to one of you.'],
-    fallen: ['Dask', 'I build what I am paid to build. Ask Perrin who pays.'] },
-  { tag: 'perrin', core: 'corePerrin', group: 'suite', seen: ['Perrin', 'Whatever your people offered, the buyer offered more. In crystal.'],
-    fallen: ['Perrin', 'The buyer never showed a face. And never needed the guns for themselves. Think about that.'] },
+  { tag: 'dask', core: 'coreDask', group: 'workshop', seen: ['Dask', 'Put that down. I stamped every piece in that crate. I know when one\'s missing.'],
+    fallen: ['Dask', 'Ask Perrin how a box of my work pays for a captain\'s house.'] },
+  { tag: 'perrin', core: 'corePerrin', group: 'suite', seen: ['Perrin', 'I sell to whoever clears the invoice. You got a purchase order?'],
+    fallen: ['Perrin', 'Read the buyer column. The Legion paid on Friday. On Saturday the bridge fell.'] },
   { tag: 'rooke', core: 'coreRooke', group: 'security', seen: ['Rooke', 'Seal it. Nobody walks out of here with a core.'],
     fallen: ['Rooke', 'Take it. You will not reach the lift.'] },
 ];
@@ -168,7 +167,7 @@ const STAGES = [
     enter: (m, h) => {
       h.spawn('dock');
       h.enable('crateA', 'crateB', 'crateC');
-      h.say('Ione', 'Halvane\'s manifest says medical supplies. Nobody posts gunmen over bandages. Open the marked crates.');
+      h.say('Ione', 'The clinic lost two patients last night. Same blue drug, same Halvane seal. Open the marked crates. Let\'s find where it came from.');
     },
     retry: (m, h) => h.respawn('dock'),
     markers: (m) => ['crateA', 'crateB', 'crateC'].filter((id) => !m.flags[`done:${id}`]).map((id) => ({ ...m.interactables.get(id), label: 'Marked crate' })),
@@ -179,7 +178,7 @@ const STAGES = [
     text: 'Unlock the dock\'s inner door',
     enter: (m, h) => {
       h.enable('dockTerminal');
-      h.say('Ione', 'Three signatures on every transfer: the quartermaster who builds them, the broker who sells them, the chief who keeps it quiet. They are inside.');
+      h.say('Ione', 'Dask packed it. Perrin sold it. Rooke signed it out. Get their ledger cores. I want to know who keeps the money.');
     },
     retry: (m, h) => h.respawn('dock'),
     markers: (m) => [{ ...m.interactables.get('dockTerminal'), label: 'Door control' }],
@@ -239,7 +238,7 @@ const STAGES = [
       if (!m.flags.wave && m.flags.hold >= 9) { h.flag('wave'); h.spawn('lockdownB'); }
       if (!m.flags.decrypt && m.flags.hold >= 16) {
         h.flag('decrypt');
-        h.say('Ione', 'Perrin\'s records are open. The buyer paid in Will-forged crystal. Only one of us could make that.');
+        h.say('Ione', 'Look at the deposits. The drug money bought the guns. Every Legion payment went back to one account.');
       }
     },
     timer: (m) => HOLD_SECONDS - (m.flags.hold || 0),
@@ -250,9 +249,9 @@ const STAGES = [
     id: 'name', title: 'There is someone above them', groups: ['vault'],
     text: 'Go to the archive vault',
     enter: (m, h) => {
-      h.say('Ione', 'There is a recording on the last core. You should hear it.');
-      h.say('Arden (recording)', 'If you are hearing this, you came for the cores yourself. I taught you to finish what you start. The vault. I will not run.');
-      h.say('Ione', '...That is Arden. That is your teacher\'s voice.');
+      h.say('Ione', 'Last core\'s got a voice memo. I\'ll play it.');
+      h.say('Arden (recording)', 'I signed for those crates. Come to the vault. You deserve to ask me why.');
+      h.say('Ione', 'Arden? I... I\'ve heard him call roll since I was six.');
       h.open('vault');
       h.checkpoint({ x: 1, z: 17, yaw: -Math.PI / 2 });
       h.spawn('vault');
@@ -266,7 +265,7 @@ const STAGES = [
     text: (m) => (m.flags.ardenYielded ? 'Hear Arden out' : 'Face your teacher'),
     enter: (m, h) => {
       m.comms.length = Math.min(m.comms.length, 1); // the crew is here: whatever was still queued gives way
-      h.say('Arden', 'The Houses hunt us with a word and a warrant. I gave the hunted something to shoot back with.');
+      h.say('Arden', 'I let the first shipment through. Crane promised medicine for Saltmarch. By the time I saw the guns, she\'d put my name on every crate.');
       h.alarm();
     },
     retry: (m, h) => { h.spawn('vault'); h.flag('ardenHalf', false); },
@@ -287,9 +286,9 @@ const STAGES = [
         f.guard = null;
         f.protectedUntil = Infinity;
         m.comms.length = 0;
-        h.say('Arden', 'Enough. You have grown past me.');
-        h.say('Arden', 'Take the cores. Decide for yourself who should hold them. I did.');
-        h.say('Ione', 'The lift is here. Whatever you decide about Arden, decide it outside.');
+        h.say('Arden', 'Enough. Take my seal. Check my story yourself.');
+        h.say('Arden', 'Crane took a cut on every vial and every gun. Her next stop is Saltmarch. The people there kept the receipts.');
+        h.say('Ione', 'I\'ll get the ledger out. You get to those witnesses before Crane does.');
       }
     },
     markers: (m, h) => { const a = h.tagged('arden'); const b = a && m.world.bodies.get(a.id); return b && !m.flags.ardenYielded ? [{ x: b.x, z: b.z, label: 'Arden Vale', follow: true }] : []; },
@@ -306,5 +305,5 @@ export const CONTRABAND = Object.freeze({
   interactables: INTERACTABLES,
   stages: STAGES,
   lift: LIFT,
-  ending: 'The evidence is out. Arden Vale was gone from the vault when the wardens arrived.',
+  ending: 'The ledger tied the blue drug to the guns that cost the south bridge. Every payment ended at Captain Crane. The people who could testify were still at Saltmarch.',
 });

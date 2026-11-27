@@ -1,3 +1,5 @@
+import OnlineArenaPreview from './OnlineArenaPreview.jsx';
+import {mapPicture} from './mapPictures.mjs';
 // Duelist Adventure's menus, kept simple: a hub, a page for each mode, a Join page that puts you in any match
 // with players in it, your fighter, settings, and the story mission. Each page says what it is in one line
 // and offers one obvious button.
@@ -5,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Home, ArrowLeft, BookOpen, LogIn, Play, Settings, User, Users, Radio, Swords, Flag, Truck, Shield, Target, Zap, Globe2, Trophy, X, CircleDot, Volume2, MousePointer2, Gamepad2, CheckCircle2 } from 'lucide-react';
 import { BODIES } from '../client/assets.mjs';
+import PracticeSettings from '../client/PracticeSettings.jsx';
+import { cleanPracticeSettings, PRACTICE_DEFAULTS } from '../core/practiceSettings.mjs';
 import { usePrefs, classProgressOf } from '../client/prefs.mjs';
 import { ACTIONS, DEFAULT_KEYS, keysFrom, rebind, keyLabel, bindable } from '../client/bindings.mjs';
 import { MENU_MODES, LEVELS } from './modes.js';
@@ -22,6 +26,7 @@ import './duelistUnifiedVisual.css';
 import './duelistMenuOverlays.css';
 import './duelistTemplateUI.css';
 import './duelistDarkBlueTheme.css';
+import './duelistSapphire.css';
 
 const FIGHTER_NOTES = {
   maskedWarrior: 'Masked, leather-armoured, ponytail and scarf.',
@@ -30,9 +35,9 @@ const FIGHTER_NOTES = {
   male: 'Adam, from Fallen Sky.',
 };
 
-export function MenuShell({ title, subtitle = '', back = null, children }) {
+export function MenuShell({ title, subtitle = '', back = null, children, matchEntry = false }) {
   return (
-    <main className="duelist-menu-page">
+    <main className={matchEntry ? "duelist-menu-page duelist-match-entry" : "duelist-menu-page"}>
       <header className="duelist-menu-topbar">
         <Link to="/duelist-next" className="duelist-menu-brand" aria-label="Duelist Adventure home">
           <span>EMBLEM BLUE</span>
@@ -58,6 +63,7 @@ export function MenuShell({ title, subtitle = '', back = null, children }) {
       <footer className="duelist-menu-bottom-nav" aria-label="Duelist menu navigation">
         <Link to="/duelist-next" className="duelist-menu-bottom-link"><Home size={17}/> HOME</Link>
         <Link to="/duelist-next/$page" params={{ page: 'play-menu' }} className="duelist-menu-bottom-link"><Swords size={17}/> PLAY</Link>
+        <Link to="/duelist-next/$page" params={{ page: 'online-play' }} className="duelist-menu-bottom-link"><Users size={17}/> ONLINE</Link>
         <Link to="/duelist-next/$page" params={{ page: 'character' }} className="duelist-menu-bottom-link"><User size={17}/> CHARACTER</Link>
         <Link to="/duelist-next/$page" params={{ page: 'story' }} className="duelist-menu-bottom-link"><BookOpen size={17}/> STORY</Link>
         <Link to="/duelist-next/$page" params={{ page: 'settings' }} className="duelist-menu-bottom-link"><Settings size={17}/> SETTINGS</Link>
@@ -208,10 +214,8 @@ export function DuelistHub({ initialPanel = null }) {
             </div>
 
             <div className="duelist-hub-mode-detail">
-              <div className="duelist-hub-mode-art" aria-hidden="true">
-                <span className="duelist-hub-mode-art-glow" />
-                <SelectedIcon />
-                <span>{selected?.title || 'Choose a mode'}</span>
+              <div className="duelist-hub-mode-art" aria-hidden="true" data-map-picture={Boolean(mapPicture(selected?.route))}>
+                {mapPicture(selected?.route) ? <OnlineArenaPreview mode={selected.route} compact/> : <><span className="duelist-hub-mode-art-glow" /><SelectedIcon /><span>{selected?.title || 'Choose a mode'}</span></>}
               </div>
               <div className="duelist-hub-mode-content">
                 <h3>{selected?.title || 'Select a mode'}</h3>
@@ -336,11 +340,13 @@ export function ModePage({ mode }) {
   const navigate = useNavigate();
   const lobby = useLobby();
   const [prefs, update] = usePrefs();
-  const play = (online) => navigate({ to: '/duelist-next/play', search: { mode, online: online ? 1 : 0 } });
+  const play = (online) => online
+    ? navigate({ to: '/duelist-next/$page', params: { page: 'online-play' }, search: { mode } })
+    : navigate({ to: '/duelist-next/play', search: { mode, online: 0 } });
   const Icon = m.icon;
   const here = (lobby.matches || []).filter((x) => x.mode === mode);
   return (
-    <MenuShell title={m.title} subtitle={m.blurb} back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+    <MenuShell matchEntry title={m.title} subtitle={m.blurb} back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
         <div className="space-y-5">
           <ul className="space-y-2">
@@ -356,22 +362,24 @@ export function ModePage({ mode }) {
         <div className="duelist-menu-panel space-y-4">
           {mode === 'online' ? (
             <>
-              <p className="text-sm text-white/60">The match server selects Team Deathmatch, Capture the Flag or Three-Point Control at random.</p>
-              <Button primary disabled={!lobby.online} onClick={() => play(true)}>
-                <LogIn className="h-4 w-4" /> Find Random Match
+              <p className="text-sm text-white/60">Browse public servers and choose a Duel, Transport, team battle, or another available match directly.</p>
+              <Button primary onClick={() => play(true)}>
+                <Users className="h-4 w-4" /> Browse servers
               </Button>
             </>
           ) : mode === 'practice' ? (
             <>
               <Choice label="Opponent" value={prefs.foe} onChange={(v) => update({ foe: v })} options={Object.entries(BODIES).map(([id, b]) => [id, b.name])} />
-              <Choice label="Bots" value={String(prefs.bots)} onChange={(v) => update({ bots: Number(v) })} options={[['1', '1'], ['2', '2'], ['3', '3']]} />
+              <Choice label="Bots" value={String(prefs.bots)} onChange={(v) => update({ bots: Number(v) })} options={[['0', '0'], ['1', '1'], ['2', '2'], ['3', '3']]} />
               <Choice label="Level" value={prefs.level} onChange={(v) => update({ level: v })} options={LEVELS} />
+              <PracticeSettings value={prefs.practiceSettings} onChange={(id,value)=>update({practiceSettings:{...cleanPracticeSettings(prefs.practiceSettings),[id]:value}})} onReset={()=>update({practiceSettings:{...PRACTICE_DEFAULTS}})}/>
               <Button primary onClick={() => play(false)}><Play className="h-4 w-4" /> Start practice</Button>
+              <Button onClick={()=>play(true)}>Shared practice</Button>
             </>
           ) : (
             <>
-              <Button primary onClick={() => play(true)} disabled={!lobby.online} title={lobby.online ? undefined : 'The match server is not available'}>
-                <LogIn className="h-4 w-4" /> Play online
+              <Button primary onClick={() => play(true)}>
+                <Users className="h-4 w-4" /> Browse servers
               </Button>
               <div className="h-px bg-white/10" />
               <Choice label="Bots' level" value={prefs.level} onChange={(v) => update({ level: v })} options={LEVELS} />
@@ -394,7 +402,7 @@ export function JoinPage() {
   // the busiest place with players and room: a match (the server picks it) or an open story crew
   const busiest = withPlayers.find((m) => m.open);
   return (
-    <MenuShell title="Join" subtitle="Jump into a match that has players in it. You take a bot's place." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
+    <MenuShell matchEntry title="Join" subtitle="Jump into a match that has players in it. You take a bot's place." back={{ to: '/duelist-next', label: 'Duelist Adventure' }}>
       {!lobby.online ? (
         <div className="space-y-4">
           <p className="text-sm text-white/60">{lobby.serverUrl ? 'The match server is not answering right now.' : 'Online play is not set up yet: the match server is not deployed.'}</p>
@@ -619,10 +627,11 @@ export function SettingsContent({ sharedPrefs, sharedUpdate } = {}) {
               <span className="duelist-setting-label">Practice bots</span>
               <span className="duelist-menu-note">Number of computer-controlled fighters when using Practice mode.</span>
               <select value={String(prefs.bots)} onChange={(event) => update({ bots: Number(event.target.value) })}>
-                {[1, 2, 3].map((count) => <option key={count} value={count}>{count} {count === 1 ? 'bot' : 'bots'}</option>)}
+                {[0, 1, 2, 3].map((count) => <option key={count} value={count}>{count} {count === 1 ? 'bot' : 'bots'}</option>)}
               </select>
             </label>
           </section>
+          <PracticeSettings value={prefs.practiceSettings} onChange={(id,value)=>update({practiceSettings:{...cleanPracticeSettings(prefs.practiceSettings),[id]:value}})} onReset={()=>update({practiceSettings:{...PRACTICE_DEFAULTS}})}/>
           <div className="duelist-menu-panel">
             <span className="duelist-menu-eyebrow-text">SAVED PREFERENCES</span>
             <p className="duelist-menu-helper mt-2">Changes take effect for new actions and matches and are saved in this browser. Audio and mouse settings do not alter multiplayer combat rules.</p>

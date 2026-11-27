@@ -13,6 +13,8 @@
 export const WEBGPU_SCENES = Object.freeze({
   'fallen-sky': Object.freeze({ ready: true, preview: true, blocker: null }),
   'duelist-adventure': Object.freeze({ ready: true, preview: true, blocker: null }),
+  // Fantasy Battle draws only textured MeshBasicMaterials and lines (no custom shaders), checked on both renderers.
+  'fantasy-battle': Object.freeze({ ready: true, preview: true, blocker: null }),
 });
 
 /**

@@ -67,6 +67,9 @@ export function verifySameBrowserDocument(before, after, targetUrl) {
 
 export function classifySamplePair(first, last) {
   const fail = (reason) => ({ ok: false, reason });
+  // Imported/CDP samples are untrusted. Revoked Proxies and throwing getters
+  // must fail verification instead of crashing the entire QA report.
+  try {
   if (!first || !last || first.sceneId !== last.sceneId ||
     !Object.hasOwn(SCENE_KEYS, last.sceneId)) return fail('invalid-scene-samples');
   if (last.backend !== 'webgpu') return fail('not-native-webgpu:' + last.backend);
@@ -83,6 +86,9 @@ export function classifySamplePair(first, last) {
   if (last.frameCount <= first.frameCount) return fail('render-frame-counter-not-advancing');
   if (last.gameplayFrames <= first.gameplayFrames) return fail('gameplay-draw-counter-not-advancing');
   return { ok: true, reason: 'native-webgpu-gameplay-draws-advancing' };
+  } catch {
+    return fail('unreadable-scene-samples');
+  }
 }
 
 export function pickTarget(targets, sceneId, tabContains = '') {
@@ -92,7 +98,11 @@ export function pickTarget(targets, sceneId, tabContains = '') {
     if (target.type !== 'page' || !target.webSocketDebuggerUrl) return false;
     try {
       const url = new URL(target.url);
-      if (!['https:', 'http:'].includes(url.protocol)) return false;
+      if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) return false;
+      // Browser QA must run in a secure context: HTTPS remotely or HTTP on
+      // explicit loopback only. Remote HTTP can never certify native WebGPU.
+      const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+      if (url.protocol === 'http:' && !loopback) return false;
       // A title/URL selector must narrow matching game tabs, never bypass the scene route.
       const playableRoute = url.pathname === expected || url.pathname.startsWith(expected + '/');
       return playableRoute && (!tabContains || target.url.includes(tabContains));

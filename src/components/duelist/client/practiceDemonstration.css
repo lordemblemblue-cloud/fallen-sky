@@ -1,0 +1,19 @@
+.duelist-demo{position:absolute;left:0;top:25%;z-index:65;color:#e3f4ff;pointer-events:none;font:12px/1.35 system-ui,sans-serif}
+.duelist-demo button,.duelist-demo select{pointer-events:auto;color:inherit;font:inherit;cursor:pointer;border:0;background:rgba(55,118,144,.19);border-radius:5px;padding:6px}
+.duelist-demo button:focus-visible,.duelist-demo select:focus-visible{outline:2px solid #79deeb}
+.duelist-demo button:disabled{opacity:.45;cursor:default}
+.duelist-demo-toggle{margin-left:8px;box-shadow:0 0 16px #050a13a0}
+.duelist-demo-panel{pointer-events:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;width:clamp(170px,10vw,260px);height:50vh;height:50dvh;padding:10px 9px 10px 12px;background:linear-gradient(90deg,rgba(7,18,29,.94),rgba(13,30,44,.83) 80%,rgba(17,38,51,.55));backdrop-filter:blur(15px) saturate(125%);box-shadow:18px 0 35px -23px #56cde672;animation:duelist-demo-in .2s ease-out;overflow:hidden}
+.duelist-demo-panel:after{content:"";position:absolute;top:0;bottom:0;right:0;width:1px;background:linear-gradient(transparent,#82dbe1a0,transparent);pointer-events:none}
+.duelist-demo-panel header,.duelist-demo-row{display:flex;justify-content:space-between;align-items:center;gap:5px}
+.duelist-demo-panel header span,.duelist-demo-panel h3{font-size:10px;letter-spacing:.1em;color:#8cd6e8;text-transform:uppercase}
+.duelist-demo-panel label,.duelist-demo-row div,.duelist-demo-playing{display:flex;flex-direction:column;gap:4px}
+.duelist-demo-panel select{width:100%;background:#142c3d}
+.duelist-demo-list{overflow:auto;min-height:0;flex:1;scrollbar-width:thin;scrollbar-color:#3e8495 transparent}
+.duelist-demo-panel h3{margin:12px 0 3px}
+.duelist-demo-row{padding:7px 0;border-bottom:1px solid #b0eaff14}
+.duelist-demo-row button{flex:none;min-width:32px;min-height:32px}
+.duelist-demo-panel small{color:#afc3d4;font-size:10px}
+@keyframes duelist-demo-in{from{transform:translateX(-100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@media(max-width:700px){.duelist-demo-panel{width:min(40vw,230px)}.duelist-demo-row button{min-width:40px;min-height:40px}}
+@media(prefers-reduced-motion:reduce){.duelist-demo-panel{animation:none}}

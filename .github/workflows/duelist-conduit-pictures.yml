@@ -1,0 +1,43 @@
+name: Duelist Conduit mode pictures
+on:
+  pull_request:
+    paths:
+      - 'scripts/generate-duelist-map-pictures.mjs'
+      - 'public/duelist/maps/tdm.webp'
+      - 'public/duelist/maps/ffa.webp'
+      - 'tests/duelist-static-map-pictures.test.mjs'
+      - '.github/workflows/duelist-conduit-pictures.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pictures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Install offline image encoder if needed
+        run: |
+          if ! node --input-type=module -e "await import('sharp')"; then
+            npm install --prefix "$RUNNER_TEMP/conduit-picture-tools" --no-audit --no-fund --ignore-scripts sharp@0.34.5
+            ln -s "$RUNNER_TEMP/conduit-picture-tools/node_modules/sharp" node_modules/sharp
+          fi
+      - run: node scripts/generate-duelist-map-pictures.mjs tdm ffa
+      - name: Verify static images and dimensions
+        run: |
+          node --test tests/duelist-static-map-pictures.test.mjs
+          node --input-type=module -e "import sharp from 'sharp'; for(const mode of ['tdm','ffa']) {const m=await sharp('public/duelist/maps/'+mode+'.webp').metadata();if(m.width!==960||m.height!==540||m.format!=='webp')throw Error(mode);console.log(mode,m.width,m.height,m.size)}"
+      - name: Verify checked-in images match the generated thumbnails
+        run: git diff --exit-code -- public/duelist/maps/tdm.webp public/duelist/maps/ffa.webp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conduit-mode-pictures
+          path: |
+            public/duelist/maps/tdm.webp
+            public/duelist/maps/ffa.webp
+          retention-days: 7

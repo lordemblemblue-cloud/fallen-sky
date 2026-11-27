@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Fallen Sky story-driven terrain handoff (2026-11-26)
+
+For Fallen Sky Game 3D terrain, cave, dungeon and world rebuilding work, read [The Threads of Our Pain handoff](docs/game3d/threads-of-our-pain/CLAUDE_TERRAIN_HANDOFF.md) and its index first. The story task supplies dialogue and location constraints; the terrain agent owns blockout and implementation. Do not revive superseded War of Three Roads geometry by default or alter approved story beats. Follow existing security and performance rules.
+
 ## Active project policy — guest-only game entry (2026-11-18)
 
 **This section supersedes the legacy authentication examples below.** The five account routes (login, register, forgot-password, reset-password, MFA), their view/helpers, and the old GitSync dashboard are intentionally removed. `/` and `/gameview` are public Game 3D entries. Preserve the game character-selection screen (unrelated to account sign-in) and its local guest storage. Do not re-add login redirects, auth gates, MFA, registration, or GitSync dashboard without a new request. The root/game auth contexts are temporary compatibility stubs with **no remote login call**. Keep existing server-side permission checks on restricted gameplay features: no guest impersonation, no service-role bypass, no public access to privileged Meshy or economy endpoints. The Base44 request middleware and error-capture runtime remain necessary infrastructure, not the deleted login backend.

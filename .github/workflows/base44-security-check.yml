@@ -1,0 +1,59 @@
+name: Base44 security access and dependency gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'base44/entities/**'
+      - 'base44/functions/**'
+      - 'src/**'
+      - 'server/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/components/fantasybattle/**'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'tests/security-base44-access.test.mjs'
+      - 'tests/security-dom-sinks.test.mjs'
+      - '.github/workflows/base44-security-check.yml'
+  pull_request:
+    paths:
+      - 'base44/entities/**'
+      - 'base44/functions/**'
+      - 'src/**'
+      - 'server/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'src/components/fantasybattle/**'
+      - 'src/components/game3d/GameWorld3D.jsx'
+      - 'tests/security-base44-access.test.mjs'
+      - 'tests/security-dom-sinks.test.mjs'
+      - '.github/workflows/base44-security-check.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-fund
+      - name: Verify entity RLS and privileged endpoints
+        run: node --test tests/security-base44-access.test.mjs
+      - name: Fail if any known dependency vulnerability exists (including build tools)
+        run: npm audit --audit-level=low
+      - name: Verify client combat labels never render untrusted HTML
+        run: node --test tests/security-dom-sinks.test.mjs
+      - name: Audit standalone Duelist server dependencies
+        run: |
+          npm install --prefix server/duelist --package-lock-only --ignore-scripts --no-fund
+          npm audit --prefix server/duelist --audit-level=low
+      - name: Verify application builds with secure dependencies
+        run: npm run build

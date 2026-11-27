@@ -1,6 +1,5 @@
-// Lightweight in-memory store for the in-game clan overlay.
-// Reads from Base44 entities, subscribes to real-time changes, exposes a
-// snapshot + subscribe() API for React components.
+// In-game clan overlay. Private chat content is always loaded through a
+// server-verified membership/role check, never direct public entity reads.
 
 import { base44 } from '@/api/base44Client';
 
@@ -33,6 +32,16 @@ const state = {
 };
 
 const subs = { divisions: null, members: null, messages: null, vault: null, upgrades: null, missions: null };
+
+async function loadPrivateChat(clanId, channelId) {
+  if (!clanId || !channelId) return [];
+  const result = await base44.functions.invoke('secureClanAccess', {
+    operation: 'getMessages', divisionId: clanId,
+    entityData: { channelId }, limit: 100,
+  });
+  if (result?.data?.success !== true) return [];
+  return Array.isArray(result.data.data) ? result.data.data.slice().reverse() : [];
+}
 
 function emit() { listeners.forEach((fn) => fn(getSnapshot())); }
 export function getSnapshot() { return { ...state, onlineUserIds: new Set(state.onlineUserIds) }; }
@@ -84,39 +93,30 @@ export async function loadActiveClan(clanId, userId) {
   state.hall = (hallRows && hallRows[0]) || null;
   state.myMembership = (members || []).find((m) => m.user_id === userId) || null;
 
-  // Fetch online status from User entity for each member (best-effort)
-  try {
-    const userIds = (members || []).map((m) => m.user_id);
-    if (userIds.length > 0) {
-      const users = await base44.asServiceRole?.entities?.User?.filter?.({}) ?? [];
-      const onlineSet = new Set();
-      for (const u of users) {
-        if (userIds.includes(u.id) && (u.is_online || u.online)) onlineSet.add(u.id);
-      }
-      state.onlineUserIds = onlineSet;
-    }
-  } catch {}
+  // The browser must never try to access service-role User records.
+  // Use only authorized presence sources when they become available.
+  state.onlineUserIds = new Set();
 
-  // Load messages from a default channel (first one)
+  // Choose only a channel allowed by this player's verified clan role.
+  let chatChannelId = null;
   try {
     const channels = await base44.entities.ClanChannel.filter({ divisionId: clanId });
-    const ch = channels[0];
-    if (ch) {
-      const msgs = await base44.entities.ClanMessage.filter({ divisionId: clanId, channelId: ch.id }, '-created_date', 50);
-      state.messages = (msgs || []).reverse();
-    } else {
-      state.messages = [];
-    }
+    const rank = { member: 0, officer: 1, leader: 2 };
+    const memberRank = rank[state.myMembership?.role] ?? -1;
+    const channel = (channels || []).find((ch) =>
+      memberRank >= ({ none: 0, officer: 1, leader: 2 }[ch.role_restriction || 'none'] ?? 2));
+    chatChannelId = channel?.id || null;
+    state.messages = chatChannelId ? await loadPrivateChat(clanId, chatChannelId) : [];
   } catch {
     state.messages = [];
   }
 
   emit();
-  attachRealtime(clanId, userId);
+  attachRealtime(clanId, userId, chatChannelId);
 }
 
 // Real-time subscriptions for the currently active clan.
-function attachRealtime(clanId, userId) {
+function attachRealtime(clanId, userId, chatChannelId) {
   detachRealtime();
   try {
     subs.divisions = base44.entities.Division.subscribe((evt) => {
@@ -134,13 +134,22 @@ function attachRealtime(clanId, userId) {
       state.myMembership = state.members.find((m) => m.user_id === userId) || null;
       emit();
     });
-    subs.messages = base44.entities.ClanMessage.subscribe((evt) => {
-      const row = evt.data || { id: evt.id };
-      if (row.divisionId !== clanId) return;
-      if (evt.type === 'create') state.messages = [...state.messages, row].slice(-100);
-      else if (evt.type === 'delete') state.messages = state.messages.filter((m) => m.id !== evt.id);
-      emit();
-    });
+    if (chatChannelId) {
+      // Backend membership/role validation is necessary for private chat.
+      // Poll the scoped endpoint until an authorized realtime transport exists.
+      let fetching = false;
+      const poll = async () => {
+        if (fetching || state.activeClanId !== clanId) return;
+        fetching = true;
+        try {
+          const next = await loadPrivateChat(clanId, chatChannelId);
+          if (state.activeClanId === clanId) { state.messages = next; emit(); }
+        } catch { /* preserve messages on temporary failure */ }
+        finally { fetching = false; }
+      };
+      const timer = setInterval(poll, 10_000);
+      subs.messages = () => clearInterval(timer);
+    }
     subs.vault = base44.entities.ClanVaultItem.subscribe((evt) => {
       const row = evt.data || { id: evt.id };
       if (row.clan_id !== clanId) return;

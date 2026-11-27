@@ -4,7 +4,14 @@
   "properties": {
     "channel_id": {
       "type": "string",
-      "description": "Parent forum channel ID, required for scoped reads and writes"
+      "description": "Parent forum channel ID, required for scoped reads and writes",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "edited_at": {
       "type": "string",
@@ -18,7 +25,14 @@
     },
     "topic_id": {
       "type": "string",
-      "description": "Topic this message belongs to"
+      "description": "Topic this message belongs to",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "game_id": {
       "type": "string",
@@ -26,15 +40,36 @@
     },
     "user_id": {
       "type": "string",
-      "description": "Author user ID"
+      "description": "Author user ID",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "clan_id": {
       "type": "string",
-      "description": "Author clan ID"
+      "description": "Author clan ID",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "username": {
       "type": "string",
-      "description": "Cached username for display"
+      "description": "Cached username for display",
+      "rls": {
+        "update": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "content": {
       "type": "string",
@@ -47,8 +82,16 @@
     "content"
   ],
   "rls": {
-    "create": null,
-    "read": null,
+    "create": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "update": {
       "$or": [
         {

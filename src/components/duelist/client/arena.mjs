@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { setNodeTwin } from '../../../lib/webgpuMaterialTwins.js';
 import { arenaFloorTwin } from './duelistNodes.mjs';
+import { controlFloorPatterns, clippedPatternGeometry } from './controlFloorTrim.mjs';
 
 export const FLOOR_VERTEX = /* glsl */`
   varying vec2 vXZ;
@@ -84,7 +85,7 @@ const FLOOR_FRAGMENT = /* glsl */`
     gl_FragColor = vec4(c, 1.0);
   }`;
 
-export function createArena({ radius = 18 } = {}) {
+export function createArena({ radius = 18, footprint = null } = {}) {
   const group = new THREE.Group();
   group.name = 'DuelArena';
   const disposables = [];
@@ -92,18 +93,52 @@ export function createArena({ radius = 18 } = {}) {
   const waves = createFloorWaves();
   const floorUniforms = { uRadius: { value: radius }, uTime: { value: 0 }, uBase: { value: new THREE.Color(0x0d1420) },
     uLine: { value: new THREE.Color(0x3fa7ff) }, uEdge: { value: new THREE.Color(0x7fe9ff) }, ...waves.uniforms };
-  const floor = new THREE.Mesh(keep(new THREE.CircleGeometry(radius + 0.3, 96)),
+  const outline = footprint ? new THREE.Shape() : null;
+  const trace = (shape, points) => {
+    points.forEach(([x,z],i) => i ? shape.lineTo(x,-z) : shape.moveTo(x,-z));
+    shape.closePath();
+  };
+  if (outline) {
+    trace(outline, footprint.outer);
+    for (const points of footprint.holes) {
+      const hole = new THREE.Path();
+      trace(hole, points);
+      outline.holes.push(hole);
+    }
+  }
+  const floor = new THREE.Mesh(keep(outline ? new THREE.ShapeGeometry(outline) : new THREE.CircleGeometry(radius + 0.3, 96)),
     keep(setNodeTwin(new THREE.ShaderMaterial({ vertexShader: FLOOR_VERTEX, fragmentShader: FLOOR_FRAGMENT, uniforms: floorUniforms }), arenaFloorTwin)));
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   group.add(floor);
   // shadow catcher over the patterned floor
-  const shadow = new THREE.Mesh(keep(new THREE.CircleGeometry(radius, 64)), keep(new THREE.ShadowMaterial({ opacity: 0.35 })));
+  const shadow = new THREE.Mesh(keep(outline ? new THREE.ShapeGeometry(outline) : new THREE.CircleGeometry(radius, 64)), keep(new THREE.ShadowMaterial({ opacity: 0.35 })));
   shadow.rotation.x = -Math.PI / 2;
   shadow.position.y = 0.002;
   shadow.receiveShadow = true;
   group.add(shadow);
+  if (footprint) {
+    const patterns=controlFloorPatterns(footprint);
+    // Same hex and telekinesis shader as practice, darker alloy palette at both boundaries.
+    const darkUniforms={...floorUniforms,uBase:{value:new THREE.Color(0x070d16)},uLine:{value:new THREE.Color(0x22537d)},uEdge:{value:new THREE.Color(0x000000)}};
+    const dark=keep(setNodeTwin(new THREE.ShaderMaterial({vertexShader:FLOOR_VERTEX,fragmentShader:FLOOR_FRAGMENT,uniforms:darkUniforms}),arenaFloorTwin));
+    const layers=[
+      ['A dark perimeter',patterns.trim,dark,.004],
+      ['A angular edge inlay',patterns.inlay,keep(new THREE.MeshBasicMaterial({color:0x4386ab})),.008],
+      ['A circuit diamonds',patterns.motifs,keep(new THREE.MeshBasicMaterial({color:0x305775})),.008],
+    ];
+    for(const [name,polygons,material,y] of layers){
+      const mesh=new THREE.Mesh(keep(clippedPatternGeometry(floor.geometry,polygons)),material);
+      mesh.name=name;mesh.position.y=y;group.add(mesh);
+    }
+  }
   // the platform's rim and underside
+  if (outline) {
+    const foundation = new THREE.Mesh(keep(new THREE.ExtrudeGeometry(outline, { depth: 1.1, bevelEnabled: false })), keep(new THREE.MeshStandardMaterial({ color: 0x1a2232, metalness: 0.6, roughness: 0.5 })));
+    foundation.rotation.x = -Math.PI / 2;
+    foundation.position.y = -1.105;
+    group.add(foundation);
+  } else {
   const rim = new THREE.Mesh(keep(new THREE.CylinderGeometry(radius + 0.3, radius - 1.5, 2.4, 96, 1, true)),
     keep(new THREE.MeshStandardMaterial({ color: 0x1a2232, metalness: 0.6, roughness: 0.5, side: THREE.DoubleSide })));
   rim.position.y = -1.2;
@@ -130,6 +165,7 @@ export function createArena({ radius = 18 } = {}) {
     const d = 70 + ((i * 13) % 25);
     tower.position.set(Math.sin(a) * d, h / 2 - 12, Math.cos(a) * d);
     group.add(tower);
+  }
   }
   return {
     group,

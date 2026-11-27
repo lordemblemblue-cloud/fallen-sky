@@ -24,7 +24,7 @@ export function ScoreLine({ view }) {
   if (mode === 'control' && Array.isArray(view.controlPoints)) {
     return (
       <div className="duelist-scoreline duelist-scoreline--control">
-        <div className="duelist-control-rail" role="group" aria-label="Three-Point Control score and objectives">
+        <div className="duelist-control-rail" role="group" aria-label="Control Point score and objectives">
           <div className="duelist-control-team duelist-control-team--red">
             <strong>{Math.floor(view.teamScores.red)}%</strong><span>RED TEAM</span>
           </div>
@@ -80,7 +80,7 @@ export function ScoreLine({ view }) {
             <span style={{ width: `${percent}%` }} />
           </div>
           <span className="duelist-escort-percent">{Math.round(percent)}%</span>
-          <span className="duelist-escort-subtitle">{view.escort.contested ? 'CONTESTED · CLEAR THE TRANSPORT' :
+          <span className="duelist-escort-subtitle">{!view.escort.pointACaptured ? 'CAPTURE POINT A · '+Math.floor(view.escort.captureProgress||0)+'%' : view.escort.contested ? 'CONTESTED · CLEAR THE TRANSPORT' :
             view.escort.moving ? 'TRANSPORT ADVANCING' : 'WAITING FOR ESCORT'}</span>
         </div>
       </div>
@@ -135,6 +135,11 @@ export function ScoreLine({ view }) {
 
 export function Countdown({ view, fightFlash }) {
   if (view.phase === 'countdown' && view.countdown > 0) {
+    if(view.mode==='escort'||view.mode==='ctf'){
+      const prep=view.preparation??Math.max(0,view.countdown-5);
+      if(prep>.0001)return <div className="duelist-countdown duelist-escort-preparation" role="status"><small>Prepare for battle</small><strong>{Math.ceil(prep-1e-6)}</strong><span>Choose your class and equipment</span></div>;
+      return <div className="duelist-countdown" role="status"><small>Match begins in</small>{Math.min(5,Math.ceil(view.countdown-1e-6))}</div>;
+    }
     return <div className="duelist-countdown">{view.mode === 'duel' && view.round > 1 ? <small>Round {view.round}</small> : null}{Math.ceil(view.countdown)}</div>;
   }
   if (view.phase === 'roundOver') {
@@ -147,7 +152,7 @@ export function Countdown({ view, fightFlash }) {
 
 export function RespawnNote({ view }) {
   if (!view.me?.dead || view.mode === 'duel' || view.phase !== 'live') return null;
-  return <div className="duelist-respawn">Back in {Math.max(0, view.me.respawnIn).toFixed(1)}</div>;
+  return <div className="duelist-respawn">Back in {Math.max(0, view.me.respawnIn).toFixed(1)}{view.mode==='escort'&&view.me.team==='blue'&&view.escort?.defenderRespawnSeconds>4&&<small style={{display:'block',fontSize:'.7em'}}>Defense reinforcement delay increased</small>}</div>;
 }
 
 function feedLine(view, e) {

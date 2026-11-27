@@ -1,3 +1,4 @@
+import {ctfRestricted} from '../sim/importedCtfLayout.mjs';
 // The player's own fighter, played a step ahead of the server.
 //
 // Online, everyone is drawn from the server's snapshots a tenth of a second late. Your own fighter would be
@@ -13,6 +14,7 @@
 // shows sooner what it is about to decide.
 import { createWorld, addFighter, step, BODY_RADIUS } from '../sim/world.mjs';
 import { resolveCircle } from '../sim/level.mjs';
+import { moveArenaBody, ARENA_BODY_HEIGHT } from '../sim/modeArenaLayout.mjs';
 import { TICK_HZ, applyOwn } from './protocol.mjs';
 
 const STEP = 1 / TICK_HZ;
@@ -38,11 +40,14 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
   let ey = 0;
   let ez = 0;
   let lastCorrection = 0;
+  let evasionUntil=-Infinity;
+  let smoothCorrection=false;
 
   // the server moves two overlapping bodies half the overlap each; the others stand where they were last seen
   function keepApart(others) {
     const min = BODY_RADIUS * 2;
     for (const o of others) {
+      if(world.arenaLayout && Number.isFinite(o.y) && Math.abs(body.y-o.y)>=ARENA_BODY_HEIGHT)continue;
       const dx = body.x - o.x;
       const dz = body.z - o.z;
       const d = Math.hypot(dx, dz);
@@ -53,13 +58,17 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
   }
   function keepInside() {
     if (world.level) { resolveCircle(world.level, body, BODY_RADIUS); return; }
+    if(world.arenaLayout?.imported)return;
     const r = Math.hypot(body.x, body.z);
     const limit = world.arenaRadius - BODY_RADIUS;
     if (r > limit) { body.x *= limit / r; body.z *= limit / r; }
   }
   function stepOnce(input, others) {
     step(world, STEP, { [id]: input });
+    const before={x:body.x,y:body.y,z:body.z};
     if (!fighter.vitals.dead) keepApart(others);
+    if(world.arenaLayout){const dx=body.x-before.x,dz=body.z-before.z;Object.assign(body,before);moveArenaBody(world.arenaLayout,body,dx,dz,0,BODY_RADIUS,false);}
+    if(world.arenaLayout?.ctfImported&&ctfRestricted(fighter.team,body,world.ctfCarriers?.has(id))&&!ctfRestricted(fighter.team,before,world.ctfCarriers?.has(id)))Object.assign(body,before);
     keepInside();
   }
 
@@ -70,7 +79,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
     advance(seq, input, others = []) {
       pending.push({ seq, input });
       if (pending.length > PREDICTION.maxPending) pending.shift();
-      if (active) stepOnce(input, others);
+      if (active) {stepOnce(input, others);if(fighter.action?.id==='roll')evasionUntil=world.time+.25;}
     },
     /**
      * The server's word: the fighter in full (encodeOwn) after it used inputs up to number `ack`. Back to
@@ -81,8 +90,10 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       while (pending.length && pending[0].seq <= ack) pending.shift();
       // held in someone's grip: the holder moves this body, so it is drawn from the server's picture
       if (own.hb) { active = false; return; }
+      const evasive=active&&(fighter.action?.id==='roll'||own.a?.[0]==='roll'||world.time<evasionUntil);
       const was = active ? [body.x, body.y, body.z] : shownAt ? [shownAt.x, shownAt.y, shownAt.z] : null;
       if (!active) { ex = 0; ey = 0; ez = 0; }
+      const priorProtection=fighter.protectedUntil;
       applyOwn(fighter, body, own);
       world.time = own.at;
       for (const p of pending) stepOnce(p.input, others);
@@ -93,21 +104,24 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
         ex += dx;
         ey += was[1] - body.y;
         ez += dz;
-        if (Math.hypot(ex, ez) > PREDICTION.cutMetres) { ex = 0; ey = 0; ez = 0; }
+        const respawn=fighter.protectedUntil>priorProtection+.01||fighter.vitals.dead;
+        smoothCorrection=!respawn&&(smoothCorrection&&Math.hypot(ex,ez)>.1||evasive||fighter.action?.id==='roll')&&Math.hypot(ex,ez)<9&&Math.abs(ey)<2;
+        if (Math.hypot(ex, ez) > PREDICTION.cutMetres && !smoothCorrection || respawn) { ex = 0; ey = 0; ez = 0; smoothCorrection=false; }
+
       } else { ex = 0; ey = 0; ez = 0; lastCorrection = 0; }
       active = true;
     },
     /** The server is not acting on this player's inputs (fallen, a countdown): nothing to predict. */
     drop() { active = false; },
     /** A new connection or a new match: nothing to replay, nothing predicted until the server's next word. */
-    reset() { pending.length = 0; active = false; ex = 0; ey = 0; ez = 0; lastCorrection = 0; },
+    reset() { pending.length = 0; active = false; ex = 0; ey = 0; ez = 0; lastCorrection = 0; evasionUntil=-Infinity;smoothCorrection=false; },
     /**
      * Write the predicted fighter into the fighter and body the game view draws (the mirror world's), whose
      * clock reads `time`: moments (cooldowns, a stagger's end) are moved onto that clock, and an action keeps
      * its object while it is the same action (the animator and the effects tell a new action by it).
      */
     present(shown, shownBody, time, dt) {
-      const k = Math.exp(-Math.max(0, dt) / PREDICTION.easeSeconds);
+      const k = Math.exp(-Math.max(0, dt) / (smoothCorrection?.22:PREDICTION.easeSeconds));
       ex *= k; ey *= k; ez *= k;
       const shift = time - world.time;
       Object.assign(shown.vitals, fighter.vitals);
@@ -116,6 +130,7 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
       shown.matchBoost = fighter.matchBoost;
       shown.items = fighter.items;
       shown.shopStats = fighter.shopStats;
+      shown.specialActiveUntil = (fighter.specialActiveUntil ?? -Infinity) + shift;
       shown.activeRelicUntil = fighter.activeRelicUntil + shift;
       shown.activeRelicCooldownUntil = fighter.activeRelicCooldownUntil + shift;
       shown.activeAnchorAt = fighter.activeAnchorAt ? { ...fighter.activeAnchorAt, until: fighter.activeAnchorAt.until + shift } : null;
@@ -137,10 +152,12 @@ export function createPredictor({ id, level = null, arenaRadius = 22 } = {}) {
         } else shown.action = { id: a.id, move: a.move, t: a.t, nextHit: a.nextHit, held: a.held, chainedFrom: a.chainedFrom, link: a.link, startedAt };
       }
       shownBody.x = body.x + ex;
-      shownBody.y = Math.max(0, body.y + ey);
+      shownBody.y = world.arenaLayout?.imported ? body.y + ey : Math.max(0, body.y + ey);
       shownBody.z = body.z + ez;
       shownBody.yaw = body.yaw;
       shownBody.vy = body.vy;
+      shownBody.jumped = body.jumped;
+      shownBody.airJumpAt = body.airJumpAt;
       shownBody.speed = body.speed;
       shownBody.moving = body.moving;
       shownBody.motion = body.motion;

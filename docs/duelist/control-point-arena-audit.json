@@ -1,0 +1,16 @@
+{
+  "validSpawns": 12,
+  "totalSpawns": 12,
+  "spawnAuditLog": [],
+  "fallbackVerified": true,
+  "headroomMeters": 7.2,
+  "headroomOk": true,
+  "passedRoutes": 13,
+  "totalRoutes": 13,
+  "failedRouteNames": [],
+  "exportsValidated": true,
+  "triangles": 19616,
+  "meshObjects": 120,
+  "colliders": 191,
+  "method": "Node + real Three.js math, stub 2D canvas; no GPU, no actual GLB export"
+}

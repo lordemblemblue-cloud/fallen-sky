@@ -93,3 +93,15 @@ The server determines capture, ownership, percentages, and winner; clients only 
 placeholder markers. Future map layouts may pass `controlLayout: [{x,z},{x,z},{x,z}]` to
 `createDuelistServer()` or `createMatch()`, with rematch persistence already supported. See
 `docs/duelist/THREE_POINT_CONTROL_QUICKPLAY.md` for the full contract. Multiplayer protocol version is 3.
+
+## Persistent public arenas
+
+The hosted entry point enables continuous simulation for the permanent public room in each of the seven competitive modes. Empty overflow rooms still sleep and expire under the existing rules. Permanent rooms restart after the existing 12-second intermission, preserving their room ID. Set `DUELIST_CONTINUOUS_PUBLIC_ROOMS=0` to restore the prior idle behavior if host profiling shows an unacceptable CPU cost.
+
+The online browser always displays one fixed 3D join card per official room, plus extra rooms confirmed by /lobby. Each card joins its exact room ID. Unknown counts are not fabricated while disconnected. These previews are schematic map views, not a live spectator feed. Visible room cards render at a capped frame rate; offscreen cards release their renderer and hidden tabs pause drawing. The authoritative service is independent of dashboard or browser lifetime. Production guest access, service hosting and the published VITE_DUELIST_WS_URL still require a secure deployment configuration; do not enable the local-only guest bypass on an unrestricted production host. The current server uses existing mode-specific capacities; 100-player rooms require separate load testing and capacity changes.
+
+## Guest-only arena deployment
+
+The guest-only web entry needs a dedicated authoritative match host. Do not use the local-only `DUELIST_ALLOW_GUESTS` flag in production. The isolated service in `publicHostEntry.mjs` creates random ephemeral guest identities, allows only explicitly configured HTTPS browser origins, caps concurrent sockets at 64 and rooms at 16, disallows story crews, and does not use Base44 account privileges or persistent XP. Existing mode seat counts are preserved. It is not a substitute for a production load/security review.
+
+Build from the repository root with `docker build -f server/duelist/Dockerfile.public -t duelist-public .`. Configure `DUELIST_PUBLIC_ORIGINS` with the exact preview and published app HTTPS origins, set the host port (default 5321), expose the service through TLS, then set the Base44 frontend build variable `VITE_DUELIST_WS_URL=wss://<host>/ws/duelist`. Keep the public arena process separate from account/economy services. Verify `/status`, `/lobby`, protocol compatibility and two browsers joining the same room before making it available. Until a host is configured, the room cards expose an explicit local bots-only option, never fake online occupancy.

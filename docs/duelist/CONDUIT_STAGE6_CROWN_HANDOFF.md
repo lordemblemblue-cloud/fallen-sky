@@ -1,0 +1,10 @@
+# The Conduit — Stage 6 Crown platform
+
+## Layout
+Preserve the 18 m diameter, Y=5 deck, 6.5 m pad landing radius, all four pads, 1.45 s flight duration, and existing central 1.5x damage buff (15 s duration, 90 s respawn). Relocate four low barriers from centered cardinal positions at radius 5.3 m to radial 6.0 m / tangential 1.85 m, preserving rotational symmetry. Barriers are 2.2 x 0.78 x 0.75 m, with matching walkable colliders. The center-to-cardinal-edge approach is clear of these barriers. Actual airborne drops from the Crown to the courtyard are not certified. Add 88 visual-only detail instances (cover caps and trim, landing corners, guide marks, edge warnings, pickup ring) using existing materials and batch pipeline. No new lights, textures, independent collision or animation loops.
+
+## Integration and evidence
+Reusable arena constructor uses the new plan by default; enableCrownTactics:false retains previous cover for A/B inspection. Three fixture groups passed from exact committed source in isolated JS assertion harness, including all 12 idealized pad trajectories vs new Crown cover, four landing envelopes, access to center and four edge approaches. Added actual assembled-map A/B test for unchanged non-Crown collider records, spawns, pads, pickups, nav nodes, four matching relocated colliders and 88 instance delta. CI configured; full assembled check and physical GPU rendering not yet run locally. These probes do not certify actual class movement or balance.
+
+## Dependencies
+Stage 1 lighting merged. Stage 2 #357 remains blocked; #358 and #359 focused prototype CI passed but are unmerged. Stage 5 #360 focused fixture and assembled CI passed; repository-wide lint failed with 2192 errors in broader validation. Stage 6 is a separate draft based on main; reconcile all map-constructor edits when combining, retaining stage 2 navigation fixes and stage 5 interior details. Validate pad arcs against the complete collision world, drop paths, combat sightlines, class movement, bots, WebGPU performance and multiplayer before activation. No changes to live TDM or deployment.

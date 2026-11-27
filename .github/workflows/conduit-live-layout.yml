@@ -1,0 +1,40 @@
+name: Conduit live layout generation
+on:
+  push:
+    branches: ['conduit/normal-match-activation', 'conduit/match-release-fixes']
+  pull_request:
+    paths:
+      - 'src/components/duelist/sim/conduitLive*'
+      - 'src/components/duelist/sim/modeArenaLayout.mjs'
+      - 'src/components/duelist/sim/match.mjs'
+      - 'src/components/duelist/sim/bots.mjs'
+      - 'src/components/duelist/net/protocol.mjs'
+      - 'src/components/duelist/client/maps/conduitArena.mjs'
+      - '.github/workflows/conduit-live-layout.yml'
+permissions:
+  contents: read
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/export-duelist-conduit-manifest.mjs /tmp/conduit.json
+      - name: Validate checked-in collision manifest against actual assembled map
+        run: node --input-type=module -e "import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import m from './src/components/duelist/sim/conduitLiveData.mjs';assert.deepEqual(m,JSON.parse(readFileSync('/tmp/conduit.json','utf8')));"
+      - run: node --test tests/duelist-mode-arena-layout.test.mjs tests/duelist-conduit*.test.mjs tests/duelist-match.test.mjs tests/duelist-server.test.mjs tests/duelist-online-server-browser.test.mjs tests/duelist-base44-actors.test.mjs
+      - name: Build native Actor bundle for the same map/protocol
+        run: npx --yes esbuild@0.25.12 scripts/duelist-actor-entry.mjs --bundle --minify --platform=neutral --format=esm --external:base44:runtime/actors --outfile=/tmp/conduit-actor.ts
+      - name: Export generated Actor bundle for checked-in deployment artifact
+        run: |
+          node --input-type=module -e "import {readFileSync} from 'node:fs';const s=readFileSync('/tmp/conduit-actor.ts','utf8');for(let i=0;i<s.length;i+=1800)console.log('CONDUIT_ACTOR_CHUNK '+i+' '+JSON.stringify(s.slice(i,i+1800)));"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: conduit-native-actor
+          path: /tmp/conduit-actor.ts
+      - run: npm run build

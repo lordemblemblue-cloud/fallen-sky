@@ -1,6 +1,7 @@
 // A purely presentational projection of the match server's purchased equipment.
 // Unknown, duplicate, invalid and extra entries never produce an image URL.
-import { SHOP_ITEMS, SHOP_RULES, ownedItem } from '../core/shop.mjs';
+import { SHOP_ITEMS, SHOP_RULES, ownedItem, tierItemPassive } from '../core/shop.mjs';
+import { itemArt } from '../core/shopView.mjs';
 
 const byId = new Map(SHOP_ITEMS.map((item) => [item.id, item]));
 export const HUD_EQUIPMENT_SLOTS = SHOP_RULES.slots;
@@ -20,9 +21,9 @@ export function equippedHudSlots(entries) {
       id: item.id,
       name: item.name,
       tier: owned.tier,
-      art: '/duelist/items/' + item.id + '.svg',
+      art: itemArt(item.id, owned.tier),
       category: item.category,
-      passive: owned.tier === 3 ? item.passive.text : null,
+      passive: tierItemPassive(item, owned.tier)?.text || null,
     });
     if (slots.length >= HUD_EQUIPMENT_SLOTS) break;
   }

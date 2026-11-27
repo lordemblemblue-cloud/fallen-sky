@@ -28,7 +28,14 @@
       "description": "ID of item if type is item"
     },
     "note": {
-      "type": "string"
+      "type": "string",
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": [

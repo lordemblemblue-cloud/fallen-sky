@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CLASS_IDS, CLASSES } from '../src/components/duelist/core/classes.mjs';
-import { createMatch, queueMatchClass, stepMatch, matchView, standInInput, COUNTDOWN } from '../src/components/duelist/sim/match.mjs';
+import { createMatch, queueMatchClass, stepMatch, matchView, standInInput, matchCountdownSeconds } from '../src/components/duelist/sim/match.mjs';
 
 const STEP = 1 / 60;
 function advance(match, seconds) {
@@ -20,7 +20,7 @@ test('all four canonical class selections are queued, private, and applied only 
     assert.equal(matchView(match, 'beta').me.pendingClass, null, 'other seat sees only its own pending choice');
     assert.equal(matchView(match, 'beta').people.some(p => Object.hasOwn(p, 'pendingClass')), false);
     assert.equal(matchView(match, 'beta').people.some(p => Object.hasOwn(p, 'specialMeter')), false);
-    advance(match, COUNTDOWN + 0.1);
+    advance(match, matchCountdownSeconds(match.mode) + 0.1);
     assert.equal(match.seats.get('alpha').classId, classId);
     assert.equal(match.seats.get('alpha').pendingClass, null);
     assert.equal(match.world.fighters.get('alpha').weapon, CLASSES[classId].weapon);
@@ -35,7 +35,7 @@ test('latest legal queued class wins at spawn; a forged input cannot overwrite t
   assert.equal(queueMatchClass(match, 'alpha', 'healer').accepted, true);
   stepMatch(match, STEP, { alpha: { classId: 'warrior', pendingClass: 'warrior', specialMeter: 100 } });
   assert.equal(match.seats.get('alpha').pendingClass, 'healer');
-  advance(match, COUNTDOWN + 0.1);
+  advance(match, matchCountdownSeconds(match.mode) + 0.1);
   assert.equal(match.seats.get('alpha').classId, 'healer');
   assert.equal(match.world.fighters.get('alpha').weapon, 'sword');
   assert.equal(match.seats.get('alpha').specialMeter, 0);
@@ -48,7 +48,7 @@ test('every match mode applies each class at countdown without exposing private 
     for (const classId of CLASS_IDS) {
       const match = createMatch({ mode, players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
       assert.equal(queueMatchClass(match, 'alpha', classId).accepted, true, mode + '/' + classId);
-      advance(match, COUNTDOWN + 0.1);
+      advance(match, matchCountdownSeconds(match.mode) + 0.1);
       const seat = match.seats.get('alpha');
       assert.equal(seat.classId, classId, mode + '/' + classId);
       assert.equal(match.world.fighters.get('alpha').weapon, CLASSES[classId].weapon, mode + '/' + classId);
@@ -82,7 +82,7 @@ test('untrusted seats and invalid class names cannot mutate queued choices or pr
 test('temporary stand-in preserves the authenticated seat class and private meter without exposing them to peers', () => {
   const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
   assert.equal(queueMatchClass(match, 'alpha', 'assassin').accepted, true);
-  advance(match, COUNTDOWN + 0.1);
+  advance(match, matchCountdownSeconds(match.mode) + 0.1);
   const seat = match.seats.get('alpha');
   seat.specialMeter = 40; // Arrange server-owned state; never a client packet.
   const fighter = match.world.fighters.get('alpha');
@@ -105,7 +105,7 @@ test('independent player seats retain their own class and private meter across c
   assert.equal(queueMatchClass(match, 'beta', 'duelist').accepted, true);
   assert.equal(matchView(match, 'alpha').me.pendingClass, 'assassin');
   assert.equal(matchView(match, 'beta').me.pendingClass, 'duelist');
-  advance(match, COUNTDOWN + 0.1);
+  advance(match, matchCountdownSeconds(match.mode) + 0.1);
   assert.equal(match.seats.get('alpha').classId, 'assassin');
   assert.equal(match.seats.get('beta').classId, 'duelist');
   assert.equal(match.world.fighters.get('alpha').weapon, CLASSES.assassin.weapon);
@@ -126,7 +126,7 @@ test('all four classes apply only at a defeated player next respawn without leak
     for (const nextClass of CLASS_IDS) {
       const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
       assert.equal(queueMatchClass(match, 'alpha', initialClass).accepted, true);
-      advance(match, COUNTDOWN + 0.1);
+      advance(match, matchCountdownSeconds(match.mode) + 0.1);
       const seat = match.seats.get('alpha');
       const oldFighter = match.world.fighters.get('alpha');
       seat.specialMeter = 55; // Arrange trusted match state, not a client award.
@@ -156,7 +156,7 @@ test('live fighters cannot hot-swap any class or reset earned charge before defe
   for (const activeClass of CLASS_IDS) {
     const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
     assert.equal(queueMatchClass(match, 'alpha', activeClass).accepted, true);
-    advance(match, COUNTDOWN + 0.1);
+    advance(match, matchCountdownSeconds(match.mode) + 0.1);
     const seat = match.seats.get('alpha');
     const fighter = match.world.fighters.get('alpha');
     seat.specialMeter = 75; // Arrange trusted state, not a client request.
@@ -178,7 +178,7 @@ test('live fighters cannot hot-swap any class or reset earned charge before defe
 test('disconnect stand-in cannot consume or replace a queued respawn class', () => {
   const match = createMatch({ mode: 'practice', players: [{ id: 'alpha' }, { id: 'beta' }], seats: 2 });
   assert.equal(queueMatchClass(match, 'alpha', 'warrior').accepted, true);
-  advance(match, COUNTDOWN + 0.1);
+  advance(match, matchCountdownSeconds(match.mode) + 0.1);
   const seat = match.seats.get('alpha');
   const oldFighter = match.world.fighters.get('alpha');
   seat.specialMeter = 35; // Trusted simulation setup, not a network request.
@@ -215,7 +215,7 @@ test('queued class has no active special meter until authoritative countdown spa
     stepMatch(match, STEP, { alpha: { specialMeter: 100, classId } });
     assert.equal(seat.classId, null, 'client input cannot activate the queued class');
     assert.equal(matchView(match, 'alpha').me.specialMeter, null);
-    advance(match, COUNTDOWN + 0.1);
+    advance(match, matchCountdownSeconds(match.mode) + 0.1);
     assert.equal(seat.classId, classId);
     assert.equal(matchView(match, 'alpha').me.specialMeter, 0);
   }

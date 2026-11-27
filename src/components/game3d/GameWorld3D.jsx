@@ -122,6 +122,7 @@ import {selectWolfveilGroundedEnemySpawns} from './wolfveil/WolfveilEnemySpawns.
 import {createWolfveilZombieHordeRuntime} from './wolfveil/WolfveilZombieHordeRuntime.js';
 import {zombieAttackLevel} from './wolfveil/WolfveilZombieCamps.mjs';
 import {threeRoadsEnabled} from './threeroads/threeRoadsFlag.mjs';
+import {questTestRuntimeActive} from './threeroads/questTestRuntime.mjs';
 import {createThreeRoadsWorld} from './threeroads/ThreeRoadsWorld.mjs';
 import {WOLFVEIL_ADMIN_C1_MODEL,WOLFVEIL_ADMIN_C1_ANIMATIONS} from './wolfveil/WolfveilEnemyAssets.mjs';
 import { createSharedSkinnedFBXSpawner } from './performance/SharedSkinnedFBXSpawner.mjs';
@@ -177,6 +178,7 @@ import {activateCloneUltraWorldGraphics} from './game3dPauseMenuModel.mjs';
 import {isInsideMeadowCircle,meadowGroundHeight}
   from './wolfveil/WolfveilMeadowField.mjs';
 import { buildGrassEnvironment } from './buildGrassEnvironment';
+import {isPlatformRegion,createTemporaryPlatform,insidePlatform,clampPlatformPosition,PLATFORM_EDGE} from './worlds/temporaryPlatform.mjs';
 import {createWolfveilVillage,createWolfveilCaveDestination} from './wolfveil/WolfveilScene';
 import {WOLFVEIL_CAVES_REGION,createWolfveilDungeonPortals} from './wolfveil/WolfveilDungeonPortals.js';
 import {createWolfveilAreaLoader} from './wolfveil/streaming/WolfveilAreaLoader.mjs';
@@ -202,7 +204,7 @@ import {loadClassicWolfveilSuigenAccents} from './worlds/WolfveilSuigenReuseAsse
 import {saveWolfveilWorldVariant,WORLD_VARIANT_CLASSIC,
   WORLD_VARIANT_EVENT,WORLD_VARIANT_STATUS_EVENT}
   from './worlds/WolfveilWorldVariants.mjs';
-import {VORTEX_LAKE,isVortexLakeWetSurface} from './wolfveil/VortexLakeLayout.mjs';
+import {VORTEX_LAKE} from './wolfveil/VortexLakeLayout.mjs';
 import {installWolfveilArtisanTown} from './wolfveil/WolfveilArtisanTownScene.mjs';
 import WolfveilArtisanShopPanel from './wolfveil/WolfveilArtisanShopPanel';
 import {WOLFVEIL_PLAYER_TOWN_SPAWN,wolfveilQuestNpcSpot,insideWolfveilImportedTown} from './wolfveil/WolfveilImportedTownLayout.mjs';
@@ -258,7 +260,7 @@ import { WOLFVEIL_ROUTES, WOLFVEIL_SITES, wolfveilDistanceToRiver, wolfveilRoute
 import { wolfveilLandscapeAllowsTallGrass } from './wolfveil/WolfveilLandscapeDesign.mjs';
 import { createGame3DWaterContact } from './axe/world/Game3DWaterContact';
 import { LUNAR_CAVE_REGION, LUNAR_CAVE_ENTRANCE, LUNAR_CAVE_TRAINING_SPAWNS, LUNAR_CAVE_WATER_END } from './dungeons/LunarCaveLayout.mjs';
-import { shouldRejectCaveGroundStep,nearSuigenCaveGround } from './dungeons/CaveRimSafety.mjs';
+import { shouldRejectCaveGroundStep } from './dungeons/CaveRimSafety.mjs';
 import { createLunarMountainEntrance, createLunarCaveDungeon } from './dungeons/LunarCaveScene';
 import { ASTRAL_DUNGEON_REGION, ASTRAL_DUNGEON_ENTRANCE, ASTRAL_MONSTER_SPAWNS } from './dungeons/AstralDungeonLayout.mjs';
 import { createAstralDungeon, createAstralMountainGate } from './dungeons/AstralDungeonScene';
@@ -349,7 +351,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     window.addEventListener('game3dArtisanShopOpen', open);
     return () => window.removeEventListener('game3dArtisanShopOpen', open);
   }, []);
-  const [enemyCount, setEnemyCount] = useState(region==='wolfveil'?0:region===LUNAR_CAVE_REGION?LUNAR_CAVE_TRAINING_SPAWNS.length:region===ASTRAL_DUNGEON_REGION?ASTRAL_MONSTER_SPAWNS.length:ENEMY_SPAWNS.length);
+  const flatPlatform=isPlatformRegion(region);
+  const [enemyCount, setEnemyCount] = useState(flatPlatform||region==='wolfveil'?0:region===LUNAR_CAVE_REGION?LUNAR_CAVE_TRAINING_SPAWNS.length:region===ASTRAL_DUNGEON_REGION?ASTRAL_MONSTER_SPAWNS.length:ENEMY_SPAWNS.length);
   const [score, setScore] = useState(0);
   const [playerLevel, setPlayerLevel] = useState(1);
   const [playerXP, setPlayerXP] = useState(0);
@@ -615,7 +618,15 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       canvas.remove();
       const msg = document.createElement('div');
       msg.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:sans-serif;background:#0f1419;text-align:center;padding:24px;';
-      msg.innerHTML = '<div><div style="font-size:18px;font-weight:600;margin-bottom:8px">3D world unavailable</div><div style="opacity:0.6;font-size:14px">Your browser couldn\'t allocate a WebGL context. Close other tabs and reload.</div></div>';
+      const content = document.createElement('div');
+      const heading = document.createElement('div');
+      heading.style.cssText = 'font-size:18px;font-weight:600;margin-bottom:8px';
+      heading.textContent = '3D world unavailable';
+      const guidance = document.createElement('div');
+      guidance.style.cssText = 'opacity:0.6;font-size:14px';
+      guidance.textContent = "Your browser couldn't allocate a WebGL context. Close other tabs and reload.";
+      content.append(heading, guidance);
+      msg.appendChild(content);
       container.appendChild(msg);
       return;
     }
@@ -757,9 +768,10 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     remoteManagerRef.current = createRemotePlayersManager(scene);
     // Dedicated duels use server-owned X/Z and 2D capsule collision.
     // This is a visual projection, NOT a replacement for world terrain physics.
-    let dedicatedMode=window.__game3dDedicatedMode||null;
+    let dedicatedMode=flatPlatform?null:(window.__game3dDedicatedMode||null);
     let dedicatedPose=window.__game3dDedicatedPose||null;
     const onDedicatedMode=event=>{
+      if(flatPlatform)return;
       dedicatedMode=event.detail||null;
       if(!dedicatedMode){
         dedicatedPose=null;
@@ -826,6 +838,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       viewScale: region === 'wolfveil' ? 5.5 : 1 });
     setEnvSystem(envSystem);
     window.__worldEnv = envSystem;
+    if(flatPlatform){envSystem.setSkyEnabled(false);scene.background=new THREE.Color(0x9ba9b7);sun.intensity=2.2;hemi.intensity=1.3;}
     if(region===ASTRAL_DUNGEON_REGION){
       envSystem.setSkyEnabled(false);
       sun.intensity=0;hemi.intensity=0;
@@ -862,8 +875,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         }
       } catch (e) { /* keep the probabilistic fallback until the next fetch */ }
     };
-    fetchWeather();
-    const weatherInterval = setInterval(fetchWeather, 30 * 60 * 1000);
+    if(!flatPlatform)fetchWeather();
+    const weatherInterval = flatPlatform?null:setInterval(fetchWeather, 30 * 60 * 1000);
 
     // Game 1 Verdant Wilds forest: real raised bark, wind/rain grass, water,
     // muddy puddles, and wandering fauna on this world's Three.js scene.
@@ -895,7 +908,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         // Underground cave feet must never snap UP to an overlying mountain
         // roof merely because a ray found no reachable tread. A null contact
         // is blocked by the seven-foot cave edge movement guard instead.
-        if(nearSuigenCaveGround(x,z,.85))return null;
+        
       }
       // Classic Wolfveil, given the feet (`referenceY`): the highest floor
       // within one step of them, so walking under a bridge deck (or an upper
@@ -1147,7 +1160,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     const wolfveilCaveDestination=region===WOLFVEIL_CAVES_REGION?createWolfveilCaveDestination(scene):null;
     const lunarDungeon = region===LUNAR_CAVE_REGION ? createLunarCaveDungeon(scene) : null;
     const astralDungeon = region===ASTRAL_DUNGEON_REGION ? createAstralDungeon(scene) : null;
-    const grassGround=wolfveilVillage?.ground||lunarDungeon?.ground||astralDungeon?.ground||wolfveilCaveDestination?.floor||buildGrassEnvironment(scene);
+    const grassGround=flatPlatform?createTemporaryPlatform(THREE,scene):(wolfveilVillage?.ground||lunarDungeon?.ground||astralDungeon?.ground||wolfveilCaveDestination?.floor||buildGrassEnvironment(scene));
     const forestBiome = grassGround.userData.forestBiome;
     if(wolfveilCaveDestination)groundMeshes.push(...wolfveilCaveDestination.walkableSurfaces);
     else groundMeshes.push(grassGround);
@@ -1223,7 +1236,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         protectedTile:wolfveilIsProtectedSWTile,
         insideTown:insideWolfveilImportedTown,
         nearGameplaySite:(x,z,radius)=>
-          isVortexLakeWetSurface(x,z-70,radius+10)||
+          
           Object.values(WOLFVEIL_SITES).some(site=>
             Math.hypot(x-site.x,z-(site.z+70))<radius+18),
       }).then(layer=>{
@@ -1336,7 +1349,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
 
     // Quest-NPC idle clip — uses the ARCHER idle (player-style anim set), not the
     // mutant idle that enemies use. Quest NPCs must ONLY play this idle.
-    const questNPCIdleClipPromise = new Promise((resolve) => {
+    const questNPCIdleClipPromise = flatPlatform?Promise.resolve(null):new Promise((resolve) => {
       loader.load(
         ANIMATION_URLS.idle,
         (animFbx) => resolve(animFbx.animations?.[0] || null),
@@ -1374,7 +1387,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     };
     const loadCompanionAsset = (companionDef) => {
       const assetVersion = ++companionAssetVersion;
-      if (!companionDef) return;
+      if (flatPlatform || !companionDef) return;
       const setupCompanion = (companionModel, embeddedClips = []) => {
         if (companionAssetDisposed || assetVersion !== companionAssetVersion) return;
         // Keep the navigation root aligned with world +Z while the actual
@@ -1698,21 +1711,21 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // Pre-load enemy creature clips once (shared across all enemies).
     // These come from the "creature" folder in admin → AnimationFBX manager
     // (Survivor A Lusth model + mutant animation set).
-    const walkClipPromise = new Promise((resolve) => {
+    const walkClipPromise = flatPlatform?Promise.resolve(null):new Promise((resolve) => {
       loader.load(CREATURE_ANIMATION_URLS.walk, (animFbx) => resolve(animFbx.animations?.[0] || null), undefined, () => resolve(null));
     });
-    const idleClipPromise = new Promise((resolve) => {
+    const idleClipPromise = flatPlatform?Promise.resolve(null):new Promise((resolve) => {
       loader.load(CREATURE_ANIMATION_URLS.idle, (animFbx) => resolve(animFbx.animations?.[0] || null), undefined, () => resolve(null));
     });
     // Existing mutant clips are preserved for quest/dungeon enemies. C1 uses
     // its separate admin-bound run/kick/death assets below, not mutant clips.
     const runClipPromise=Promise.resolve(null);
-    const deathClipPromise = new Promise((resolve) => {
+    const deathClipPromise = flatPlatform?Promise.resolve(null):new Promise((resolve) => {
       loader.load(CREATURE_ANIMATION_URLS.death, (animFbx) => resolve(animFbx.animations?.[0] || null), undefined, () => resolve(null));
     });
     // Use the mutant "punch" animation for attacks (different from the default
     // "swiping" attack so the player sees variety in enemy strikes).
-    const attackClipPromise = new Promise((resolve) => {
+    const attackClipPromise = flatPlatform?Promise.resolve(null):new Promise((resolve) => {
       loader.load(CREATURE_ANIMATION_URLS.punch, (animFbx) => resolve(animFbx.animations?.[0] || null), undefined, () => resolve(null));
     });
     // Cache the death + attack clips once they load so we can reuse them per-enemy
@@ -1782,33 +1795,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // A SECOND instance of the same real GLB dragon watches the new lake
     // from the eastern mountain rim. It loads only when a player explores
     // nearby; the old quarry encounter, boss HP system and animations stay.
-    const lakeStormDragon=region==='wolfveil'&&worldArea===wolfveilAreaAtWorld({x:VORTEX_LAKE.centerX+58,z:VORTEX_LAKE.centerZ+100})?createQuarryDragonBoss({
-      loader:worldGltfLoader,scene,bossEntities,setBosses,
-      sampleGroundY:sampleTileGroundY,
-      instanceId:'wolfveil_living_lake_storm_dragon',
-      encounterName:'Dragon of Living Perspectives',
-      site:'vortex_lake',
-      spawnPosition:{
-        x:VORTEX_LAKE.centerX+58,
-        z:VORTEX_LAKE.centerZ+70+30,
-      },
-      getPlayerPosition:()=>{
-        const p=modelRef.current?.position;
-        return p?{x:p.x,z:p.z,alive:getPlayerHUD().hp>0}:null;
-      },
-      applyPlayerDamage:(incoming)=>{
-        const player=getPlayerHUD();
-        if(!player||player.hp<=0)return;
-        const damage=Math.max(0,incoming-absorbShield(incoming));
-        if(damage>0)setHP(Math.max(0,player.hp-damage));
-      },
-      onEngage:boss=>{
-        if(!bossEncounter.isActive()){
-          bossEncounter.start({bossId:boss.id});
-          bossEncounter.beginCombat();
-        }
-      },
-    }):null;
+    const lakeStormDragon=null;
     const pendingAXEDungeonBossSpawns = new Set();
     window.__gw3dSpawnAXEDungeonBoss = ({
       bossDef,
@@ -1816,7 +1803,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       sessionId = null,
       roomId = null,
     } = {}) => {
-      if (!bossDef?.id || !position) return null;
+      if (flatPlatform || !bossDef?.id || !position) return null;
       const runtimeId = `${bossDef.id}::${sessionId || 'runtime'}`;
       const alreadyLive = bossEntities.some((boss) =>
         boss?.id === runtimeId &&
@@ -1850,7 +1837,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // fixed, steep-ground-checked encounter sites. The SAFE settlement and
     // legacy AXE arena coordinates are not mixed. These client visuals are
     // not an authoritative server enemy/XP/loot seed.
-    const enemySpawnDefinitions=region===LUNAR_CAVE_REGION
+    const enemySpawnDefinitions=flatPlatform?[]:region===LUNAR_CAVE_REGION
       ?LUNAR_CAVE_TRAINING_SPAWNS
       :region===ASTRAL_DUNGEON_REGION?ASTRAL_MONSTER_SPAWNS
       :region==='wolfveil'?selectWolfveilGroundedEnemySpawns(sampleGroundY)
@@ -1864,7 +1851,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     if(typeof window!=='undefined')window.__gw3dZombieCamps=zombieCamps;
     // The War of Three Roads (places, cast, enemies, pledge steps). Off unless
     // ?threeRoads=1. All of it lives under threeroads/; this is its only hook.
-    const threeRoads=threeRoadsEnabled(window)?createThreeRoadsWorld({
+    const threeRoads=!flatPlatform&&threeRoadsEnabled(window)?createThreeRoadsWorld({
       region,worldArea,areaScenes,scene,renderer,camera,enemies,questNPCs,groundMeshes,
       wolfveilWorld:wolfveilVillage?.world||null,sampleGroundY,snapToGround,
       fbxLoader:loader,gltfLoader:worldGltfLoader,getPlayer:()=>modelRef.current,
@@ -2416,7 +2403,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // Preserve the original quest IDs, positions, dialogues and player XP.
       // Only use an authored GLB if it actually contains a playable idle clip.
       let questNpcSharedIdle=null;
-      if(!swap&&region!==LUNAR_CAVE_REGION&&region!==ASTRAL_DUNGEON_REGION) QUEST_NPCS.forEach((npcDef) => {
+      if(!swap&&!flatPlatform&&region!==LUNAR_CAVE_REGION&&region!==ASTRAL_DUNGEON_REGION) QUEST_NPCS.forEach((npcDef) => {
         loadAXEQuestNPCVisual({
           npcId:npcDef.id,gltfLoader:worldGltfLoader,
           fbxLoader:loader,fallbackUrl:ARCHER_URL,
@@ -2481,7 +2468,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       });
 
       // Wire up the quest enemy spawner — set on the ref so the React layer can call it
-      if (!swap) spawnQuestEnemiesRef.current = createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount, creatureSource });
+      if (!swap&&!flatPlatform) spawnQuestEnemiesRef.current = createQuestEnemySpawner({ scene, enemies, loader, snapToGround, walkClipPromise, idleClipPromise, setEnemyCount, creatureSource });
       window.__gw3dSpawnQuestEnemies = spawnQuestEnemiesRef.current;
 
       // Load player animation clips once — bind to player AND reuse for quest NPC idle
@@ -2530,7 +2517,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
             });
           }
           // Spawn the oversized Living Quest NPC away from the cluster (once: not again for a swapped body)
-          if (!swap) spawnLivingQuestNPC({
+          if (!swap&&!flatPlatform) spawnLivingQuestNPC({
             scene, loader, archerUrl: ARCHER_URL, snapToGround,
             idleClip: sourceClips['idle'] || null,
             onReady: (h) => { livingQuestEntity = h; window.__gw3dLivingQuestNPC = h?.group || null; },
@@ -2703,11 +2690,11 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
 
     // Click-to-move: a Settings option, off by default (axe/player/AXEClickToMove.js). With it off,
     // nothing below changes WASD play. Walkable = terrain under the point, inside the arena clamp.
-    const arenaRadius = region===LUNAR_CAVE_REGION?675:region===ASTRAL_DUNGEON_REGION?330:region===WOLFVEIL_CAVES_REGION?675:36.5; // dungeon bounds use their dedicated collision geometry
+    const arenaRadius = flatPlatform?PLATFORM_EDGE:region===LUNAR_CAVE_REGION?675:region===ASTRAL_DUNGEON_REGION?330:region===WOLFVEIL_CAVES_REGION?675:36.5; // dungeon bounds use their dedicated collision geometry
     // Wolfveil is an explorable landscape, not the 36.5m combat test arena.
     // Both click-to-move and keyboard movement stop only at actual terrain edges.
     const isClickMoveWalkable = (x, z) =>
-      (region===LUNAR_CAVE_REGION ? lunarDungeon?.isWalkable(x,z) : region===ASTRAL_DUNGEON_REGION ? astralDungeon?.isWalkable(x,z) : region==='wolfveil'||region===WOLFVEIL_CAVES_REGION||Math.hypot(x,z)<=arenaRadius) && sampleGroundY(x, z) !== null;
+      (flatPlatform?insidePlatform(x,z):region===LUNAR_CAVE_REGION ? lunarDungeon?.isWalkable(x,z) : region===ASTRAL_DUNGEON_REGION ? astralDungeon?.isWalkable(x,z) : region==='wolfveil'||region===WOLFVEIL_CAVES_REGION||Math.hypot(x,z)<=arenaRadius) && sampleGroundY(x, z) !== null;
     const clickMoveMarker = createAXEClickToMoveMarker(scene);
     const clickToMove = createAXEClickToMove({
       isEnabled: isAXEClickToMoveEnabled,
@@ -3324,9 +3311,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         respond({ ok:false, reason:'This dungeon checkpoint is no longer available.' });
         return;
       }
-      const returningToWolfveil = region !== 'wolfveil' &&
+      const returningToWolfveil = !flatPlatform && region !== 'wolfveil' &&
         request.source !== 'axe-dungeon-checkpoint';
-      const candidates = request.source === NEARBY_RESPAWN_ID && region === 'wolfveil'
+      const candidates = flatPlatform?[{id:'temporary-platform-center',x:0,z:0}]:request.source === NEARBY_RESPAWN_ID && region === 'wolfveil'
         ? [resolveSafeNearbyRespawn(request.deathPosition), getRespawnPoint(), getDefaultSpawnPoint()]
         : request.source === 'axe-dungeon-checkpoint'
           ? [dungeonPoint]
@@ -3517,7 +3504,10 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       actor.position.z+=dz;
       const model=actor;
       const distFromCenter = Math.sqrt(model.position.x * model.position.x + model.position.z * model.position.z);
-    if(region==='wolfveil'){
+    if(flatPlatform){
+      const safe=clampPlatformPosition(model.position.x,model.position.z);
+      model.position.x=safe.x;model.position.z=safe.z;
+    }else if(region==='wolfveil'){
       if(!insideWolfveilClientGround(model.position.x,model.position.z,.65)||
          sampleGroundY(model.position.x,model.position.z)===null){
         model.position.x=fromX;
@@ -3574,6 +3564,8 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     // Save while playing, on scene handoff, and before navigation. Never save
     // the login camera's origin or a dedicated duel worker's arena position.
     const flushCheckpoint = () => {
+      // Test teleports must not replace the character's normal saved location.
+      if (flatPlatform || questTestRuntimeActive()) return;
       const actor = modelRef.current;
       if (!actor || entryModeRef.current || dedicatedMode || getPlayerHUD().hp <= 0 ||
           checkpointOwnerRef.current !== getStorageUser() + '::' + getActiveId()) return;
@@ -3627,7 +3619,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         keys.current={};
         attackPressed.current=false;
         rangedClickAttackPressed.current=false;
-        if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
+        if(!flatPlatform&&region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
         // The creator studio covers the world: keep its last frame instead of updating and redrawing
         // the whole scene behind it every frame (a resize still redraws it: redrawAfterResize).
         if(entryBackdrop.shouldHold(entryPreviewModeRef.current,renderNow))return;
@@ -3675,7 +3667,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       weaponSummon?.preUpdate();
       impactFeedback.preUpdate(); // restore additive bone recoil before enemy Mixers pose
       const npcsVisible = npcsVisibleRef.current; // '=' toggles all non-boss entities (NPCs/enemies/companion)
-      if(region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
+      if(!flatPlatform&&region!==ASTRAL_DUNGEON_REGION)envSystem.update(delta);
       forestBiome?.update(delta, envSystem.getState(), modelRef.current?.position);
       regionStream?.update(loaderPosition(),
           {paused:entryModeRef.current});
@@ -6437,7 +6429,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       {!loading && <Game3DLunarNotifications environmentSystem={envSystem} />}
 
       {/* Day/night + season + weather HUD */}
-      {!loading && envSystem && <WorldEnvironmentHUD system={envSystem} adminTools={workflowAllowed} />}
+      {!loading && envSystem && <WorldEnvironmentHUD system={envSystem} adminTools={workflowAllowed && !entryMode} />}
       {!loading && region === 'wolfveil' && nearbyArtisanShop && !activeArtisanShop && !entryMode && (
         <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-[30] pointer-events-none rounded-xl border border-amber-400/50 bg-slate-950/85 backdrop-blur-lg px-4 py-2 text-center text-sm text-amber-100">
           E · {nearbyArtisanShop.label}

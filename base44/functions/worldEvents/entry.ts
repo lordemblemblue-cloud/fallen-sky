@@ -1,5 +1,15 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json' }
+    });
+
+const fail = (message: string, status: number) => {
+    throw Object.assign(new Error(message), { status });
+};
+
 Deno.serve(async (req) => {
     try {
         const base44 = createClientFromRequest(req);
@@ -14,52 +24,37 @@ Deno.serve(async (req) => {
         // first threw before reaching its logic.
         const body = await req.json().catch(() => ({}));
         const { action, eventId, questId } = body || {};
+        const event = getCurrentWorldEvent();
 
         switch (action) {
             case 'getCurrentEvent': {
-                const event = await getCurrentWorldEvent();
-                return new Response(JSON.stringify(event), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                return json(event);
             }
 
             case 'joinEvent': {
-                const participation = await joinWorldEvent(user.id, eventId);
-                return new Response(JSON.stringify(participation), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const participation = await joinWorldEvent(base44, user.id, eventId || event.id);
+                return json(participation);
             }
 
             case 'getEventProgress': {
-                const progress = await getEventProgress(user.id, eventId);
-                return new Response(JSON.stringify(progress), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const progress = await getEventProgress(base44, user.id, eventId || event.id, event);
+                return json(progress);
             }
 
             case 'completeEventQuest': {
-                const completion = await completeEventQuest(base44, user, questId);
-                return new Response(JSON.stringify(completion), {
-                    status: 200,
-                    headers: { 'Content-Type': 'application/json' }
-                });
+                const completion = await completeEventQuest(base44, user, event, questId);
+                return json(completion);
             }
 
             default:
                 return new Response('Invalid action', { status: 400 });
         }
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-        });
+        return json({ error: error?.message || 'World event request failed' }, error?.status || 500);
     }
 });
 
-async function getCurrentWorldEvent() {
+function getCurrentWorldEvent() {
     // Simulate current world event
     return {
         id: 'leviathan_rise_2024',
@@ -105,74 +100,128 @@ async function getCurrentWorldEvent() {
     };
 }
 
-async function joinWorldEvent(userId, eventId) {
-    // Record user participation in world event
-    const participation = {
-        userId,
-        eventId,
-        joinedAt: new Date().toISOString(),
-        contribution: 0,
-        questsCompleted: 0,
-        rewards: []
-    };
+// Participation is a real server-side row so eligibility can be checked later.
+async function joinWorldEvent(base44: any, userId: string, eventId: string) {
+    const rows = base44.asServiceRole.entities.WorldEventParticipation;
+    const existing = await rows.filter({ user_id: userId, event_id: eventId }, '-created_date', 1);
+    let participation = existing?.[0];
+
+    if (!participation) {
+        participation = await rows.create({
+            user_id: userId,
+            event_id: eventId,
+            joined_at: new Date().toISOString(),
+            contribution: 0,
+            quest_progress: {}
+        });
+    }
 
     return {
         success: true,
-        participation,
-        message: 'Successfully joined the world event!',
-        initialReward: '50 AGP'
+        participation: projectParticipation(participation),
+        message: 'Successfully joined the world event!'
     };
 }
 
-async function getEventProgress(userId, eventId) {
-    // Get user's progress in the event
+async function getEventProgress(base44: any, userId: string, eventId: string, event: any) {
+    const rows = base44.asServiceRole.entities.WorldEventParticipation;
+    const [participation] = await rows.filter({ user_id: userId, event_id: eventId }, '-created_date', 1);
+    const recorded = participation?.quest_progress && typeof participation.quest_progress === 'object'
+        ? participation.quest_progress
+        : {};
+
+    const quests = (event.quests || []).map((quest: any) => {
+        const entry = recorded[quest.id] || {};
+        const progress = Number(entry.progress) || 0;
+        return {
+            id: quest.id,
+            progress,
+            target: quest.target,
+            complete: Boolean(entry.verified_at) && progress >= Number(quest.target || 0),
+            claimed: Boolean(entry.claimed_at)
+        };
+    });
+
     return {
         userId,
         eventId,
-        personalDamage: 125000,
-        questsCompleted: 1,
-        rank: 342,
-        contribution: 8.5,
-        rewards: [
-            { type: 'agp', amount: 250, claimed: true },
-            { type: 'item', name: 'Leviathan Scale', claimed: false }
-        ]
+        joined: Boolean(participation),
+        contribution: Number(participation?.contribution) || 0,
+        quests,
+        questsCompleted: quests.filter((quest: any) => quest.complete).length
     };
 }
 
-async function completeEventQuest(base44, user, questId) {
-    const questRewards = {
+function projectParticipation(participation: any) {
+    const recorded = participation?.quest_progress && typeof participation.quest_progress === 'object'
+        ? participation.quest_progress
+        : {};
+    return {
+        userId: participation.user_id,
+        eventId: participation.event_id,
+        joinedAt: participation.joined_at,
+        contribution: Number(participation.contribution) || 0,
+        questsCompleted: Object.values(recorded).filter((entry: any) => entry?.claimed_at).length
+    };
+}
+
+async function completeEventQuest(base44: any, user: any, event: any, questId: string) {
+    const quest = (event.quests || []).find((entry: any) => entry.id === String(questId || ''));
+    if (!quest) {
+        fail('Quest not found', 404);
+    }
+
+    const questRewards: Record<string, { agp?: number; experience?: number; item?: string }> = {
         'damage_leviathan': { agp: 500, experience: 1000 },
         'find_cache': { item: 'Legendary Treasure Chest', agp: 300 }
     };
-
-    const reward = questRewards[String(questId || '')];
+    const reward = questRewards[quest.id];
     if (!reward) {
-        throw new Error('Quest not found');
+        fail('Quest not found', 404);
+    }
+
+    const svc = base44.asServiceRole.entities;
+    const [participation] = await svc.WorldEventParticipation.filter(
+        { user_id: user.id, event_id: event.id },
+        '-created_date',
+        1
+    );
+    if (!participation) {
+        fail('Join the world event before claiming its rewards', 403);
+    }
+
+    // Progress is only ever written by server-side gameplay, never by this
+    // endpoint, so a client cannot claim a quest it has not actually completed.
+    const recorded = participation.quest_progress?.[quest.id];
+    const progress = Number(recorded?.progress) || 0;
+    if (!recorded?.verified_at || progress < Number(quest.target || 0)) {
+        fail('No verified progress for this quest yet', 409);
+    }
+    if (recorded?.claimed_at) {
+        fail('This quest reward has already been claimed', 409);
     }
 
     // A world-event quest pays out at most once per account. The claim is a
     // server-side RewardGrant row keyed by the quest, written before any
     // currency moves, so replaying the request cannot mint AGP again.
-    const svc = base44.asServiceRole.entities;
-    const grantKey = `world_event_quest:${questId}`;
+    const grantKey = `world_event_quest:${quest.id}`;
     const claimed = await svc.RewardGrant.filter({ user_id: user.id, grant_key: grantKey }, '-created_date', 5);
     if (claimed.length) {
-        throw new Error('This quest reward has already been claimed');
+        fail('This quest reward has already been claimed', 409);
     }
 
     const grant = await svc.RewardGrant.create({
         user_id: user.id,
         grant_key: grantKey,
         status: 'pending',
-        payload: { source: 'world_event_quest', quest_id: String(questId), ...reward }
+        payload: { source: 'world_event_quest', quest_id: String(quest.id), ...reward }
     });
 
     // Two racing requests can both create a claim; only the oldest may pay.
     const settled = await svc.RewardGrant.filter({ user_id: user.id, grant_key: grantKey }, 'created_date', 5);
     if (settled.length !== 1 || settled[0].id !== grant.id) {
         await svc.RewardGrant.delete(grant.id).catch(() => {});
-        throw new Error('This quest reward has already been claimed');
+        fail('This quest reward has already been claimed', 409);
     }
 
     if (reward.agp) {
@@ -187,9 +236,16 @@ async function completeEventQuest(base44, user, questId) {
         completed_at: new Date().toISOString()
     }).catch(() => {});
 
+    await svc.WorldEventParticipation.update(participation.id, {
+        quest_progress: {
+            ...(participation.quest_progress || {}),
+            [quest.id]: { ...recorded, claimed_at: new Date().toISOString() }
+        }
+    }).catch(() => {});
+
     return {
         success: true,
-        quest: questId,
+        quest: quest.id,
         rewards: reward,
         message: `Quest completed! Earned ${reward.agp ? reward.agp + ' AGP' : reward.item}!`
     };

@@ -1,33 +1,64 @@
 // Entity automation handler for ClanMember create/delete events.
-// Posts a system message into the clan's default chat channel whenever a member
-// joins or leaves the guild.
-//
-// Server functions are publicly reachable, so the body is not trusted as an
-// event. The membership row is re-read from the database and the clan, the
-// user and the role all come from that stored record; a caller can no longer
-// name an arbitrary clan and user to forge an announcement. Repeat deliveries
-// for the same membership are ignored.
+// Announcements require a verified automation signature; a publicly supplied
+// member ID is never proof of a membership event. Deleted records cannot be
+// re-read as proof, so deleted-member announcements fail closed. Replayed
+// creation announcements are deduplicated.
 
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
+const respond = (body: unknown, status = 200) => Response.json(body, {
+  status, headers: { 'Cache-Control': 'no-store' },
+});
+const signedHex = (bytes: Uint8Array) =>
+  [...bytes].map(byte => byte.toString(16).padStart(2, '0')).join('');
+const sameHash = (left: string, right: string) => {
+  if (left.length !== right.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < left.length; i++) mismatch |= left.charCodeAt(i) ^ right.charCodeAt(i);
+  return mismatch === 0;
+};
+
+// A trusted producer signs timestamp.body with HMAC-SHA256. It must set
+// x-clan-event-time (milliseconds) and x-clan-event-signature (lowercase hex).
 Deno.serve(async (req) => {
+  if (req.method !== 'POST') return respond({ error: 'Method not allowed' }, 405);
+  const secret = Deno.env.get('CLAN_MEMBERSHIP_EVENT_SECRET') || '';
+  if (secret.length < 32) return respond({ error: 'Clan notification unavailable' }, 503);
+  const raw = await req.text();
+  if (raw.length > 16_000) return respond({ error: 'Request too large' }, 413);
+  const stamp = req.headers.get('x-clan-event-time') || '';
+  const signature = req.headers.get('x-clan-event-signature') || '';
+  if (!/^[0-9]{13}$/.test(stamp) || !/^[0-9a-f]{64}$/.test(signature) ||
+      Math.abs(Date.now() - Number(stamp)) > 120_000) {
+    return respond({ error: 'Unauthorized' }, 401);
+  }
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const expected = signedHex(new Uint8Array(await crypto.subtle.sign('HMAC', key,
+    new TextEncoder().encode(stamp + '.' + raw))));
+  if (!sameHash(signature, expected)) return respond({ error: 'Unauthorized' }, 401);
   try {
     const base44 = createClientFromRequest(req);
     const svc = base44.asServiceRole.entities;
-    const payload = await req.json().catch(() => ({}));
+    const payload = JSON.parse(raw || '{}');
     const event = payload?.event || {};
     const type = String(event.type || '');
     if (!['create', 'delete'].includes(type)) {
       return Response.json({ ok: true, skipped: 'not a membership event' });
     }
 
-    const rowId = String(payload?.data?.id || payload?.old_data?.id || event.entity_id || '').trim();
+    // This function is publicly callable. After a membership is deleted we
+    // cannot prove caller-supplied old_data ever existed, so unsigned delete
+    // notifications must not be trusted as evidence of a player leaving.
+    if (type === 'delete') {
+      return Response.json({ ok: true, skipped: 'unverified membership deletion event' });
+    }
+
+    const rowId = String(payload?.data?.id || event.entity_id || '').trim();
     if (!rowId) return Response.json({ ok: true, skipped: 'no membership row' });
 
-    // Authoritative membership row. A create is announced only while the row
-    // exists; a delete only once the row is actually gone.
-    const stored = await svc.ClanMember.get(rowId).catch(() => null);
-    const row = type === 'create' ? stored : (stored ? null : payload?.old_data);
+    // A join announcement requires a current server-stored membership row.
+    const row = await svc.ClanMember.get(rowId).catch(() => null);
     if (!row?.clan_id || !row?.user_id) {
       return Response.json({ ok: true, skipped: 'membership row does not match event' });
     }
@@ -74,6 +105,6 @@ Deno.serve(async (req) => {
     return Response.json({ ok: true });
   } catch (error) {
     console.error('[clanMembershipNotifier] error:', error);
-    return Response.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: 'Clan notification unavailable' }, { status: 500 });
   }
 });

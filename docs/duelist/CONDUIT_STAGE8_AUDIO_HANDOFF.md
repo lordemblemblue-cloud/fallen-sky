@@ -1,0 +1,13 @@
+# The Conduit — Stage 8 spatial audio
+
+## Scope
+Existing Duelist combat audio already has camera-relative 3D position panning and master volume. Preserve it. New opt-in Conduit hooks borrow its unlocked AudioContext, limiter, listener and master gain; no additional context, timers, downloads or renderer. Conduit is not registered in live TDM. No shared game-loop or server changes.
+
+## Audio and performance
+Procedural concrete/metal steps, pitch variants for above/below, distance attenuation, HRTF panning and low-pass cross-level cues. Optional host-supplied occlusion callback for blocked paths (not a certified wall/LOS implementation). Tier and surface selection are elevation heuristics, not actual floor-material lookup. Only presentation-authorized audible actors with grounded, moving and alive flags produce footsteps; never pass raw hidden opponents. Track at most 64 nearby actors. Low/medium/high footsteps token replenishment 8/12/16 per second with corresponding 19/23/26 m range, four per update maximum; the credit bucket permits a short burst. Pad cues require explicit event IDs, not proximity; retain up to 128 IDs for deduplication within the active controller session. Bank caps concurrent voices at 24, caches synthesized buffers, and shares existing master controls. Ten possible ambient sources (reactor, undercroft, eight fan locations), nearest one or two soft looping sources selected four times per second. Stop and disconnect owned nodes on lifecycle cleanup. No additional combat sounds replaced.
+
+## Integration
+Instantiate createConduitSpatialAudio only in approved Conduit host after audio unlock. Feed elapsed seconds, listener position, permitted audible actor snapshots and valid grounded/movement flags; supply authoritative pad activation event IDs and pad registry. Update at host cadence, call dispose when leaving map, and keep existing audio.listen call for camera orientation. Use audited collision/LOS to supply occlusion when available. Test that invisibility/stealth does not disclose hidden positions, confirm sound balance and actual floor material, and measure mobile/headphone/desktop audio performance. No host wiring yet; no live audio playback verified.
+
+## Evidence
+Four exact committed-source fixture groups passed in an isolated JS assertion harness (not Node runner). Includes elevation/attenuation rules, hidden/airborne/idle gating, event deduplication, deterministic waveforms, mocked WebAudio voice cap and cleanup. Real AudioContext/HRTF and listening tests are not verified. GitHub CI configured. Stage 7 #363 dedicated tests passed; Stage 2 #357 remains the combined-map release blocker. No merge or deployment.

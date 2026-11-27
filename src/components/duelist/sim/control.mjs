@@ -20,7 +20,7 @@ const safePosition = (point, fallback, arena) => {
   const x = Number(point?.x);
   const z = Number(point?.z);
   return Number.isFinite(x) && Number.isFinite(z) && Math.hypot(x, z) < arena - CONTROL.radius
-    ? { x, z } : fallback;
+    ? { x, z, ...(Number.isFinite(point.y)?{y:point.y,radius:point.radius,minElevationY:point.minElevationY,maxElevationY:point.maxElevationY}:{}) } : fallback;
 };
 
 /** Supports future authored maps: override the three positions with [{x,z}, ...]. */
@@ -60,7 +60,7 @@ export function stepControlPoints(match, dt) {
       const fighter = world.fighters.get(seat.id);
       if (!fighter || fighter.vitals.dead || isDown(fighter, world.time) || fighter.heldBy || world.time < (fighter.activeRelicUntil ?? -Infinity)) continue;
       const body = bodyOf(world, seat.id);
-      if (!body || Math.hypot(body.x - point.x, body.z - point.z) > CONTROL.radius) continue;
+      if (!body || (Number.isFinite(point.y) ? body.y<point.minElevationY || body.y>point.maxElevationY : world.arenaLayout && body.y > 1.5) || Math.hypot(body.x - point.x, body.z - point.z) > (point.radius??CONTROL.radius)) continue;
       inside[seat.team]++;
     }
     point.contested = inside.red > 0 && inside.blue > 0;
@@ -101,7 +101,7 @@ export function stepControlPoints(match, dt) {
 /** No private or player identity data: safe for HUD and match replay. */
 export function controlPointView(points) {
   return points?.map(point => ({
-    id: point.id, x: round(point.x), z: round(point.z), owner: point.owner,
+    id: point.id, x: round(point.x), z: round(point.z), ...(Number.isFinite(point.y)?{y:point.y,radius:point.radius}:{}), owner: point.owner,
     capturing: point.capturing, progress: round(point.progress / CONTROL.captureSeconds),
     contested: point.contested,
   })) || null;

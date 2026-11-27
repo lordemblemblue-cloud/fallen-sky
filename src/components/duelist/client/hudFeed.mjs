@@ -3,10 +3,13 @@
 // view (sim/match.mjs; online they arrive from the server). Presentation only: nothing here decides the game.
 // Pure: the caller passes the time (seconds on any steady clock).
 
+import { killAnnouncement, recordKill, resetKillChain } from '../core/killAnnouncements.mjs';
+
 export const BANNER_SECONDS = 3.4;
+export const KILL_BANNER_SECONDS = 2.4;
 export const KILL_ROW_SECONDS = 7;
 export const KILL_ROWS = 5;
-export const STREAKS = Object.freeze([3, 5, 7, 10]); // the player's own streaks; others' are announced from 5
+export const STREAKS = Object.freeze([3, 5, 7, 10, 12, 15]); // life streak milestones
 export const OTHERS_STREAKS = Object.freeze([5, 10]);
 export const FLAG_STATE_TEXT = Object.freeze({ home: 'At base', taken: 'Taken', dropped: 'Dropped', returned: 'Returned', captured: 'Captured' });
 // the match calls a flag in someone's hands 'carried'
@@ -44,7 +47,8 @@ export function createHudFeed() {
   let nextId = 1;
   let kills = [];
   let banners = [];
-  let streaks = new Map(); // fighter id -> eliminations since it last fell
+  let streaks = new Map(); // fighter id -> authoritative count or legacy event fallback
+  let legacyChains = new Map();
   let owners = {}; // control point id -> owner, as last seen
   let contested = new Set();
   let allThree = null;
@@ -53,14 +57,14 @@ export function createHudFeed() {
   let hinted = null; // the match (mode + round) whose opening hint was shown
   let lastPhase = null;
 
-  const banner = (slot, tone, text, now, seconds = BANNER_SECONDS) => {
+  const banner = (slot, tone, text, now, seconds = BANNER_SECONDS, subtitle = null) => {
     banners = banners.filter((b) => b.slot !== slot || b.until <= now); // one at a time in each slot: the newest
-    banners.push({ id: nextId++, slot, tone, text, at: now, until: now + seconds });
+    banners.push({ id: nextId++, slot, tone, text, subtitle, at: now, until: now + seconds });
   };
   const sideTone = (team, ctx) => (ctx.myTeam ? (team === ctx.myTeam ? 'good' : 'bad') : 'neutral');
 
   function reset() {
-    kills = []; banners = []; streaks = new Map(); owners = {}; contested = new Set(); allThree = null; matchPoint = null; flagFlash = {}; hinted = null;
+    kills = []; banners = []; streaks = new Map(); legacyChains = new Map(); owners = {}; contested = new Set(); allThree = null; matchPoint = null; flagFlash = {}; hinted = null;
     lastPhase = null;
   }
 
@@ -69,18 +73,32 @@ export function createHudFeed() {
     const name = (id) => upper(ctx.nameOf?.(id) || 'A player');
     switch (e.type) {
       case 'defeat': {
-        if (e.who) streaks.set(e.who, 0);
-        if (!e.by) break;
-        const n = (streaks.get(e.by) || 0) + 1;
+        if (e.who) {
+          streaks.set(e.who, 0);
+          legacyChains.delete(e.who);
+        }
+        if (!e.by || e.by === e.who) break;
+        // Current hosts supply counts from the actual match. Older deployed hosts
+        // still produce authoritative defeat events: reconstruct only from those.
+        let chain = legacyChains.get(e.by);
+        if (!chain) { chain = {}; resetKillChain(chain); legacyChains.set(e.by, chain); }
+        const fallback = recordKill(chain, Number.isFinite(e.at) ? e.at : now);
+        const n = Number.isSafeInteger(e.streak) && e.streak > 0 ? e.streak : fallback.streak;
+        const multi = Number.isSafeInteger(e.multiKill) && e.multiKill > 0 ? e.multiKill : fallback.multiKill;
         streaks.set(e.by, n);
         kills.push({ id: nextId++, by: e.by, who: e.who, byName: ctx.nameOf?.(e.by) || '?', whoName: ctx.nameOf?.(e.who) || '?',
           byTeam: ctx.teamOf?.(e.by) || null, whoTeam: ctx.teamOf?.(e.who) || null, byClass: ctx.classOf?.(e.by) || null, whoClass: ctx.classOf?.(e.who) || null,
           mine: e.by === ctx.me || e.who === ctx.me, at: now, until: now + KILL_ROW_SECONDS });
         if (kills.length > KILL_ROWS) kills = kills.slice(-KILL_ROWS);
-        if (e.by === ctx.me) { if (STREAKS.includes(n)) banner('event', 'gold', `${n} PLAYER KILL STREAK!`, now, BANNER_SECONDS + 0.6); }
+        if (e.by === ctx.me) {
+          const { text: title, subtitle } = killAnnouncement(n, multi);
+          banner('kill', 'gold', title, now, KILL_BANNER_SECONDS, subtitle);
+        }
         else if (OTHERS_STREAKS.includes(n)) banner('event', ctx.myTeam && ctx.teamOf?.(e.by) === ctx.myTeam ? 'good' : 'bad', `${name(e.by)}: ${n} KILL STREAK`, now);
         break;
       }
+      case 'captureBlocked': if(e.id===ctx.me)banner('objective','bad','RETURN YOUR FLAG BEFORE SCORING',now);break;
+      case 'overtime': banner('event','gold','OVERTIME — NEXT CAPTURE WINS',now);break;
       case 'flagTaken': // team: whose flag
         if (e.by === ctx.me) banner('objective', 'gold', 'YOU HAVE THE FLAG: TAKE IT HOME', now);
         else if (e.team === ctx.myTeam) banner('objective', 'bad', 'YOUR FLAG HAS BEEN TAKEN', now);
@@ -114,7 +132,10 @@ export function createHudFeed() {
           banner('event', mine ? 'gold' : 'bad', mine ? 'ROUND WON' : 'ROUND LOST', now);
         }
         break;
-      case 'round': matchPoint = null; break;
+      case 'round':
+        matchPoint = null;
+        for (const chain of legacyChains.values()) { chain.multiKill = 0; chain.lastKillAt = null; }
+        break;
       case 'levelUp': // the class reached a level; every fifth one improves its abilities, 10 and 20 its special
         if (e.id === ctx.me) {
           const what = e.level % 10 === 0 ? 'ABILITIES AND SPECIAL IMPROVE' : e.level % 5 === 0 ? 'ABILITIES IMPROVE' : null;
@@ -168,7 +189,7 @@ export function createHudFeed() {
     /** The banner showing in each slot (or null). */
     banners: (now) => {
       banners = banners.filter((b) => b.until > now);
-      return { objective: banners.findLast((b) => b.slot === 'objective') || null, event: banners.findLast((b) => b.slot === 'event') || null };
+      return { objective: banners.findLast((b) => b.slot === 'objective') || null, event: banners.findLast((b) => b.slot === 'event') || null, kill: banners.findLast((b) => b.slot === 'kill') || null };
     },
     /** A flag's state for the indicator: the match's own (home, taken, dropped), or for a moment 'returned' / 'captured'. */
     flagState: (team, state, now) => (flagFlash[team]?.until > now ? flagFlash[team].state : FLAG_STATES[state] || 'home'),

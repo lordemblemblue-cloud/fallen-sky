@@ -12,17 +12,18 @@ import { getAXEQuestObjectives } from '../axe/quests/AXEQuestFramework';
 import { LUNAR_CAVE_CHAMBERS, LUNAR_CAVE_WATER_END } from '../dungeons/LunarCaveLayout.mjs';
 import { ASTRAL_PADS,ASTRAL_RETURN_PORTAL,ASTRAL_DUNGEON_TITLE } from '../dungeons/AstralDungeonLayout.mjs';
 import { WOLFVEIL_MAP_WORLD_BOUNDS, wolfveilMapZoneAt } from '../wolfveil/WolfveilMapDesign.mjs';
-import {WOLFVEIL_CAVE_APPROACHES} from '../wolfveil/WolfveilCaveAccessPlan.mjs';
 import { isPledge } from '../pledges/pledgeModel.mjs';
 import { getPledgeNavigationTarget } from '../threeroads/pledgeworld/pledgeNavigation.mjs';
 
+import {PLATFORM_REGION,PLATFORM_SIZE,isPlatformRegion} from '../worlds/temporaryPlatform.mjs';
 const FUTURE_WORLD = createAXEInitialWorldManifest();
 const normalize = value => String(value || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
 const isForest = region => region === 'forest';
 export const MAP_SCALE = Object.freeze({
+  [PLATFORM_REGION]:Object.freeze({name:'Temporary Platform',minX:-PLATFORM_SIZE/2,maxX:PLATFORM_SIZE/2,minZ:-PLATFORM_SIZE/2,maxZ:PLATFORM_SIZE/2}),
   forest: Object.freeze({ name: 'First Territory', minX: -1200, maxX: 1200, minZ: -1200, maxZ: 1200 }),
   // Preserve the complete Wolfveil map extent while exposing cave approaches.
-  wolfveil: Object.freeze({ name: 'Wolfveil Valley · Cave Approaches', ...WOLFVEIL_MAP_WORLD_BOUNDS }),
+  wolfveil: Object.freeze({ name: 'Wolfveil Valley', ...WOLFVEIL_MAP_WORLD_BOUNDS }),
   'lunar-cave': Object.freeze({ name: 'Lunar Cave Dungeon', minX: -390, maxX: 390, minZ: -40, maxZ: 740 }),
   'astral-dungeon': Object.freeze({ name: ASTRAL_DUNGEON_TITLE, minX: -200, maxX: 200, minZ: -60, maxZ: 340 }),
 });
@@ -38,21 +39,8 @@ export const mapBearing = (origin,target) =>
 
 // All quest NPCs are loaded in GameWorld3D in both regions.
 export function getMapMarkers(region) {
-  if(region==='astral-dungeon')return [
-    ...ASTRAL_PADS.map(p=>({id:'astral:'+p.id,name:p.name,type:'landmark',
-      x:p.x,z:p.z,live:true,description:'High-level platform '+p.index+' · Lv '+p.level+'+'})),
-    {id:'astral:return',name:'Return Portal',type:'portal',x:ASTRAL_RETURN_PORTAL.x,
-      z:ASTRAL_RETURN_PORTAL.z,live:true,description:'Return to Wolfveil'},
-  ];
-  if(region==='lunar-cave')return [
-    {id:'dungeon:entrance',name:'Dungeon entrance',type:'portal',x:0,z:-21,live:true,description:'Return to Wolfveil'},
-    ...LUNAR_CAVE_CHAMBERS.map(c=>({
-      id:'dungeon:'+c.id,name:c.name,type:'landmark',x:c.x,z:c.z,live:true,
-      description:'Training chamber '+c.index+' · Level '+c.level+'+',
-    })),
-    {id:'dungeon:exit',name:'Dungeon return portal',type:'portal',x:LUNAR_CAVE_WATER_END.x,
-      z:LUNAR_CAVE_WATER_END.returnPortalZ,live:true,description:'Return to Wolfveil'},
-  ];
+  if(isPlatformRegion(region))return [];
+  if(region==='astral-dungeon'||region==='lunar-cave'||region==='wolfveil-caves')return [];
   // Wolfveil's quest givers stand at their own places around the town.
   const townSpots = region === 'wolfveil' ? WOLFVEIL_TOWN_QUEST_NPC_SPOTS : {};
   const markers = QUEST_NPCS.map(npc => ({
@@ -60,17 +48,6 @@ export function getMapMarkers(region) {
     x:townSpots[npc.id]?.x ?? npc.pos[0], z:townSpots[npc.id]?.z ?? npc.pos[2], live:true,
     description:'Quest giver',
   }));
-  // The four caves are actual walk-in Wolfveil destinations, not reserve
-  // portal labels. Their center coords use the same +70m world-Z as Game 3D.
-  if(region==='wolfveil'){
-    for(const access of WOLFVEIL_CAVE_APPROACHES){
-      markers.push({
-        id:'cave:'+access.caveId,name:access.label,type:'cave',
-        x:access.entrance.x,z:access.entrance.z+70,live:true,
-        description:access.trailName+' · physical walk-in descent, connected underground',
-      });
-    }
-  }
   if (!isForest(region)) return markers;
   for (const zone of ENEMY_ZONES) {
     markers.push({id:'mob:'+zone.id,name:zone.id.replace(/^axe_/,'').replaceAll('_',' '),
@@ -81,12 +58,14 @@ export function getMapMarkers(region) {
   // Charted macro-world data is explicitly marked "reserve" while its
   // 3D streaming/interaction mounts are disabled in GameView.
   for (const poi of FUTURE_WORLD.pois) {
+    if (/cave|dungeon|vortex|grotto|vault|abyss|moonfall/i.test([poi.kind,poi.id,poi.name].join(' '))) continue;
     markers.push({id:'poi:'+poi.id,name:poi.name,type:poi.kind==='CaveEntrance'?'cave':'landmark',
       x:poi.position[0],z:poi.position[2],live:false,
       description:'Charted reserve — not yet open for travel',
       sourceId:poi.id});
   }
   for (const point of FUTURE_WORLD.travelPoints) {
+    if (/cave|dungeon|vortex|grotto|vault|abyss|moonfall/i.test([point.id,point.name,point.target,point.destination].join(' '))) continue;
     markers.push({id:'travel:'+point.id,name:point.name,
       type:'portal',x:point.position[0],z:point.position[2],live:false,
       description:point.requiredItemId
@@ -110,6 +89,7 @@ function questReady(quest,state) {
   });
 }
 export function getQuestNavigationTarget(region, questState, player={x:0,z:0}) {
+  if(isPlatformRegion(region))return null;
   if(region==='lunar-cave'||region==='astral-dungeon')return null; // Instance maps do not show outside-world quest objectives.
   const quest=getTrackedQuest(questState);
   if(!quest) return null;

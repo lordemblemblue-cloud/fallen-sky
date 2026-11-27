@@ -1,0 +1,26 @@
+name: Conduit arena import validation
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/maps/conduitArena.mjs'
+      - 'src/components/duelist/client/maps/conduitLighting.mjs'
+      - 'tests/duelist-conduit-import.test.mjs'
+      - '.github/workflows/duelist-conduit-import.yml'
+permissions:
+  contents: read
+jobs:
+  conduit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check src/components/duelist/client/maps/conduitArena.mjs
+      - run: node --check src/components/duelist/client/maps/conduitLighting.mjs
+      - run: node --test tests/duelist-conduit-import.test.mjs
+      - run: npm run build
+      - run: npm run lint

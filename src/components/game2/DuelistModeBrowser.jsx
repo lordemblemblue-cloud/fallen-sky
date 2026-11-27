@@ -25,7 +25,7 @@ export default function DuelistModeBrowser({ onJoin, onSolo, onQuickMatch }) {
       <button type="button" className="g2-duelist-browser__quickplay" onClick={onQuickMatch}
         disabled={!lobby.online} data-testid="duelist-online-quickplay">
         <Shuffle size={23} aria-hidden="true" />
-        <span><strong>Online</strong><small>Random match · Team Deathmatch, Capture the Flag or Three-Point Control</small></span>
+        <span><strong>Online</strong><small>Random match · Team Deathmatch, Capture the Flag or Control Point</small></span>
         <span className="g2-duelist-browser__quickplay-action">{lobby.online ? 'Find Match' : 'Offline'} <Play size={14} aria-hidden="true" /></span>
       </button>
       <div className="g2-duelist-browser__tabs" role="group" aria-label="Choose a Duelist game mode">

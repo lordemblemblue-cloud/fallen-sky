@@ -7,6 +7,7 @@
 /* global window, document */
 import * as THREE from 'three';
 import { DEFAULT_KEYS, KIND, keysFrom, actionFor } from './bindings.mjs';
+import { createInteriorOrbit } from './interiorOrbit.mjs';
 
 const AIMED = new Set(['light', 'heavy', 'ability1', 'ability2', 'ability3', 'ability4', 'special', 'breach']);
 
@@ -17,6 +18,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
   const touchHeld = new Set(); // virtual controls are independent of physical keys
   let touchMove = { x: 0, y: 0 };
   const presses = [];
+  const queuePress = command => { if (command !== 'special' || !presses.includes(command)) presses.push(command); };
   let yaw = 0;
   let pitch = 0.32;
   let lockRequested = false;
@@ -30,7 +32,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
     held.add(action);
     const kind = KIND[action];
     if (action === 'lock') lockRequested = true;
-    else if (kind === 'press' || kind === 'ability') presses.push(action);
+    else if (kind === 'press' || kind === 'ability') queuePress(action);
     else if (kind === 'guard') presses.push('blockDown');
     return true;
   };
@@ -149,7 +151,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
       touchHeld.add(action);
       if (action === 'lock') lockRequested = true;
       else if (KIND[action] === 'guard') presses.push('blockDown');
-      else if (KIND[action] === 'press' || KIND[action] === 'ability') presses.push(action);
+      else if (KIND[action] === 'press' || KIND[action] === 'ability') queuePress(action);
     },
     touchActionUp(action) {
       if (!touchHeld.delete(action)) return;
@@ -163,7 +165,7 @@ export function createControls(canvas, { keys = DEFAULT_KEYS, sensitivity = 1, o
         THREE.MathUtils.clamp(Number(dy) || 0, -120, 120) * 0.0022 * sensitivity, -0.2, 1.1);
     },
     // Existing on-screen HUD and automated test compatibility.
-    press(command) { if (command) presses.push(command); },
+    press(command) { if (command) queuePress(command); },
     takeLockToggle() { const r = lockRequested; lockRequested = false; return r; },
     yaw: () => yaw,
     pitch: () => pitch,
@@ -187,9 +189,19 @@ export function createFollowCamera(camera) {
   const focus = new THREE.Vector3();
   const wanted = new THREE.Vector3();
   let first = true;
+  const interior = createInteriorOrbit(camera);
+  let wasInterior = false;
   return {
     // clamp(target, point): indoors, pulls a camera position back inside the room (walls, the ceiling)
-    update(dt, { target, yaw, pitch, lockOn = null, clamp = null }) {
+    update(dt, { target, yaw, pitch, lockOn = null, clamp = null, interiorRay = null }) {
+      if (interiorRay) {
+        focus.set(target.x, target.y + 1.45, target.z);
+        if (first || !wasInterior) interior.snap();
+        interior.update(dt, { target, yaw, pitch, ray: interiorRay });
+        first = false; wasInterior = true;
+        return;
+      }
+      if (wasInterior) { first = true; wasInterior = false; }
       const distance = 4.3;
       focus.set(target.x, target.y + 1.45, target.z);
       if (lockOn) focus.lerp(new THREE.Vector3(lockOn.x, lockOn.y + 1.2, lockOn.z), 0.25);

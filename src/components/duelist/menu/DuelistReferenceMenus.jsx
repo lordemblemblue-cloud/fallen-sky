@@ -11,6 +11,8 @@ import {
   Trophy, UserRound, Users, Volume2, X, Zap
 } from 'lucide-react';
 import DuelistHangarStage from './DuelistHangarStage.jsx';
+import { PracticeOptions } from '../client/PracticeSettings.jsx';
+import { cleanPracticeSettings, PRACTICE_DEFAULTS } from '../core/practiceSettings.mjs';
 import { KeyBindings } from './MenuPages.jsx';
 import GraphicsRuntimePanel from '../../shared/GraphicsRuntimePanel';
 import { BODIES } from '../client/assets.mjs';
@@ -41,6 +43,7 @@ const SETTINGS_TABS = [
   { id:'graphics', label:'GRAPHICS', Icon:Monitor },
   { id:'audio', label:'AUDIO', Icon:Volume2 },
   { id:'controls', label:'CONTROLS', Icon:Gamepad2 },
+  { id:'practice', label:'PRACTICE', Icon:SlidersHorizontal },
   { id:'keys', label:'KEYBINDINGS', Icon:Keyboard },
   { id:'accessibility', label:'ACCESSIBILITY', Icon:Accessibility },
 ];
@@ -205,18 +208,26 @@ export function SettingsReferenceMenu({ prefs, onPrefs, close }) {
   const patchAudio=obj=>{setAudio(prev=>({...prev,...obj}));setMessage('Unsaved changes');};
   const apply=()=>{
     onPrefs({sensitivity:Number(draft.sensitivity), level:draft.level, bots:Number(draft.bots),
-      keys:draft.keys,voices:draft.voices!==false});
+      keys:draft.keys,voices:draft.voices!==false,practiceSettings:cleanPracticeSettings(draft.practiceSettings)});
     try {window.localStorage.setItem('duelist.audio',JSON.stringify(audio));} catch { /* session-only fallback */ }
     setMessage('Settings saved. New actions and matches use your selected preferences.');
   };
   const revert=()=>{setDraft({...prefs,keys:{...(prefs.keys||{})}});setAudio(audioFromStorage());setMessage('Changes discarded.');};
-  return <section className="dxr-art dxr-art--settings" id="duelist-settings-panel" aria-label="Duelist settings">
+  return <section className="dxr-art dxr-art--settings dxr-settings-glass" id="duelist-settings-panel" aria-label="Duelist settings">
     <CloseControl onClose={close} name="Settings"/>
-    <nav className="dxr-settings-tabs" aria-label="Settings categories">{SETTINGS_TABS.map(item=><button type="button"
-      key={item.id} aria-pressed={tab===item.id} data-selected={tab===item.id} onClick={()=>setTab(item.id)}>
-      <span>{item.label}</span></button>)}</nav>
-    <div className="dxr-settings-controls" aria-label="Settings controls">
-      <h2>{SETTINGS_TABS.find(t=>t.id===tab)?.label}</h2>
+    <header className="dxr-settings-heading"><span>EMBLEM BLUE · DUELIST ADVENTURE</span><h1>Settings</h1></header>
+    <nav className="dxr-settings-tabs" aria-label="Settings categories">{SETTINGS_TABS.map(({id,label,Icon})=><button type="button"
+      key={id} aria-pressed={tab===id} data-selected={tab===id} onClick={()=>setTab(id)}>
+      <Icon size={18} aria-hidden="true"/><span>{label}</span></button>)}</nav>
+    <div className="dxr-settings-divider" aria-hidden="true"/>
+    <div className="dxr-settings-controls" aria-labelledby="duelist-settings-active-title" key={tab}>
+      <h2 id="duelist-settings-active-title">{SETTINGS_TABS.find(t=>t.id===tab)?.label}</h2>
+      <p className="dxr-settings-description">{tab==='graphics'?'Review detected graphics capabilities and renderer preferences.'
+        : tab==='keys'?'Custom bindings are saved when you apply changes.'
+        : tab==='audio'?'Sound preferences apply after saving.'
+        : tab==='controls'?'Adjust camera response and offline practice options.'
+        : tab==='accessibility'?'Adjust available accessibility preferences.'
+        : 'Configure your local game preferences.'}</p>
       {tab==='system' && <div className="dxr-settings-rows"><p>Adjust your Duelist Adventure preferences. Changes are stored in this browser.</p>
         <p><Monitor size={16}/> Graphics runtime information and auto-detection are available in the Graphics tab.</p>
         <p><Volume2 size={16}/> Sound, sensitivity, bot practice and keybinding options are adjustable.</p>
@@ -235,8 +246,9 @@ export function SettingsReferenceMenu({ prefs, onPrefs, close }) {
         <label><span>AI difficulty</span><select value={draft.level} onChange={e=>patch({level:e.target.value})}>
           {LEVELS.map(([id,name])=><option key={id} value={id}>{name}</option>)}</select></label>
         <label><span>Practice bots</span><select value={String(draft.bots)} onChange={e=>patch({bots:Number(e.target.value)})}>
-          {[1,2,3].map(n=><option key={n} value={n}>{n} bot{n>1?'s':''}</option>)}</select></label>
+          {[0,1,2,3].map(n=><option key={n} value={n}>{n} bot{n>1?'s':''}</option>)}</select></label>
       </div>}
+      {tab==='practice' && <PracticeOptions value={draft.practiceSettings} onChange={(id,value)=>patch({practiceSettings:{...cleanPracticeSettings(draft.practiceSettings),[id]:value}})} onReset={()=>patch({practiceSettings:{...PRACTICE_DEFAULTS}})}/>}
       {tab==='keys' && <div className="dxr-settings-keys"><p>Click a binding, then press a key or mouse button. Escape cancels rebinding.</p>
         <KeyBindings keys={draft.keys||{}} onChange={keys=>patch({keys})}/></div>}
       {tab==='accessibility' && <div className="dxr-settings-rows">
@@ -246,17 +258,8 @@ export function SettingsReferenceMenu({ prefs, onPrefs, close }) {
         <p>Keyboard bindings are available in Keybindings. Reduced-motion rendering follows your device preference.</p>
       </div>}
     </div>
-    <aside className="dxr-settings-preview" aria-label="Settings information">
-      <div className="dxr-settings-preview-title">DUELIST ADVENTURE</div>
-      <div className="dxr-settings-preview-text"><strong>{SETTINGS_TABS.find(t=>t.id===tab)?.label}</strong>
-        <p>{tab==='graphics'?'Detected graphics capabilities and renderer preferences are shown at left.'
-          : tab==='keys'?'Your custom controls will be saved when you apply changes.'
-          : tab==='audio'?'Sound changes apply to game audio after saving.'
-          : tab==='controls'?'These values affect your next offline match and camera controls.'
-          : 'Only available Duelist Adventure settings are shown.'}</p>
-        {message && <small role="status">{message}</small>}</div>
-    </aside>
     <div className="dxr-settings-actions" aria-label="Settings actions">
+      <p className="dxr-settings-status" role="status">{message || 'Local preferences · graphics settings use their own controls.'}</p>
       <LabelledAction Icon={ArrowLeft} onClick={revert}>REVERT</LabelledAction>
       <LabelledAction Icon={Check} primary onClick={apply}>APPLY</LabelledAction>
       <LabelledAction Icon={X} onClick={close}>CLOSE</LabelledAction>

@@ -196,7 +196,7 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   const { server, url } = await start();
   const http = url.replace('ws://', 'http://').replace(WS_PATH, '/lobby');
   const starters = (await (await fetch(http)).json()).matches;
-  assert.deepEqual(starters.map(m => m.mode).sort(), ['control', 'ctf', 'duel', 'escort', 'football', 'tdm']);
+  assert.deepEqual(starters.map(m => m.mode).sort(), ['control', 'ctf', 'duel', 'escort', 'ffa', 'football', 'practice', 'tdm']);
   for (const room of starters) {
     assert.equal(room.publicRoom, true, 'every mode gets a permanent official server');
     assert.equal(room.players, 0);
@@ -209,7 +209,7 @@ test('the lobby lists live matches for the menus: mode and head counts, no names
   assert.equal(res.headers.get('access-control-allow-origin'), '*');
   const text = await res.text();
   const { matches } = JSON.parse(text);
-  assert.equal(matches.length, 6, 'joining does not create a duplicate public server');
+  assert.equal(matches.length, starters.length, 'joining does not create a duplicate public server');
   const selected = matches.find(m => m.id === joined.match);
   assert.deepEqual({ id: selected.id, mode: selected.mode, players: selected.players, bots: selected.bots, seats: selected.seats, open: selected.open },
     { id: joined.match, mode: 'tdm', players: 1, bots: 7, seats: 8, open: true });
@@ -418,7 +418,7 @@ test('open crews: the story with no code finds a crew with room; the lobby lists
   const joined = await a.next((m) => m.t === 'joined');
   const { matches } = await (await fetch(http)).json();
   assert.deepEqual(matches.filter(m => m.mode === 'story').map((m) => [m.id, m.mode, m.name, m.players, m.seats, m.open]), [[joined.match, 'story', 'Contraband', 1, 4, true]]);
-  assert.equal(matches.filter(m => m.publicRoom).length, 6, 'the public modes remain listed during story missions');
+  assert.equal(matches.filter(m => m.publicRoom).length, 8, 'the public modes remain listed during story missions');
   const b = await player(url, 'ben');
   b.send({ t: 'join', mode: 'story' });
   assert.equal((await b.next((m) => m.t === 'joined')).match, joined.match, 'the crew that has room');
@@ -636,4 +636,30 @@ test('online, a class level is what the server keeps for the account, whatever t
     assert.deepEqual([theirs.own.lv, theirs.view.me.level, theirs.view.me.xp], [1, 1, 0], 'someone new starts at level 1');
     assert.ok(!a.inbox.some((m) => m.t === 'snap' && (m.events || []).some((e) => e.type === 'xp')), 'what others earn is not broadcast');
   } finally { clearInterval(inputs); }
+});
+
+
+test('continuous permanent arenas advance without players and reset under the same room ID', async () => {
+  const { server } = await start({ speed: 1, continuousPublicRooms: true });
+  try {
+    const rooms = [...server.rooms.values()].filter(room => room.publicRoom);
+    assert.ok(rooms.length >= 7);
+    const initial = rooms.map(room => room.match.world.time);
+    await new Promise(resolve => setTimeout(resolve, 200));
+    rooms.forEach((room, i) => assert.ok(room.match.world.time > initial[i], room.mode));
+    const room = rooms.find(room => room.mode === 'duel');
+    const original = room.match;
+    const id = room.id;
+    // Simulate completion and an elapsed intermission without a real-time 12s wait.
+    original.phase = 'over';
+    room.overAt = performance.now() / 1000 - 13;
+    await new Promise(resolve => setTimeout(resolve, 150));
+    assert.equal(server.rooms.get(id), room);
+    assert.notEqual(room.match, original);
+    assert.equal(room.clients.size, 0);
+    assert.equal(room.match.phase, 'countdown');
+    assert.equal(room.effects.length, 0);
+  } finally {
+    await server.close();
+  }
 });

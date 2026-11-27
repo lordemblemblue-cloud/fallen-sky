@@ -7,7 +7,7 @@
 //                                                resume: { match, key } from an earlier 'joined': back to that seat
 //   { t: 'lobby' }                               the open matches
 //   { t: 'join', mode }                          'duel' | 'ffa' | 'ctf' | 'football' | 'tdm' | 'control'
-//                                                or 'online' (random TDM, CTF or Three-Point Control)
+//                                                or 'online' (random TDM, CTF or Control Point)
 //                                                or legacy 'any' (busiest occupied match)
 //   { t: 'join', mode: 'story', mission?, code?, create?, open?, matchId? } a story mission (sim/mission.mjs
 //                                                MISSIONS; default Contraband): a crew room by its code (whatever it
@@ -31,7 +31,7 @@
 //       mission's 'joined' (rematch: true, mission: the next one)
 //   { t: 'seats', seats }                                someone joined or left (story: people appeared or were cleared away)
 //   { t: 'snap', time, ack, fighters, projectiles, flags, effects, events, view?, own? }
-//       view.controlPoints: [{ id, x, z, owner, capturing, progress, contested }] in Three-Point Control;
+//       view.controlPoints: [{ id, x, z, owner, capturing, progress, contested }] in Control Point;
 //       view.teamScores: authoritative percentages from 0 to 100
 //       ack: the last input the simulation has used (inputs are used one a tick, in order);
 //       own: the receiving player's fighter in full at that moment (encodeOwn), sent while the server is
@@ -46,7 +46,8 @@
 // 4426 a page from before an update, 4429 too many messages
 import { CLIENT_COMMANDS, MOVES, EFFECT_BITS, effectsFromBits, moveFor, itemBonuses } from '../core/index.mjs';
 
-export const PROTOCOL = 13; // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
+export const PROTOCOL = 21; // Industrial CTF map, elevated flags and protected spawn rooms.
+// // 13: input tg (the fighter locked on to) for targeted abilities; Mind Dominance, taunt, air dash per jump
 // 11: the sword's directional cuts in three modes; 10: active relic commands and timed stasis/anchor state
 export const WS_PATH = '/ws/duelist';
 export const TICK_HZ = 60;
@@ -56,9 +57,25 @@ export const MAX_WAITING_INPUTS = 5;
 // A dropped connection keeps its seat this long (server seconds); the browser keeps trying for as long.
 export const RECONNECT_SECONDS = 30;
 export const KEPT_WAITING_INPUTS = 2;
+// Server-only queue compaction. Do not apply a retained roll to a later stick
+// direction: the client already predicted it in the original direction.
+export function compactWaitingInputs(waiting){
+ if(waiting.length<=MAX_WAITING_INPUTS)return;
+ const skipped=waiting.splice(0,waiting.length-KEPT_WAITING_INPUTS),first=waiting[0];
+ const original=[...skipped,first].find(v=>v.presses.some(p=>p==='roll'||p==='dash'||p==='jump'));
+ first.presses=[...skipped.flatMap(v=>v.presses),...first.presses].slice(-16);
+ if(original){first.move={...original.move};first.face=original.face;first.strafe=original.strafe;}
+}
+
 export const SNAPSHOT_EVERY = 3; // ticks: 20 snapshots a second
 export const VIEW_EVERY = 4; // snapshots: the scoreboard five times a second
-export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort']);
+// Append new modes to preserve the permanent room IDs (m1 through m7).
+export const ONLINE_MODES = Object.freeze(['duel', 'ctf', 'football', 'tdm', 'control', 'escort', 'ffa', 'practice']);
+export const DEFAULT_PUBLIC_ROOMS = Object.freeze(ONLINE_MODES.map((mode, index) => Object.freeze({ id: `m${index + 1}`, mode })));
+// A map revision gets a fresh native Actor instance, without changing its public room ID.
+// Retired long-lived instances may retain old geometry even after publication.
+export const actorInstanceId = roomId => roomId === 'm2' ? 'm2-ctf-industrial-p21-r1' : roomId === 'm6' ? 'm6-escort-canyon-p21-r1' : (roomId === 'm4' || roomId === 'm7') ? roomId+'-conduit-p21-r1' : roomId + '-p21-r1';
+export const actorPublicRoomId = instanceId => DEFAULT_PUBLIC_ROOMS.find(room => actorInstanceId(room.id) === instanceId)?.id ?? null;
 // Online is a quick-match action, not a match ruleset or permanent server.
 export const QUICKPLAY_MODES = Object.freeze(['tdm', 'ctf', 'control']);
 export const STORY_MODE = 'story';
@@ -125,6 +142,7 @@ export function encodeFighter(f, body, { own = false } = {}) {
     hb: f.heldBy || 0,
     br: Object.keys(f.breaches),
     c: f.classId || 0, mb: f.matchBoost || 0, it: f.items || [], st: Number.isFinite(f.activeRelicUntil) ? r3(f.activeRelicUntil) : null,
+    sa: finite(f.specialActiveUntil) ? f.specialActiveUntil : null,
     fx: effectFlags(f),
     cd: own ? Object.fromEntries(Object.entries(f.cooldowns).map(([k, t]) => [k, r3(t)])) : undefined,
   };
@@ -156,6 +174,7 @@ export function applyFighter(world, data, makeFighter, makeBody) {
   f.items = Array.isArray(data.it) ? data.it.map((x) => ({ id: x.id, tier: x.tier })) : [];
   f.shopStats = itemBonuses(f.items);
   f.activeRelicUntil = Number.isFinite(data.st) ? data.st : -Infinity;
+  f.specialActiveUntil = finite(data.sa) ? data.sa : -Infinity;
   f.effects = effectsFromBits(data.fx || 0);
   if (data.cd) f.cooldowns = { ...data.cd };
   if (data.a) {
@@ -207,13 +226,15 @@ export function encodeOwn(f, body, time) {
     br: times(f.breaches),
     b: [r5(body.x), r5(body.y), r5(body.z), r5(body.yaw), r5(body.vy), r5(body.kx), r5(body.kz)],
     ad: [body.jumped ? 1 : 0, body.airDashReady ? 1 : 0, null, body.airJumpAt ?? null],
+    cb:when(f.conduitDamageUntil),
+    cp:body.conduitFlight?[body.conduitFlight.vx,body.conduitFlight.vy,body.conduitFlight.vz,body.conduitFlight.left]:null,
     cl: f.classId || 0, lv: f.level || 1, md: f.mode || 0, mb: f.matchBoost || 0, it: f.items || [],
     re: [when(f.activeRelicUntil), when(f.activeRelicCooldownUntil),
-      f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until] : null],
-    mt: f.meter || 0, sg: f.specialTarget || 0,
+      f.activeAnchorAt ? [f.activeAnchorAt.x, f.activeAnchorAt.z, f.activeAnchorAt.until, f.activeAnchorAt.y ?? null] : null],
+    mt: f.meter || 0, sg: f.specialTarget || 0, sa: when(f.specialActiveUntil ?? -Infinity),
     fx: Object.fromEntries(Object.entries(f.effects || {}).map(([k, e]) => [k, { ...e, until: when(e.until) }])),
     // the current move's root motion: following its clip, or a set distance along a direction
-    m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done)],
+    m: !m ? 0 : m.clip ? [m.id, 1, r5(m.forward), r5(m.right)] : [m.id, 0, r5(m.dir.x), r5(m.dir.z), m.from, m.to, m.distance, r5(m.done), r5(m.baseY ?? 0)],
   };
 }
 
@@ -232,7 +253,7 @@ export function applyOwn(f, body, data) {
   f.shopStats = itemBonuses(f.items); // exact item bonuses match server before reconstructing moves
   f.activeRelicUntil = then(data.re?.[0]);
   f.activeRelicCooldownUntil = then(data.re?.[1]);
-  f.activeAnchorAt = data.re?.[2] ? { x: data.re[2][0], z: data.re[2][1], until: data.re[2][2] } : null;
+  f.activeAnchorAt = data.re?.[2] ? { x: data.re[2][0], z: data.re[2][1], until: data.re[2][2], ...(Number.isFinite(data.re[2][3]) ? {y:data.re[2][3]} : {}) } : null;
   f.mode = data.md || 'balanced';
   f.action = data.a ? { id: data.a[0], move: moveFor(f, data.a[0]), t: data.a[1], nextHit: data.a[2], held: !!data.a[3], chainedFrom: data.a[4] || null, link: data.a[5] || 1, from: data.a[6] || 0 } : null;
   f.cooldowns = untimes(data.cd);
@@ -247,13 +268,16 @@ export function applyOwn(f, body, data) {
   f.classId = data.cl || null;
   f.meter = data.mt || 0;
   f.specialTarget = data.sg || null;
+  f.specialActiveUntil = then(data.sa);
   f.effects = Object.fromEntries(Object.entries(data.fx || {}).map(([k, e]) => [k, { ...e, until: then(e.until) }]));
   f.events = [];
   const [x, y, z, yaw, vy, kx, kz] = data.b;
   Object.assign(body, { x, y, z, yaw, vy, kx, kz,
     airJumpAt: Number.isFinite(data.ad?.[3]) ? data.ad[3] : null, jumped: !!data.ad?.[0], airDashReady: !!data.ad?.[1] });
+  f.conduitDamageUntil=then(data.cb);
+  body.conduitFlight=Array.isArray(data.cp)&&data.cp.length===4&&data.cp.every(Number.isFinite)?{vx:data.cp[0],vy:data.cp[1],vz:data.cp[2],left:data.cp[3]}:null;
   const m = data.m;
   body.motion = !m ? null : m[1] ? { id: m[0], clip: true, forward: m[2], right: m[3] }
-    : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7] };
+    : { id: m[0], dir: { x: m[2], z: m[3] }, from: m[4], to: m[5], distance: m[6], done: m[7], baseY: m[8] ?? 0 };
   return { f, body };
 }

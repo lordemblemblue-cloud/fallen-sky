@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 import { CLASS_IDS, CLASSES, SPECIAL_MAX } from '../src/components/duelist/core/classes.mjs';
 import { settleSpecialSpend } from '../src/components/duelist/sim/specialMeterSettlement.mjs';
 
@@ -31,5 +32,5 @@ test('match settlement applies only to human class seats, never bots or legacy s
   const match = readFileSync(new URL('../src/components/duelist/sim/match.mjs', import.meta.url), 'utf8');
   assert.match(match, /if \(s\?\.kind === 'player' && s\.classId\) \{/);
   assert.match(match, /const remaining = settleSpecialSpend\(s\.specialMeter, e\.cost\);/);
-  assert.match(match, /if \(remaining !== null\) s\.specialMeter = remaining;/);
+  assert.match(match, /if \(remaining !== null && !s\.training\?\.unlimitedUltimate\) s\.specialMeter = remaining;/);
 });

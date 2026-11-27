@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-// The single-impact corrected 10-second cinematic, hosted in the owner's
-// Base44 media library so both browser and installed PWA can stream it.
-// The two-game selection screen is rendered only after this video ends.
+// Short owner-provided launch cinematic hosted in the Base44 media library.
+// Only the application hub uses this video; game-specific intros are unchanged.
 export const LIVE_LAUNCH_INTRO_URL =
-  'https://media.base44.com/videos/public/6876751a602125f45f1861b9/16a6b1762_intro_single_impact_fixed.mp4';
+  'https://media.base44.com/videos/public/6af625cd654fa5b8954442ce/048cdc2a52efa6316a52802499c58d40_trimmed_video_cinematic_fade_4_.mp4';
 
 export default function LiveAppIntro({ onComplete }) {
   const videoRef = useRef(null);
@@ -36,6 +35,12 @@ export default function LiveAppIntro({ onComplete }) {
       videoRef.current?.pause();
     };
   }, [playWithSound]);
+
+  useEffect(() => {
+    // Bound startup even if the media server or autoplay stalls.
+    const timeout = window.setTimeout(onComplete, 10000);
+    return () => window.clearTimeout(timeout);
+  }, [onComplete]);
 
   return (
     <main

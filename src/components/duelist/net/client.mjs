@@ -12,13 +12,16 @@
 // in the tab's session storage too, so a reload sits back down as well; leaving for the menu gives it up.
 /* global window, WebSocket, performance, fetch, setTimeout */
 import { createWorld } from '../sim/world.mjs';
-import { createFighter } from '../core/index.mjs';
+import { createFighter, MOVES } from '../core/index.mjs';
+import { cleanPracticeSettings } from '../core/practiceSettings.mjs';
 import { MODES } from '../sim/match.mjs';
+import { getModeArenaLayout } from '../sim/modeArenaLayout.mjs';
 import { MISSIONS } from '../sim/mission.mjs';
 import { createLevel, setDoor } from '../sim/level.mjs';
 import { enemySeat, allySeat, crewSeat } from '../client/missionSeats.mjs';
 import { PROTOCOL, WS_PATH, TICK_HZ, RECONNECT_SECONDS, encodeInput, sanitizeInput, applyFighter } from './protocol.mjs';
 import { createPredictor } from './predict.mjs';
+import { ACTOR_TRANSPORT, actorLobby, createActorSocket } from './actorTransport.mjs';
 
 const DELAY = 0.1; // seconds the picture stays behind the newest snapshot
 const STEP = 1 / TICK_HZ; // the player's inputs are read, sent and played in the server's own steps
@@ -45,12 +48,17 @@ function keptSeat(storage, mode, room, matchId = null) {
   return null;
 }
 
+/** Reloading a seated tab should resume without asking for a different class. */
+export function hasResumableDuelistSeat(mode, room, matchId, storage = tabStorage()) {
+  return !!(storage && keptSeat(storage, mode, room, matchId));
+}
+
 /** Where the match server is: VITE_DUELIST_WS_URL, or the local test server when the page runs on localhost. */
-export function duelistServerUrl() {
+export function duelistServerUrl(mode = null) {
   const configured = import.meta.env?.VITE_DUELIST_WS_URL;
   if (typeof configured === 'string' && /^wss?:\/\/[^\s/]+(?::\d+)?\/ws\/duelist$/i.test(configured.trim())) return configured.trim();
   if (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname)) return `ws://${window.location.hostname}:5321${WS_PATH}`;
-  return null;
+  return mode === 'story' ? null : ACTOR_TRANSPORT;
 }
 
 /**
@@ -59,12 +67,13 @@ export function duelistServerUrl() {
  */
 export async function fetchLobby(serverUrl = duelistServerUrl()) {
   if (!serverUrl) return null;
+  if (serverUrl === ACTOR_TRANSPORT) return actorLobby();
   const url = serverUrl.replace(/^ws(s?):\/\//i, 'http$1://').replace(/\/ws\/duelist$/i, '/lobby');
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(url, { cache: 'no-store', signal: globalThis.AbortSignal.timeout(5000) });
     if (!res.ok) return null;
     const body = await res.json();
-    return Array.isArray(body.matches) ? body.matches : null;
+    return body.protocol === PROTOCOL && Array.isArray(body.matches) ? body.matches : null;
   } catch {
     return null;
   }
@@ -96,17 +105,18 @@ const lerpAngle = (a, b, k) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) 
  * seat's key is kept across a reload (this tab's session storage by default).
  */
 // classId: the class to fight as (core/classes.mjs); chooseClass changes it for the next spawn
-export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, matchId = null, classId = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
+export function createOnlineSource({ url, token, name, body, mode, mission = 'contraband', room = null, matchId = null, classId = null, practiceSettings = null, predict = true, storage = tabStorage(), onChange = () => {} }) {
   let wantedClass = classId;
   let classAnswer = null; // the server's last answer: { ok, pending, reason }
   let shopAnswer = null;
+  let supportsShopBuild = false;
   let storySupplyAnswer = null;
   const story = mode === 'story';
   // a mission's rooms, for the picture and the camera (the server owns the doors: they follow its view)
   let def = story ? MISSIONS[mission] || MISSIONS.contraband : null;
   let level = def ? createLevel(def.level) : null;
   let generation = 0;
-  const world = createWorld({ arenaRadius: story ? 1e6 : MODES[mode]?.arena || 22 });
+  const world = createWorld({ arenaRadius: story ? 1e6 : MODES[mode]?.arena || 22, arenaLayout:story?null:getModeArenaLayout(mode) });
   const maxOf = new Map(); // the depot's people: id -> their full vitals
   const lastFull = new Map(); // a mission: fighter id -> its last full state (the unchanged come by id only)
   let code = null;
@@ -121,6 +131,9 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   let escortDistance = 0;
   let status = 'connecting';
   let seq = 0;
+  let pendingSpecial = null;
+  let authoritativeSpecialActive = false;
+  const specialState = () => pendingSpecial !== null ? 'pending' : authoritativeSpecialActive ? 'active' : null;
   let stepClock = 0; // time waiting to be played in whole steps
   let predictor = null; // the player's own fighter, a step ahead (made once the server says who the player is)
   // When the server stops acting on the player's inputs (fallen, grabbed, the round over), the predicted
@@ -182,6 +195,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   function receive(msg) {
     lastHeard = local();
     if (msg.t === 'welcome') {
+      supportsShopBuild = msg.shopBuild === true;
       meId = msg.id;
       if (predict && !devNoPrediction() && (!predictor || predictor.fighter.id !== meId)) predictor = createPredictor({ id: meId, level, arenaRadius: world.arenaRadius });
       if (msg.resumed) return; // back in the seat: its 'joined' follows
@@ -197,11 +211,15 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       send({ t: 'join', mode, ...(story ? { mission } : {}), ...(wantedClass && !story ? { cls: wantedClass } : {}), ...how });
     } else if (msg.t === 'joined') {
       // a new match or mission (the next one, or another after the seat was given up): nothing of the old one stays
+      pendingSpecial = null;
+      authoritativeSpecialActive = false;
       const fresh = !!msg.rematch || (joinedOnce && !msg.resumed);
       joinedOnce = true;
       matchMode = msg.mode;
-      world.arenaRadius = MODES[msg.mode]?.arena || world.arenaRadius;
-      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.reset(); }
+      if (msg.mode === 'practice' && !msg.resumed) for (const [option,enabled] of Object.entries(cleanPracticeSettings(practiceSettings))) send({t:'practiceOption',option,enabled});
+      world.arenaLayout = getModeArenaLayout(msg.mode);
+      world.arenaRadius = world.arenaLayout?.radius ?? (MODES[msg.mode]?.arena || world.arenaRadius);
+      if (predictor) { predictor.world.arenaRadius = world.arenaRadius; predictor.world.arenaLayout = world.arenaLayout; predictor.world.escortStage=0; predictor.world.ctfCarriers=new Set(); predictor.fighter.team=msg.team??msg.seats?.find(s=>s.id===meId)?.team??null; predictor.reset(); }
       // the crew plays another mission (a friend's crew; the story's next one): its rooms
       if (story && msg.mission && MISSIONS[msg.mission] && msg.mission !== def?.id) {
         def = MISSIONS[msg.mission];
@@ -225,6 +243,12 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       setStatus('ready', msg.mode);
     } else if (msg.t === 'seats') { seats = dress(msg.seats); seatsVersion += 1; }
     else if (msg.t === 'snap') {
+      // A processed input is acknowledged even if the special was refused.
+      // Use the newest server state, not the delayed animation or local guess.
+      if (pendingSpecial !== null && Number.isInteger(msg.ack) && msg.ack >= pendingSpecial) pendingSpecial = null;
+      const specialOwner = msg.fighters.find(f => f.id === meId);
+      if (specialOwner) authoritativeSpecialActive = !(specialOwner.v[4] & DEAD) &&
+        (!!MOVES[specialOwner.a?.[0]]?.special || (Number.isFinite(specialOwner.sa) && specialOwner.sa > msg.time));
       const at = local();
       const estimate = msg.time - at;
       // the newest snapshot that arrived soonest after it was sent sets the clock (jitter only delays)
@@ -243,16 +267,20 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       if (snaps.length > 40) snaps.shift();
       if (msg.view) {
         view = msg.view;
+        if(msg.view.escort){world.escortStage=msg.view.escort.stage??0;if(predictor)predictor.world.escortStage=world.escortStage;}
         if (level && view.doors) for (const d of view.doors) setDoor(level, d.id, d.open);
       }
       if (story) applyUses(msg.uses);
-      if (msg.flags) flags = msg.flags;
+      if (msg.flags) {flags = msg.flags;world.ctfCarriers=new Set(Object.values(flags).map(f=>f.carrier).filter(Boolean));if(predictor)predictor.world.ctfCarriers=world.ctfCarriers;}
       if (msg.ball) footballBall = { ...msg.ball };
       // the player's own fighter: back to the server's word, the inputs it has not used yet replayed on top
-      others = msg.fighters.filter((f) => f.id !== meId && !(f.v[4] & DEAD) && !f.hb).map((f) => ({ x: f.p[0], z: f.p[2] }));
+      others = msg.fighters.filter((f) => f.id !== meId && !(f.v[4] & DEAD) && !f.hb).map((f) => ({ x: f.p[0], y: f.p[1], z: f.p[2] }));
       if (predictor) {
+        const ownSeat=msg.fighters.find(f=>f.id===meId);if(ownSeat)predictor.fighter.team=ownSeat.tm??null;
         const was = predictor.active;
-        if (msg.own) predictor.reconcile(msg.own, msg.ack, others, was ? null : world.bodies.get(meId) || null);
+        const recovered=msg.events?.some(e=>e.type==='positionRecovered'&&e.id===meId);
+        if(recovered){predictor.reset();}
+        if (msg.own) predictor.reconcile(msg.own, msg.ack, others, recovered?null:was ? null : world.bodies.get(meId) || null);
         else predictor.drop();
         if (predictor.active) handover = -Infinity;
         else if (was) handover = msg.time;
@@ -276,7 +304,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   }
 
   function connect(resume) {
-    const socket = new WebSocket(url);
+    const socket = url === ACTOR_TRANSPORT ? createActorSocket({ mode, matchId }) : new WebSocket(url);
     ws = socket;
     socket.onopen = () => { if (ws === socket) send({ t: 'hello', v: PROTOCOL, token: token || '', name, body, ...(resume ? { resume } : {}) }); };
     socket.onmessage = (event) => {
@@ -341,9 +369,13 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       classAnswer = null;
       if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'class', id }));
     },
-    buyItem(id) {
+    setPracticeOption(option, enabled) { if (ws?.readyState === 1) send({ t: 'practiceOption', option, enabled }); },
+    sellItem(id) { if (ws?.readyState === 1) send({ t: 'practiceSell', id }); },
+    buyItem(id, tier, combine = false) {
       shopAnswer = null;
-      if (!story && typeof id === 'string' && ws?.readyState === 1) send({ t: 'shop', id });
+      if (story || typeof id !== 'string' || ws?.readyState !== 1) { shopAnswer = {ok:false,reason:'not-available'}; return; }
+      if (tier !== undefined && !supportsShopBuild) { shopAnswer = {ok:false,reason:'shop-build-unavailable'}; onChange(status,null); return; }
+      send(tier === undefined && !combine ? { t: 'shop', id } : { t: 'shopBuild', id, tier, combine });
     },
     seats: () => seats,
     view: () => view,
@@ -352,6 +384,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
     escortDistance: () => escortDistance,
     /** The connection as the player feels it: the round trip (seconds) and how the prediction is going. */
     netStats: () => ({ roundTrip, lag, ...(predictor ? predictor.stats() : { predicting: false }) }),
+    specialState,
     /**
      * Each frame: read, send and play the player's input in whole 60 Hz steps; move the picture to (server
      * time - 100 ms); return the effects and events that happened up to then (and what just happened to the
@@ -373,7 +406,15 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
           stepClock -= STEP;
           const given = typeof input === 'function' ? input() : input;
           if (!given) break;
-          const wire = encodeInput(seq, given);
+          let queuedSpecial = false;
+          const presses = (given.presses || []).filter(command => {
+            if (command !== 'special') return true;
+            if (specialState() || queuedSpecial) return false;
+            queuedSpecial = true;
+            return true;
+          });
+          const wire = encodeInput(seq, { ...given, presses });
+          if (wire.p?.slice(0, 8).includes('special')) pendingSpecial = seq;
           send(wire);
           sentAt.set(seq, local());
           if (sentAt.size > 600) sentAt.delete(sentAt.keys().next().value);
@@ -441,7 +482,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
         const prev = s0.ball || s1.ball;
         footballBall = { x: prev.x + (s1.ball.x - prev.x) * k, z: prev.z + (s1.ball.z - prev.z) * k };
       }
-      world.projectiles = s1.projectiles.map((p) => ({ id: p.id, x: p.x, z: p.z, dir: { x: p.d[0], z: p.d[1] }, move: p.move }));
+      world.projectiles = s1.projectiles.map((p) => ({ id: p.id, x: p.x, y: p.y, z: p.z, dir: { x: p.d[0], z: p.d[1] }, move: p.move }));
       while (snaps.length > 2 && snaps[1].time < time - 0.5) snaps.shift();
       return out;
     },

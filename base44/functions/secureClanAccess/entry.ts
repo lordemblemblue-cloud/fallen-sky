@@ -2,16 +2,31 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
 async function checkClanMembership(base44, userId, divisionId) {
   const membership = await base44.asServiceRole.entities.ClanMember.filter({
-    divisionId,
-    userId
+    clan_id: divisionId,
+    user_id: userId
   });
   
   return membership && membership.length > 0 ? membership[0] : null;
 }
 
 async function isClanLeader(base44, userId, divisionId) {
-  const division = await base44.asServiceRole.entities.Division.filter({ id: divisionId });
-  return division && division.length > 0 && division[0].leaderId === userId;
+  const member = await checkClanMembership(base44, userId, divisionId);
+  return member?.role === 'leader';
+}
+async function verifyChannel(base44, divisionId, channelId, membership) {
+  if (typeof channelId !== 'string' || !channelId || channelId.length > 160) {
+    throw Object.assign(new Error('Channel required'), {status:400});
+  }
+  const channel = await base44.asServiceRole.entities.ClanChannel.get(channelId).catch(() => null);
+  if (!channel || channel.divisionId !== divisionId) {
+    throw Object.assign(new Error('Channel not found'), {status:404});
+  }
+  const rank = {member:0,officer:1,leader:2};
+  const required = {none:0,officer:1,leader:2}[channel.role_restriction || 'none'] ?? 2;
+  if ((rank[membership?.role] ?? -1) < required) {
+    throw Object.assign(new Error('Restricted channel'), {status:403});
+  }
+  return channel;
 }
 
 Deno.serve(async (req) => {
@@ -41,11 +56,13 @@ Deno.serve(async (req) => {
     switch (operation) {
       case 'listPublic':
         // Public clan list
-        result = await base44.asServiceRole.entities.Division.filter(
-          filter || {},
-          '-created_date',
-          limit || 20
-        );
+        {
+          const safeLimit = Math.min(50, Math.max(1, Number.isInteger(limit) ? limit : 20));
+          const rows = await base44.asServiceRole.entities.Division.filter(
+            { is_public: true }, '-created_date', safeLimit);
+          result = (rows || []).map(({id,name,description,emblem_url,banner_url}) =>
+            ({id,name,description,emblem_url,banner_url}));
+        }
         break;
         
       case 'getMessages':
@@ -56,12 +73,12 @@ Deno.serve(async (req) => {
         
         // Enforce max limit
         const maxLimit = 100;
-        const safeLimit = Math.min(limit || 50, maxLimit);
+        const safeLimit = Math.min(maxLimit, Math.max(1, Number.isInteger(limit) ? limit : 50));
         
+        await verifyChannel(base44, divisionId, entityData?.channelId, membership);
         result = await base44.asServiceRole.entities.ClanMessage.filter(
-          { divisionId, channelId: entityData?.channelId || null },
-          '-created_date',
-          safeLimit
+          { divisionId, channelId: entityData.channelId },
+          '-created_date', safeLimit
         );
         break;
         
@@ -83,10 +100,11 @@ Deno.serve(async (req) => {
           if (content.length > 4000) {
             return Response.json({ error: 'Message is too long' }, { status: 400 });
           }
+          await verifyChannel(base44, divisionId, entityData?.channelId, membership);
           const officer = ['leader', 'officer'].includes(membership?.role);
           result = await base44.asServiceRole.entities.ClanMessage.create({
             divisionId,
-            channelId: typeof entityData?.channelId === 'string' ? entityData.channelId : 'clan_global',
+            channelId: entityData.channelId,
             author: user.full_name || user.username || user.email?.split('@')?.[0] || 'Player',
             authorAvatar: user.avatar_url || '',
             content,
@@ -109,8 +127,12 @@ Deno.serve(async (req) => {
           return Response.json({ error: 'Message not found' }, { status: 404 });
         }
         
-        const isAuthor = message[0].author === user.id;
-        const isLeader = await isClanLeader(base44, user.id, message[0].divisionId);
+        if (!divisionId || message[0].divisionId !== divisionId) {
+          return Response.json({ error: 'Message not found' }, {status:404});
+        }
+        await verifyChannel(base44, divisionId, message[0].channelId, membership);
+        const isAuthor = message[0].userId === user.id;
+        const isLeader = await isClanLeader(base44, user.id, divisionId);
         
         if (!isAuthor && !isLeader && user.role !== 'admin') {
           return Response.json({ error: 'Forbidden: Cannot delete this message' }, { status: 403 });
@@ -139,7 +161,17 @@ Deno.serve(async (req) => {
           return Response.json({ error: 'Forbidden: Only clan leader can update' }, { status: 403 });
         }
         
-        result = await base44.asServiceRole.entities.Division.update(divisionId, entityData);
+        // A clan leader may edit public profile fields, never arbitrary entity data.
+        const allowed = {};
+        for (const key of ['name','description','emblem_url','banner_url']) {
+          if (typeof entityData?.[key] === 'string' && entityData[key].length <= 1000) {
+            allowed[key] = entityData[key].trim();
+          }
+        }
+        if (!Object.keys(allowed).length) {
+          return Response.json({ error: 'No supported updates' }, {status:400});
+        }
+        result = await base44.asServiceRole.entities.Division.update(divisionId, allowed);
         break;
         
       default:
@@ -150,8 +182,6 @@ Deno.serve(async (req) => {
     
   } catch (error) {
     console.error('Clan Access Error:', error.message);
-    return Response.json({ 
-      error: 'Operation failed. Please try again.' 
-    }, { status: 500 });
+    return Response.json({ error: 'Operation failed. Please try again.' }, { status: error?.status || 500 });
   }
 });

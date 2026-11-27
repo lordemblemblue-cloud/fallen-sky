@@ -35,8 +35,15 @@ export function validateDualGameEvidence(reports) {
     // Origin includes the scheme, host and port, so localhost and HTTPS
     // production reports cannot be silently combined.
     origins.add(url.origin);
-    if (!['https:', 'http:'].includes(url.protocol) ||
-      (url.pathname !== route && !url.pathname.startsWith(route + '/'))) {
+    // Remote HTTP is not a secure context for native WebGPU browser evidence.
+    // Allow loopback HTTP for local QA, but require HTTPS for deployments.
+    // Reject credential-bearing URLs rather than accepting/leaking tokens.
+    const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(url.hostname);
+    if ((url.protocol !== 'https:' && !(url.protocol === 'http:' && loopback)) ||
+      url.username || url.password) {
+      return fail('insecure-evidence-origin:' + report.sceneId);
+    }
+    if (url.pathname !== route && !url.pathname.startsWith(route + '/')) {
       return fail('wrong-playable-route:' + report.sceneId);
     }
     const checkedAt = report.checkedAt;
@@ -50,6 +57,14 @@ export function validateDualGameEvidence(reports) {
     dates.push(timestamp);
     if (report.first?.sceneId !== report.sceneId || report.last?.sceneId !== report.sceneId) {
       return fail('sample-scene-mismatch:' + report.sceneId);
+    }
+    // The browser probe verifies that both counter samples came from the same
+    // document (URL and navigation start). Reclassifying counters alone would
+    // otherwise accept a report whose tab navigated/reloaded between samples.
+    // Fail closed for old reports that lack this required identity evidence.
+    if (report.documentCheck?.ok !== true ||
+      report.documentCheck.reason !== 'same-browser-document') {
+      return fail('unverified-browser-document:' + report.sceneId);
     }
     const decision = classifySamplePair(report.first, report.last);
     if (!decision.ok || report.ok !== true || report.reason !== decision.reason) {

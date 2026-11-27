@@ -1,0 +1,6599 @@
+{
+  "spec": {
+    "mapId": "duelist_control_point_arena_v1",
+    "boundarySize": 300,
+    "fallRespawnY": -18,
+    "gridDivisions": 10,
+    "cellSize": 30,
+    "slabThickness": 2,
+    "railingHeight": 1.2,
+    "pathwayWidth": 14,
+    "horizontalLength": 210,
+    "horizontalZ": 90,
+    "landingSize": 36,
+    "landingX": 105,
+    "centerHubSize": 30,
+    "alphaApexZ": -105,
+    "crossbarHalfSpan": 52.5,
+    "buildingWidth": 10,
+    "buildingDepth": 12,
+    "rooftopY": 4,
+    "upperLandingY": 8,
+    "wallThickness": 0.3,
+    "doorWidth": 3,
+    "doorHeight": 3,
+    "stairWidth": 4,
+    "stepHeight": 0.2,
+    "stepDepth": 0.35,
+    "risersPerFlight": 20,
+    "l2HubWidth": 60,
+    "l2HubDepth": 40,
+    "l2HubChamfer": 5,
+    "l2SlabThickness": 0.8,
+    "l2BridgeWidth": 8,
+    "alphaSize": 40,
+    "alphaChamfer": 8,
+    "alphaCaptureRadius": 6,
+    "alphaBridgeStartZ": -20,
+    "alphaBridgeEndZ": -85,
+    "alphaBridgeWidth": 14,
+    "elevations": {
+      "level1DeckY": 0,
+      "rooftopAndMidLandingY": 4,
+      "level2DeckAndAlphaY": 8
+    },
+    "captureRules": {
+      "neutralCaptureSeconds": 8,
+      "decapSeconds": 6,
+      "contestedPausesProgress": true,
+      "verticalToleranceMeters": 3.5
+    }
+  },
+  "spawnDefinitions": {
+    "redTeam": {
+      "team": "Red",
+      "basePlatform": "Bravo",
+      "elevationY": 0,
+      "facingYawRad": -0.7853981633974483,
+      "primarySpawns": [
+        {
+          "id": "Red_Spawn_1",
+          "x": -119,
+          "y": 0,
+          "z": 84
+        },
+        {
+          "id": "Red_Spawn_2",
+          "x": -112,
+          "y": 0,
+          "z": 79
+        },
+        {
+          "id": "Red_Spawn_3",
+          "x": -110.5,
+          "y": 0,
+          "z": 76.5
+        },
+        {
+          "id": "Red_Spawn_4",
+          "x": -114.5,
+          "y": 0,
+          "z": 83.2
+        }
+      ],
+      "fallbackSpawns": [
+        {
+          "id": "Red_Fallback_1",
+          "x": -108.5,
+          "y": 0,
+          "z": 103.5
+        },
+        {
+          "id": "Red_Fallback_2",
+          "x": -98,
+          "y": 0,
+          "z": 102
+        }
+      ]
+    },
+    "blueTeam": {
+      "team": "Blue",
+      "basePlatform": "Charlie",
+      "elevationY": 0,
+      "facingYawRad": 0.7853981633974483,
+      "primarySpawns": [
+        {
+          "id": "Blue_Spawn_1",
+          "x": 119,
+          "y": 0,
+          "z": 84
+        },
+        {
+          "id": "Blue_Spawn_2",
+          "x": 112,
+          "y": 0,
+          "z": 79
+        },
+        {
+          "id": "Blue_Spawn_3",
+          "x": 110.5,
+          "y": 0,
+          "z": 76.5
+        },
+        {
+          "id": "Blue_Spawn_4",
+          "x": 114.5,
+          "y": 0,
+          "z": 83.2
+        }
+      ],
+      "fallbackSpawns": [
+        {
+          "id": "Blue_Fallback_1",
+          "x": 108.5,
+          "y": 0,
+          "z": 103.5
+        },
+        {
+          "id": "Blue_Fallback_2",
+          "x": 98,
+          "y": 0,
+          "z": 102
+        }
+      ]
+    }
+  },
+  "capturePoints": [
+    {
+      "id": "Alpha",
+      "letter": "A",
+      "x": 0,
+      "y": 8,
+      "z": -105,
+      "radius": 6,
+      "minElevationY": 7.5,
+      "maxElevationY": 11.5
+    },
+    {
+      "id": "Bravo",
+      "letter": "B",
+      "x": -105,
+      "y": 0,
+      "z": 90,
+      "radius": 10,
+      "minElevationY": -0.5,
+      "maxElevationY": 3.5
+    },
+    {
+      "id": "Charlie",
+      "letter": "C",
+      "x": 105,
+      "y": 0,
+      "z": 90,
+      "radius": 10,
+      "minElevationY": -0.5,
+      "maxElevationY": 3.5
+    }
+  ],
+  "connectionPoints": [
+    {
+      "id": "L2_Bridge_Bravo_Start",
+      "position": {
+        "x": -96.5,
+        "y": 8,
+        "z": 81
+      },
+      "width": 8
+    },
+    {
+      "id": "L2_Bridge_Charlie_Start",
+      "position": {
+        "x": 96.5,
+        "y": 8,
+        "z": 81
+      },
+      "width": 8
+    },
+    {
+      "id": "L2_Alpha_North_Socket",
+      "position": {
+        "x": 0,
+        "y": 8,
+        "z": -20
+      },
+      "width": 14
+    }
+  ],
+  "obstacleDefinitions": [
+    {
+      "id": "Obstacle_0_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": -55,
+        "y": 0,
+        "z": 85.2
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_1_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": 55,
+        "y": 0,
+        "z": 85.2
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_2_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": -28,
+        "y": 0,
+        "z": 94.8
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_3_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": 28,
+        "y": 0,
+        "z": 94.8
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_4_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": -62,
+        "y": 0,
+        "z": 18
+      },
+      "rotationY": 0.48,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_5_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": 62,
+        "y": 0,
+        "z": 18
+      },
+      "rotationY": -0.48,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_6_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": -34,
+        "y": 0,
+        "z": -38
+      },
+      "rotationY": 0.48,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_7_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": 34,
+        "y": 0,
+        "z": -38
+      },
+      "rotationY": -0.48,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_8_struct_pillar",
+      "type": "struct_pillar",
+      "position": {
+        "x": -9.4,
+        "y": 0,
+        "z": -9.4
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 3
+      }
+    },
+    {
+      "id": "Obstacle_9_struct_pillar",
+      "type": "struct_pillar",
+      "position": {
+        "x": 9.4,
+        "y": 0,
+        "z": -9.4
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 3
+      }
+    },
+    {
+      "id": "Obstacle_10_struct_pillar",
+      "type": "struct_pillar",
+      "position": {
+        "x": -9.4,
+        "y": 0,
+        "z": 9.4
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 3
+      }
+    },
+    {
+      "id": "Obstacle_11_struct_pillar",
+      "type": "struct_pillar",
+      "position": {
+        "x": 9.4,
+        "y": 0,
+        "z": 9.4
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 3
+      }
+    },
+    {
+      "id": "Obstacle_12_vent_unit",
+      "type": "vent_unit",
+      "position": {
+        "x": -11.5,
+        "y": 0,
+        "z": 0
+      },
+      "rotationY": 1.5707963267948966,
+      "dimensions": {
+        "width": 2,
+        "depth": 1.5,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_13_vent_unit",
+      "type": "vent_unit",
+      "position": {
+        "x": 11.5,
+        "y": 0,
+        "z": 0
+      },
+      "rotationY": 1.5707963267948966,
+      "dimensions": {
+        "width": 2,
+        "depth": 1.5,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_14_small_crate",
+      "type": "small_crate",
+      "position": {
+        "x": -11.2,
+        "y": 0,
+        "z": -3.2
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_15_small_crate",
+      "type": "small_crate",
+      "position": {
+        "x": 11.2,
+        "y": 0,
+        "z": -3.2
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_16_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": -92,
+        "y": 0,
+        "z": 99.5
+      },
+      "rotationY": -0.78,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_17_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": 92,
+        "y": 0,
+        "z": 99.5
+      },
+      "rotationY": 0.78,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_18_small_crate",
+      "type": "small_crate",
+      "position": {
+        "x": -95,
+        "y": 0,
+        "z": 102
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_19_small_crate",
+      "type": "small_crate",
+      "position": {
+        "x": 95,
+        "y": 0,
+        "z": 102
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_20_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": -15,
+        "y": 8,
+        "z": -9
+      },
+      "rotationY": 0.35,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_21_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": 15,
+        "y": 8,
+        "z": -9
+      },
+      "rotationY": -0.35,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_22_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": -15,
+        "y": 8,
+        "z": 9
+      },
+      "rotationY": -0.35,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_23_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": 15,
+        "y": 8,
+        "z": 9
+      },
+      "rotationY": 0.35,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_24_large_container",
+      "type": "large_container",
+      "position": {
+        "x": -21,
+        "y": 8,
+        "z": -2.5
+      },
+      "rotationY": 1.5707963267948966,
+      "dimensions": {
+        "width": 4,
+        "depth": 2,
+        "height": 2.5
+      }
+    },
+    {
+      "id": "Obstacle_25_large_container",
+      "type": "large_container",
+      "position": {
+        "x": 21,
+        "y": 8,
+        "z": -2.5
+      },
+      "rotationY": 1.5707963267948966,
+      "dimensions": {
+        "width": 4,
+        "depth": 2,
+        "height": 2.5
+      }
+    },
+    {
+      "id": "Obstacle_26_small_crate",
+      "type": "small_crate",
+      "position": {
+        "x": -18.5,
+        "y": 8,
+        "z": -7.5
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_27_small_crate",
+      "type": "small_crate",
+      "position": {
+        "x": 18.5,
+        "y": 8,
+        "z": -7.5
+      },
+      "rotationY": 0,
+      "dimensions": {
+        "width": 1.2,
+        "depth": 1.2,
+        "height": 1.2
+      }
+    },
+    {
+      "id": "Obstacle_28_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": -10.5,
+        "y": 8,
+        "z": -114.5
+      },
+      "rotationY": 0.78,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_29_large_barrier",
+      "type": "large_barrier",
+      "position": {
+        "x": 10.5,
+        "y": 8,
+        "z": -114.5
+      },
+      "rotationY": -0.78,
+      "dimensions": {
+        "width": 4,
+        "depth": 1,
+        "height": 2.2
+      }
+    },
+    {
+      "id": "Obstacle_30_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": -10.5,
+        "y": 8,
+        "z": -94.5
+      },
+      "rotationY": -0.78,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    },
+    {
+      "id": "Obstacle_31_small_barrier",
+      "type": "small_barrier",
+      "position": {
+        "x": 10.5,
+        "y": 8,
+        "z": -94.5
+      },
+      "rotationY": 0.78,
+      "dimensions": {
+        "width": 3,
+        "depth": 0.8,
+        "height": 1.1
+      }
+    }
+  ],
+  "collisionDefinitions": [
+    {
+      "id": "Landing_Platform_BL_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -123,
+          "y": -2,
+          "z": 72
+        },
+        "max": {
+          "x": -87,
+          "y": 0,
+          "z": 108
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -112.92,
+          "z": 72
+        },
+        {
+          "x": -97.08,
+          "z": 72
+        },
+        {
+          "x": -87,
+          "z": 82.08
+        },
+        {
+          "x": -87,
+          "z": 97.92
+        },
+        {
+          "x": -97.08,
+          "z": 108
+        },
+        {
+          "x": -112.92,
+          "z": 108
+        },
+        {
+          "x": -123,
+          "z": 97.92
+        },
+        {
+          "x": -123,
+          "z": 82.08
+        }
+      ]
+    },
+    {
+      "id": "Landing_Platform_BR_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 87,
+          "y": -2,
+          "z": 72
+        },
+        "max": {
+          "x": 123,
+          "y": 0,
+          "z": 108
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 97.08,
+          "z": 72
+        },
+        {
+          "x": 112.92,
+          "z": 72
+        },
+        {
+          "x": 123,
+          "z": 82.08
+        },
+        {
+          "x": 123,
+          "z": 97.92
+        },
+        {
+          "x": 112.92,
+          "z": 108
+        },
+        {
+          "x": 97.08,
+          "z": 108
+        },
+        {
+          "x": 87,
+          "z": 97.92
+        },
+        {
+          "x": 87,
+          "z": 82.08
+        }
+      ]
+    },
+    {
+      "id": "Horizontal_Pathway_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -88,
+          "y": -2,
+          "z": 83
+        },
+        "max": {
+          "x": 88,
+          "y": 0,
+          "z": 97
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -88,
+          "z": 83
+        },
+        {
+          "x": 88,
+          "z": 83
+        },
+        {
+          "x": 88,
+          "z": 97
+        },
+        {
+          "x": -88,
+          "z": 97
+        }
+      ]
+    },
+    {
+      "id": "Central_Intersection_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -15,
+          "y": -2,
+          "z": -15
+        },
+        "max": {
+          "x": 15,
+          "y": 0,
+          "z": 15
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -6.6,
+          "z": -15
+        },
+        {
+          "x": 6.6,
+          "z": -15
+        },
+        {
+          "x": 15,
+          "z": -6.6
+        },
+        {
+          "x": 15,
+          "z": 6.6
+        },
+        {
+          "x": 6.6,
+          "z": 15
+        },
+        {
+          "x": -6.6,
+          "z": 15
+        },
+        {
+          "x": -15,
+          "z": 6.6
+        },
+        {
+          "x": -15,
+          "z": -6.6
+        }
+      ]
+    },
+    {
+      "id": "Central_Spine_South_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -7,
+          "y": -2,
+          "z": 14
+        },
+        "max": {
+          "x": 7,
+          "y": 0,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7,
+          "z": 14
+        },
+        {
+          "x": 7,
+          "z": 14
+        },
+        {
+          "x": 7,
+          "z": 83
+        },
+        {
+          "x": -7,
+          "z": 83
+        }
+      ]
+    },
+    {
+      "id": "Central_Spine_North_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -7,
+          "y": -2,
+          "z": -112
+        },
+        "max": {
+          "x": 7,
+          "y": 0,
+          "z": -14
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7,
+          "z": -112
+        },
+        {
+          "x": 7,
+          "z": -112
+        },
+        {
+          "x": 7,
+          "z": -14
+        },
+        {
+          "x": -7,
+          "z": -14
+        }
+      ]
+    },
+    {
+      "id": "Central_Crossbar_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -52.5,
+          "y": -2,
+          "z": -7
+        },
+        "max": {
+          "x": 52.5,
+          "y": 0,
+          "z": 7
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -52.5,
+          "z": -7
+        },
+        {
+          "x": 52.5,
+          "z": -7
+        },
+        {
+          "x": 52.5,
+          "z": 7
+        },
+        {
+          "x": -52.5,
+          "z": 7
+        }
+      ]
+    },
+    {
+      "id": "Diagonal_Pathway_Left_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -101.218,
+          "y": -2,
+          "z": -99.216
+        },
+        "max": {
+          "x": 1.218,
+          "y": 0,
+          "z": 81.216
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -101.218,
+          "z": 74.784
+        },
+        {
+          "x": -11.218,
+          "z": -99.216
+        },
+        {
+          "x": 1.218,
+          "z": -92.784
+        },
+        {
+          "x": -88.782,
+          "z": 81.216
+        }
+      ]
+    },
+    {
+      "id": "Diagonal_Pathway_Right_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -1.218,
+          "y": -2,
+          "z": -99.216
+        },
+        "max": {
+          "x": 101.218,
+          "y": 0,
+          "z": 81.216
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 88.782,
+          "z": 81.216
+        },
+        {
+          "x": -1.218,
+          "z": -92.784
+        },
+        {
+          "x": 11.218,
+          "z": -99.216
+        },
+        {
+          "x": 101.218,
+          "z": 74.784
+        }
+      ]
+    },
+    {
+      "id": "Building_Bravo_Wall_0",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": -121.5,
+          "y": 0,
+          "z": 87
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 87.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Bravo_Wall_1",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": -121.5,
+          "y": 0,
+          "z": 98.7
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Bravo_Wall_2",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": -121.5,
+          "y": 0,
+          "z": 87
+        },
+        "max": {
+          "x": -121.2,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Bravo_Wall_3",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": -111.8,
+          "y": 0,
+          "z": 87
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 91.5
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Bravo_Wall_4",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": -111.8,
+          "y": 0,
+          "z": 94.5
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Bravo_Wall_5",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": -111.8,
+          "y": 3,
+          "z": 91.5
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 94.5
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Rooftop_Bravo_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -121.5,
+          "y": 3.65,
+          "z": 87
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -121.5,
+          "z": 87
+        },
+        {
+          "x": -111.5,
+          "z": 87
+        },
+        {
+          "x": -111.5,
+          "z": 99
+        },
+        {
+          "x": -121.5,
+          "z": 99
+        }
+      ]
+    },
+    {
+      "id": "Rooftop_Connector_Bravo_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -115.5,
+          "y": 3.65,
+          "z": 83
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -115.5,
+          "z": 83
+        },
+        {
+          "x": -111.5,
+          "z": 83
+        },
+        {
+          "x": -111.5,
+          "z": 87
+        },
+        {
+          "x": -115.5,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Staircase_Bravo_Flight1_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": -111.5,
+          "y": 0,
+          "z": 83
+        },
+        "max": {
+          "x": -104.5,
+          "y": 4,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": -104.5,
+          "y": 0,
+          "z": 85
+        },
+        "ascendingEnd": {
+          "x": -111.5,
+          "y": 4,
+          "z": 85
+        },
+        "descendingStart": {
+          "x": -111.5,
+          "y": 4,
+          "z": 85
+        },
+        "descendingEnd": {
+          "x": -104.5,
+          "y": 0,
+          "z": 85
+        }
+      }
+    },
+    {
+      "id": "Staircase_Bravo_MidLanding_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -115.5,
+          "y": 3.65,
+          "z": 79
+        },
+        "max": {
+          "x": -111.5,
+          "y": 4,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -115.5,
+          "z": 79
+        },
+        {
+          "x": -111.5,
+          "z": 79
+        },
+        {
+          "x": -111.5,
+          "z": 83
+        },
+        {
+          "x": -115.5,
+          "z": 83
+        }
+      ]
+    },
+    {
+      "id": "Staircase_Bravo_Flight2_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": -111.5,
+          "y": 4,
+          "z": 79
+        },
+        "max": {
+          "x": -104.5,
+          "y": 8,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": -111.5,
+          "y": 4,
+          "z": 81
+        },
+        "ascendingEnd": {
+          "x": -104.5,
+          "y": 8,
+          "z": 81
+        },
+        "descendingStart": {
+          "x": -104.5,
+          "y": 8,
+          "z": 81
+        },
+        "descendingEnd": {
+          "x": -111.5,
+          "y": 4,
+          "z": 81
+        }
+      }
+    },
+    {
+      "id": "Upper_Landing_Bravo_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -104.5,
+          "y": 7.2,
+          "z": 75
+        },
+        "max": {
+          "x": -96.5,
+          "y": 8,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -104.5,
+          "z": 75
+        },
+        {
+          "x": -96.5,
+          "z": 75
+        },
+        {
+          "x": -96.5,
+          "z": 87
+        },
+        {
+          "x": -104.5,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Building_Charlie_Wall_0",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 0,
+          "z": 87
+        },
+        "max": {
+          "x": 121.5,
+          "y": 4,
+          "z": 87.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Charlie_Wall_1",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 0,
+          "z": 98.7
+        },
+        "max": {
+          "x": 121.5,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Charlie_Wall_2",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": 121.2,
+          "y": 0,
+          "z": 87
+        },
+        "max": {
+          "x": 121.5,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Charlie_Wall_3",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 0,
+          "z": 87
+        },
+        "max": {
+          "x": 111.8,
+          "y": 4,
+          "z": 91.5
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Charlie_Wall_4",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 0,
+          "z": 94.5
+        },
+        "max": {
+          "x": 111.8,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Building_Charlie_Wall_5",
+      "type": "solid_wall",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 3,
+          "z": 91.5
+        },
+        "max": {
+          "x": 111.8,
+          "y": 4,
+          "z": 94.5
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Rooftop_Charlie_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 3.65,
+          "z": 87
+        },
+        "max": {
+          "x": 121.5,
+          "y": 4,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 111.5,
+          "z": 87
+        },
+        {
+          "x": 121.5,
+          "z": 87
+        },
+        {
+          "x": 121.5,
+          "z": 99
+        },
+        {
+          "x": 111.5,
+          "z": 99
+        }
+      ]
+    },
+    {
+      "id": "Rooftop_Connector_Charlie_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 3.65,
+          "z": 83
+        },
+        "max": {
+          "x": 115.5,
+          "y": 4,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 111.5,
+          "z": 83
+        },
+        {
+          "x": 115.5,
+          "z": 83
+        },
+        {
+          "x": 115.5,
+          "z": 87
+        },
+        {
+          "x": 111.5,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Staircase_Charlie_Flight1_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": 104.5,
+          "y": 0,
+          "z": 83
+        },
+        "max": {
+          "x": 111.5,
+          "y": 4,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": 104.5,
+          "y": 0,
+          "z": 85
+        },
+        "ascendingEnd": {
+          "x": 111.5,
+          "y": 4,
+          "z": 85
+        },
+        "descendingStart": {
+          "x": 111.5,
+          "y": 4,
+          "z": 85
+        },
+        "descendingEnd": {
+          "x": 104.5,
+          "y": 0,
+          "z": 85
+        }
+      }
+    },
+    {
+      "id": "Staircase_Charlie_MidLanding_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 3.65,
+          "z": 79
+        },
+        "max": {
+          "x": 115.5,
+          "y": 4,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 111.5,
+          "z": 79
+        },
+        {
+          "x": 115.5,
+          "z": 79
+        },
+        {
+          "x": 115.5,
+          "z": 83
+        },
+        {
+          "x": 111.5,
+          "z": 83
+        }
+      ]
+    },
+    {
+      "id": "Staircase_Charlie_Flight2_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": 104.5,
+          "y": 4,
+          "z": 79
+        },
+        "max": {
+          "x": 111.5,
+          "y": 8,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": 111.5,
+          "y": 4,
+          "z": 81
+        },
+        "ascendingEnd": {
+          "x": 104.5,
+          "y": 8,
+          "z": 81
+        },
+        "descendingStart": {
+          "x": 104.5,
+          "y": 8,
+          "z": 81
+        },
+        "descendingEnd": {
+          "x": 111.5,
+          "y": 4,
+          "z": 81
+        }
+      }
+    },
+    {
+      "id": "Upper_Landing_Charlie_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 96.5,
+          "y": 7.2,
+          "z": 75
+        },
+        "max": {
+          "x": 104.5,
+          "y": 8,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 96.5,
+          "z": 75
+        },
+        {
+          "x": 104.5,
+          "z": 75
+        },
+        {
+          "x": 104.5,
+          "z": 87
+        },
+        {
+          "x": 96.5,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Level2_Central_Platform_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -30,
+          "y": 7.2,
+          "z": -20
+        },
+        "max": {
+          "x": 30,
+          "y": 8,
+          "z": 20
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -25,
+          "z": -20
+        },
+        {
+          "x": 25,
+          "z": -20
+        },
+        {
+          "x": 30,
+          "z": -15
+        },
+        {
+          "x": 30,
+          "z": 15
+        },
+        {
+          "x": 25,
+          "z": 20
+        },
+        {
+          "x": -25,
+          "z": 20
+        },
+        {
+          "x": -30,
+          "z": 15
+        },
+        {
+          "x": -30,
+          "z": -15
+        }
+      ]
+    },
+    {
+      "id": "Level2_Bridge_Bravo_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -102.789,
+          "y": 7.2,
+          "z": 7.133
+        },
+        "max": {
+          "x": -24.211,
+          "y": 8,
+          "z": 83.867
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -102.789,
+          "z": 78.133
+        },
+        {
+          "x": -29.789,
+          "z": 7.133
+        },
+        {
+          "x": -24.211,
+          "z": 12.867
+        },
+        {
+          "x": -97.211,
+          "z": 83.867
+        }
+      ]
+    },
+    {
+      "id": "Level2_Bridge_Charlie_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 24.211,
+          "y": 7.2,
+          "z": 7.133
+        },
+        "max": {
+          "x": 102.789,
+          "y": 8,
+          "z": 83.867
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 97.211,
+          "z": 83.867
+        },
+        {
+          "x": 24.211,
+          "z": 12.867
+        },
+        {
+          "x": 29.789,
+          "z": 7.133
+        },
+        {
+          "x": 102.789,
+          "z": 78.133
+        }
+      ]
+    },
+    {
+      "id": "Level2_Column_0",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -24.7,
+          "y": 0,
+          "z": -14.7
+        },
+        "max": {
+          "x": -23.3,
+          "y": 7.2,
+          "z": -13.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_1",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 23.3,
+          "y": 0,
+          "z": -14.7
+        },
+        "max": {
+          "x": 24.7,
+          "y": 7.2,
+          "z": -13.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_2",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -24.7,
+          "y": 0,
+          "z": 13.3
+        },
+        "max": {
+          "x": -23.3,
+          "y": 7.2,
+          "z": 14.7
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_3",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 23.3,
+          "y": 0,
+          "z": 13.3
+        },
+        "max": {
+          "x": 24.7,
+          "y": 7.2,
+          "z": 14.7
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_4",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -12.7,
+          "y": 0,
+          "z": -16.7
+        },
+        "max": {
+          "x": -11.3,
+          "y": 7.2,
+          "z": -15.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_5",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 11.3,
+          "y": 0,
+          "z": -16.7
+        },
+        "max": {
+          "x": 12.7,
+          "y": 7.2,
+          "z": -15.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_6",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -12.7,
+          "y": 0,
+          "z": 15.3
+        },
+        "max": {
+          "x": -11.3,
+          "y": 7.2,
+          "z": 16.7
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_7",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 11.3,
+          "y": 0,
+          "z": 15.3
+        },
+        "max": {
+          "x": 12.7,
+          "y": 7.2,
+          "z": 16.7
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_8",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -64.7,
+          "y": 0,
+          "z": 45.3
+        },
+        "max": {
+          "x": -63.3,
+          "y": 7.2,
+          "z": 46.7
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Level2_Column_9",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 63.3,
+          "y": 0,
+          "z": 45.3
+        },
+        "max": {
+          "x": 64.7,
+          "y": 7.2,
+          "z": 46.7
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Alpha_Capture_Platform_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -20,
+          "y": 7.2,
+          "z": -125
+        },
+        "max": {
+          "x": 20,
+          "y": 8,
+          "z": -85
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -12,
+          "z": -125
+        },
+        {
+          "x": 12,
+          "z": -125
+        },
+        {
+          "x": 20,
+          "z": -117
+        },
+        {
+          "x": 20,
+          "z": -93
+        },
+        {
+          "x": 12,
+          "z": -85
+        },
+        {
+          "x": -12,
+          "z": -85
+        },
+        {
+          "x": -20,
+          "z": -93
+        },
+        {
+          "x": -20,
+          "z": -117
+        }
+      ]
+    },
+    {
+      "id": "Level2_Bridge_Alpha_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -7,
+          "y": 7.2,
+          "z": -85
+        },
+        "max": {
+          "x": 7,
+          "y": 8,
+          "z": -20
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7,
+          "z": -85
+        },
+        {
+          "x": 7,
+          "z": -85
+        },
+        {
+          "x": 7,
+          "z": -20
+        },
+        {
+          "x": -7,
+          "z": -20
+        }
+      ]
+    },
+    {
+      "id": "Alpha_Staircase_Left_Flight1_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": -14,
+          "y": 0,
+          "z": -107
+        },
+        "max": {
+          "x": -7,
+          "y": 4,
+          "z": -103
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": -7,
+          "y": 0,
+          "z": -105
+        },
+        "ascendingEnd": {
+          "x": -14,
+          "y": 4,
+          "z": -105
+        },
+        "descendingStart": {
+          "x": -14,
+          "y": 4,
+          "z": -105
+        },
+        "descendingEnd": {
+          "x": -7,
+          "y": 0,
+          "z": -105
+        }
+      }
+    },
+    {
+      "id": "Alpha_Staircase_Left_MidLanding_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -26,
+          "y": 3.65,
+          "z": -107
+        },
+        "max": {
+          "x": -14,
+          "y": 4,
+          "z": -103
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -26,
+          "z": -107
+        },
+        {
+          "x": -14,
+          "z": -107
+        },
+        {
+          "x": -14,
+          "z": -103
+        },
+        {
+          "x": -26,
+          "z": -103
+        }
+      ]
+    },
+    {
+      "id": "Alpha_Staircase_Left_Flight2_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": -26,
+          "y": 4,
+          "z": -103
+        },
+        "max": {
+          "x": -22,
+          "y": 8,
+          "z": -96
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": -24,
+          "y": 4,
+          "z": -103
+        },
+        "ascendingEnd": {
+          "x": -24,
+          "y": 8,
+          "z": -96
+        },
+        "descendingStart": {
+          "x": -24,
+          "y": 8,
+          "z": -96
+        },
+        "descendingEnd": {
+          "x": -24,
+          "y": 4,
+          "z": -103
+        }
+      }
+    },
+    {
+      "id": "Alpha_Staircase_Left_TopDeck_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": -26,
+          "y": 7.2,
+          "z": -96
+        },
+        "max": {
+          "x": -20,
+          "y": 8,
+          "z": -92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -26,
+          "z": -96
+        },
+        {
+          "x": -20,
+          "z": -96
+        },
+        {
+          "x": -20,
+          "z": -92
+        },
+        {
+          "x": -26,
+          "z": -92
+        }
+      ]
+    },
+    {
+      "id": "Alpha_Staircase_Right_Flight1_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": 7,
+          "y": 0,
+          "z": -107
+        },
+        "max": {
+          "x": 14,
+          "y": 4,
+          "z": -103
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": 7,
+          "y": 0,
+          "z": -105
+        },
+        "ascendingEnd": {
+          "x": 14,
+          "y": 4,
+          "z": -105
+        },
+        "descendingStart": {
+          "x": 14,
+          "y": 4,
+          "z": -105
+        },
+        "descendingEnd": {
+          "x": 7,
+          "y": 0,
+          "z": -105
+        }
+      }
+    },
+    {
+      "id": "Alpha_Staircase_Right_MidLanding_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 14,
+          "y": 3.65,
+          "z": -107
+        },
+        "max": {
+          "x": 26,
+          "y": 4,
+          "z": -103
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 14,
+          "z": -107
+        },
+        {
+          "x": 26,
+          "z": -107
+        },
+        {
+          "x": 26,
+          "z": -103
+        },
+        {
+          "x": 14,
+          "z": -103
+        }
+      ]
+    },
+    {
+      "id": "Alpha_Staircase_Right_Flight2_Ramp",
+      "type": "stair_ramp",
+      "bounds": {
+        "min": {
+          "x": 22,
+          "y": 4,
+          "z": -103
+        },
+        "max": {
+          "x": 26,
+          "y": 8,
+          "z": -96
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 29.74,
+      "endpoints": {
+        "ascendingStart": {
+          "x": 24,
+          "y": 4,
+          "z": -103
+        },
+        "ascendingEnd": {
+          "x": 24,
+          "y": 8,
+          "z": -96
+        },
+        "descendingStart": {
+          "x": 24,
+          "y": 8,
+          "z": -96
+        },
+        "descendingEnd": {
+          "x": 24,
+          "y": 4,
+          "z": -103
+        }
+      }
+    },
+    {
+      "id": "Alpha_Staircase_Right_TopDeck_Floor",
+      "type": "walkable_floor",
+      "bounds": {
+        "min": {
+          "x": 20,
+          "y": 7.2,
+          "z": -96
+        },
+        "max": {
+          "x": 26,
+          "y": 8,
+          "z": -92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 20,
+          "z": -96
+        },
+        {
+          "x": 26,
+          "z": -96
+        },
+        {
+          "x": 26,
+          "z": -92
+        },
+        {
+          "x": 20,
+          "z": -92
+        }
+      ]
+    },
+    {
+      "id": "Alpha_Column_0",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -16.7,
+          "y": 0,
+          "z": -90.7
+        },
+        "max": {
+          "x": -15.3,
+          "y": 7.2,
+          "z": -89.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Alpha_Column_1",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 15.3,
+          "y": 0,
+          "z": -90.7
+        },
+        "max": {
+          "x": 16.7,
+          "y": 7.2,
+          "z": -89.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Alpha_Column_2",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -16.7,
+          "y": 0,
+          "z": -120.7
+        },
+        "max": {
+          "x": -15.3,
+          "y": 7.2,
+          "z": -119.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Alpha_Column_3",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 15.3,
+          "y": 0,
+          "z": -120.7
+        },
+        "max": {
+          "x": 16.7,
+          "y": 7.2,
+          "z": -119.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Alpha_Column_4",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": -8.7,
+          "y": 0,
+          "z": -52.7
+        },
+        "max": {
+          "x": -7.3,
+          "y": 7.2,
+          "z": -51.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Alpha_Column_5",
+      "type": "support_column",
+      "bounds": {
+        "min": {
+          "x": 7.3,
+          "y": 0,
+          "z": -52.7
+        },
+        "max": {
+          "x": 8.7,
+          "y": 7.2,
+          "z": -51.3
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_0_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -56.5,
+          "y": 0,
+          "z": 84.8
+        },
+        "max": {
+          "x": -53.5,
+          "y": 1.1,
+          "z": 85.6
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_1_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 53.5,
+          "y": 0,
+          "z": 84.8
+        },
+        "max": {
+          "x": 56.5,
+          "y": 1.1,
+          "z": 85.6
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_2_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -29.5,
+          "y": 0,
+          "z": 94.4
+        },
+        "max": {
+          "x": -26.5,
+          "y": 1.1,
+          "z": 95.2
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_3_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 26.5,
+          "y": 0,
+          "z": 94.4
+        },
+        "max": {
+          "x": 29.5,
+          "y": 1.1,
+          "z": 95.2
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_4_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -63.515,
+          "y": 0,
+          "z": 16.953
+        },
+        "max": {
+          "x": -60.485,
+          "y": 1.1,
+          "z": 19.047
+        }
+      },
+      "rotationY": 0.48,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_5_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 60.485,
+          "y": 0,
+          "z": 16.953
+        },
+        "max": {
+          "x": 63.515,
+          "y": 1.1,
+          "z": 19.047
+        }
+      },
+      "rotationY": -0.48,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_6_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -35.515,
+          "y": 0,
+          "z": -39.047
+        },
+        "max": {
+          "x": -32.485,
+          "y": 1.1,
+          "z": -36.953
+        }
+      },
+      "rotationY": 0.48,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_7_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 32.485,
+          "y": 0,
+          "z": -39.047
+        },
+        "max": {
+          "x": 35.515,
+          "y": 1.1,
+          "z": -36.953
+        }
+      },
+      "rotationY": -0.48,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_8_struct_pillar",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -10,
+          "y": 0,
+          "z": -10
+        },
+        "max": {
+          "x": -8.8,
+          "y": 3,
+          "z": -8.8
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_9_struct_pillar",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 8.8,
+          "y": 0,
+          "z": -10
+        },
+        "max": {
+          "x": 10,
+          "y": 3,
+          "z": -8.8
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_10_struct_pillar",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -10,
+          "y": 0,
+          "z": 8.8
+        },
+        "max": {
+          "x": -8.8,
+          "y": 3,
+          "z": 10
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_11_struct_pillar",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 8.8,
+          "y": 0,
+          "z": 8.8
+        },
+        "max": {
+          "x": 10,
+          "y": 3,
+          "z": 10
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_12_vent_unit",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -12.25,
+          "y": 0,
+          "z": -1
+        },
+        "max": {
+          "x": -10.75,
+          "y": 1.2,
+          "z": 1
+        }
+      },
+      "rotationY": 1.5708,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_13_vent_unit",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 10.75,
+          "y": 0,
+          "z": -1
+        },
+        "max": {
+          "x": 12.25,
+          "y": 1.2,
+          "z": 1
+        }
+      },
+      "rotationY": 1.5708,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_14_small_crate",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -11.8,
+          "y": 0,
+          "z": -3.8
+        },
+        "max": {
+          "x": -10.6,
+          "y": 1.2,
+          "z": -2.6
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_15_small_crate",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 10.6,
+          "y": 0,
+          "z": -3.8
+        },
+        "max": {
+          "x": 11.8,
+          "y": 1.2,
+          "z": -2.6
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_16_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -93.773,
+          "y": 0,
+          "z": 97.738
+        },
+        "max": {
+          "x": -90.227,
+          "y": 2.2,
+          "z": 101.262
+        }
+      },
+      "rotationY": -0.78,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_17_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 90.227,
+          "y": 0,
+          "z": 97.738
+        },
+        "max": {
+          "x": 93.773,
+          "y": 2.2,
+          "z": 101.262
+        }
+      },
+      "rotationY": 0.78,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_18_small_crate",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -95.6,
+          "y": 0,
+          "z": 101.4
+        },
+        "max": {
+          "x": -94.4,
+          "y": 1.2,
+          "z": 102.6
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_19_small_crate",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 94.4,
+          "y": 0,
+          "z": 101.4
+        },
+        "max": {
+          "x": 95.6,
+          "y": 1.2,
+          "z": 102.6
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_20_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -17.05,
+          "y": 8,
+          "z": -10.155
+        },
+        "max": {
+          "x": -12.95,
+          "y": 10.2,
+          "z": -7.845
+        }
+      },
+      "rotationY": 0.35,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_21_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 12.95,
+          "y": 8,
+          "z": -10.155
+        },
+        "max": {
+          "x": 17.05,
+          "y": 10.2,
+          "z": -7.845
+        }
+      },
+      "rotationY": -0.35,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_22_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -17.05,
+          "y": 8,
+          "z": 7.845
+        },
+        "max": {
+          "x": -12.95,
+          "y": 10.2,
+          "z": 10.155
+        }
+      },
+      "rotationY": -0.35,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_23_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 12.95,
+          "y": 8,
+          "z": 7.845
+        },
+        "max": {
+          "x": 17.05,
+          "y": 10.2,
+          "z": 10.155
+        }
+      },
+      "rotationY": 0.35,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_24_large_container",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -22,
+          "y": 8,
+          "z": -4.5
+        },
+        "max": {
+          "x": -20,
+          "y": 10.5,
+          "z": -0.5
+        }
+      },
+      "rotationY": 1.5708,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_25_large_container",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 20,
+          "y": 8,
+          "z": -4.5
+        },
+        "max": {
+          "x": 22,
+          "y": 10.5,
+          "z": -0.5
+        }
+      },
+      "rotationY": 1.5708,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_26_small_crate",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -19.1,
+          "y": 8,
+          "z": -8.1
+        },
+        "max": {
+          "x": -17.9,
+          "y": 9.2,
+          "z": -6.9
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_27_small_crate",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 17.9,
+          "y": 8,
+          "z": -8.1
+        },
+        "max": {
+          "x": 19.1,
+          "y": 9.2,
+          "z": -6.9
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_28_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -12.273,
+          "y": 8,
+          "z": -116.262
+        },
+        "max": {
+          "x": -8.727,
+          "y": 10.2,
+          "z": -112.738
+        }
+      },
+      "rotationY": 0.78,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_29_large_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 8.727,
+          "y": 8,
+          "z": -116.262
+        },
+        "max": {
+          "x": 12.273,
+          "y": 10.2,
+          "z": -112.738
+        }
+      },
+      "rotationY": -0.78,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_30_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": -11.848,
+          "y": 8,
+          "z": -95.839
+        },
+        "max": {
+          "x": -9.152,
+          "y": 9.1,
+          "z": -93.161
+        }
+      },
+      "rotationY": -0.78,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Obstacle_31_small_barrier",
+      "type": "tactical_obstacle",
+      "bounds": {
+        "min": {
+          "x": 9.152,
+          "y": 8,
+          "z": -95.839
+        },
+        "max": {
+          "x": 11.848,
+          "y": 9.1,
+          "z": -93.161
+        }
+      },
+      "rotationY": 0.78,
+      "slopeDegrees": 0
+    },
+    {
+      "id": "Railing_level1_1",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -112.92,
+          "y": 0,
+          "z": 71.64
+        },
+        "max": {
+          "x": -99.456,
+          "y": 1.2,
+          "z": 71.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -112.92,
+          "z": 71.64
+        },
+        {
+          "x": -99.456,
+          "z": 71.64
+        },
+        {
+          "x": -99.456,
+          "z": 71.92
+        },
+        {
+          "x": -112.92,
+          "z": 71.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_2",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -97.023,
+          "y": 0,
+          "z": 97.977
+        },
+        "max": {
+          "x": -86.745,
+          "y": 1.2,
+          "z": 108.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -86.745,
+          "z": 98.175
+        },
+        {
+          "x": -96.825,
+          "z": 108.255
+        },
+        {
+          "x": -97.023,
+          "z": 108.057
+        },
+        {
+          "x": -86.943,
+          "z": 97.977
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_3",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -112.92,
+          "y": 0,
+          "z": 108.08
+        },
+        "max": {
+          "x": -97.08,
+          "y": 1.2,
+          "z": 108.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -97.08,
+          "z": 108.36
+        },
+        {
+          "x": -112.92,
+          "z": 108.36
+        },
+        {
+          "x": -112.92,
+          "z": 108.08
+        },
+        {
+          "x": -97.08,
+          "z": 108.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_4",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -123.255,
+          "y": 0,
+          "z": 97.977
+        },
+        "max": {
+          "x": -112.977,
+          "y": 1.2,
+          "z": 108.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -113.175,
+          "z": 108.255
+        },
+        {
+          "x": -123.255,
+          "z": 98.175
+        },
+        {
+          "x": -123.057,
+          "z": 97.977
+        },
+        {
+          "x": -112.977,
+          "z": 108.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_5",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -123.36,
+          "y": 0,
+          "z": 82.08
+        },
+        "max": {
+          "x": -123.08,
+          "y": 1.2,
+          "z": 97.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -123.36,
+          "z": 97.92
+        },
+        {
+          "x": -123.36,
+          "z": 82.08
+        },
+        {
+          "x": -123.08,
+          "z": 82.08
+        },
+        {
+          "x": -123.08,
+          "z": 97.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_6",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -123.255,
+          "y": 0,
+          "z": 71.745
+        },
+        "max": {
+          "x": -112.977,
+          "y": 1.2,
+          "z": 82.023
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -123.255,
+          "z": 81.825
+        },
+        {
+          "x": -113.175,
+          "z": 71.745
+        },
+        {
+          "x": -112.977,
+          "z": 71.943
+        },
+        {
+          "x": -123.057,
+          "z": 82.023
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_7",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 99.456,
+          "y": 0,
+          "z": 71.64
+        },
+        "max": {
+          "x": 112.92,
+          "y": 1.2,
+          "z": 71.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 99.456,
+          "z": 71.64
+        },
+        {
+          "x": 112.92,
+          "z": 71.64
+        },
+        {
+          "x": 112.92,
+          "z": 71.92
+        },
+        {
+          "x": 99.456,
+          "z": 71.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_8",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 112.977,
+          "y": 0,
+          "z": 71.745
+        },
+        "max": {
+          "x": 123.255,
+          "y": 1.2,
+          "z": 82.023
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 113.175,
+          "z": 71.745
+        },
+        {
+          "x": 123.255,
+          "z": 81.825
+        },
+        {
+          "x": 123.057,
+          "z": 82.023
+        },
+        {
+          "x": 112.977,
+          "z": 71.943
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_9",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 123.08,
+          "y": 0,
+          "z": 82.08
+        },
+        "max": {
+          "x": 123.36,
+          "y": 1.2,
+          "z": 97.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 123.36,
+          "z": 82.08
+        },
+        {
+          "x": 123.36,
+          "z": 97.92
+        },
+        {
+          "x": 123.08,
+          "z": 97.92
+        },
+        {
+          "x": 123.08,
+          "z": 82.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_10",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 112.977,
+          "y": 0,
+          "z": 97.977
+        },
+        "max": {
+          "x": 123.255,
+          "y": 1.2,
+          "z": 108.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 123.255,
+          "z": 98.175
+        },
+        {
+          "x": 113.175,
+          "z": 108.255
+        },
+        {
+          "x": 112.977,
+          "z": 108.057
+        },
+        {
+          "x": 123.057,
+          "z": 97.977
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_11",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 97.08,
+          "y": 0,
+          "z": 108.08
+        },
+        "max": {
+          "x": 112.92,
+          "y": 1.2,
+          "z": 108.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 112.92,
+          "z": 108.36
+        },
+        {
+          "x": 97.08,
+          "z": 108.36
+        },
+        {
+          "x": 97.08,
+          "z": 108.08
+        },
+        {
+          "x": 112.92,
+          "z": 108.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_12",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 86.745,
+          "y": 0,
+          "z": 97.977
+        },
+        "max": {
+          "x": 97.023,
+          "y": 1.2,
+          "z": 108.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 96.825,
+          "z": 108.255
+        },
+        {
+          "x": 86.745,
+          "z": 98.175
+        },
+        {
+          "x": 86.943,
+          "z": 97.977
+        },
+        {
+          "x": 97.023,
+          "z": 108.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_13",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -87,
+          "y": 0,
+          "z": 82.64
+        },
+        "max": {
+          "x": -7,
+          "y": 1.2,
+          "z": 82.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -87,
+          "z": 82.64
+        },
+        {
+          "x": -7,
+          "z": 82.64
+        },
+        {
+          "x": -7,
+          "z": 82.92
+        },
+        {
+          "x": -87,
+          "z": 82.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_14",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7,
+          "y": 0,
+          "z": 82.64
+        },
+        "max": {
+          "x": 87,
+          "y": 1.2,
+          "z": 82.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 7,
+          "z": 82.64
+        },
+        {
+          "x": 87,
+          "z": 82.64
+        },
+        {
+          "x": 87,
+          "z": 82.92
+        },
+        {
+          "x": 7,
+          "z": 82.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_15",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -87,
+          "y": 0,
+          "z": 97.08
+        },
+        "max": {
+          "x": 87,
+          "y": 1.2,
+          "z": 97.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 87,
+          "z": 97.36
+        },
+        {
+          "x": -87,
+          "z": 97.36
+        },
+        {
+          "x": -87,
+          "z": 97.08
+        },
+        {
+          "x": 87,
+          "z": 97.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_16",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 6.657,
+          "y": 0,
+          "z": -15.255
+        },
+        "max": {
+          "x": 15.255,
+          "y": 1.2,
+          "z": -6.657
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 6.855,
+          "z": -15.255
+        },
+        {
+          "x": 15.255,
+          "z": -6.855
+        },
+        {
+          "x": 15.057,
+          "z": -6.657
+        },
+        {
+          "x": 6.657,
+          "z": -15.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_17",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 6.657,
+          "y": 0,
+          "z": 6.657
+        },
+        "max": {
+          "x": 15.255,
+          "y": 1.2,
+          "z": 15.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 15.255,
+          "z": 6.855
+        },
+        {
+          "x": 6.855,
+          "z": 15.255
+        },
+        {
+          "x": 6.657,
+          "z": 15.057
+        },
+        {
+          "x": 15.057,
+          "z": 6.657
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_18",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -15.255,
+          "y": 0,
+          "z": 6.657
+        },
+        "max": {
+          "x": -6.657,
+          "y": 1.2,
+          "z": 15.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -6.855,
+          "z": 15.255
+        },
+        {
+          "x": -15.255,
+          "z": 6.855
+        },
+        {
+          "x": -15.057,
+          "z": 6.657
+        },
+        {
+          "x": -6.657,
+          "z": 15.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_19",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -15.255,
+          "y": 0,
+          "z": -15.255
+        },
+        "max": {
+          "x": -6.657,
+          "y": 1.2,
+          "z": -6.657
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -15.255,
+          "z": -6.855
+        },
+        {
+          "x": -6.855,
+          "z": -15.255
+        },
+        {
+          "x": -6.657,
+          "z": -15.057
+        },
+        {
+          "x": -15.057,
+          "z": -6.657
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_20",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7.08,
+          "y": 0,
+          "z": 14
+        },
+        "max": {
+          "x": 7.36,
+          "y": 1.2,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 7.36,
+          "z": 14
+        },
+        {
+          "x": 7.36,
+          "z": 83
+        },
+        {
+          "x": 7.08,
+          "z": 83
+        },
+        {
+          "x": 7.08,
+          "z": 14
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_21",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -7.36,
+          "y": 0,
+          "z": 14
+        },
+        "max": {
+          "x": -7.08,
+          "y": 1.2,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7.36,
+          "z": 83
+        },
+        {
+          "x": -7.36,
+          "z": 14
+        },
+        {
+          "x": -7.08,
+          "z": 14
+        },
+        {
+          "x": -7.08,
+          "z": 83
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_22",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -7,
+          "y": 0,
+          "z": -112.36
+        },
+        "max": {
+          "x": 7,
+          "y": 1.2,
+          "z": -112.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7,
+          "z": -112.36
+        },
+        {
+          "x": 7,
+          "z": -112.36
+        },
+        {
+          "x": 7,
+          "z": -112.08
+        },
+        {
+          "x": -7,
+          "z": -112.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_23",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7.08,
+          "y": 0,
+          "z": -112
+        },
+        "max": {
+          "x": 7.36,
+          "y": 1.2,
+          "z": -107
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 7.36,
+          "z": -112
+        },
+        {
+          "x": 7.36,
+          "z": -107
+        },
+        {
+          "x": 7.08,
+          "z": -107
+        },
+        {
+          "x": 7.08,
+          "z": -112
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_24",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7.08,
+          "y": 0,
+          "z": -103
+        },
+        "max": {
+          "x": 7.36,
+          "y": 1.2,
+          "z": -97.4
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 7.36,
+          "z": -103
+        },
+        {
+          "x": 7.36,
+          "z": -97.4
+        },
+        {
+          "x": 7.08,
+          "z": -97.4
+        },
+        {
+          "x": 7.08,
+          "z": -103
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_25",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7.08,
+          "y": 0,
+          "z": -75.8
+        },
+        "max": {
+          "x": 7.36,
+          "y": 1.2,
+          "z": -14
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 7.36,
+          "z": -75.8
+        },
+        {
+          "x": 7.36,
+          "z": -14
+        },
+        {
+          "x": 7.08,
+          "z": -14
+        },
+        {
+          "x": 7.08,
+          "z": -75.8
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_26",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -7.36,
+          "y": 0,
+          "z": -75.8
+        },
+        "max": {
+          "x": -7.08,
+          "y": 1.2,
+          "z": -14
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7.36,
+          "z": -14
+        },
+        {
+          "x": -7.36,
+          "z": -75.8
+        },
+        {
+          "x": -7.08,
+          "z": -75.8
+        },
+        {
+          "x": -7.08,
+          "z": -14
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_27",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -7.36,
+          "y": 0,
+          "z": -103
+        },
+        "max": {
+          "x": -7.08,
+          "y": 1.2,
+          "z": -97.4
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7.36,
+          "z": -97.4
+        },
+        {
+          "x": -7.36,
+          "z": -103
+        },
+        {
+          "x": -7.08,
+          "z": -103
+        },
+        {
+          "x": -7.08,
+          "z": -97.4
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_28",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -7.36,
+          "y": 0,
+          "z": -112
+        },
+        "max": {
+          "x": -7.08,
+          "y": 1.2,
+          "z": -107
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7.36,
+          "z": -107
+        },
+        {
+          "x": -7.36,
+          "z": -112
+        },
+        {
+          "x": -7.08,
+          "z": -112
+        },
+        {
+          "x": -7.08,
+          "z": -107
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_29",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -42.9,
+          "y": 0,
+          "z": -7.36
+        },
+        "max": {
+          "x": -14.1,
+          "y": 1.2,
+          "z": -7.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -42.9,
+          "z": -7.36
+        },
+        {
+          "x": -14.1,
+          "z": -7.36
+        },
+        {
+          "x": -14.1,
+          "z": -7.08
+        },
+        {
+          "x": -42.9,
+          "z": -7.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_30",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 14.1,
+          "y": 0,
+          "z": -7.36
+        },
+        "max": {
+          "x": 42.9,
+          "y": 1.2,
+          "z": -7.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 14.1,
+          "z": -7.36
+        },
+        {
+          "x": 42.9,
+          "z": -7.36
+        },
+        {
+          "x": 42.9,
+          "z": -7.08
+        },
+        {
+          "x": 14.1,
+          "z": -7.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_31",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 14.1,
+          "y": 0,
+          "z": 7.08
+        },
+        "max": {
+          "x": 50.7,
+          "y": 1.2,
+          "z": 7.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 50.7,
+          "z": 7.36
+        },
+        {
+          "x": 14.1,
+          "z": 7.36
+        },
+        {
+          "x": 14.1,
+          "z": 7.08
+        },
+        {
+          "x": 50.7,
+          "z": 7.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_32",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -50.7,
+          "y": 0,
+          "z": 7.08
+        },
+        "max": {
+          "x": -14.1,
+          "y": 1.2,
+          "z": 7.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -14.1,
+          "z": 7.36
+        },
+        {
+          "x": -50.7,
+          "z": 7.36
+        },
+        {
+          "x": -50.7,
+          "z": 7.08
+        },
+        {
+          "x": -14.1,
+          "z": 7.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_33",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -100.252,
+          "y": 0,
+          "z": -99.381
+        },
+        "max": {
+          "x": -11.289,
+          "y": 1.2,
+          "z": 72.262
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -100.252,
+          "z": 72.133
+        },
+        {
+          "x": -11.537,
+          "z": -99.381
+        },
+        {
+          "x": -11.289,
+          "z": -99.253
+        },
+        {
+          "x": -100.003,
+          "z": 72.262
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_34",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -42.977,
+          "y": 0,
+          "z": -75.88
+        },
+        "max": {
+          "x": -7.187,
+          "y": 1.2,
+          "z": -7.039
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7.187,
+          "z": -75.751
+        },
+        {
+          "x": -42.728,
+          "z": -7.039
+        },
+        {
+          "x": -42.977,
+          "z": -7.168
+        },
+        {
+          "x": -7.436,
+          "z": -75.88
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_35",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -88.436,
+          "y": 0,
+          "z": 6.859
+        },
+        "max": {
+          "x": -49.983,
+          "y": 1.2,
+          "z": 80.849
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -49.983,
+          "z": 6.987
+        },
+        {
+          "x": -88.187,
+          "z": 80.849
+        },
+        {
+          "x": -88.436,
+          "z": 80.72
+        },
+        {
+          "x": -50.232,
+          "z": 6.859
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_36",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 49.983,
+          "y": 0,
+          "z": 6.859
+        },
+        "max": {
+          "x": 88.436,
+          "y": 1.2,
+          "z": 80.849
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 88.187,
+          "z": 80.849
+        },
+        {
+          "x": 49.983,
+          "z": 6.987
+        },
+        {
+          "x": 50.232,
+          "z": 6.859
+        },
+        {
+          "x": 88.436,
+          "z": 80.72
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_37",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7.187,
+          "y": 0,
+          "z": -75.88
+        },
+        "max": {
+          "x": 42.977,
+          "y": 1.2,
+          "z": -7.039
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 42.728,
+          "z": -7.039
+        },
+        {
+          "x": 7.187,
+          "z": -75.751
+        },
+        {
+          "x": 7.436,
+          "z": -75.88
+        },
+        {
+          "x": 42.977,
+          "z": -7.168
+        }
+      ]
+    },
+    {
+      "id": "Railing_level1_38",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 11.289,
+          "y": 0,
+          "z": -99.381
+        },
+        "max": {
+          "x": 100.252,
+          "y": 1.2,
+          "z": 72.262
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 11.537,
+          "z": -99.381
+        },
+        {
+          "x": 100.252,
+          "z": 72.133
+        },
+        {
+          "x": 100.003,
+          "z": 72.262
+        },
+        {
+          "x": 11.289,
+          "z": -99.253
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_39",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -121.5,
+          "y": 4,
+          "z": 86.64
+        },
+        "max": {
+          "x": -115.5,
+          "y": 5.2,
+          "z": 86.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -121.5,
+          "z": 86.64
+        },
+        {
+          "x": -115.5,
+          "z": 86.64
+        },
+        {
+          "x": -115.5,
+          "z": 86.92
+        },
+        {
+          "x": -121.5,
+          "z": 86.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_40",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -111.42,
+          "y": 4,
+          "z": 87
+        },
+        "max": {
+          "x": -111.14,
+          "y": 5.2,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -111.14,
+          "z": 87
+        },
+        {
+          "x": -111.14,
+          "z": 99
+        },
+        {
+          "x": -111.42,
+          "z": 99
+        },
+        {
+          "x": -111.42,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_41",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -121.5,
+          "y": 4,
+          "z": 99.08
+        },
+        "max": {
+          "x": -111.5,
+          "y": 5.2,
+          "z": 99.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -111.5,
+          "z": 99.36
+        },
+        {
+          "x": -121.5,
+          "z": 99.36
+        },
+        {
+          "x": -121.5,
+          "z": 99.08
+        },
+        {
+          "x": -111.5,
+          "z": 99.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_42",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -121.86,
+          "y": 4,
+          "z": 87
+        },
+        "max": {
+          "x": -121.58,
+          "y": 5.2,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -121.86,
+          "z": 99
+        },
+        {
+          "x": -121.86,
+          "z": 87
+        },
+        {
+          "x": -121.58,
+          "z": 87
+        },
+        {
+          "x": -121.58,
+          "z": 99
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_43",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -115.86,
+          "y": 4,
+          "z": 83
+        },
+        "max": {
+          "x": -115.58,
+          "y": 5.2,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -115.86,
+          "z": 87
+        },
+        {
+          "x": -115.86,
+          "z": 83
+        },
+        {
+          "x": -115.58,
+          "z": 83
+        },
+        {
+          "x": -115.58,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_44",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -115.5,
+          "y": 4,
+          "z": 78.64
+        },
+        "max": {
+          "x": -111.5,
+          "y": 5.2,
+          "z": 78.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -115.5,
+          "z": 78.64
+        },
+        {
+          "x": -111.5,
+          "z": 78.64
+        },
+        {
+          "x": -111.5,
+          "z": 78.92
+        },
+        {
+          "x": -115.5,
+          "z": 78.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_45",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -115.86,
+          "y": 4,
+          "z": 79
+        },
+        "max": {
+          "x": -115.58,
+          "y": 5.2,
+          "z": 83
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -115.86,
+          "z": 83
+        },
+        {
+          "x": -115.86,
+          "z": 79
+        },
+        {
+          "x": -115.58,
+          "z": 79
+        },
+        {
+          "x": -115.58,
+          "z": 83
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_46",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -104.5,
+          "y": 8,
+          "z": 74.64
+        },
+        "max": {
+          "x": -99.1,
+          "y": 9.2,
+          "z": 74.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -104.5,
+          "z": 74.64
+        },
+        {
+          "x": -99.1,
+          "z": 74.64
+        },
+        {
+          "x": -99.1,
+          "z": 74.92
+        },
+        {
+          "x": -104.5,
+          "z": 74.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_47",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -96.42,
+          "y": 8,
+          "z": 82.6
+        },
+        "max": {
+          "x": -96.14,
+          "y": 9.2,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -96.14,
+          "z": 82.6
+        },
+        {
+          "x": -96.14,
+          "z": 87
+        },
+        {
+          "x": -96.42,
+          "z": 87
+        },
+        {
+          "x": -96.42,
+          "z": 82.6
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_48",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -104.5,
+          "y": 8,
+          "z": 87.08
+        },
+        "max": {
+          "x": -96.5,
+          "y": 9.2,
+          "z": 87.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -96.5,
+          "z": 87.36
+        },
+        {
+          "x": -104.5,
+          "z": 87.36
+        },
+        {
+          "x": -104.5,
+          "z": 87.08
+        },
+        {
+          "x": -96.5,
+          "z": 87.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_49",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -104.86,
+          "y": 8,
+          "z": 83
+        },
+        "max": {
+          "x": -104.58,
+          "y": 9.2,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -104.86,
+          "z": 87
+        },
+        {
+          "x": -104.86,
+          "z": 83
+        },
+        {
+          "x": -104.58,
+          "z": 83
+        },
+        {
+          "x": -104.58,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_50",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -104.86,
+          "y": 8,
+          "z": 75
+        },
+        "max": {
+          "x": -104.58,
+          "y": 9.2,
+          "z": 79
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -104.86,
+          "z": 79
+        },
+        {
+          "x": -104.86,
+          "z": 75
+        },
+        {
+          "x": -104.58,
+          "z": 75
+        },
+        {
+          "x": -104.58,
+          "z": 79
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_51",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 115.5,
+          "y": 4,
+          "z": 86.64
+        },
+        "max": {
+          "x": 121.5,
+          "y": 5.2,
+          "z": 86.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 115.5,
+          "z": 86.64
+        },
+        {
+          "x": 121.5,
+          "z": 86.64
+        },
+        {
+          "x": 121.5,
+          "z": 86.92
+        },
+        {
+          "x": 115.5,
+          "z": 86.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_52",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 121.58,
+          "y": 4,
+          "z": 87
+        },
+        "max": {
+          "x": 121.86,
+          "y": 5.2,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 121.86,
+          "z": 87
+        },
+        {
+          "x": 121.86,
+          "z": 99
+        },
+        {
+          "x": 121.58,
+          "z": 99
+        },
+        {
+          "x": 121.58,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_53",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 4,
+          "z": 99.08
+        },
+        "max": {
+          "x": 121.5,
+          "y": 5.2,
+          "z": 99.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 121.5,
+          "z": 99.36
+        },
+        {
+          "x": 111.5,
+          "z": 99.36
+        },
+        {
+          "x": 111.5,
+          "z": 99.08
+        },
+        {
+          "x": 121.5,
+          "z": 99.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_54",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 111.14,
+          "y": 4,
+          "z": 87
+        },
+        "max": {
+          "x": 111.42,
+          "y": 5.2,
+          "z": 99
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 111.14,
+          "z": 99
+        },
+        {
+          "x": 111.14,
+          "z": 87
+        },
+        {
+          "x": 111.42,
+          "z": 87
+        },
+        {
+          "x": 111.42,
+          "z": 99
+        }
+      ]
+    },
+    {
+      "id": "Railing_buildings_55",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 115.58,
+          "y": 4,
+          "z": 83
+        },
+        "max": {
+          "x": 115.86,
+          "y": 5.2,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 115.86,
+          "z": 83
+        },
+        {
+          "x": 115.86,
+          "z": 87
+        },
+        {
+          "x": 115.58,
+          "z": 87
+        },
+        {
+          "x": 115.58,
+          "z": 83
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_56",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 111.5,
+          "y": 4,
+          "z": 78.64
+        },
+        "max": {
+          "x": 115.5,
+          "y": 5.2,
+          "z": 78.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 111.5,
+          "z": 78.64
+        },
+        {
+          "x": 115.5,
+          "z": 78.64
+        },
+        {
+          "x": 115.5,
+          "z": 78.92
+        },
+        {
+          "x": 111.5,
+          "z": 78.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_57",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 99.1,
+          "y": 8,
+          "z": 74.64
+        },
+        "max": {
+          "x": 104.5,
+          "y": 9.2,
+          "z": 74.92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 99.1,
+          "z": 74.64
+        },
+        {
+          "x": 104.5,
+          "z": 74.64
+        },
+        {
+          "x": 104.5,
+          "z": 74.92
+        },
+        {
+          "x": 99.1,
+          "z": 74.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_58",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 104.58,
+          "y": 8,
+          "z": 75
+        },
+        "max": {
+          "x": 104.86,
+          "y": 9.2,
+          "z": 79
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 104.86,
+          "z": 75
+        },
+        {
+          "x": 104.86,
+          "z": 79
+        },
+        {
+          "x": 104.58,
+          "z": 79
+        },
+        {
+          "x": 104.58,
+          "z": 75
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_59",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 104.58,
+          "y": 8,
+          "z": 83
+        },
+        "max": {
+          "x": 104.86,
+          "y": 9.2,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 104.86,
+          "z": 83
+        },
+        {
+          "x": 104.86,
+          "z": 87
+        },
+        {
+          "x": 104.58,
+          "z": 87
+        },
+        {
+          "x": 104.58,
+          "z": 83
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_60",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 96.5,
+          "y": 8,
+          "z": 87.08
+        },
+        "max": {
+          "x": 104.5,
+          "y": 9.2,
+          "z": 87.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 104.5,
+          "z": 87.36
+        },
+        {
+          "x": 96.5,
+          "z": 87.36
+        },
+        {
+          "x": 96.5,
+          "z": 87.08
+        },
+        {
+          "x": 104.5,
+          "z": 87.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_staircases_61",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 96.14,
+          "y": 8,
+          "z": 82.6
+        },
+        "max": {
+          "x": 96.42,
+          "y": 9.2,
+          "z": 87
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 96.14,
+          "z": 87
+        },
+        {
+          "x": 96.14,
+          "z": 82.6
+        },
+        {
+          "x": 96.42,
+          "z": 82.6
+        },
+        {
+          "x": 96.42,
+          "z": 87
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_62",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -25,
+          "y": 8,
+          "z": -20.36
+        },
+        "max": {
+          "x": -7,
+          "y": 9.2,
+          "z": -20.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -25,
+          "z": -20.36
+        },
+        {
+          "x": -7,
+          "z": -20.36
+        },
+        {
+          "x": -7,
+          "z": -20.08
+        },
+        {
+          "x": -25,
+          "z": -20.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_63",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7,
+          "y": 8,
+          "z": -20.36
+        },
+        "max": {
+          "x": 25,
+          "y": 9.2,
+          "z": -20.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 7,
+          "z": -20.36
+        },
+        {
+          "x": 25,
+          "z": -20.36
+        },
+        {
+          "x": 25,
+          "z": -20.08
+        },
+        {
+          "x": 7,
+          "z": -20.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_64",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 25.057,
+          "y": 8,
+          "z": -20.255
+        },
+        "max": {
+          "x": 30.255,
+          "y": 9.2,
+          "z": -15.057
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 25.255,
+          "z": -20.255
+        },
+        {
+          "x": 30.255,
+          "z": -15.255
+        },
+        {
+          "x": 30.057,
+          "z": -15.057
+        },
+        {
+          "x": 25.057,
+          "z": -20.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_65",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 30.08,
+          "y": 8,
+          "z": -15
+        },
+        "max": {
+          "x": 30.36,
+          "y": 9.2,
+          "z": 7.8
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 30.36,
+          "z": -15
+        },
+        {
+          "x": 30.36,
+          "z": 7.8
+        },
+        {
+          "x": 30.08,
+          "z": 7.8
+        },
+        {
+          "x": 30.08,
+          "z": -15
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_66",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 25.057,
+          "y": 8,
+          "z": 16.862
+        },
+        "max": {
+          "x": 28.449,
+          "y": 9.2,
+          "z": 20.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 28.449,
+          "z": 17.06
+        },
+        {
+          "x": 25.255,
+          "z": 20.255
+        },
+        {
+          "x": 25.057,
+          "z": 20.057
+        },
+        {
+          "x": 28.251,
+          "z": 16.862
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_67",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -25,
+          "y": 8,
+          "z": 20.08
+        },
+        "max": {
+          "x": 25,
+          "y": 9.2,
+          "z": 20.36
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 25,
+          "z": 20.36
+        },
+        {
+          "x": -25,
+          "z": 20.36
+        },
+        {
+          "x": -25,
+          "z": 20.08
+        },
+        {
+          "x": 25,
+          "z": 20.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_68",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -28.449,
+          "y": 8,
+          "z": 16.862
+        },
+        "max": {
+          "x": -25.057,
+          "y": 9.2,
+          "z": 20.255
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -25.255,
+          "z": 20.255
+        },
+        {
+          "x": -28.449,
+          "z": 17.06
+        },
+        {
+          "x": -28.251,
+          "z": 16.862
+        },
+        {
+          "x": -25.057,
+          "z": 20.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_69",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -30.36,
+          "y": 8,
+          "z": -15
+        },
+        "max": {
+          "x": -30.08,
+          "y": 9.2,
+          "z": 7.8
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -30.36,
+          "z": 7.8
+        },
+        {
+          "x": -30.36,
+          "z": -15
+        },
+        {
+          "x": -30.08,
+          "z": -15
+        },
+        {
+          "x": -30.08,
+          "z": 7.8
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_70",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -30.255,
+          "y": 8,
+          "z": -20.255
+        },
+        "max": {
+          "x": -25.057,
+          "y": 9.2,
+          "z": -15.057
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -30.255,
+          "z": -15.255
+        },
+        {
+          "x": -25.255,
+          "z": -20.255
+        },
+        {
+          "x": -25.057,
+          "z": -20.057
+        },
+        {
+          "x": -30.057,
+          "z": -15.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_71",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -100.177,
+          "y": 8,
+          "z": 6.874
+        },
+        "max": {
+          "x": -29.845,
+          "y": 9.2,
+          "z": 75.291
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -100.177,
+          "z": 75.09
+        },
+        {
+          "x": -30.04,
+          "z": 6.874
+        },
+        {
+          "x": -29.845,
+          "z": 7.075
+        },
+        {
+          "x": -99.982,
+          "z": 75.291
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_72",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -96.869,
+          "y": 8,
+          "z": 16.823
+        },
+        "max": {
+          "x": -27.968,
+          "y": 9.2,
+          "z": 83.847
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -27.968,
+          "z": 17.024
+        },
+        {
+          "x": -96.674,
+          "z": 83.847
+        },
+        {
+          "x": -96.869,
+          "z": 83.646
+        },
+        {
+          "x": -28.163,
+          "z": 16.823
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_73",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 27.968,
+          "y": 8,
+          "z": 16.823
+        },
+        "max": {
+          "x": 96.869,
+          "y": 9.2,
+          "z": 83.847
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 96.674,
+          "z": 83.847
+        },
+        {
+          "x": 27.968,
+          "z": 17.024
+        },
+        {
+          "x": 28.163,
+          "z": 16.823
+        },
+        {
+          "x": 96.869,
+          "z": 83.646
+        }
+      ]
+    },
+    {
+      "id": "Railing_level2_74",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 29.845,
+          "y": 8,
+          "z": 6.874
+        },
+        "max": {
+          "x": 100.177,
+          "y": 9.2,
+          "z": 75.291
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 30.04,
+          "z": 6.874
+        },
+        {
+          "x": 100.177,
+          "z": 75.09
+        },
+        {
+          "x": 99.982,
+          "z": 75.291
+        },
+        {
+          "x": 29.845,
+          "z": 7.075
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_75",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -12,
+          "y": 8,
+          "z": -125.36
+        },
+        "max": {
+          "x": 12,
+          "y": 9.2,
+          "z": -125.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -12,
+          "z": -125.36
+        },
+        {
+          "x": 12,
+          "z": -125.36
+        },
+        {
+          "x": 12,
+          "z": -125.08
+        },
+        {
+          "x": -12,
+          "z": -125.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_76",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 12.057,
+          "y": 8,
+          "z": -125.255
+        },
+        "max": {
+          "x": 20.255,
+          "y": 9.2,
+          "z": -117.057
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 12.255,
+          "z": -125.255
+        },
+        {
+          "x": 20.255,
+          "z": -117.255
+        },
+        {
+          "x": 20.057,
+          "z": -117.057
+        },
+        {
+          "x": 12.057,
+          "z": -125.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_77",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 20.08,
+          "y": 8,
+          "z": -117
+        },
+        "max": {
+          "x": 20.36,
+          "y": 9.2,
+          "z": -96
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 20.36,
+          "z": -117
+        },
+        {
+          "x": 20.36,
+          "z": -96
+        },
+        {
+          "x": 20.08,
+          "z": -96
+        },
+        {
+          "x": 20.08,
+          "z": -117
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_78",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 12.057,
+          "y": 8,
+          "z": -92.522
+        },
+        "max": {
+          "x": 19.834,
+          "y": 9.2,
+          "z": -84.745
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 19.834,
+          "z": -92.324
+        },
+        {
+          "x": 12.255,
+          "z": -84.745
+        },
+        {
+          "x": 12.057,
+          "z": -84.943
+        },
+        {
+          "x": 19.636,
+          "z": -92.522
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_79",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7,
+          "y": 8,
+          "z": -84.92
+        },
+        "max": {
+          "x": 12,
+          "y": 9.2,
+          "z": -84.64
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 12,
+          "z": -84.64
+        },
+        {
+          "x": 7,
+          "z": -84.64
+        },
+        {
+          "x": 7,
+          "z": -84.92
+        },
+        {
+          "x": 12,
+          "z": -84.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_80",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -12,
+          "y": 8,
+          "z": -84.92
+        },
+        "max": {
+          "x": -7,
+          "y": 9.2,
+          "z": -84.64
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7,
+          "z": -84.64
+        },
+        {
+          "x": -12,
+          "z": -84.64
+        },
+        {
+          "x": -12,
+          "z": -84.92
+        },
+        {
+          "x": -7,
+          "z": -84.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_81",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -19.834,
+          "y": 8,
+          "z": -92.522
+        },
+        "max": {
+          "x": -12.057,
+          "y": 9.2,
+          "z": -84.745
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -12.255,
+          "z": -84.745
+        },
+        {
+          "x": -19.834,
+          "z": -92.324
+        },
+        {
+          "x": -19.636,
+          "z": -92.522
+        },
+        {
+          "x": -12.057,
+          "z": -84.943
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_82",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -20.36,
+          "y": 8,
+          "z": -117
+        },
+        "max": {
+          "x": -20.08,
+          "y": 9.2,
+          "z": -96
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -20.36,
+          "z": -96
+        },
+        {
+          "x": -20.36,
+          "z": -117
+        },
+        {
+          "x": -20.08,
+          "z": -117
+        },
+        {
+          "x": -20.08,
+          "z": -96
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_83",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -20.255,
+          "y": 8,
+          "z": -125.255
+        },
+        "max": {
+          "x": -12.057,
+          "y": 9.2,
+          "z": -117.057
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -20.255,
+          "z": -117.255
+        },
+        {
+          "x": -12.255,
+          "z": -125.255
+        },
+        {
+          "x": -12.057,
+          "z": -125.057
+        },
+        {
+          "x": -20.057,
+          "z": -117.057
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_84",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 7.08,
+          "y": 8,
+          "z": -85
+        },
+        "max": {
+          "x": 7.36,
+          "y": 9.2,
+          "z": -20
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 7.36,
+          "z": -85
+        },
+        {
+          "x": 7.36,
+          "z": -20
+        },
+        {
+          "x": 7.08,
+          "z": -20
+        },
+        {
+          "x": 7.08,
+          "z": -85
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_85",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -7.36,
+          "y": 8,
+          "z": -85
+        },
+        "max": {
+          "x": -7.08,
+          "y": 9.2,
+          "z": -20
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -7.36,
+          "z": -20
+        },
+        {
+          "x": -7.36,
+          "z": -85
+        },
+        {
+          "x": -7.08,
+          "z": -85
+        },
+        {
+          "x": -7.08,
+          "z": -20
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_86",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -26,
+          "y": 4,
+          "z": -107.36
+        },
+        "max": {
+          "x": -14,
+          "y": 5.2,
+          "z": -107.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -26,
+          "z": -107.36
+        },
+        {
+          "x": -14,
+          "z": -107.36
+        },
+        {
+          "x": -14,
+          "z": -107.08
+        },
+        {
+          "x": -26,
+          "z": -107.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_87",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -22,
+          "y": 4,
+          "z": -102.92
+        },
+        "max": {
+          "x": -14,
+          "y": 5.2,
+          "z": -102.64
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -14,
+          "z": -102.64
+        },
+        {
+          "x": -22,
+          "z": -102.64
+        },
+        {
+          "x": -22,
+          "z": -102.92
+        },
+        {
+          "x": -14,
+          "z": -102.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_88",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -26.36,
+          "y": 4,
+          "z": -107
+        },
+        "max": {
+          "x": -26.08,
+          "y": 5.2,
+          "z": -103
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -26.36,
+          "z": -103
+        },
+        {
+          "x": -26.36,
+          "z": -107
+        },
+        {
+          "x": -26.08,
+          "z": -107
+        },
+        {
+          "x": -26.08,
+          "z": -103
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_89",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -19.92,
+          "y": 8,
+          "z": -92.4
+        },
+        "max": {
+          "x": -19.64,
+          "y": 9.2,
+          "z": -92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -19.64,
+          "z": -92.4
+        },
+        {
+          "x": -19.64,
+          "z": -92
+        },
+        {
+          "x": -19.92,
+          "z": -92
+        },
+        {
+          "x": -19.92,
+          "z": -92.4
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_90",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -26,
+          "y": 8,
+          "z": -91.92
+        },
+        "max": {
+          "x": -20,
+          "y": 9.2,
+          "z": -91.64
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -20,
+          "z": -91.64
+        },
+        {
+          "x": -26,
+          "z": -91.64
+        },
+        {
+          "x": -26,
+          "z": -91.92
+        },
+        {
+          "x": -20,
+          "z": -91.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_91",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": -26.36,
+          "y": 8,
+          "z": -96
+        },
+        "max": {
+          "x": -26.08,
+          "y": 9.2,
+          "z": -92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": -26.36,
+          "z": -92
+        },
+        {
+          "x": -26.36,
+          "z": -96
+        },
+        {
+          "x": -26.08,
+          "z": -96
+        },
+        {
+          "x": -26.08,
+          "z": -92
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_92",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 14,
+          "y": 4,
+          "z": -107.36
+        },
+        "max": {
+          "x": 26,
+          "y": 5.2,
+          "z": -107.08
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 14,
+          "z": -107.36
+        },
+        {
+          "x": 26,
+          "z": -107.36
+        },
+        {
+          "x": 26,
+          "z": -107.08
+        },
+        {
+          "x": 14,
+          "z": -107.08
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_93",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 26.08,
+          "y": 4,
+          "z": -107
+        },
+        "max": {
+          "x": 26.36,
+          "y": 5.2,
+          "z": -103
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 26.36,
+          "z": -107
+        },
+        {
+          "x": 26.36,
+          "z": -103
+        },
+        {
+          "x": 26.08,
+          "z": -103
+        },
+        {
+          "x": 26.08,
+          "z": -107
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_94",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 14,
+          "y": 4,
+          "z": -102.92
+        },
+        "max": {
+          "x": 22,
+          "y": 5.2,
+          "z": -102.64
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 22,
+          "z": -102.64
+        },
+        {
+          "x": 14,
+          "z": -102.64
+        },
+        {
+          "x": 14,
+          "z": -102.92
+        },
+        {
+          "x": 22,
+          "z": -102.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_95",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 26.08,
+          "y": 8,
+          "z": -96
+        },
+        "max": {
+          "x": 26.36,
+          "y": 9.2,
+          "z": -92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 26.36,
+          "z": -96
+        },
+        {
+          "x": 26.36,
+          "z": -92
+        },
+        {
+          "x": 26.08,
+          "z": -92
+        },
+        {
+          "x": 26.08,
+          "z": -96
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_96",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 20,
+          "y": 8,
+          "z": -91.92
+        },
+        "max": {
+          "x": 26,
+          "y": 9.2,
+          "z": -91.64
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 26,
+          "z": -91.64
+        },
+        {
+          "x": 20,
+          "z": -91.64
+        },
+        {
+          "x": 20,
+          "z": -91.92
+        },
+        {
+          "x": 26,
+          "z": -91.92
+        }
+      ]
+    },
+    {
+      "id": "Railing_alpha_97",
+      "type": "safety_railing",
+      "bounds": {
+        "min": {
+          "x": 19.64,
+          "y": 8,
+          "z": -92.4
+        },
+        "max": {
+          "x": 19.92,
+          "y": 9.2,
+          "z": -92
+        }
+      },
+      "rotationY": 0,
+      "slopeDegrees": 0,
+      "polygonXZ": [
+        {
+          "x": 19.64,
+          "z": -92
+        },
+        {
+          "x": 19.64,
+          "z": -92.4
+        },
+        {
+          "x": 19.92,
+          "z": -92.4
+        },
+        {
+          "x": 19.92,
+          "z": -92
+        }
+      ]
+    }
+  ]
+}

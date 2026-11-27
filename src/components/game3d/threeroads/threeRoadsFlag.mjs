@@ -1,3 +1,5 @@
+import { questTestRuntimePreview } from './questTestRuntime.mjs';
+
 // The War of Three Roads: one switch for everything under threeroads/.
 //
 // Off by default while it is being built. Turn it on for one visit with
@@ -31,6 +33,7 @@ function readSwitch(win, queryKey, storageKey) {
 }
 
 export function threeRoadsEnabled(win = globalThis.window) {
+  if (questTestRuntimePreview() !== null) return true;
   return readSwitch(win, THREE_ROADS_QUERY_KEY, THREE_ROADS_STORAGE_KEY) ?? THREE_ROADS_DEFAULT_ON;
 }
 
@@ -42,6 +45,8 @@ export const THREE_ROADS_PREVIEW_QUERY_KEY = 'threeRoadsPreview';
 export const THREE_ROADS_PREVIEW_STORAGE_KEY = 'game3d.threeRoadsPreview';
 
 export function threeRoadsPreviewEnabled(win = globalThis.window) {
+  const adminPreview = questTestRuntimePreview();
+  if (adminPreview !== null) return adminPreview;
   if (!threeRoadsEnabled(win)) return false;
   return readSwitch(win, THREE_ROADS_PREVIEW_QUERY_KEY, THREE_ROADS_PREVIEW_STORAGE_KEY) ?? false;
 }

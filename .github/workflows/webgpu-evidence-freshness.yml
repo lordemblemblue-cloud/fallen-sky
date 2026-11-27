@@ -1,0 +1,24 @@
+name: WebGPU evidence freshness tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/webgpu-evidence-freshness.mjs'
+      - 'tests/webgpuEvidenceFreshness.test.mjs'
+      - '.github/workflows/webgpu-evidence-freshness.yml'
+  push:
+    paths:
+      - 'scripts/webgpu-evidence-freshness.mjs'
+      - 'tests/webgpuEvidenceFreshness.test.mjs'
+      - '.github/workflows/webgpu-evidence-freshness.yml'
+
+jobs:
+  freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test saved browser report timestamp boundaries
+        run: node --test tests/webgpuEvidenceFreshness.test.mjs

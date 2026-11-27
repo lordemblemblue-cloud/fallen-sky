@@ -51,7 +51,11 @@
         "role": "admin"
       }
     },
-    "read": null,
+    "read": {
+      "user_condition": {
+        "role": "admin"
+      }
+    },
     "update": {
       "user_condition": {
         "role": "admin"
@@ -60,7 +64,7 @@
     "delete": {
       "$or": [
         {
-          "data.author": "{{user.id}}"
+          "data.userId": "{{user.id}}"
         },
         {
           "user_condition": {

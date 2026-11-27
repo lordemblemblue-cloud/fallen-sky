@@ -92,7 +92,7 @@ export default function InstallAppButton() {
         aria-label="Install Adam X Eve Games on this device"
         aria-controls="games-hub-install-help"
         aria-expanded={showHelp}
-        className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-white/25 bg-slate-950/75 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-md transition hover:border-cyan-300/70 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/25 bg-slate-950/75 px-3 py-2 text-xs font-semibold text-white shadow-lg backdrop-blur-md transition hover:border-cyan-300/70 hover:bg-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
       >
         <Download className="h-4 w-4 text-cyan-200" aria-hidden="true" />
         Install App
@@ -113,14 +113,14 @@ export default function InstallAppButton() {
               type="button"
               onClick={() => setShowHelp(false)}
               aria-label="Close install instructions"
-              className="rounded p-1 text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+              className="-m-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded text-white/70 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
             >
               <X className="h-4 w-4" aria-hidden="true" />
             </button>
           </div>
           <p className="mt-3 text-sm leading-6 text-white/80">{installDirections()}</p>
           <p className="mt-3 text-xs leading-5 text-white/55">
-            This installs the games hub in its own window. Both games still run from the published website and may need an internet connection.
+            This installs the games hub in its own window. The games still run from the published website and may need an internet connection.
           </p>
         </section>
       )}

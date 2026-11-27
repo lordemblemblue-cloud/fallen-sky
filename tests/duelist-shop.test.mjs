@@ -76,7 +76,7 @@ test('item bonuses are implemented in authoritative fighter state and replicated
   assert.equal(f.items.length,2);
   equipItems(f,[{id:'windblossom',tier:1},{id:'heartseed',tier:1}]);
   assert.equal(f.shopStats.passive.onAllyHealHaste,0);
-  assert.equal(PROTOCOL,13);
+  assert.ok(Number.isInteger(PROTOCOL) && PROTOCOL >= 16, 'tier-aware snapshot protocol');
   const own = encodeOwn(f,{x:0,y:0,z:0,yaw:0,vy:0,kx:0,kz:0,motion:null},0);
   const copy = createFighter({id:'copy',classId:'healer'});
   applyOwn(copy,{x:0,y:0,z:0,yaw:0,vy:0,kx:0,kz:0},JSON.parse(JSON.stringify(own)));
@@ -105,7 +105,7 @@ test('equipped item HUD always shows six horizontal slots, including placeholder
   assert.equal(owned[0].name, 'Heartseed');
   assert.equal(owned[0].tier, 1);
   assert.equal(owned[0].passive, null, 'a Tier I item does not advertise its locked passive as active');
-  assert.equal(owned[1].art, '/duelist/items/windblossom.svg');
+  assert.equal(owned[1].art, '/duelist/item-tiers/windblossom-3.svg');
   assert.equal(owned[1].tier, 3);
   assert.ok(owned[1].passive.includes('movement speed'));
   assert.ok(owned.slice(2).every((slot) => slot === null));
@@ -122,7 +122,7 @@ test('equipped HUD rejects unknown or duplicated IDs and never constructs an unt
   assert.equal(slots[0].id, 'ironfang');
   assert.equal(slots[0].tier, 2);
   assert.equal(new Set(slots.filter(Boolean).map((slot) => slot.id)).size, 6);
-  assert.ok(slots.filter(Boolean).every((item) => item.art.startsWith('/duelist/items/') && !item.art.includes('..')));
+  assert.ok(slots.filter(Boolean).every((item) => item.art.startsWith('/duelist/item-tiers/') && !item.art.includes('..')));
 });
 
 test('battle HUD item row lives over the existing HP panel and keeps the responsive scale', () => {

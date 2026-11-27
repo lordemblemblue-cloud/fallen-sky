@@ -1,24 +1,26 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { createSceneRenderer } from '../../../lib/webgpuSceneRenderer.js';
+import { createSceneRenderer, destroySceneRenderer, isSceneRendererReady, sceneRendererApi, onSceneDeviceLost } from '../../../lib/webgpuSceneRenderer.js';
 import { loadFighterBody } from '../client/assets.mjs';
 import { prepareIdlePreview } from './idlePreview.mjs';
+import { createHQIdleGuests } from './hqIdleGuests.js';
 
 /**
  * Small, optional WebGL stage for the menu only.
  * Gameplay renderer and WebGPU migration paths are deliberately untouched.
  * The CSS hangar remains visible if WebGL or a character asset fails to load.
  */
-export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId = 'duelist' }) {
+export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId = 'duelist', headquarters = false, onHqStatus }) {
   const mountRef = useRef(null);
 
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount || typeof window === 'undefined') return undefined;
-    let renderer;
+    let renderer, ready;
     try {
-      renderer = createSceneRenderer('duelist-adventure', { alpha: true, antialias: true, powerPreference: 'low-power' }).renderer;
-    } catch {
+      ({ renderer, ready } = createSceneRenderer('duelist-adventure', { alpha: true, antialias: true, powerPreference: 'low-power' }));
+    } catch (error) {
+      if (headquarters) onHqStatus?.({ state: 'fallback', message: String(error?.message || error).slice(0, 200) });
       return undefined;
     }
 
@@ -27,12 +29,26 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     let idlePose = null;
     let model = null;
     let observer = null;
+    let hq = null;
+    let guests = null;
+    let guestStarted = false;
+    let reportElapsed = 0;
+    let hqFailed = false;
+    let gpuFailed = false;
+    let hqFramed = headquarters;
+    let modelOrigin = null;
+    let modelRotation = null;
     const clock = new THREE.Clock();
     const scene = new THREE.Scene();
     scene.fog = new THREE.FogExp2(0x071426, 0.026);
-    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 90);
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 250);
     camera.position.set(0, 1.65, 5.8);
     camera.lookAt(-0.6, 1.18, 0);
+    if (headquarters) frameHQCamera();
+    // The fighter and HQ use the same metre-scale scene and depth buffer.
+    const fighterAnchor = new THREE.Group();
+    fighterAnchor.name = 'HQ_SelectedFighterAnchor';
+    scene.add(fighterAnchor);
 
     renderer.setClearColor(0x020711, 0);
     renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
@@ -46,6 +62,7 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
 
     const world = new THREE.Group();
     scene.add(world);
+    world.visible = !headquarters;
     const steel = new THREE.MeshStandardMaterial({ color: 0x17283a, metalness: 0.78, roughness: 0.35 });
     const darker = new THREE.MeshStandardMaterial({ color: 0x091323, metalness: 0.7, roughness: 0.48 });
     const cyan = new THREE.MeshBasicMaterial({ color: 0x29b5ef });
@@ -110,10 +127,11 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
       const prepared = await prepareIdlePreview({ model: next, bodyId: fighter, classId, embeddedIdle: clips?.idle });
       if (!active) { prepared.dispose(); return; }
       model = next;
-      model.position.x -= 1.48;
-      model.rotation.y = 0; // Assets are authored facing +Z, toward the camera.
+      modelOrigin = model.position.clone();
+      modelRotation = model.rotation.clone();
+      placeFighter();
       idlePose = prepared;
-      scene.add(model); // reveal only after an authored idle or relaxed fallback was applied
+      fighterAnchor.add(model); // actual 3D scene, not a foreground viewer or HTML overlay
     }).catch(() => {
       // A missing or damaged character GLB must not take the home menu down.
     });
@@ -134,17 +152,118 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     }
 
     const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const originalCamera = new THREE.Vector3(0, 1.65, 5.8);
+    function frameHQCamera() {
+      // A standing eye-level camera, inside the actual hall, looking slightly
+      // left so the selected fighter is clear of the menu copy on the left.
+      camera.position.set(0, 1.7, 8.4);
+      camera.fov = 50;
+      camera.lookAt(-0.75, 1.0, 4);
+      camera.updateProjectionMatrix();
+    }
+    function placeFighter() {
+      if (!model || !modelOrigin) return;
+      model.position.copy(modelOrigin);
+      model.rotation.copy(modelRotation);
+      fighterAnchor.position.set(hqFramed ? 0 : -1.48, hqFramed ? 0.014 : 0, hqFramed ? 4 : 0);
+      fighterAnchor.rotation.y = Math.atan2(camera.position.x - fighterAnchor.position.x, camera.position.z - fighterAnchor.position.z);
+    }
+    function showOriginal() {
+      guests?.setActive(false);
+      hqFramed = headquarters;
+      scene.background = null;
+      world.visible = !headquarters;
+      portal.visible = true;
+      if (headquarters) {
+        frameHQCamera();
+      } else {
+        camera.position.copy(originalCamera);
+        camera.fov = 42;
+        camera.lookAt(-0.6, 1.18, 0);
+      }
+      camera.updateProjectionMatrix();
+      placeFighter();
+    }
+    function failHQ(error) {
+      hqFailed = true;
+      hq?.disposeGuildHeadquarters();
+      hq = null;
+      showOriginal();
+      onHqStatus?.({ state: 'fallback', message: String(error?.message || error).slice(0, 200) });
+    }
+    function failGPU(error) {
+      if (!active || gpuFailed) return;
+      gpuFailed = true;
+      failHQ(error);
+      renderer.domElement.style.visibility = 'hidden';
+      if (frameId != null) window.cancelAnimationFrame(frameId);
+    }
+    const removeLossListener = onSceneDeviceLost(renderer, failGPU);
+    ready?.catch(failGPU);
+    // Load the default Home environment only in the browser, only on HOME. The existing
+    // character, scene, renderer, and single RAF remain the owners of rendering.
+    if (headquarters) {
+      onHqStatus?.({ state: 'loading' });
+      import('./experimentalGuildHQ.js').then(({ createGuildHeadquarters }) => {
+        if (!active || gpuFailed) return;
+        hq = createGuildHeadquarters(THREE, scene, {
+          quality: window.matchMedia?.('(pointer: coarse)').matches ? 'mobile' : 'performance',
+          onFallback: (still) => { if (still && active) { showOriginal(); onHqStatus?.({ state: 'fallback', message: 'Sustained slow frames: stationary HQ retained behind fighter.' }); } },
+        });
+        // Keep the 36m headquarters at its actual authored scale. The fighter
+        // stands on its real floor and shares the camera, lights and depth.
+        world.visible = false;
+        hqFramed = true;
+        scene.background = new THREE.Color(0xb5d5eb);
+        frameHQCamera();
+        placeFighter();
+        if (reducedMotion) hq.setAmbientSystemsEnabled(false);
+      }).catch(error => { if (active) failHQ(error); });
+    }
     const tick = () => {
-      if (!active) return;
-      const dt = Math.min(0.05, clock.getDelta());
+      if (!active || gpuFailed) return;
+      const elapsed = clock.getDelta();
+      const dt = Math.min(0.05, elapsed);
       if (!document.hidden) {
         idlePose?.update(dt);
-        if (!reducedMotion) {
+        if (!reducedMotion && world.visible) {
           portal.rotation.z += dt * 0.08;
           ticks.rotation.z -= dt * 0.18;
           platformRing.rotation.z += dt * 0.1;
         }
-        renderer.render(scene, camera);
+        if (isSceneRendererReady(renderer)) {
+          try {
+            if (hq && !hqFailed) {
+              hq.updateGuildHeadquarters(dt);
+              // Only load optional cameos once the primary fighter and HQ are ready.
+              if (model && !guestStarted && hq.getHeadquartersPerformanceStats().active) {
+                guestStarted = true;
+                guests = createHQIdleGuests({ THREE, scene, selected: fighter,
+                  mobile: !!window.matchMedia?.('(pointer: coarse)').matches,
+                  reducedMotion: !!reducedMotion, loadBody: loadFighterBody, prepareIdle: prepareIdlePreview });
+                void guests.start();
+              }
+              guests?.update(dt);
+              if (elapsed < 0.5) {
+                guests?.reportFrame(elapsed * 1000, elapsed);
+                hq.reportHostFrameTime(elapsed * 1000, elapsed);
+              }
+            }
+            renderer.render(scene, camera);
+            if (hq && !hqFailed) {
+              reportElapsed += elapsed;
+              if (reportElapsed >= 1) {
+                reportElapsed = 0;
+                const stats = hq.getHeadquartersPerformanceStats();
+                onHqStatus?.({ ...stats, idleGuestCount: guests?.count || 0, state: stats.stationary ? 'fallback' : 'active', backend: sceneRendererApi(renderer), frameMs: elapsed * 1000 });
+              }
+            }
+          } catch (error) {
+            if (hq) failHQ(error);
+            else if (headquarters && !hqFailed) failHQ(error);
+            else { failGPU(error); return; }
+          }
+        }
       }
       frameId = window.requestAnimationFrame(tick);
     };
@@ -153,18 +272,22 @@ export default function DuelistHangarStage({ fighter = 'maskedWarrior', classId 
     return () => {
       active = false;
       if (frameId != null) window.cancelAnimationFrame(frameId);
+      removeLossListener();
       observer?.disconnect();
       if (!observer) window.removeEventListener('resize', resize);
+      guests?.dispose();
+      hq?.disposeGuildHeadquarters();
       idlePose?.dispose();
-      if (model) scene.remove(model);
+      if (model) fighterAnchor.remove(model);
+      scene.remove(fighterAnchor);
       // GLB geometry/materials are shared by the character loader's cache:
       // do not dispose them here. Only dispose geometry owned by this stage.
       world.traverse((object) => { if (object.isMesh) object.geometry.dispose(); });
       materials.forEach((material) => material.dispose());
-      renderer.dispose();
+      destroySceneRenderer(renderer);
       renderer.domElement.remove();
     };
-  }, [fighter, classId]);
+  }, [fighter, classId, headquarters, onHqStatus]);
 
-  return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" />;
+  return <div ref={mountRef} className="duelist-hangar-stage" aria-hidden="true" style={headquarters ? { background: 'url(https://media.base44.com/images/public/6af625cd654fa5b8954442ce/6d80d4d1d58c183223eebfce3d778043_scene.png) center / cover no-repeat #151e2a', pointerEvents: 'none' } : undefined} />;
 }

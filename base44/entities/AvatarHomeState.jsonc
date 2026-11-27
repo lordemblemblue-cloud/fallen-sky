@@ -48,11 +48,25 @@
       "items": {
         "type": "object"
       },
-      "default": []
+      "default": [],
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     },
     "preferences": {
       "type": "object",
-      "default": {}
+      "default": {},
+      "rls": {
+        "read": {
+          "user_condition": {
+            "role": "admin"
+          }
+        }
+      }
     }
   },
   "required": [

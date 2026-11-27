@@ -351,3 +351,7 @@
   .duelist-menu-bottom-link { flex-direction:column; gap:3px; font-size:9px; padding:7px 3px; }
   .duelist-menu-bottom-link svg { width:16px; height:16px; }
 }
+
+.dxt-detail-art[data-map-picture="true"], .duelist-hub-mode-art[data-map-picture="true"] { display:block; padding:0; overflow:hidden; }
+.dxt-detail-art[data-map-picture="true"]::before, .dxt-detail-art[data-map-picture="true"]::after,
+.duelist-hub-mode-art[data-map-picture="true"]::before, .duelist-hub-mode-art[data-map-picture="true"]::after { display:none; }

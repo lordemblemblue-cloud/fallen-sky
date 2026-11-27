@@ -1,11 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { URL } from 'node:url';
 
 const source = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Games Hub still navigates into the public Duelist entry route', () => {
-  assert.match(source('src/pages/GamesHub.jsx'), /to:\s*['"]\/duelist['"]/);
+  // The hub's game list lives in its catalog module; the page renders it.
+  assert.match(source('src/components/games/hub/gamesHubCatalog.mjs'), /to:\s*['"]\/duelist['"]/);
+  assert.match(source('src/pages/GamesHub.jsx'), /<GamesCrossScroll\b/);
 });
 
 test('main Duelist entry renders the cinematic hub, not the old Game 2 wrapper', () => {
@@ -32,5 +35,5 @@ test('Duelist hub removes Classic Arena from its visible home navigation without
 
 test('existing new-build game and mode routes remain intact', () => {
   assert.match(source('src/routes/duelist-next.index.jsx'), /component:\s*DuelistTemplateHub/);
-  assert.match(source('src/routes/duelist-next.\$page.jsx'), /ModePage/);
+  assert.match(source('src/routes/duelist-next.$page.jsx'), /ModePage/);
 });

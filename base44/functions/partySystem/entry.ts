@@ -11,6 +11,20 @@ const json = (body: unknown, status = 200) => new Response(JSON.stringify(body),
 });
 
 const PARTY_MAX = 5;
+const launchRoutes = new Set(['/', '/gameview', '/duelist', '/duelist-next', '/duelist-next/play']);
+function safeLaunchRoute(value: unknown): string {
+  if (typeof value !== 'string' || value.length > 512) return '';
+  const [path, query] = value.split('?', 2);
+  if (!launchRoutes.has(path)) return '';
+  if (!query) return path;
+  if (path !== '/duelist-next/play') return '';
+  const params = new URLSearchParams(query);
+  for (const [key, val] of params) {
+    if (!['mode', 'online', 'mission', 'room', 'matchId', 'from'].includes(key) ||
+        !/^[A-Za-z0-9_-]{1,64}$/.test(val)) return '';
+  }
+  return path + '?' + params.toString();
+}
 const ACTIVE_STATUSES = new Set(['forming', 'full', 'active']);
 const displayName = (user: any) => user?.full_name || user?.username || 'Player';
 const avatarUrl = (user: any) => user?.avatar_url || user?.profile_image || '';
@@ -116,7 +130,7 @@ Deno.serve(async (req) => {
       for (const invite of launchInvites || []) {
         if (isExpired(invite.expires_at)) {
           await svc.PartyLaunchInvite.update(invite.id, { status: 'expired' });
-        } else activeLaunchInvites.push(invite);
+        } else if (safeLaunchRoute(invite.launch_url)) activeLaunchInvites.push({ ...invite, launch_url: safeLaunchRoute(invite.launch_url) });
       }
 
       return json({
@@ -299,13 +313,15 @@ Deno.serve(async (req) => {
     if (action === 'broadcast_game_launch') {
       const { party } = await activePartyFor(user.id);
       if (!party) return json({ success: true, notified: 0 });
+      if (party.leaderId !== user.id) return json({ error: 'Only the party leader can launch a game' }, 403);
       const title = String(data.gameTitle || '').trim();
       if (!title) return json({ error: 'Game title is required' }, 400);
       const roster = await rosterFor(party.id);
       const recipients = roster.filter((m: any) => m.user_id !== user.id);
       const cover = String(data.gameCover || '');
       const gameId = String(data.gameId || '');
-      const launchUrl = String(data.launchUrl || '');
+      const launchUrl = safeLaunchRoute(data.launchUrl);
+      if (!launchUrl) return json({ error: 'Unknown game route' }, 400);
 
       await svc.Party.update(party.id, {
         activeGameId: gameId,
@@ -347,13 +363,13 @@ Deno.serve(async (req) => {
       const invite = await svc.PartyLaunchInvite.get(String(data.inviteId || ''));
       if (!invite || invite.recipient_id !== user.id) return json({ error: 'Game invite not found' }, 404);
       if (invite.status !== 'pending') return json({ error: 'Game invite is no longer pending' }, 409);
-      if (isExpired(invite.expires_at)) {
+      if (isExpired(invite.expires_at) || !safeLaunchRoute(invite.launch_url)) {
         await svc.PartyLaunchInvite.update(invite.id, { status: 'expired' });
         return json({ error: 'Game invite expired' }, 410);
       }
       const accepted = data.response === 'accepted';
       await svc.PartyLaunchInvite.update(invite.id, { status: accepted ? 'accepted' : 'declined' });
-      return json({ success: true, accepted, launchUrl: accepted ? invite.launch_url : '', gameTitle: invite.game_title });
+      return json({ success: true, accepted, launchUrl: accepted ? safeLaunchRoute(invite.launch_url) : '', gameTitle: invite.game_title });
     }
 
     return json({ error: 'Unknown party action' }, 400);

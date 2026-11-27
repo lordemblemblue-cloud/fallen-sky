@@ -20,14 +20,14 @@ test('four categories share a single text-free visual template and real detail p
   assert.match(css, /template-mode-frame\.svg/);
   assert.match(css, /template-character-frame\.svg/);
   assert.match(menu, /const \[category, setCategory\]/);
-  assert.match(menu, /onSelect=\{setMode\}/);
+  assert.match(menu, /onSelect=\{chooseMode\}/);
   assert.match(menu, /role="group" aria-label=\{tab.title \+ ' game modes'\}/);
 });
 
 test('mode routes launch real supported modes only, never imaginary ranked or custom queues', () => {
   assert.deepEqual(templateLaunch('normal','duel',false,false), {mode:'duel', online:0});
   assert.equal(templateLaunch('normal','duel',true,false), null);
-  assert.deepEqual(templateLaunch('normal','duel',true,true), {mode:'duel', online:1});
+  assert.equal(templateLaunch('normal','duel',true,true), null);
   assert.deepEqual(templateLaunch('practice','team-drills',false,false), {mode:'tdm', online:0});
   assert.deepEqual(templateLaunch('practice','free-practice',false,false), {mode:'practice', online:0});
   assert.equal(templateLaunch('practice','target-range'), null);

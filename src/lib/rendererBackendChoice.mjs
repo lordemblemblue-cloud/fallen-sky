@@ -18,6 +18,23 @@ import { WEBGPU_SCENES, isSceneWebGPUPreviewable, isSceneWebGPUReady } from './w
 
 export const RENDERER_OVERRIDE_KEY = 'fallen_sky_renderer_v1';
 export const RENDERER_KINDS = Object.freeze(['webgpu', 'webgl2', 'webgl']);
+
+// The hub's Yes/No choice applies to this launch even if browser storage is blocked.
+// A manual developer URL override still takes precedence. No device-failure flags
+// are cleared here: the existing recovery policy remains authoritative.
+const launchPreferences = new WeakMap();
+export function setLaunchRendererPreference(preference, host = globalThis.window) {
+  if (!host || !['auto', 'webgl'].includes(preference)) return;
+  launchPreferences.set(host, preference);
+  try {
+    const storage = host.localStorage;
+    if (!storage) return;
+    if (preference === 'auto') storage.removeItem(RENDERER_OVERRIDE_KEY);
+    else storage.setItem(RENDERER_OVERRIDE_KEY, 'webgl');
+    launchPreferences.delete(host);
+  } catch { /* keep the in-memory preference for this page */ }
+}
+
 // Set (per tab) when WebGPURenderer failed to start or lost its device: the next start uses the classic renderer.
 export const RENDERER_FAILED_KEY = 'fallen_sky_renderer_failed_v1';
 
@@ -67,7 +84,24 @@ export function chooseSceneRendererFor(sceneId, host = globalThis.window) {
   try { previousFailure = host?.sessionStorage?.getItem?.(RENDERER_FAILED_KEY + ':' + sceneId) === '1'; } catch { /* optional */ }
   try { search = host?.location?.search || ''; } catch { /* optional */ }
   try { storage = host?.localStorage || null; } catch { /* optional */ }
-  const override = readRendererOverride({ search, storage });
+  let override = readRendererOverride({ search, storage });
+  let explicit = false;
+  try {
+    const param = new globalThis.URLSearchParams(search).get('renderer');
+    explicit = param === 'auto' || RENDERER_KINDS.includes(param);
+  } catch { /* optional */ }
+  if (host && launchPreferences.has(host)) {
+    if (explicit) launchPreferences.delete(host);
+    else override = launchPreferences.get(host) === 'webgl' ? 'webgl' : null;
+  }
+  // An explicit WebGPU override must not bypass the browser's secure-context
+  // requirement. Keep forced WebGL2 available to test fallback on HTTP pages.
+  // Reading this browser flag can itself throw in privacy wrappers.
+  if (override === 'webgpu') {
+    try {
+      if (host?.isSecureContext === false) return { kind: 'webgl', reason: 'webgpu-api-unavailable' };
+    } catch { return { kind: 'webgl', reason: 'webgpu-api-unavailable' }; }
+  }
   // The graphics API is exposed only in supported, secure browser contexts.
   // Do not default to WebGPU on SSR, insecure pages or browsers without it. Privacy wrappers can also throw
   // on reading navigator.gpu (tests/webgpuNavigatorGpuGetterRegression.test.mjs): that counts as no WebGPU.

@@ -1,0 +1,25 @@
+name: Conduit spatial audio
+on:
+  pull_request:
+    paths:
+      - 'src/components/duelist/client/audio.mjs'
+      - 'src/components/duelist/client/maps/conduitSpatialAudio.mjs'
+      - 'src/components/duelist/client/maps/conduitAudioBank.mjs'
+      - 'tests/duelist-conduit-spatial-audio.test.mjs'
+      - '.github/workflows/duelist-conduit-audio.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check src/components/duelist/client/audio.mjs
+      - run: node --check src/components/duelist/client/maps/conduitSpatialAudio.mjs
+      - run: node --check src/components/duelist/client/maps/conduitAudioBank.mjs
+      - run: node --test tests/duelist-conduit-spatial-audio.test.mjs

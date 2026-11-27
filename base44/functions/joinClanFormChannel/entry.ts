@@ -1,5 +1,23 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 
+const hex = (bytes: Uint8Array) => Array.from(bytes, x => x.toString(16).padStart(2, '0')).join('');
+async function passwordDigest(password: string, salt: Uint8Array) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
+  return hex(new Uint8Array(await crypto.subtle.deriveBits({name:'PBKDF2', hash:'SHA-256', salt, iterations:600000}, key, 256)));
+}
+async function hashPassword(password: string) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return hex(salt) + '.' + await passwordDigest(password, salt);
+}
+async function matchesPassword(password: string, stored: string) {
+  if (!/^[a-f0-9]{32}\.[a-f0-9]{64}$/.test(stored)) return false;
+  const [salt, expected] = stored.split('.');
+  const actual = await passwordDigest(password, Uint8Array.from(salt.match(/../g)!, x => parseInt(x, 16)));
+  let diff = 0;
+  for (let i = 0; i < actual.length; i++) diff |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
 const STANDARD_TOPICS = ['General', 'Farming', 'Grinding', 'LFG'];
 const json = (body: unknown, status = 200) => Response.json(body, { status });
 const fail = (error: string, status = 400) => { throw Object.assign(new Error(error), { status }); };
@@ -9,7 +27,7 @@ const project = (ch: any) => ({
   created_by_clan_id: ch.created_by_clan_id,
   channel_type: ch.channel_type || 'chat',
   capacity: ch.capacity || 50,
-  requires_password: Boolean(ch.join_password),
+  requires_password: Boolean(ch.join_password_hash || ch.join_password),
 });
 
 Deno.serve(async (req) => {
@@ -25,6 +43,7 @@ Deno.serve(async (req) => {
     if (typeof game_id !== 'string' || !game_id || typeof clan_id !== 'string' || !clan_id) {
       return json({ success: false, error: 'Game and clan are required' }, 400);
     }
+    if (typeof join_password !== 'string' || join_password.length > 100) fail('Invalid channel password');
     const entities = base44.asServiceRole.entities;
     const members = await entities.ClanMember.filter({ clan_id, user_id: user.id });
     const member = members?.[0];
@@ -76,7 +95,7 @@ Deno.serve(async (req) => {
         participating_clan_ids: [clan_id],
         is_open: scope === 'all_clans',
         access_scope: scope,
-        join_password: typeof join_password === 'string' ? join_password.slice(0, 100) : '',
+        join_password_hash: join_password ? await hashPassword(join_password) : '',
         channel_type: ['chat', 'party'].includes(channel_type) ? channel_type : 'chat',
         capacity: Math.max(2, Math.min(200, Number(desired_capacity) || 100)),
         active_member_ids: [],
@@ -93,9 +112,17 @@ Deno.serve(async (req) => {
       && !(selected.participating_clan_ids || []).includes(clan_id)) {
       fail('This channel is not accepting new clans', 403);
     }
-    if (shared && selected.join_password && owner !== clan_id
-      && join_password !== selected.join_password
-      && !(selected.participating_clan_ids || []).includes(clan_id)) {
+    // Upgrade pre-existing channels on access. The write clears the legacy value
+    // and installs its verifier together, preserving existing memberships.
+    if (selected.join_password && !selected.join_password_hash) {
+      const hash = await hashPassword(selected.join_password);
+      await entities.ClanFormChannel.update(selected.id, { join_password: '', join_password_hash: hash });
+      selected.join_password_hash = hash;
+      selected.join_password = '';
+    }
+    if (shared && selected.join_password_hash && owner !== clan_id
+      && !(selected.participating_clan_ids || []).includes(clan_id)
+      && !await matchesPassword(join_password, selected.join_password_hash)) {
       fail('Channel password is invalid', 403);
     }
     let current = Array.isArray(selected.active_member_ids) ? selected.active_member_ids : [];

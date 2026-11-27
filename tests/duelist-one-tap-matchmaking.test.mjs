@@ -5,14 +5,15 @@ import { templateLaunch } from '../src/components/duelist/menu/templateCatalog.m
 
 const hub = readFileSync(new URL('../src/components/duelist/menu/DuelistTemplateHub.jsx', import.meta.url), 'utf8');
 
-test('a normal public mode card queues immediately when a real lobby is online', () => {
+test('public mode cards select the mode, then open the named-server browser instead of queuing', () => {
   assert.match(hub, /onClick=\{\(\) => onSelect\(item\.id\)\}/);
   assert.match(hub, /onSelect=\{chooseMode\}/);
-  assert.match(hub, /const chooseMode = id =>/);
-  assert.match(hub, /category === 'normal' && lobby\.online && selected\?\.route && MENU_MODES\[selected\.route\]\?\.online/);
-  assert.match(hub, /launch\(id, true\)/);
-  assert.deepEqual(templateLaunch('normal', 'ctf', true, true), { mode: 'ctf', online: 1 });
-  assert.deepEqual(templateLaunch('normal', 'control', true, true), { mode: 'control', online: 1 });
+  assert.match(hub, /const chooseMode = id => setMode\(id\)/);
+  assert.match(hub, /onClick=\{\(\) => openServers\(mode\.route\)\}/);
+  assert.match(hub, /page: 'online-play'/);
+  assert.doesNotMatch(hub, /launch\(id, true\)|'QUEUE'/);
+  assert.equal(templateLaunch('normal', 'ctf', true, true), null);
+  assert.equal(templateLaunch('normal', 'control', true, true), null);
 });
 
 test('offline, ranked and custom categories are not silently put into public matches', () => {

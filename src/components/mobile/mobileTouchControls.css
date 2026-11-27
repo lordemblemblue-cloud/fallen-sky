@@ -169,6 +169,105 @@
   .mobile-look-zone {left:37%;top:14%;bottom:9%;}
 }
 
+/* Duelist Adventure's thumb-friendly landscape preset from the approved HUD:
+   primary movement and defense cluster on the left; offensive controls on the
+   right. Keep all overrides scoped so Fallen Sky retains its current sizes. */
+@media (orientation:landscape) {
+  .mobile-game-controls[data-game='duelist'] .mobile-move-stick {
+    width:clamp(112px,16vmin,146px);
+    height:clamp(112px,16vmin,146px);
+  }
+  .mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action='light'] {
+    width:clamp(92px,13vmin,112px);
+    height:clamp(92px,13vmin,112px);
+  }
+  /* Do not cover the central scoreboard; edit controls live behind MORE. */
+  .mobile-game-controls[data-game='duelist'] .mobile-control-toolbar {
+    left:auto;right:max(8px,env(safe-area-inset-right,0px));
+    transform:none;
+  }
+}
+
+
+/* Duelist's four real class skills: illustrated bubbles with names inside
+   and compact classifications underneath. Artwork and subtitles never take
+   pointer events away from their parent touch target. */
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action^='ability'],
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action='special'] {
+  position:absolute;overflow:visible;isolation:isolate;padding:0;
+  display:block;touch-action:none;
+}
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action^='ability'] {
+  width:clamp(60px,9vmin,70px);
+  height:clamp(60px,9vmin,70px);
+  min-width:60px;min-height:60px;
+}
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action='special'] {
+  min-width:72px;min-height:72px;
+  width:clamp(72px,10vmin,82px);
+  height:clamp(72px,10vmin,82px);
+  background:radial-gradient(circle at 45% 28%,rgba(144,102,39,.95),rgba(31,22,21,.98));
+}
+.mobile-duelist-ability-name {
+  position:absolute;top:3px;left:6px;right:6px;min-height:16px;
+  display:flex;align-items:center;justify-content:center;
+  color:#f8f6ed;line-height:1.02;letter-spacing:-.025em;font-size:9px;
+  font-weight:850;text-shadow:0 1px 3px #000,0 0 6px #000;
+  text-wrap:balance;pointer-events:none;
+}
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action='special']
+.mobile-duelist-ability-name {font-size:9px;top:4px;}
+.mobile-duelist-ability-art {
+  position:absolute;left:50%;top:59%;transform:translate(-50%,-50%);
+  width:22px;height:22px;pointer-events:none;
+  color:#e9d1ad;filter:drop-shadow(0 1px 3px #010811);
+}
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action='special']
+.mobile-duelist-ability-art {top:58%;width:23px;height:23px;color:#ffdc94;}
+.mobile-duelist-ability-number {
+  position:absolute;top:-8px;left:-5px;min-width:16px;height:17px;
+  border:1px solid rgba(240,196,133,.75);border-radius:6px;
+  display:grid;place-items:center;padding:1px 3px;
+  background:#091a2c;color:#fff2d8;font-size:9px;font-weight:850;
+  pointer-events:none;
+}
+.mobile-duelist-ability-charge {
+  position:absolute;bottom:3px;left:0;right:0;
+  font-size:10px;font-weight:850;color:#fff2cf;line-height:1;
+  pointer-events:none;text-shadow:0 1px 3px #000;
+}
+.mobile-duelist-ability-type {
+  position:absolute;left:50%;top:calc(100% + 4px);transform:translateX(-50%);
+  color:#d9efff;border:1px solid rgba(100,169,216,.45);
+  border-radius:6px;background:rgba(5,17,29,.84);
+  padding:2px 5px;white-space:nowrap;max-width:110px;
+  font-size:9px;font-weight:800;line-height:1.1;
+  letter-spacing:.01em;text-shadow:0 1px 2px #000;
+  pointer-events:none;
+}
+.mobile-game-controls[data-game='duelist']
+.mobile-touch-action[data-action='special'] .mobile-duelist-ability-type {
+  border-color:rgba(245,195,112,.58);color:#fce4b5;
+}
+.mobile-duelist-ability-cooldown {
+  position:absolute;inset:19px 2px 9px;z-index:2;
+  display:grid;place-items:center;border-radius:20px;
+  color:white;background:rgba(5,12,22,.82);font-size:12px;
+  text-shadow:0 1px 4px #000;pointer-events:none;
+}
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-low-will='true'] {
+  border-color:rgba(179,130,197,.74);
+}
+.mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-cooling='true']
+.mobile-duelist-ability-art {opacity:.42;}
+@media (orientation:landscape) and (max-height:390px) {
+  .mobile-game-controls[data-game='duelist'] .mobile-touch-action[data-action^='ability'] {
+    width:58px;height:58px;min-width:58px;min-height:58px;
+  }
+  .mobile-duelist-ability-name {font-size:8px;}
+  .mobile-duelist-ability-type {font-size:8px;padding:1px 4px;}
+}
+
 /* Mandatory landscape while playing either current game on a touch device.
    Cover all game controls and HUD even if the class picker temporarily disables
    touch input; do not show a bypass to a squashed portrait combat viewport. */

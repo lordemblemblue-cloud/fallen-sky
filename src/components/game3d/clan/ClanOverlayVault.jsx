@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Package, Coins, Gem, Upload, Download } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
 import { clanAction } from './clanStore';
 
 const RARITY_COLORS = {
@@ -13,6 +14,8 @@ const RARITY_COLORS = {
 
 /** Guild Vault tab — deposit/withdraw items, view stash tabs. */
 export default function ClanOverlayVault({ clan, vaultItems, myMembership, hall }) {
+  const { user } = useAuth();
+  const canCredit = user?.role === 'admin' && ['leader', 'officer'].includes(myMembership?.role);
   const [activeTab, setActiveTab] = useState(0);
   const [showDeposit, setShowDeposit] = useState(false);
   const [draft, setDraft] = useState({ item_name: '', quantity: 1, rarity: 'common' });
@@ -74,16 +77,16 @@ export default function ClanOverlayVault({ clan, vaultItems, myMembership, hall 
             Tab {t + 1}
           </button>
         ))}
-        <button
+        {canCredit && <button
           onClick={() => setShowDeposit(!showDeposit)}
           className="ml-auto mb-1 flex items-center gap-1.5 px-3 py-1 text-xs font-semibold bg-emerald-500/15 border border-emerald-400/30 text-emerald-300 rounded hover:bg-emerald-500/25"
         >
           <Upload className="w-3 h-3" />
-          Deposit
-        </button>
+          Credit vault
+        </button>}
       </div>
 
-      {showDeposit && (
+      {canCredit && showDeposit && (
         <div className="mx-6 mt-3 p-3 rounded bg-black/30 border border-white/10 space-y-2">
           <input
             value={draft.item_name}
