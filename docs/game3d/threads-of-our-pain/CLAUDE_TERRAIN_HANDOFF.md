@@ -1,5 +1,7 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
+> **R124 — second optional construction packet:** [Secrets buried beneath history](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md). D11–D20/S11–S20, 24 modular stages, 32 planned tests; 40/105 optional IDs and 60/125 total detailed construction entries. Reuse D09/S11 and D10/S12, M08 archive, M11 refuge and M13 monument. S13 genuine notice, S16–18 actual original actions, S19 both lanes; no baseline action credit. No runtime verification. Next R125 D21–D30/S21–S30.
+
 > **R123 — first optional construction packet:** [The secrets beyond the main road](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md). D01–D10/S01–S10, 24 modular stages, 32 planned tests; 20/105 optional IDs documented in this detailed series. Shared West Root, spring, bridge, cliff and waterfall assets; R66 second vista, R99 S09 provisional and S10 actual drain/lantern predicates retained. No runtime verification. Next R124 D11–D20/S11–S20.
 
 > **R122 — coordinated construction manifest:** [From story to world construction](R122_MAIN_CAMPAIGN_CONSTRUCTION_DEPENDENCY_AND_ASSET_MANIFEST.md). Verified nine packets, 20/20 main chapters, 182 stages (including one N/A worksheet step), 117 anchor rows/groups and 222 planned tests; 20 proposed shared asset families, 18 seams, 12 decision/alias checks. Use this register before regional preview; no runtime verification or build authority. R111 and R65/R84 gates remain. Next R123 optional-content intake.
