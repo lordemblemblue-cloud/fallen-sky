@@ -1,5 +1,7 @@
 # R61 — Three-reality continuity and production gate
 
+> Historical continuity ledger. For finale timeline replacement, fates, migration, and M05 postgame implications, [R64A](R64A_OWNER_ENDING_RECONCILIATION.md) takes precedence.
+
 Source: R60 cumulative Word master (5,708 paragraphs), narrative rules, R41/R50 audits, R54 ending ledger, R55–R60 adventure revisions. This is an additive targeted reconciliation, not new canon, a line-by-line final audit, or runtime verification.
 
 ## Reality and chronology rules
