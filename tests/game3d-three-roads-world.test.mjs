@@ -158,5 +158,7 @@ test('GameWorld3D has exactly one hook: create behind the switch, update, dispos
   assert.equal(count(/threeRoads\?\.dispose\(\)/g), 1);
   assert.equal(count(/threeRoads\?\.resolveCollision\(model\.position,/g), 1);
   assert.equal(count(/threeRoads\b/g), 7, 'no other use of the Three Roads world in GameWorld3D');
-  assert.equal(count(/from '\.\/threeroads\//g), 2, 'only the switch and the world are imported');
+  // The switch, the world, and the admin test preview another agent added on 2026-11-23.
+  const imported = [...source.matchAll(/from '\.\/threeroads\/([\w/]+)\.mjs'/g)].map(match => match[1]).sort();
+  assert.deepEqual(imported, ['ThreeRoadsWorld', 'questTestRuntime', 'threeRoadsFlag'], 'nothing else of the Three Roads is imported');
 });
