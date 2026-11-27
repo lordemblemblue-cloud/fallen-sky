@@ -1,5 +1,9 @@
 # R61 — stable quest and discovery navigation index
 
+> **R84 — unified New Game Plus contract:** [Progression, replay and difficulty](R84_UNIFIED_NEW_GAME_PLUS_PROGRESSION_CONTRACT.md). Owner rules consolidated, including retained levels/equipment, unlimited cycles, blue level suffix, 2x enemy XP and rebased challenge. Permanent ceiling, other rewards and exact stat curves remain open.
+
+> **R83 — priority canon reconciliation:** [Chronology, actor lifetimes and endings](R83_CANON_CHRONOLOGY_ACTOR_ENDING_RECONCILIATION.md). R64A/R65 ending precedence, separate local/presentation chronology, distinct families, phase/actor guards and unresolved writer blockers. R80 reported but not verified in PR #402; verified classifications remain 60/105 through R79. R81/R82 pending.
+
 > **R79 — third quest objective classification:** [D21–D30 / S21–S30](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md). 60/105 IDs provisionally classified. Preserve independent S27 evidence and repair receipts, S29 distinct-source threshold (R66 adapter proposed), S23/S25 dual lanes and actual S30 escort arrivals; exact phase gates and ending access unresolved.
 
 > **R78 — second quest objective classification:** [D11–D20 / S11–S20](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md). 40/105 IDs provisionally classified. Preserve genuine S16 deliveries, S17 toy repair, S18 escorts, S19 two-lane completion and S13 authored notice reuse; exact phase gates and ending access remain unresolved.
