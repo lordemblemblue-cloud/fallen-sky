@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R103 — fifth twenty opportunity window predicates:** [Beyond the forgotten horizon](R103_D41-D50_S41-S50_OPPORTUNITY_WINDOW_AUDIT.md). D41–D50/S41–S50 source re-audit, twenty proposed dialogue packets and terrain deltas; all 50 paired discoveries require post-claim vista, S41 consent, S43 D01 receipt reuse, D49 flight prerequisite and D50 precommit history. Supplemental audit 100/105. Next S51–S55 and consolidation. Draft only.
+
 > **R102 — fourth twenty opportunity window predicates:** [Those who never stopped waiting](R102_D31-D40_S31-S40_OPPORTUNITY_WINDOW_AUDIT.md). D31–D40/S31–S40 source re-audit, twenty proposed dialogue packets and terrain deltas; D31/S46 rested guardian, D36 required second vista, D37 delivery variants, S36 consent and S40 privacy. Supplemental audit 80/105; exact original closure TBD. Next D41–D50/S41–S50. Draft only.
 
 > **R101 — third twenty opportunity window predicates:** [The burdens we carry](R101_D21-D30_S21-S30_OPPORTUNITY_WINDOW_AUDIT.md). D21–D30/S21–S30 source re-audit with twenty proposed dialogue packets and terrain deltas, D25 required second vista, S27/S29 verified evidence adapter pending approval, actual two-lane receipts and independent optional outcomes. Supplemental audit 60/105; exact original closure TBD. Next D31–D40/S31–S40. Draft only.
