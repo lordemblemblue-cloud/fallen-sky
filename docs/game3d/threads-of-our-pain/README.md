@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R118 — Hollow Mountain and council construction prompts:** [The names carved in stone](R118_M13_M14_MEMORIAL_AND_COUNCIL_CONSTRUCTION_PROMPTS.md). M13–M14, 22 modular stages, 15 anchor groups, 28 planned tests. Shared D19/S23 worksite, actual escort/roof/names, neutral evidence and independent camp reports, original civilian retreat. Detailed main construction coverage 14/20; R111 chronology-dependent shipping blocked. No runtime verification. Next R119 M15–M16 crossing and witness review.
+
 > **R117 — refuge and family memory construction prompts:** [Those we could not leave behind](R117_M11_M12_REFUGE_AND_FAMILY_MEMORY_CONSTRUCTION_PROMPTS.md). M11–M12, 20 modular stages, 13 anchor groups, 25 planned tests. Actual vent/medicine, protected civilians, distinct families, shared motif/emblem, public evidence and safe revisit. Detailed main construction coverage 12/20; R111 chronology-dependent shipping blocked. No runtime verification. Next R118 M13–M14 memorial and neutral council aftermath.
 
 > **R116 — sanctuary and interception construction prompts:** [The stranger with my face](R116_M09_M10_SANCTUARY_INTERCEPTION_CONSTRUCTION_PROMPTS.md). M09–M10, 18 modular stages, 12 anchor groups, 22 planned tests. Two actual bodies, voluntary seal contact, two skies, survival and safe retreat, no deity defeat or Celestial Sight. Detailed main construction coverage 10/20. R111 chronology-dependent shipping blocked. No build or runtime verification. Next R117 M11–M12 mining refuge and family memory prompts.
