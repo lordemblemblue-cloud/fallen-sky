@@ -1,5 +1,7 @@
 # R61 — stable quest and discovery navigation index
 
+> **R78 — second quest objective classification:** [D11–D20 / S11–S20](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md). 40/105 IDs provisionally classified. Preserve genuine S16 deliveries, S17 toy repair, S18 escorts, S19 two-lane completion and S13 authored notice reuse; exact phase gates and ending access remain unresolved.
+
 > **R77 — first quest objective classification:** [D01–D10 / S01–S10](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md). 20/105 IDs provisionally classified; persistent versus event-exclusive lanes, actual closure predicates and NG+ recovery. S06 has an authored post-M14 retrospective, not a replay of the live meeting. Exact phase gates and runtime access largely unresolved.
 
 > **R65 current finale script:** [M19/M20 revised finale](R65_M19-M20_REVISED_FINALE.md) supersedes conflicting R39/R40/R54 branch scripts. Read with R64A. Retain existing approach, rescue and confrontation; sacrifice restores the age-eighteen existence with ancient former-world losses; refusal fuses the landscape and damage, with continued play and a roughly twenty-year reconstruction coda. Exact postgame mechanics and final script sign-off pending.
