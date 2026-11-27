@@ -85,21 +85,30 @@ export function createProfile(name){
 export function isProfile(p){
   return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer(GEAR_IDS.includes(k)&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&['starterBow','sapphireBow'].includes(p.equipped)&&p.inventory[p.equipped]>0&&['starterBow','sapphireBow'].every(k=>integer(p.enhancements?.[k],0,5))&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);
 }
+// Legacy records have no revision. A complete serialized record also catches same-time edits.
+export const slotStamp=record=>record===undefined?null:JSON.stringify(record);
 export function readSlots(storage){
   let raw;try{raw=storage.getItem(SAVE_KEY);}catch(error){return {slots:[],error:String(error?.message||error)};}
   if(!raw)return {slots:[],error:null};
+  if(raw.length>3*MAX_BACKUP_BYTES*2)return {slots:[],error:'Save data exceeds the local size limit. No save has been removed.'};
   let data;try{data=JSON.parse(raw);}catch{return {slots:[],error:'Save data is damaged. No save has been removed.'};}
   if(!data||typeof data!=='object'||Array.isArray(data))return {slots:[],error:'Save format is invalid.'};
-  return {slots:SLOT_IDS.filter(id=>Object.hasOwn(data,id)).map(id=>{const s=data[id];return isProfile(s?.profile)&&Number.isFinite(s?.savedAt)?{id,status:'valid',savedAt:s.savedAt,profile:s.profile}:{id,status:'corrupt'};}),error:null};
+  return {slots:SLOT_IDS.filter(id=>Object.hasOwn(data,id)).map(id=>{const s=data[id];return isProfile(s?.profile)&&Number.isFinite(s?.savedAt)?{id,status:'valid',savedAt:s.savedAt,profile:s.profile,stamp:slotStamp(s)}:{id,status:'corrupt',stamp:slotStamp(s)};}),error:null};
 }
-export function writeSlot(storage,id,profile,{overwrite=false}={}){
+export function writeSlot(storage,id,profile,{overwrite=false,expectedStamp}={}){
   if(!SLOT_IDS.includes(id)||!isProfile(profile))throw Error('Invalid save slot or profile.');
   const raw=storage.getItem(SAVE_KEY);
+  if(raw&&raw.length>3*MAX_BACKUP_BYTES*2)throw Error('Save data exceeds the local size limit.');
   const data=raw?JSON.parse(raw):{};
   if(!data||typeof data!=='object'||Array.isArray(data))throw Error('Save data is damaged.');
+  if(expectedStamp!==undefined&&slotStamp(Object.hasOwn(data,id)?data[id]:undefined)!==expectedStamp)throw Error('Save conflict: this slot changed. Reload or choose a different slot.');
   if(Object.hasOwn(data,id)&&!overwrite)throw Error('Confirm overwrite first.');
-  const record={savedAt:Date.now(),profile:copy(profile)};
-  storage.setItem(SAVE_KEY,JSON.stringify({...data,[id]:record}));
+  const prior=Object.hasOwn(data,id)?data[id]:null;
+  const previousTime=Number.isFinite(prior?.savedAt)?prior.savedAt:0;
+  const record={savedAt:Math.max(Date.now(),previousTime+1),profile:copy(profile)};
+  const next=JSON.stringify({...data,[id]:record});
+  if(next.length>3*MAX_BACKUP_BYTES*2)throw Error('Save data exceeds the local size limit.');
+  storage.setItem(SAVE_KEY,next);
   return record;
 }
 export function mostRecent(slots){return slots.filter(s=>s.status==='valid').sort((a,b)=>b.savedAt-a.savedAt)[0]||null;}
