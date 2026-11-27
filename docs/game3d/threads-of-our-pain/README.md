@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R127 — final discovery construction packet:** [The final forgotten treasures](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md). D41–D50/S41–S50, 24 modular stages, 32 planned tests; 100/105 optional IDs, all 50 discoveries and 120/125 total detailed construction entries. D44–50 required second vistas, D49 flight prerequisite, D50 precommit history, S41 consent, S43 D01 receipt reuse, S46 rest and S50 distinct short span. No runtime verification. Next R128 S51–S55 and consolidation.
+
 > **R126 — fourth optional construction packet:** [The weapons of another life](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md). D31–D40/S31–S40, 24 modular stages, 32 planned tests; 80/105 optional IDs and 100/125 total detailed construction entries. D31/S46 rested guardian, D36 required vista, D39/D40 progression-safe rewards, S35/S36/S38 genuine lanes, S39 proposed exchange policy and S40 privacy. No runtime verification. Next R127 D41–D50/S41–S50.
 
 > **R125 — third optional construction packet:** [The civilizations and their forgotten relics](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md). D21–D30/S21–S30, 24 modular stages, 32 planned tests; 60/105 optional IDs and 80/125 total detailed construction entries. Shared faction sites, D17–20 reuse, dual lanes S23–25/S27, and S29 distinct source threshold with proposed R66 early S27 adapter approval gate. No runtime verification. Next R126 D31–D40/S31–S40.
