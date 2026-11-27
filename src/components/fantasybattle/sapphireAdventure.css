@@ -130,3 +130,26 @@
 @media(max-aspect-ratio:4/3){.fa-ui.page .fa-panel{border:0;border-bottom:1px solid var(--fa-line);border-radius:12px;background:linear-gradient(125deg,#080e20ed,#1c3c6ddc)}.fa-heading-kicker{display:none}.fa-ui[data-screen="09"] .fa-panel{font-size:10px;overflow:auto}.fa-ui[data-screen="09"] .fa-enemy-intent .fa-skill-art{display:none}}
 @media(max-height:480px){.fa-ui[data-screen="09"] .fa-panel{font-size:10px;gap:2px;padding:4px}.fa-ui[data-screen="09"] .fa-combat-actions .fa-button{min-height:26px}.fa-ui[data-screen="09"] .fa-enemy-hud{padding:2px}.fa-enemy-intent{padding:3px;margin-top:2px}.fa-heading-kicker{display:none}.fa-ui[data-screen="01"] .fa-button{min-height:30px}}
 @media(prefers-reduced-motion:reduce){.fa-root .fa-button{transition:none}}
+
+
+/* First runtime replacement pass: original image plates + existing live handlers.
+   Preserve image aspect ratio, use text/control hit areas rather than redraws. */
+.fa-ui.page[data-staged-original="true"][data-screen="35"]{inset:50% auto auto 50%;width:min(100vw,177.6833vh);height:min(100vh,56.2799vw);transform:translate(-50%,-50%);overflow:hidden;background:none}
+.fa-ui[data-staged-original="true"][data-screen="35"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"]:is([data-screen="35"],[data-screen="40"]) .fa-header,.fa-ui[data-staged-original="true"][data-screen="40"] .fa-panel h2{position:absolute!important;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);padding:0;border:0}
+.fa-ui[data-staged-original="true"][data-screen="35"] .fa-panel{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0;padding:0;border:0;background:none;display:block;overflow:visible;pointer-events:none;text-align:center;font-size:clamp(10px,min(1.45vw,2.58vh),21px)}
+.fa-original-subtitle{position:absolute;top:20%;left:38%;width:25%;text-align:center;color:#f6e5b8;font-size:clamp(12px,min(2.2vw,3.9vh),30px);text-shadow:0 2px 8px #080d1a;pointer-events:none}
+.fa-ui[data-staged-original="true"][data-screen="35"] .fa-panel h2{position:absolute;left:24%;top:57%;width:52%;margin:0;font-size:1em;color:#fff5df;text-shadow:0 2px 6px #080d1a}
+.fa-ui[data-staged-original="true"][data-screen="35"] .fa-panel p{position:absolute;left:31%;top:79%;width:47%;margin:0;color:#fff5df;font-size:.88em;text-shadow:0 2px 5px #080d1a}
+.fa-ui[data-staged-original="true"][data-screen="35"] .fa-panel progress{position:absolute;left:18.1%;top:68.3%;width:27.5%;height:3.4%;margin:0;opacity:.65;background:#132443;accent-color:#8cd6fa}
+.fa-ui[data-staged-original="true"][data-screen="35"] .fa-panel .fa-button{position:absolute;left:42%;top:89%;width:16%;min-height:0;height:6.5%;margin:0;padding:0;background:#10264a80;border:0;box-shadow:none;color:#fff5df;pointer-events:auto;font-size:.95em}
+.fa-ui[data-staged-original="true"][data-screen="35"] .fa-panel .fa-button:hover:not(:disabled){background:#2e6192a0}
+.fa-ui[data-staged-original="true"][data-screen="40"] .fa-panel p{left:50.5%;top:47.5%;width:39%;max-height:19%;font-size:.95em}
+.fa-ui[data-staged-original="true"][data-screen="40"] .fa-panel .fa-button{padding:0;text-shadow:0 1px 2px #fff2}
+.fa-save-plaque{position:absolute;z-index:5;top:2%;right:3%;width:clamp(180px,25vw,320px);aspect-ratio:300/69;pointer-events:none;display:flex;align-items:center;justify-content:center;color:#fff5df;font-size:clamp(11px,1.2vw,17px);text-shadow:0 1px 4px #080d1a}
+.fa-save-plaque:not(.is-ready){background:#11254cbe;border-radius:12px}
+.fa-save-plaque img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0}
+.fa-save-plaque.is-ready img{opacity:1}
+.fa-save-plaque span{position:relative;text-align:center;overflow-wrap:anywhere}
+.fa-save-plaque.is-ready span{position:absolute;left:31%;top:24%;width:54%;height:47%;display:grid;place-items:center;line-height:1.05}
+@media(max-aspect-ratio:4/3){.fa-save-plaque{width:clamp(165px,45vw,290px)}}
