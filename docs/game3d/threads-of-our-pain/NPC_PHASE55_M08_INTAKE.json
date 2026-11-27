@@ -1,0 +1,242 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M08",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M08.md",
+    "R52_M07-M13_VOICE_PASS.md",
+    "R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md",
+    "R106_M01-M10_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md",
+    "R115_M06_M08_WORLD_THAT_REMEMBERS_CONSTRUCTION_PROMPTS.md",
+    "R39-R41_RECOVERED_SOURCE.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "ARCHIVE_ENTER",
+      "reality": "PRESERVED",
+      "anchor": "ARCHIVE_ENTRY",
+      "evidence": "Public entry, M07 completed and sketch available",
+      "requires": [
+        "M07_COMPLETE"
+      ]
+    },
+    {
+      "id": "LYRA_TOPIC",
+      "reality": "PRESERVED",
+      "anchor": "LYRA_DESK",
+      "evidence": "Select topic or accessible summary; preserve M07 privacy; identify adjacent crest in catalog with assistance if requested",
+      "requires": [
+        "ARCHIVE_ENTER"
+      ]
+    },
+    {
+      "id": "DAMAGED_INSPECTED",
+      "reality": "PRESERVED",
+      "anchor": "DAMAGED_BINDING",
+      "evidence": "Actual missing leaf and damaged binding inspected; scraped ink and shelf gap additional evidence",
+      "requires": [
+        "LYRA_TOPIC"
+      ]
+    },
+    {
+      "id": "COPY_COMPARED",
+      "reality": "PRESERVED",
+      "anchor": "COPY",
+      "evidence": "Lawfully compare two distinct matching features out of heading, crest and route text",
+      "requires": [
+        "DAMAGED_INSPECTED"
+      ]
+    },
+    {
+      "id": "NOTICE18_INSPECTED",
+      "reality": "ORIGINAL",
+      "anchor": "NOTICE18",
+      "evidence": "Safe authored visit and actual readable evacuation notice observation; skip may deliver readable authored record",
+      "requires": [
+        "COPY_COMPARED"
+      ]
+    },
+    {
+      "id": "RETURN15",
+      "reality": "PRESERVED",
+      "anchor": "M08_MIGRATE_SAFE15",
+      "evidence": "Safe return desk and retained provenance; no physical notice transfer",
+      "requires": [
+        "NOTICE18_INSPECTED"
+      ]
+    },
+    {
+      "id": "ROUTE_ACCEPTED",
+      "reality": "PRESERVED",
+      "anchor": "M09_LEAD",
+      "evidence": "Player compares actual remembered channel/fork with transcript then accepts lawful route copy",
+      "requires": [
+        "RETURN15"
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "role": "Lyra the Seeker",
+      "reality": "PRESERVED",
+      "proposedNpcId": "FS_NPC_006",
+      "runtimeId": null
+    },
+    {
+      "role": "archivist",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "shelter attendant",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "mother",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "traveler",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_016",
+      "name": "Orin Vellwood",
+      "relationship": "Proposed S13 bookbinder, not automatically M08 archivist"
+    },
+    {
+      "id": "FS_NPC_012",
+      "name": "Elias Windrow",
+      "relationship": "Thematic records/communications association only"
+    },
+    {
+      "id": "FS_NPC_003",
+      "name": "Eryndor",
+      "relationship": "Thematic historical association only"
+    }
+  ],
+  "evidence": [
+    {
+      "id": "M08_INDEX",
+      "source": "archive catalog",
+      "reality": "PRESERVED",
+      "classification": "observation"
+    },
+    {
+      "id": "M08_TORN_LEAF",
+      "source": "damaged manuscript",
+      "reality": "PRESERVED",
+      "classification": "observation"
+    },
+    {
+      "id": "M08_COPY",
+      "source": "intact newer bound transcript",
+      "reality": "PRESERVED",
+      "classification": "observation"
+    },
+    {
+      "id": "M08_NOTICE18",
+      "source": "actual original shelter notice",
+      "reality": "ORIGINAL",
+      "classification": "observation"
+    },
+    {
+      "id": "M08_ROUTE",
+      "source": "comparison and accepted local route copy",
+      "reality": "PRESERVED",
+      "classification": "observation"
+    }
+  ],
+  "comparison": {
+    "features": [
+      "heading",
+      "crest",
+      "route_description"
+    ],
+    "minimumDistinctMatches": 2,
+    "allThreeOptionalAnnotation": true,
+    "wrongChoicePenalty": false,
+    "assisted": true,
+    "sourceTerms": [
+      "shelter",
+      "shrine"
+    ],
+    "motive": "UNRESOLVED"
+  },
+  "assetContract": {
+    "sharedPublicCrest": "M07_CREST",
+    "outline": "three-lobed insignia",
+    "instances": [
+      "M07_CREST",
+      "INSIGNIA_15",
+      "INSIGNIA_18"
+    ],
+    "separatePersonalMark": "M07_MARK_MESH",
+    "actualMeshVerified": false,
+    "transforms": null
+  },
+  "topics": [
+    "historical_records",
+    "crest",
+    "geographic_familiarity"
+  ],
+  "disclosure": [
+    "discretion",
+    "anonymous_public_discrepancy",
+    "private_investigation"
+  ],
+  "privacy": {
+    "preserveM07PrivateDisclosure": true,
+    "neverNameCulprit": true,
+    "protectBinderName": true,
+    "separateS13Consent": true
+  },
+  "optionalIndependent": [
+    "S13",
+    "D26"
+  ],
+  "s13": {
+    "readOnlyM08Notice": true,
+    "requiresOwnBinderCopy": true,
+    "requiresOwnAlterationEvidence": true,
+    "requiresOwnComparison": true,
+    "requiresOwnDisclosure": true,
+    "autoComplete": false,
+    "ownsM09Unlock": false
+  },
+  "completion": {
+    "required": [
+      "two distinct transcript observations",
+      "actual notice observation or authored readable skip record",
+      "actual route comparison",
+      "accepted local route copy"
+    ],
+    "next": "M09_AVAILABLE",
+    "autoAccept": false,
+    "rewardGrant": false
+  },
+  "prohibitions": [
+    "manual reality switch",
+    "physical notice transfer",
+    "confirmed culprit",
+    "forced camera",
+    "mandatory S13",
+    "paired focus",
+    "mandatory combat",
+    "mandatory glide",
+    "runtime activation"
+  ]
+}
