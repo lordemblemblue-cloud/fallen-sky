@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R68 unified story library:** [Read original and continuation together](CLAUDE_UNIFIED_STORY_LIBRARY.md). [Late campaign phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md) extends R67 through M13–M19; no dependency on ChatGPT Library storage. R64A/R65 finale and R66 mechanics precedence remain. All geometry and exact unknown dates remain subject to survey.
+
 > **R67 chronology:** [Opening actor and phase register](R67_ACTOR_PHASE_REGISTER.md) records M04–M12, S04–S06/M14 and ending anchors, separate clock axes, character lifetimes and proposed dialogue fallbacks. Local dates and individual survival are not certified. R65 remains finale script; R66 remains quest mechanics reconciliation.
 
 > **R66 quest continuity:** [Discovery completion and evidence reconciliation](R66_QUEST_CONTINUITY_RECONCILIATION.md) records second-vista completion, S27/S29 evidence eligibility, S39/S55 lane proposals and D31/S46/S43 state safeguards. Read before implementing affected IDs; proposed mechanics remain unverified.
