@@ -1,6 +1,7 @@
 import worldMarkup from './worldMarkup.html?raw';
 import {WORLD_MAX_X,WORLD_END_X,EXTRA_REGIONS,ARENAS,EXTRA_ENCOUNTERS,arenaForEncounter,extraHeight,regionForX} from '../core/worldExpansion.mjs';
 import {TREASURE_IDS,treasureFor} from '../core/treasureCatalog.mjs';
+import {WORLD_SERVICES,nearestService} from '../core/worldInteractions.mjs';
 import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
 import {makeExplorationAvatar} from './explorationAvatar.js';
 
@@ -1739,7 +1740,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           el.addEventListener('pointerdown', on); el.addEventListener('pointerup', off); el.addEventListener('pointerleave', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
         }
         document.getElementById('touch-jump').addEventListener('click', () => { if (!this.inputLocked && this.mode === 'wilds' && this.grounded) { this.playerVelY = 7.6; this.grounded = false; } });
-        const act = () => { if (!this.inputLocked && this.mode === 'wilds') { if (this.activeDiscovery) this.collectDiscovery(this.activeDiscovery); else if (this.activeEncounter) this.triggerEncounterTransition(this.activeEncounter); } };
+        const act = () => { if (!this.inputLocked && this.mode === 'wilds') { if (this.activeDiscovery) this.collectDiscovery(this.activeDiscovery); else if (this.activeEncounter) this.triggerEncounterTransition(this.activeEncounter); else this.openService?.(); } };
         document.getElementById('touch-act').addEventListener('click', act);
         document.getElementById('btn-engage').addEventListener('click', act);
         document.getElementById('btn-return').addEventListener('click', () => this.returnToExploration());
@@ -1855,6 +1856,10 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           document.getElementById('encounter-title').textContent = nearEnc.label;
           document.getElementById('encounter-sub').textContent = `Press [E] to enter ${nearEnc.battleMapId}`;
           document.getElementById('btn-engage').textContent = 'Engage [E]'; bar.classList.remove('hidden');
+        } else if(this.nearService?.()) {
+          document.getElementById('encounter-title').textContent=this.nearService().label;
+          document.getElementById('encounter-sub').textContent='Press [E] to interact';
+          document.getElementById('btn-engage').textContent='Interact [E]'; bar.classList.remove('hidden');
         } else bar.classList.add('hidden');
       }
 
@@ -1939,8 +1944,9 @@ export async function mountSapphireWorld(root, onEvent) {
   };
   app.completedEncounters = new Set();
   app.appearanceTint=0xffffff;
-  app.servicePoints=[{id:'grove_service',label:'Grove rest point',x:9,z:-1.4},{id:'sanctuary_service',label:'Sanctuary services',x:191,z:-1.4},{id:'moonveil_service',label:'Moonveil rest point',x:226,z:-1.4}];
-  const nearService=()=>app.mode==='wilds'&&app.servicePoints.find(s=>Math.hypot(app.playerPos.x-s.x,app.playerPos.z-s.z)<=2.4&&Math.abs(app.playerPos.y-app.terrainVisualHeight(s.x,s.z))<2);
+  app.servicePoints=WORLD_SERVICES;
+  const nearService=()=>app.mode==='wilds'?nearestService(app.playerPos.toArray(),(x,z)=>app.terrainVisualHeight(x,z)):null;
+  app.nearService=nearService;
   app.openService=()=>{const service=nearService();if(service&&!app.inputLocked){app.resetInput();app.inputLocked=true;send('service',{service,world:snapshot()});}};
   const registeredMarkers = new Map();
   const collect = app.collectDiscovery.bind(app);
