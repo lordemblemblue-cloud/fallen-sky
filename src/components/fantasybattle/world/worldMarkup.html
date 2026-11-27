@@ -1,0 +1,208 @@
+
+  <div id="viewport"></div>
+  <button id="btn-clean-view" class="sumi-btn" type="button">Hide UI (H)</button>
+  <div id="startup-error" hidden role="alert"></div>
+
+  <!-- Directional Sapphire Ink-Wash Transition Overlay -->
+  <div id="ink-curtain" class="flex items-center justify-center">
+    <canvas id="ink-canvas"></canvas>
+    <div class="relative z-10 text-center px-6 drop-shadow-[0_2px_14px_rgba(8,13,26,0.95)]">
+      <p id="curtain-sub" class="font-display text-xs tracking-[0.25em] text-[#78c9ed] uppercase">Sapphire Ink Wash</p>
+      <h2 id="curtain-title" class="font-display text-xl sm:text-2xl text-[#edf2f6] mt-1">Transitioning Realm</h2>
+    </div>
+  </div>
+
+  <!-- Top-Left Title & Telemetry -->
+  <div class="fixed top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-none max-w-[54vw]">
+    <div class="sumi-glass rounded-2xl px-3.5 py-2.5 pointer-events-auto">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-[#78c9ed] shadow-[0_0_8px_#78c9ed]"></span>
+        <h1 class="font-display text-xs sm:text-sm font-bold text-[#edf2f6]">SAPPHIRE SUMI REALISM</h1>
+      </div>
+      <p id="mode-subtitle" class="text-[10px] sm:text-xs text-[#b3d9f1]/85 mt-0.5">Sapphire Sanctuary — Floating Island Battleground</p>
+      <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px]">
+        <span id="badge-renderer" class="px-2 py-0.5 rounded-md bg-[#18274d] border border-[#78c9ed]/35 text-[#78c9ed] font-medium">Renderer: ...</span>
+        <span id="badge-fps" class="px-2 py-0.5 rounded-md bg-[#10182b] border border-[#78c9ed]/20 text-[#b3d9f1]">FPS: measuring…</span>
+        <span id="badge-section" class="px-2 py-0.5 rounded-md bg-[#10182b] border border-[#ebd6a6]/30 text-[#ebd6a6]">Arena Center</span>
+        <span id="badge-discoveries" class="px-2 py-0.5 rounded-md bg-[#10182b] border border-[#d7b3d2]/35 text-[#d7b3d2] hidden">Discoveries: 0/3</span>
+      </div>
+    </div>
+
+    <div id="encounter-bar" class="sumi-glass rounded-xl px-3 py-2 pointer-events-auto hidden border-[#ebd6a6]/50">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <span id="encounter-title" class="text-[11px] font-semibold text-[#ebd6a6] block">Encounter Nearby</span>
+          <span id="encounter-sub" class="text-[10px] text-[#b3d9f1]">Press [E] to enter Sapphire Sanctuary</span>
+        </div>
+        <button id="btn-engage" class="sumi-btn active rounded-lg px-2.5 py-1 text-[10px] font-semibold cursor-pointer">Engage [E]</button>
+      </div>
+    </div>
+
+    <div id="return-bar" class="sumi-glass rounded-xl px-3 py-2 pointer-events-auto hidden border-[#78c9ed]/60">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <span class="text-[11px] font-semibold text-[#78c9ed] block">Battle Transition Active</span>
+          <span class="text-[10px] text-[#b3d9f1]">Return restores your exploration position</span>
+        </div>
+        <button id="btn-return" class="sumi-btn active rounded-lg px-2.5 py-1 text-[10px] font-semibold cursor-pointer">Return to Wilds</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top-Right Mode Switcher -->
+  <div class="fixed top-3 right-3 z-20 flex flex-wrap justify-end items-center gap-1.5 max-w-[92vw]">
+    <div class="sumi-glass rounded-xl p-1 flex flex-wrap items-center gap-1">
+      <button data-mode="sanctuary" class="mode-btn sumi-btn active rounded-lg px-2.5 py-1 text-[10px] sm:text-xs font-medium cursor-pointer">Sanctuary</button>
+      <button data-mode="wilds" class="mode-btn sumi-btn rounded-lg px-2.5 py-1 text-[10px] sm:text-xs font-medium cursor-pointer">Sapphire Wilds</button>
+      <button data-mode="materials" class="mode-btn sumi-btn rounded-lg px-2.5 py-1 text-[10px] sm:text-xs font-medium cursor-pointer">15 Materials</button>
+      <button data-mode="assets" class="mode-btn sumi-btn rounded-lg px-2.5 py-1 text-[10px] sm:text-xs font-medium cursor-pointer">Asset Kit</button>
+      <select id="asset-category" aria-label="Asset inspection category" class="sumi-btn rounded-lg px-1.5 py-1 text-[10px] cursor-pointer">
+        <option value="overview">Overview</option>
+        <option value="rocks">25 Rocks</option>
+        <option value="arch">Architecture</option>
+        <option value="vegetation">Flora</option>
+        <option value="trees">Trees</option>
+      </select>
+    </div>
+    <button id="btn-drawer" class="sumi-glass sumi-btn rounded-xl px-2.5 py-1.5 text-[10px] sm:text-xs font-medium cursor-pointer">Controls</button>
+  </div>
+
+  <!-- Collapsible Controls Drawer -->
+  <aside id="drawer" class="hidden fixed top-14 right-3 z-20 w-72 sm:w-80 max-h-[78vh] overflow-y-auto sumi-glass rounded-2xl p-3.5 flex flex-col gap-3">
+    <div>
+      <span class="font-display text-[11px] text-[#ebd6a6] block mb-1.5">CAMERA ANGLES</span>
+      <div class="grid grid-cols-3 gap-1">
+        <button data-cam="battle" class="cam-btn sumi-btn active rounded-lg py-1 text-[9px] cursor-pointer">Battle</button>
+        <button data-cam="tree" class="cam-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Ancient Tree</button>
+        <button data-cam="emblem" class="cam-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Emblem</button>
+        <button data-cam="ruins" class="cam-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Ruins</button>
+        <button data-cam="castle" class="cam-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Castle</button>
+        <button data-cam="underside" class="cam-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Island Base</button>
+      </div>
+      <div class="grid grid-cols-2 gap-1 mt-1.5">
+        <button id="btn-anchors" class="sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">4v4 Models (1.8m): OFF</button>
+        <button id="btn-boss-anchor" class="sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Boss Model (4.5m): OFF</button>
+      </div>
+      <div class="grid grid-cols-2 gap-1 mt-1">
+        <button id="btn-colliders" class="sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Colliders: OFF</button>
+        <button id="btn-reset-cam" class="sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Reset View</button>
+      </div>
+    </div>
+
+    <div class="border-t border-[#78c9ed]/15 pt-2.5">
+      <span class="font-display text-[11px] text-[#78c9ed] block mb-1.5">SAPPHIRE WILDS SECTIONS (220m)</span>
+      <div class="grid grid-cols-3 gap-1">
+        <button data-sec="0" class="sec-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">1. Grove</button>
+        <button data-sec="1" class="sec-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">2. Ruins</button>
+        <button data-sec="2" class="sec-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">3. Falls</button>
+        <button data-sec="3" class="sec-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">4. Cave</button>
+        <button data-sec="4" class="sec-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">5. Heights</button>
+        <button data-sec="5" class="sec-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">6. Gate</button>
+      </div>
+    </div>
+
+    <div class="border-t border-[#78c9ed]/15 pt-2.5">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="font-display text-[11px] text-[#ebd6a6]">GRAPHICS PRESET</span>
+        <span id="lbl-quality" class="text-[10px] text-[#78c9ed]">Performance</span>
+      </div>
+      <div class="grid grid-cols-4 gap-1">
+        <button data-q="performance" class="q-btn sumi-btn active rounded-lg py-1 text-[9px] cursor-pointer">Perf</button>
+        <button data-q="balanced" class="q-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Balanced</button>
+        <button data-q="high" class="q-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">High</button>
+        <button data-q="cinematic" class="q-btn sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Cinematic</button>
+      </div>
+      <div class="flex items-center justify-between gap-1 mt-1.5">
+        <button id="btn-adaptive-res" class="sumi-btn active rounded-lg py-1 px-2 text-[9px] flex-1 cursor-pointer">Adaptive Res: ON</button>
+        <span id="lbl-res-scale" class="text-[9px] text-[#a6b5c6] px-1">Scale: 100%</span>
+      </div>
+    </div>
+
+    <div class="border-t border-[#78c9ed]/15 pt-2.5 flex flex-col gap-1.5">
+      <span class="font-display text-[11px] text-[#78c9ed]">PRODUCTION EXPORT (.GLB + SHADERS)</span>
+      <select id="glb-export-target" class="w-full rounded-lg bg-[#10182b] border border-[#78c9ed]/35 text-[10px] text-[#edf2f6] px-2 py-1 outline-none">
+        <option value="rocks">Complete Rock Library (25 Variants)</option>
+        <option value="arch">Architectural Stone Kit</option>
+        <option value="vegetation">Vegetation &amp; Crystal Library</option>
+        <option value="trees">Tree Assets (16m + 10m + 7m + 4m)</option>
+        <option value="battle_map">Complete Battle Map (Sapphire Sanctuary)</option>
+        <option value="wilds_sec_0">Exploration Section 1 — Whispering Grove</option>
+        <option value="wilds_sec_1">Exploration Section 2 — Broken Pilgrimage</option>
+        <option value="wilds_sec_2">Exploration Section 3 — Celestial Waterfall</option>
+        <option value="wilds_sec_3">Exploration Section 4 — Forgotten Passage</option>
+        <option value="wilds_sec_4">Exploration Section 5 — Blossom Heights</option>
+        <option value="wilds_sec_5">Exploration Section 6 — Sanctuary Entrance</option>
+      </select>
+      <div class="grid grid-cols-3 gap-1">
+        <button id="btn-export-glb" class="sumi-btn active rounded-lg py-1 text-[9px] cursor-pointer">Export .GLB</button>
+        <button id="btn-export-shaders" class="sumi-btn rounded-lg py-1 text-[9px] text-[#ebd6a6] cursor-pointer">Shaders .JS</button>
+        <button id="btn-export-meta" class="sumi-btn rounded-lg py-1 text-[9px] text-[#d7b3d2] cursor-pointer">Meta .JSON</button>
+      </div>
+      <span id="lbl-export-status" class="text-[9px] text-[#a6b5c6]">Ready for geometry, shader &amp; metadata export</span>
+    </div>
+
+    <div class="border-t border-[#78c9ed]/15 pt-2.5 flex flex-col gap-1.5">
+      <span class="font-display text-[11px] text-[#ebd6a6]">WATERCOLOR &amp; SUMI SHADERS</span>
+      <div><div class="flex justify-between text-[10px] text-[#b3d9f1]"><span>Ink Intensity</span><span id="v-ink">60%</span></div><input id="s-ink" type="range" min="0" max="100" value="60" class="w-full" /></div>
+      <div><div class="flex justify-between text-[10px] text-[#b3d9f1]"><span>Pigment Saturation</span><span id="v-sat">55%</span></div><input id="s-sat" type="range" min="0" max="100" value="55" class="w-full" /></div>
+      <div><div class="flex justify-between text-[10px] text-[#b3d9f1]"><span>Watercolor Diffusion</span><span id="v-diff">65%</span></div><input id="s-diff" type="range" min="0" max="100" value="65" class="w-full" /></div>
+      <div><div class="flex justify-between text-[10px] text-[#b3d9f1]"><span>Surface Realism</span><span id="v-real">40%</span></div><input id="s-real" type="range" min="0" max="100" value="40" class="w-full" /></div>
+      <div><div class="flex justify-between text-[10px] text-[#b3d9f1]"><span>Edge Darkness</span><span id="v-edge">35%</span></div><input id="s-edge" type="range" min="0" max="100" value="35" class="w-full" /></div>
+      <div><div class="flex justify-between text-[10px] text-[#b3d9f1]"><span>Highlight Intensity</span><span id="v-high">45%</span></div><input id="s-high" type="range" min="0" max="100" value="45" class="w-full" /></div>
+      <div><div class="flex justify-between text-[10px] text-[#b3d9f1]"><span>Granulation Intensity</span><span id="v-gran">30%</span></div><input id="s-gran" type="range" min="0" max="100" value="30" class="w-full" /></div>
+    </div>
+
+    <div class="border-t border-[#78c9ed]/15 pt-2.5 flex flex-col gap-1.5">
+      <span class="font-display text-[11px] text-[#ebd6a6]">ATMOSPHERE &amp; DIAGNOSTICS</span>
+      <label class="text-[10px] text-[#b3d9f1]">Wind / motion <span id="v-wind">100%</span><input id="s-wind" type="range" min="0" max="200" value="100" class="w-full" /></label>
+      <label class="text-[10px] text-[#b3d9f1]">Petal density <span id="v-petals">100%</span><input id="s-petals" type="range" min="0" max="100" value="100" class="w-full" /></label>
+      <label class="text-[10px] text-[#b3d9f1]">Cloud / mist density <span id="v-mist">100%</span><input id="s-mist" type="range" min="0" max="100" value="100" class="w-full" /></label>
+      <div class="grid grid-cols-3 gap-1 mt-1">
+        <button id="btn-force-gl" class="sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Test WebGL2</button>
+        <button id="btn-auto-gpu" class="sumi-btn rounded-lg py-1 text-[9px] cursor-pointer">Auto GPU</button>
+        <button id="btn-diagnostics" class="sumi-btn rounded-lg py-1 text-[9px] text-[#ebd6a6] cursor-pointer">Run Check</button>
+      </div>
+      <div id="diag-output" class="hidden rounded-lg bg-[#080d1a]/85 border border-[#78c9ed]/25 p-2 text-[9px] text-[#b3d9f1] leading-relaxed font-mono whitespace-pre-wrap"></div>
+    </div>
+
+    <div class="border-t border-[#78c9ed]/15 pt-2">
+      <span class="block text-[9px] text-[#a6b5c6] mb-1">Master Color Library Anchors</span>
+      <div class="grid grid-cols-8 gap-1">
+        <span class="h-3 rounded" style="background:#080D1A" title="Abyssal Black"></span>
+        <span class="h-3 rounded" style="background:#18274D" title="Midnight Indigo"></span>
+        <span class="h-3 rounded" style="background:#2859B8" title="Royal Sapphire"></span>
+        <span class="h-3 rounded" style="background:#78C9ED" title="Celestial Cyan"></span>
+        <span class="h-3 rounded" style="background:#566476" title="Blue-Gray Stone"></span>
+        <span class="h-3 rounded" style="background:#587B68" title="Muted Emerald"></span>
+        <span class="h-3 rounded" style="background:#D7B3D2" title="Blossom Rose"></span>
+        <span class="h-3 rounded" style="background:#EBD6A6" title="Celestial Gold"></span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom-Left Exploration Controls Bar -->
+  <div id="explore-bar" class="fixed bottom-3 left-3 z-20 hidden">
+    <div class="sumi-glass rounded-xl px-2.5 py-1.5 flex flex-wrap items-center gap-1.5">
+      <button id="touch-left" class="sumi-btn rounded-lg px-2.5 py-1 text-[10px] font-bold cursor-pointer">◀ A</button>
+      <button id="touch-right" class="sumi-btn rounded-lg px-2.5 py-1 text-[10px] font-bold cursor-pointer">D ▶</button>
+      <button id="touch-in" class="sumi-btn rounded-lg px-2 py-1 text-[10px] font-bold cursor-pointer">▲ W</button>
+      <button id="touch-out" class="sumi-btn rounded-lg px-2 py-1 text-[10px] font-bold cursor-pointer">▼ S</button>
+      <button id="touch-jump" class="sumi-btn rounded-lg px-2.5 py-1 text-[10px] cursor-pointer">Jump [Space]</button>
+      <button id="touch-act" class="sumi-btn rounded-lg px-2.5 py-1 text-[10px] text-[#ebd6a6] cursor-pointer">Interact [E]</button>
+    </div>
+  </div>
+
+  <!-- Bottom-Right Performance Telemetry -->
+  <div class="fixed bottom-3 right-3 z-20 pointer-events-none">
+    <div class="sumi-glass rounded-xl px-3 py-1.5 text-[10px] text-[#a6b5c6] flex flex-wrap items-center gap-2">
+      <span id="stat-ms">Frame time: measuring…</span>
+      <span>•</span><span id="stat-draws">Draws: 0</span>
+      <span>•</span><span id="stat-tris">Tris: 0</span>
+      <span>•</span><span id="stat-particles">Pts: 0</span>
+      <span>•</span><span id="stat-sections">Sec: 1</span>
+      <span>•</span><span id="stat-tex">Tex: 0</span>
+    </div>
+  </div>
+
+  
+  
