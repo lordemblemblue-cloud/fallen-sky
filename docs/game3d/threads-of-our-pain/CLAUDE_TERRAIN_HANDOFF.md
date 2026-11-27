@@ -1,5 +1,7 @@
 # Claude terrain handoff — Fallen Sky: The Threads of Our Pain
 
+> **R135 — opening quest receipts and encounter recovery:** [Source-to-fixture receipts and reset acceptance](R135_P01_SOURCE_TO_FIXTURE_RECEIPTS_AND_RESET_ACCEPTANCE.md). Sixteen receipt rows, twelve recovery situations and eighteen cross-referenced scenarios; actual cue observation, voluntary readiness, safe retry, stale-event rejection and once-only victory entitlement. Worksheet labels only; no runtime tests or implementation. Next R136 consolidated P01 approval/evidence package.
+
 > **R134 — opening cue and encounter presentation:** [Character, audio, animation and encounter handoff](R134_P01_CUE_CHARACTER_AND_ENCOUNTER_PRESENTATION_HANDOFF.md). Fourteen source-grounded beats, six actor contracts and eleven cross-referenced evidence rows; R106 voice alternatives, non-spoiler Woman in the Light, genuine M02 readiness, three M03 phases and actual defeat/aftermath. Later scope after accepted Low blockout; no generated assets or runtime evidence. Next R135 fixture receipt and reset scenarios.
 
 > **R133 — Low blockout asset and measurement worksheet:** [Opening forest construction components](R133_P01_LOW_BLOCKOUT_ASSET_AND_MEASUREMENT_WORKSHEET.md). Eleven landmark groups, 20 proposed logical asset modules, ten survey/evidence rows; source dimensions and shared clearing preserved, A01/A20 reuse, no new runtime IDs. T04 planning input only; no actual surveyed coordinates, implementation or runtime evidence. Next R134 cue and encounter presentation handoff.
