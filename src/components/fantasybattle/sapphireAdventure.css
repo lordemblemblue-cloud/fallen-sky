@@ -368,3 +368,38 @@
 .fa-character-appearance .fa-button{font-size:.9em;min-height:24px;width:100%;margin-top:.45em;padding:.2em}
 .fa-original-character .fa-character-back,.fa-original-character .fa-character-done{position:absolute;pointer-events:auto;top:78.4%;height:5.5%}
 .fa-character-back{left:38%;width:14%}.fa-character-done{left:58.7%;width:17%}
+
+/* Original plate 06: paint is the image; controls remain live and accessible. */
+.fa-ui.page[data-staged-original="true"][data-screen="06"]{inset:50% auto auto 50%;width:min(100vw,177.63vh);height:min(100vh,56.30vw);transform:translate(-50%,-50%);overflow:hidden;background:#142949}
+.fa-ui[data-staged-original="true"][data-screen="06"] .fa-template{display:block;background-size:100% 100%}
+.fa-ui[data-staged-original="true"][data-screen="06"] .fa-header{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.fa-original-equipment{position:absolute;inset:0;color:#fff6df;pointer-events:none;font-size:clamp(10px,min(1.2vw,2.13vh),18px);text-shadow:0 1px 3px #081329}
+.fa-original-equipment h2,.fa-original-equipment p{margin:0}
+.fa-original-equipment .fa-button{pointer-events:auto;min-height:0;min-width:0;padding:0 4%;border:0;background:#132b4c30;box-shadow:none;color:inherit;font:inherit;line-height:1.12;overflow:hidden}
+.fa-original-equipment .fa-button[aria-pressed="true"],.fa-original-equipment .fa-button.primary{background:#172c57b8;box-shadow:inset 0 0 0 2px #efd594}
+.fa-original-equipment .fa-button:focus-visible{outline:2px solid #b9efff;outline-offset:1px}
+.fa-original-equipment .fa-button:disabled{opacity:.55}
+.fa-eq-title{position:absolute;left:4%;top:10%;width:21%;text-align:center;font-size:1.9em;color:#fff6df}
+.fa-eq-nav{position:absolute;left:4.2%;top:25.6%;width:20.7%;height:36.9%;display:grid;grid-template-rows:repeat(5,1fr);gap:3.3%}
+.fa-eq-nav .fa-button{padding-left:22%;background:#142949a0;border-radius:20px}
+.fa-eq-profile{position:absolute;left:9.6%;top:72.6%;width:15%;display:grid;gap:.35em;font-size:.9em}
+.fa-eq-portrait{position:absolute;left:35%;top:17%;width:19.8%;height:58.5%;display:grid;place-items:center;overflow:hidden}
+.fa-eq-portrait .fa-archer-portrait{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain}
+.fa-eq-slot{position:absolute!important;left:28.2%;width:6.45%;height:14%;display:flex;gap:.15em;flex-direction:column;justify-content:center;font-size:.75em!important;overflow:hidden}
+.fa-eq-slot.slot-0{top:18.5%}.fa-eq-slot.slot-1{top:34%}.fa-eq-slot.slot-2{top:48.5%}
+.fa-eq-slot img,.fa-eq-grid img{max-width:70%;max-height:53%;object-fit:contain}
+.fa-eq-slot span{max-width:100%;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.fa-eq-wearer{position:absolute;left:38%;top:75.5%;width:14%;height:5%;pointer-events:auto}
+.fa-eq-wearer select{width:100%;height:100%;color:#fff6df;background:#172d4f;border:1px solid #d1b784;border-radius:12px;text-align:center;font:inherit}
+.fa-eq-inventory-title{position:absolute;left:68.5%;top:11.6%;width:27%;text-align:center}
+.fa-eq-shortcuts{position:absolute;left:65.5%;top:16%;width:28.5%;height:4%;display:grid;grid-template-columns:repeat(5,1fr)}
+.fa-eq-shortcuts .fa-button{background:#172d4fe8;border-radius:9px;font-size:.78em}
+.fa-eq-grid{position:absolute;left:65.8%;top:21.1%;width:30%;height:20.6%;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));grid-auto-rows:47%;gap:5% 2%;overflow:auto;pointer-events:auto;scrollbar-width:thin}
+.fa-eq-grid .fa-button{background:#132b4c80;border:1px solid #d1b78466;font-size:.78em;gap:0}
+.fa-eq-grid p{grid-column:1/-1;background:#172d4fd9;padding:.5em}
+.fa-eq-detail{position:absolute;left:64.5%;top:44%;width:33.2%;height:13.6%;display:grid;grid-template-columns:25% 1fr;gap:5%;align-items:center;overflow:auto;pointer-events:auto}
+.fa-eq-detail img{max-width:100%;max-height:100%;object-fit:contain}.fa-eq-detail p{margin:.25em 0}
+.fa-eq-compare{position:absolute;left:65.5%;top:60.4%;width:31.5%;height:19.4%;display:flex;flex-direction:column;gap:.2em;overflow:auto;pointer-events:auto;font-size:.88em}
+.fa-eq-compare div{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;text-align:right;gap:.25em}.fa-eq-compare div span:first-child{text-align:left}
+.fa-eq-equip,.fa-eq-remove,.fa-eq-back{position:absolute!important;top:84%;height:5.4%;border-radius:20px}
+.fa-eq-equip{left:46%;width:15%;background:#162d56d9!important}.fa-eq-remove{left:63%;width:13%}.fa-eq-back{left:78%;width:11%}
