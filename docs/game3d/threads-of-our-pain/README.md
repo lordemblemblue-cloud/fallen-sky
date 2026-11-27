@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R96 — midcampaign continuity reconciliation:** [The stranger with my face](R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md). Six source-grounded M07–M12 editorial packets; R92–R96 now cover all 20 main IDs. Preserve M09/M10 physical overlap, distinct families, no Celestial Sight; next scene-level original chronology dependency audit. Draft, no implementation or owner approval.
+
 > **R95 — opening continuity reconciliation:** [The road before the world broke](R95_M01-M06_OPENING_CONTINUITY_RECONCILIATION.md). Six source-grounded scene packets for M01–M06, with fixed M05 death and unresolved older local chronology. R92–R95 cover 14/20 main IDs; next M07–M12. Earlier chat-only wording not recovered; no new quests or implementation.
 
 > **R94 — source-grounded M19–M20 finale delta:** [The world that survives](R94_M19-M20_SOURCE_GROUNDED_FINALE_REFINEMENTS.md). Six proposed editorial alternatives for the existing confrontation, restored reality and fused recovery, with R64A/R65 and R76/R84 precedence. M13–M20 source-reviewed in R92–R94; next reconcile M01–M12 chat-only drafts. No new quests or implementation.
