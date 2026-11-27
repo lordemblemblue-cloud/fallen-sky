@@ -203,11 +203,13 @@ export class FantasyBattleStage {
   }
 
   buildScene() {
-    const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(2600, 1300), new THREE.MeshBasicMaterial({ map: makeBackdropTexture(), depthTest: false, depthWrite: false }));
-    backdrop.position.set(0, 880 - 650, -5);
-    backdrop.renderOrder = 0;
-    this.backdrop = backdrop;
-    if (!this.transparentBackdrop) this.scene.add(backdrop); else { backdrop.geometry.dispose(); backdrop.material.map?.dispose(); backdrop.material.dispose(); this.backdrop=null; }
+    if (!this.transparentBackdrop) {
+      const backdrop = new THREE.Mesh(new THREE.PlaneGeometry(2600, 1300), new THREE.MeshBasicMaterial({ map: makeBackdropTexture(), depthTest: false, depthWrite: false }));
+      backdrop.position.set(0, 880 - 650, -5);
+      backdrop.renderOrder = 0;
+      this.backdrop = backdrop;
+      this.scene.add(backdrop);
+    }
     const arrowTexture = this.textures.get('arrow');
     this.fx = new FxSystem(this.scene, arrowTexture);
     const allies=this.units.filter(u=>u.team==='player'), enemies=this.units.filter(u=>u.team!=='player');
@@ -219,8 +221,10 @@ export class FantasyBattleStage {
       const y=compact&&idx>=2?185:0;
       return [u.id,new Fighter(this,{id:u.id,name:u.name,combatClass:u.combatClass,enemyArchetype:u.archetype,gearVisuals:u.gearVisuals,weaponId:u.weaponId,rig:this.companionRigs?.get(u.id)||this.enemyRigs?.get(u.visualId)||this.rig,textures:this.textures,arrowTexture,tint:(this.companionRigs?.has(u.id)||this.enemyRigs?.has(u.visualId))?0xffffff:(u.tint??(ally?0xffffff:0xb9a6e8)),x,y,scale:compact ? 0.68 : 1,facing:ally?1:-1,seed:11+i*18,renderBase:100+drawOrder.indexOf(u)*100})];
     }));
+    // Stage-owned immutable geometry; individual shadows retain independent materials.
+    this.shadowGeometry = new THREE.PlaneGeometry(1, 1);
     for (const f of Object.values(this.fighters)) {
-      const shadow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
+      const shadow = new THREE.Mesh(this.shadowGeometry, new THREE.MeshBasicMaterial({ map: this.fx.tex.shadow, transparent: true, depthTest: false, depthWrite: false }));
       shadow.scale.set(380*f.scale, 70*f.scale, 1);
       shadow.position.set(f.x, f.y+6, 0);
       shadow.renderOrder = 2;
@@ -682,7 +686,8 @@ export class FantasyBattleStage {
     this.renderer?.domElement.removeEventListener('pointerdown', this.onPointer);
     for (const w of this.waiters) w.resolve();
     for (const t of this.timers) t.resolve();
-    if (this.fighters) for (const f of Object.values(this.fighters)) {f.view.dispose();f.shadow?.geometry.dispose();f.shadow?.material.dispose();}
+    if (this.fighters) for (const f of Object.values(this.fighters)) {f.view.dispose();f.shadow?.material.dispose();}
+    this.shadowGeometry?.dispose();
     this.fx?.dispose();
     if (this.textures) for (const t of this.textures.values()) t.dispose();
     this.backdrop?.material.map?.dispose();
