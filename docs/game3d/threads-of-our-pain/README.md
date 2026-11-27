@@ -1,5 +1,19 @@
 # The Threads of Our Pain — story-to-world index
 
+> **R75A:** [Concurrent progression addendum](R75A_POSTGAME_PROGRESSION_ADDENDUM.md) supplements the primary R75 with consumed/sold item provenance, safe snapshot failure recovery and historical journal states. Dialogue variants are alternatives. No owner approval or runtime validation.
+
+> **R75:** [Postgame progression and save decisions](R75_POSTGAME_PROGRESSION_DECISIONS.md) proposes preserving earned progression, isolated pre-finale replay and branch-safe play. Owner approval remains required; R74 completes all 105 detailed source reviews, not runtime validation.
+
+> **R74:** [Final five original-world opportunity reviews — S51–S55](R74_ORIGINAL_OPPORTUNITY_SCHEDULE.md) completes 105/105 source-level scheduling reviews. Exact phase windows, S53 inscription policy, S55 two-lane policy, postgame progression and runtime tests remain open. R65 ending precedence retained.
+
+> **R73:** [Original opportunity schedule — D41–D50 / S41–S50](R73_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends detailed review to 100/105, five pending. All discovery IDs reviewed; reconcile legacy optional vista flags with R66, preserve consent, actual receipts and safe access. Exact phases and runtime remain unverified.
+
+> **R72:** [Original opportunity schedule — D31–D40 / S31–S40](R72_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 80/105, 25 pending. Preserve guardian rest, consent, genuine original receipts, and occupied crossing safety. Exact phases and gameplay remain unverified.
+
+> **R71:** [Original opportunity schedule — D21–D30 / S21–S30](R71_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends the detailed review to 60/105, 45 pending. Preserve R66 evidence adapters, actual arrival and repair receipts, and second vista. Exact phase bounds and gameplay remain unverified.
+
+> **R70:** [Original opportunity schedule — D11–D20 / S11–S20](R70_ORIGINAL_OPPORTUNITY_SCHEDULE.md) extends R69 to 40/105 step-level reviews, 65 pending. Exact local phase bounds remain TBD; no automatic historical completion or new travel.
+
 > **R69:** [Original opportunity schedule — first twenty IDs](R69_ORIGINAL_OPPORTUNITY_SCHEDULE.md) adds step-level conditions for D01–D10 and S01–S10. 20/105 reviewed at step level; 85 pending, exact original opening/closing phases TBD. No new travel or historical completion assumed.
 
 > **R68 unified story library:** [Read original and continuation together](CLAUDE_UNIFIED_STORY_LIBRARY.md). [Late campaign phase register](R68_LATE_CAMPAIGN_PHASE_REGISTER.md) extends R67 through M13–M19; no dependency on ChatGPT Library storage. R64A/R65 finale and R66 mechanics precedence remain. All geometry and exact unknown dates remain subject to survey.
