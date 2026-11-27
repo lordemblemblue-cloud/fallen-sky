@@ -1,5 +1,5 @@
-// Shared local inventory, two slots per recruited party member.
-export const GEAR_SLOTS=Object.freeze(['armor','mantle']);
+// Shared local inventory, four slots per recruited party member.
+export const GEAR_SLOTS=Object.freeze(['armor','mantle','ring','necklace']);
 const item=(name,slot,buy,sell,atk,def,spd,color,trim,style,rarity='Common',requiredLevel=1,setId=null)=>Object.freeze({name,kind:'gear',slot,buy,sell,atk,def,spd,color,trim,style,rarity,requiredLevel,setId});
 export const GEAR=Object.freeze({
  groveVest:item('Groveweave Vest','armor',45,18,1,2,1,0x39776b,0xc1e4c1,'vest'),
@@ -13,7 +13,13 @@ export const GEAR=Object.freeze({
  moonveilRaiment:item('Moonveil Raiment','armor',110,44,3,2,3,0x427c89,0xd7f5ef,'jacket','Elite',3,'moonveil'),
  moonveilVeil:item('Moonveil Veil','mantle',75,30,2,1,2,0x427c89,0xd7f5ef,'leaf','Elite',3,'moonveil'),
  astralCarapace:item('Astral Carapace','armor',155,62,2,7,1,0x443775,0xe2caff,'plate','Legendary',4,'astral'),
- astralMantle:item('Astral Mantle','mantle',105,42,1,4,1,0x443775,0xe2caff,'dusk','Legendary',4,'astral')
+ astralMantle:item('Astral Mantle','mantle',105,42,1,4,1,0x443775,0xe2caff,'dusk','Legendary',4,'astral'),
+ groveRing:item('Grove Amber Ring','ring',30,12,1,0,1,0x39776b,0xe4c68b,'ring','Common',1),
+ pilgrimPendant:item('Pilgrim Ward Pendant','necklace',55,22,0,3,0,0x64744b,0xd5c79c,'pendant','Rare',2),
+ moonveilRing:item('Moonveil Silver Ring','ring',75,30,2,0,2,0x427c89,0xd7f5ef,'ring','Elite',3),
+ moonveilPendant:item('Moonveil Echo Pendant','necklace',80,32,1,1,2,0x427c89,0xd7f5ef,'pendant','Elite',3),
+ astralRing:item('Astral Star Ring','ring',120,48,3,1,1,0x443775,0xe2caff,'ring','Legendary',4),
+ astralPendant:item('Astral Signal Pendant','necklace',125,50,2,3,1,0x443775,0xe2caff,'pendant','Legendary',4)
 });
 export const GEAR_IDS=Object.freeze(Object.keys(GEAR));
 export const GEAR_SETS=Object.freeze({pilgrim:Object.freeze({name:'Pilgrim Watch',atk:0,def:2,spd:0}),moonveil:Object.freeze({name:'Moonveil Rites',atk:2,def:0,spd:1}),astral:Object.freeze({name:'Astral Observatory',atk:2,def:2,spd:0})});
@@ -26,7 +32,9 @@ export const WEARERS=Object.freeze(['hero','groveArcher','pilgrimWarden','mistSc
 export const gearFor=(p,id)=>WEARERS.includes(id)?p?.gear?.[id]||{}:{};
 export const gearCount=(p,key)=>WEARERS.reduce((n,id)=>n+GEAR_SLOTS.filter(slot=>gearFor(p,id)[slot]===key).length,0);
 export function addGearStats(stats,p,id){const out={...stats};for(const slot of GEAR_SLOTS){const key=gearFor(p,id)[slot];if(gearEligible(p,key)&&GEAR[key].slot===slot)for(const k of ['atk','def','spd'])out[k]+=GEAR[key][k];}const set=activeGearSet(p,id);if(set)for(const k of ['atk','def','spd'])out[k]+=set[k];return out;}
-export const equippedVisuals=(p,id)=>GEAR_SLOTS.map(slot=>gearFor(p,id)[slot]).filter(key=>Object.hasOwn(GEAR,key));
+// Accessories contribute stats but must not be passed to the armor/mantle mesh renderer.
+export const equippedVisuals=(p,id)=>['armor','mantle'].map(slot=>gearFor(p,id)[slot]).filter(key=>Object.hasOwn(GEAR,key));
+export const gearSlotLabel=slot=>({armor:'Armor',mantle:'Mantle',ring:'Ring',necklace:'Necklace'})[slot]||'Equipment';
 export function validGear(p,recruited){
  if(p.gear===undefined)return true;
  if(!p.gear||typeof p.gear!=='object'||Array.isArray(p.gear))return false;
