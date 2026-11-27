@@ -67,6 +67,9 @@ Baseline: Living Story Bible v0.4, 26 Nov 2026. The narrative handoff is active;
 | M11 | Those Left Behind | [Expanded main quest](M11.md) | Ready for proposed blockout; unverified |
 | D29 | Rain Across the Stone | [Expanded discovery](D29_S44.md) | Ready for proposed blockout; unverified |
 | S44 | The Mirror of Rain | [Expanded optional quest and terrain brief](D29_S44.md) | Ready for proposed blockout; unverified |
+| M12 | A Song I Know | [Expanded main quest](M12.md) | Ready for proposed blockout; unverified |
+| D30 | The Lunar Vault's Eye | [Expanded discovery](D30_S45.md) | Ready for proposed blockout; unverified |
+| S45 | The Silence of the Lunar Vault | [Expanded optional quest and terrain brief](D30_S45.md) | Ready for proposed blockout; unverified |
 
 [Initial three scene scripts and terrain briefs](INITIAL_DISCOVERY_BRIEFS.md) are adapted from the inspected v0.4 Word document. The source has 20 main quest, 55 side quest and 50 discovery outlines; this initial repository index does not yet contain all of those scripts. Future hourly sessions should add per-ID Markdown briefs and update this index, preserving earlier revisions. Terrain designs remain proposals until Claude returns verified results. Do not infer missing quests or final coordinates from this index.
 
@@ -165,3 +168,7 @@ D11/S14 expanded, preserving catalog reward Herbalism Satchel and original plant
 ## Revision R31a — concurrent draft reconciliation
 
 [R31 continuity addendum](R31_CONTINUITY_ADDENDUM.md) retains the primary M11 and D29/S44 scripts, selects compatible dialogue/staging and weather fallback from the parallel draft, and resolves conflicting provisional names, geometry, melody and objectives. Do not build both variants. Primary provisional family names Mira/Renn/Tovin; retain the primary melody, louver, stone shutter and second vista. Master v2.7a R31a saved in Library, 229 pages; all 2,919 primary R31 paragraphs preserved, 221 R30 page images byte-identical. Counts unchanged (31 discoveries, 21 optional, 11 main, 63/125). Use R31a as next baseline, not the archived duplicate R31. Next M12/D30/S45. No game code, terrain build, merge, credits or deployment.
+
+## Revision R32
+
+[M12](M12.md) expands the matching lullaby and inherited emblem, two distinct families, register comparison, playable original refuge revisit and lead to M13. No confirmed reincarnation. [D30/S45](D30_S45.md) preserves three-depth eye alignment, moonlit vault, personal silver protective charm and existing older item, second vista, independent survey and optional guardian. 32/50 discoveries, 22/55 optional quests, 12/20 main quests expanded; all 75 outlines retained, 66/125 combined. Master v2.8 R32 saved to Library; 238 pages, all 2,936 prior paragraphs preserved and 229 previous page images byte-identical; nine new pages individually inspected after eliminating a near-empty page. Next M13 — The Sanctuary That Remembers, D37 — The Last Crate / S53 — The Last Supply Run (catalog verified); D31–D36 already expanded. Pending D02/D03/D05/D06 reconciliation; S13/S19/S25/S26/S29 separate. Claude return surveyed anchors, melody/emblem asset IDs, actual layout, eye alignment and guardian traversal checks, and measured performance. Terrain unbuilt; no game code, merge, credits or deployment.
