@@ -90,5 +90,5 @@ Missing information filed:    (request IDs in MISSING_INFORMATION.md)
 ## 8. Agent-specific notes
 
 - **ChatGPT:** the repository is public; read it on GitHub. When writing story or design packets, mark each as draft until the owner approves it, keep the stable IDs (R61), and add the packet to the index README the docs already use. A packet that changes canon must name the affected IDs.
-- **Claude Code (local):** follow the hub session's brief; worktrees under `C:\Users\marcu\.copilot\repos\fallen-sky-worktrees\`; commit as the repository owner identity the hub gives; push only your branch; never push `main`; report the branch head and compare link to the hub. The machine runs Windows: no `python`, CRLF sources, junctioned `node_modules`.
+- **Claude Code (local):** follow the hub session's brief; worktrees under `%USERPROFILE%\.copilot\repos\fallen-sky-worktrees\`; commit as the repository owner identity the hub gives; push only your branch; never push `main`; report the branch head and compare link to the hub. The machine runs Windows: no `python`, CRLF sources, junctioned `node_modules`.
 - **Gemini:** cite every reference; flag formulas and lore that are guesses; return comparison material as files the owner can review, not as edits to another agent's region.
