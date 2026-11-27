@@ -1,6 +1,6 @@
 # The Threads of Our Pain — story-to-world index
 
-> **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed, 47 targeted source reviews, 58 still pending. No game implementation or final script sign-off.
+> **Current R64 handoff:** [Owner-directed finale reconciliation](R64A_OWNER_ENDING_RECONCILIATION.md) supersedes conflicting R39–R63 ending proposals. [Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): all 105 optional IDs indexed, 69 targeted source reviews, 36 still pending. No game implementation or final script sign-off.
 
 **Current R61 handoff:** [125-ID source navigation](R61_STABLE_ID_INDEX.md) and [three-reality continuity ledger](R61_CONTINUITY_LEDGER.md). The historical table and revision logs below are retained, but their coverage counters and backfill status are superseded by the R61 section.
 
@@ -258,3 +258,7 @@ Recovered all thirteen missing revision text ranges R35–R47 from the actual R6
 ## R64C — availability review, second pass
 
 [Updated opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): 47/105 targeted source reviews, including 21 discoveries and 26 optional adventures. Reviewed 35 additional IDs from 22 briefs; 58 remain indexed only. S10 explicitly requires paired D08 entrance, S11 shares D09 clapper/outlet access (alternate route unresolved), S24 requires genuine watch completion. D18 original alignment is after M06; most exact first/last local phase windows remain TBD. Preserve actual observations and reward receipts rather than recreating historical encounters in either new ending. Claude must survey phase-specific geometry and actor lifetimes; tests not executed. No game code, terrain, merge or deployment.
+
+## R64D — availability review, third pass
+
+[Opportunity manifest](R64B_OPPORTUNITY_MANIFEST.md): 69/105 targeted source reviews (32 discoveries, 37 optional quests); 22 additional IDs, 36 pending. Distinguish genuinely required original-world objectives from optional counterpart scenes and independent public access. Preserve consent, evidence provenance and actual completion; reconstruction cannot backfill historical encounters. Exact phase windows and postgame inventory rules remain open. No runtime changes, terrain construction, merge or deployment.
