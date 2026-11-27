@@ -1,0 +1,55 @@
+# R67 — Character lifetimes and chronology: opening campaign
+27 November 2026 | Additive continuity pass. Sources: R66 cumulative Word master; M04–M06, M09–M12, M14, S04–S06, R62, R64A and R65. Preserve all prior prose, stable IDs and owner ending directions. Local phase aliases are proposed production identifiers, not newly approved dates. No new quests.
+
+## 1. Three clocks, one lived story
+Track presentation order (when player sees a scene), local event order (within that reality) and protagonist-experienced order separately. The last can include genuine migrations without implying calendar equivalence. An event being displayed after M05 does not establish that the original eighteen-year-old body survived M05. M05's death remains a genuine experienced event; refusal explicitly replaces the prior death timeline at the ending. Sacrifice resolves into age-eighteen existence in the restored reality. Do not use a playable ghost, cloned body or arbitrary rewind to close the unresolved original chronology. Assign unknown local order as TBD. The player should discover the asymmetric time through physical evidence and personal experience, not a new timeline menu or a narrator explaining every mystery.
+
+## 2. Targeted phase register
+| Phase alias | Source and mandatory relationship | Actor and access condition |
+|---|---|---|
+| O_EVAC_OUTSKIRTS | M04, before O_BARRIER_ROAD | Older hero active, guards and observed civilian groups; local rescue flags, not universal survival |
+| O_BARRIER_ROAD | M05 scene 1 follows M04 retreat | Roadside woman/traveler greeting requires witnessed M04 encounter; otherwise neutral |
+| O_BARRIER_RIVER | M05 scene 2 before threshold | Safe river route; existing survivors only |
+| O_BARRIER_DEATH | M05 scene 4, after threshold readiness | Original body dies, life force preserved; no respawn at this authored event |
+| P_CLEARING_WAKE | M06 after M05 in presentation and personal experience, local absolute date unknown | Younger hero and Moon Goddess; older avatar absent; mark inspection not a power |
+| P_WOLFVEIL_OPEN | M06 after clearing, before M07 | Lyra at fountain; optional oath never required |
+| P_SANCTUARY_CONTACT | M09 after M08 archive directions | Younger hero and unnamed goddess; seal contact; no premature attack |
+| O_SANCTUARY_WITNESS | M09 linked to P_SANCTUARY_CONTACT, relation to O_BARRIER_DEATH TBD | Older hero and attendant; child silhouette, older fails to identify self |
+| X_INTERCEPT_ESCAPE | M10 after M09 in both scene sequences | Physical overlap, older interception, younger recognizes resemblance, escape; no Celestial Sight |
+| O_REFUGE_FIRST | M11 after M10 in presentation; local date versus M05 TBD | Mira/Renn/Tovin, healer and guard; vent and medicine in either order |
+| P_FAMILY_MELODY | M12 after M11 in presentation | Lessa/Neri/Calen at ordinary home; Lyra and public register; no fixed genealogical equivalence |
+| O_REFUGE_REVISIT | M12 after O_REFUGE_FIRST locally, exact interval TBD | Same original family and actual M11 task/trust states; genuine visit, not reenactment |
+| P_PARLEY_LIVE | S06 after M06, before M14 assassination | Sable/Tome/Henut/Livilla; rescue acknowledgment only where earned |
+| P_ASSASSINATION_BRIEF | M14 after M13; assassination before report | Envoy deceased, identity unfinalized; no living envoy in later parley |
+| P_PARLEY_RECORD | S06 late retrospective after M14 | Actual records/valid witnesses, no repeated assassination or fake participation |
+| A_RESTORED | R65 M20.A1/A2 after sacrifice commit | Age-eighteen hero, ordinary sky; former preserved acquaintances historical/deceased |
+| B_FUSED_RECOVERY | R65 M20.B1 after refusal commit | Age-eighteen hero, fused land and original scars; individuals require approved survival status |
+| B_GENERATION_CODA | R65 M20.B2 roughly twenty years later | New generation and verified older survivors only; playable starting phase and age TBD |
+
+No global date conversion, exact first/last opportunity windows, or invented local calendar. Use these anchors as partial-order constraints. The older optional visits still require individual scheduling, not a global unlock simply because M06 is complete.
+
+## 3. Actor lifetime register — targeted first pass
+Assign distinct stable writer aliases, mapped by Claude to existing actor IDs rather than spawning new duplicate NPCs. Alive-at-scene is evidence only for that scene, not proof of later survival. Historical, unknown, absent, departed and confirmed deceased are different states.
+- HERO_P15: living in preserved campaign, shared life force after M05, physical overlap M10. No independently playable younger avatar after either ending.
+- HERO_O18: active at authored original scenes, M05 original body deceased at threshold, chronology of later-presented visits unresolved. Both endings resolve into age-eighteen existence; refusal replaces prior death frame. No postdeath body assumption in pre-finale scenes.
+- MOON_GODDESS: M05 protector, M06 examiner, later counsel. She knows temporary protection's purpose, but M06 does not establish complete understanding of the mark. Do not assign omniscience or make permanent migration available.
+- HOSTILE_GODDESS: witnessed M09/M10, withdraws in M19; not declared dead or named. Motive and intermediary not settled by optional evidence.
+- LYRA_P: present at M06, assists M12 comparison. S04 optional, no compulsory oath history. Sacrifice: historical, not a living quest contact. Fusion: survival/later role TBD.
+- MIRA_O / RENN_O / TOVIN_O: original refuge family, alive at M11 and M12 revisit as written; medicine/vent outcome does not guarantee eventual survival. No one-to-one assignment to preserved family. Both endings' original-family individual fates TBD; do not automatically apply the preserved-population historical rule to their separate original lives.
+- LESSA_P / NERI_P / CALEN_P: distinct preserved family, alive at M12, returning-memory arc in M16 (exact speaker TBD). Sacrifice: part of past, no current living actor. Fusion: individual survival and later descendants TBD.
+- SABLE_P / TOME_P / HENUT_P / LIVILLA_P: present at M14 independent of optional S05/S06. Rescues and keepsakes independently recorded. Sacrifice: historical; fusion: individual fates unresolved. Do not derive survival solely from optional completion.
+- ENVOY_P: dead before M14 report; no final name. S06 live parley precedes death; late mode must not recreate it. Cause/culprit not resolved by actor death flag.
+- GUARD_O_M04, ATTENDANT_O_M09, HEALER_O_M11: local functional roles; identity across scenes unverified. Do not collapse into a single reusable narrative NPC merely because meshes can be reused.
+- A_CUSTODIAN, B_WORKER, B_APPRENTICE: proposed ending roles, not confirmed counterparts or descendants. Use independent biographies and actor IDs; avoid implied names or family lineage until approved.
+
+## 4. Dialogue deltas for truthful continuity
+M06 fountain, if player asks Lyra whether they have met before: she stops checking her slate and looks at him directly. “Not that I remember. You can tell me your name now, though.” He studies the running water before answering. “Maybe I had the wrong place.” Preserve a neutral first meeting; she must not confirm the other reality or imply an oath was made. If the player declines the topic, resume the existing mountain lead. No new mandatory interaction.
+M12 original revisit: Mira adjusts the blanket on the rail before greeting him. If M11 medicine and vent receipts are present, she says, “The air is easier here today.” If optional S16 was not completed, do not thank him for that separate delivery. Hero (checks the necklace without touching it): “I heard somebody sing your song.” Mira: “My mother taught me that one. Where did you hear it?” Hero: “Somewhere I don't know how to describe.” She waits, then returns to the child. No exact date, kinship claim, or claim of crossing together. This respects both actual family lives and the mystery.
+M14 late S06 retrospective: the clerk places a dated record on the table rather than resurrecting the busy festival-like parley. “This is what was written before the envoy died. It isn't what anybody learned afterward.” Hero: “Then let's keep those apart.” If no legitimate record or authorized witness exists, leave the optional step unavailable rather than invent testimony. Mandatory briefing remains available.
+
+## 5. Claude phase and actor handoff
+Reuse M04 split waystone/retreat corridor, M05 river bend/barrier terrace, M06 awakening slab/fountain, M09/M10 arch and safe pier, M11 refuge family bay, M12 porch/register, M14 hall and S06 table. Graph: M04 road → M05 river → threshold; separate M06 clearing → fountain → mountain trail. M09 contact ↔ authored older witness → M10 interception → safe exits; M11 refuge → M12 porch/register → authored refuge revisit → safe return. Do not introduce live portal or new dungeon. Preserve surveyed safe traversal, distinct world dressing, collision before transitions, unobstructed actor positions and two separate camera sightlines during overlap; no forced camera. M09 older sightline must obscure resemblance without replacing rigs, M10 younger view may show it. Proposed 2 m clear interaction zones at record, family bay and fountain, subject to avatar survey. No new traps, mandatory glide or relic. Preserve existing encounter telegraphs and safe checkpoints. R65 A and B share geographical anchors, not actor histories; B later coda gets separate phase/actor pool and scar/repair layers. Keep active cells only; bounded overlap proxy, low-poly reusable materials, navmesh validated for actual phase, local audio/captions and reduced motion. Return anchor IDs/transforms, local phase adjacency, actual actor availability and fallback records, traversal and camera tests, measured WebGPU/fallback performance and discrepancies.
+Test specifications (not executed): M04 witnessed/unwitnessed greeting; M05 ordinary defeat versus canonical transition; M06 skipped oath; M09 contact release and reload; M10 recognition asymmetry and no Celestial Sight; M11 both task orders; M12 distinct families and no S16 false credit; S05 partial and skipped; S06 before/after M14; both endings without optional quests; absent actor, unknown lifetime, coda phase and historical journal read without quest writes. Exact postgame spawn, reward transfer and replay remain owner decisions.
+
+## Revision tracker
+18 phase aliases and 17 individually named/grouped actor records or role groups targeted, not exhaustive character or opportunity certification. All 125 expansions (20 main, 50 discoveries, 55 optional) and 105 targeted availability reviews retained. No game code, map artwork, terrain construction, merge, deployment or credits. Next R68: continue M13–M19 actor/phase register and original optional visit schedule, starting shelter report, M14 original retreat, M16 witness consent, M17 observatory and M18–M19 deliberation. Preserve exact unknown dates and individual survivor decisions; then reconcile first/last opportunities without inventing access.
