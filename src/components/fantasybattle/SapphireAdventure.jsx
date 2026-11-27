@@ -866,6 +866,48 @@ function ItemInventory({profile,encounter,serviceAvailable,original,layout,initi
   return <><Panel rect={layout[0]}><h2>Inventory</h2>{category}{sorting}{search}{filters}<Btn onClick={()=>go('06')}>Equipment</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching owned items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{details}<p>{reason}</p>{action}</Panel></>;
 }
 
+// Bestiary lists actual world encounter records. Original wolf artwork is decorative, not an enemy record.
+function Bestiary({profile,world,original,layout,go,back}){
+  const [filter,setFilter]=useState('all'),[selectedId,setSelected]=useState(null),[pageIndex,setPage]=useState(0);
+  const completed=profile?.world.completedEncounters||[];
+  const entries=(world?.encounters||[]).filter(e=>e&&typeof e.id==='string'&&typeof e.label==='string');
+  const defeated=e=>Boolean(e.completed||completed.includes(e.id));
+  const matches=entries.filter(e=>filter==='all'||(filter==='defeated'?defeated(e):filter==='remaining'?!defeated(e):e.category===filter));
+  const pages=Math.max(1,Math.ceil(matches.length/12)),index=Math.min(pageIndex,pages-1),visible=matches.slice(index*12,index*12+12);
+  const selected=visible.find(e=>e.id===selectedId)||visible[0];
+  const lead=selected?enemyFormation(selected,1)[0]:null;
+  const categories=[['all','All encounters'],['Normal','Normal'],['Elite','Elite'],['Boss','Bosses'],['defeated','Defeated'],['remaining','Remaining']];
+  const filters=categories.map(([key,label])=><Btn key={key} primary={filter===key} aria-pressed={filter===key} onClick={()=>{setFilter(key);setPage(0);setSelected(null);}}>{label}</Btn>);
+  const cards=visible.map(e=>{const unit=enemyFormation(e,1)[0];return <Btn key={e.id} className="fa-bestiary-card" primary={selected?.id===e.id} aria-pressed={selected?.id===e.id} aria-label={e.label+' · '+(defeated(e)?'Defeated':'Not defeated')} title={e.label} onClick={()=>setSelected(e.id)}><EnemyPortrait enemy={unit} small/><span>{e.label}</span>{defeated(e)&&<small>✓</small>}</Btn>;});
+  const paging=<><Btn disabled={!index} onClick={()=>setPage(index-1)} aria-label="Previous enemies">‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} onClick={()=>setPage(index+1)} aria-label="Next enemies">›</Btn></>;
+  const stats=lead?[['HP',lead.maxHp],['Attack',lead.atk],['Defense',lead.def],['Speed',lead.spd]]:[];
+  const statsRows=stats.map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>);
+  const tactic=lead?tacticFor(lead.strategy,lead.archetype):'Explore the world to view encounter records.';
+  const status=selected?(defeated(selected)?'Defeated':'Not yet defeated'):'No selected encounter';
+  const activeSize=profile?1+activeRoster(profile).length:1;
+  const formation=selected?enemyFormation(selected,activeSize):[];
+  const formationRows=formation.map(unit=><div className="fa-bestiary-formation-member" key={unit.id}><EnemyPortrait enemy={unit} small/><span>{unit.name}</span></div>);
+  const navigation=<><Btn onClick={()=>go('29')}>World Codex</Btn><Btn onClick={back}>Back</Btn></>;
+  if(original)return <div className="fa-original-bestiary">
+    <h2 className="fa-bestiary-title">Bestiary</h2>
+    <nav className="fa-bestiary-nav" aria-label="Encounter filters and navigation">{filters}{navigation}</nav>
+    <div className="fa-bestiary-count">{matches.length} encounters</div>
+    <section className="fa-bestiary-grid" aria-label="World encounters">{cards}{!visible.length&&<p>No matching encounters</p>}</section>
+    <div className="fa-bestiary-pages">{paging}</div>
+    <span className="fa-bestiary-cover-label">Original cover illustration</span>
+    <h3 className="fa-bestiary-notes-title">Combat notes</h3><div className="fa-bestiary-notes"><p>{tactic}</p><small>Base stats are for one party member; actual formation scales with party size.</small></div>
+    <div className="fa-bestiary-detail-title"><h3>{selected?.label||'Select an encounter'}</h3><small>{selected?.category||'—'} · {status}</small></div>
+    <div className="fa-bestiary-portrait">{lead&&<EnemyPortrait enemy={lead}/>}</div><div className="fa-bestiary-record"><span>{lead?'Recorded enemy profile':'No enemy selected'}</span><small>{status}</small></div>
+    <h3 className="fa-bestiary-stats-title">Base statistics</h3><section className="fa-bestiary-stats" aria-label="Base enemy statistics">{statsRows}</section>
+    <div className="fa-bestiary-type"><span>{selected?.category||'—'}</span><span>{lead?.archetype||'—'}</span></div>
+    <h3 className="fa-bestiary-tactic-title">Tactics</h3><div className="fa-bestiary-tactic">{lead?.strategy||'—'}</div>
+    <h3 className="fa-bestiary-status-title">Progress</h3><div className="fa-bestiary-status">{status}</div>
+    <h3 className="fa-bestiary-formation-title">Formation preview</h3><section className="fa-bestiary-formation" aria-label="Enemy formation preview">{formationRows}</section>
+    <p className="fa-bestiary-disclaimer">No drop tables or elemental weaknesses are defined here.</p>
+  </div>;
+  return <><Panel rect={layout[0]}><h2>Bestiary</h2>{filters}{navigation}</Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching encounters.</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{selected?.label||'Select an encounter'}</h2><p>{status}</p>{lead&&<EnemyPortrait enemy={lead}/>}<section>{statsRows}</section><p>{tactic}</p><p>Base stats; formation scales with party size.</p>{formationRows}<small>No drop tables or elemental weaknesses are defined here.</small></Panel></>;
+}
+
 function SaveToast({status}){
   const [ready,setReady]=useState(false);
   return <aside className={'fa-save-plaque'+(ready?' is-ready':'')} role="status" aria-live="polite">
@@ -921,7 +963,7 @@ export default function SapphireAdventure(){
   const [itemId,setItemId]=useState('starterBow'),[loot,setLoot]=useState([]),[service,setService]=useState(null),[candidate,setCandidate]=useState(null),[destination,setDestination]=useState(null);
   const [gearWearer,setGearWearer]=useState('hero');
   const [equipmentFilter,setEquipmentFilter]=useState('all');
-  const [companionId,setCompanionId]=useState(COMPANION.id),[enemyId,setEnemyId]=useState(null);
+  const [companionId,setCompanionId]=useState(COMPANION.id);
   const [importSlot,setImportSlot]=useState('1'),[backupError,setBackupError]=useState(''),[backupPass,setBackupPass]=useState(''),[backupBusy,setBackupBusy]=useState(false);
   const backupLock=useRef(false),saveBaseline=useRef(null);
   const [notifications,setNotifications]=useState([]),[lesson,setLesson]=useState(0),[discovery,setDiscovery]=useState(null),[saveStatus,setSaveStatus]=useState('');
@@ -1029,7 +1071,6 @@ export default function SapphireAdventure(){
     window.addEventListener('message',receive);window.addEventListener('keydown',key);return()=>{window.removeEventListener('message',receive);window.removeEventListener('keydown',key);};
   },[]);
   const selectedCompanion=ROSTER.find(m=>m.id===companionId)||COMPANION, member=memberFor(profile,selectedCompanion.id);
-  const seenEnemy=world?.encounters?.find(e=>e.id===enemyId)||world?.encounters?.[0];
   const backupField=<label>Backup passphrase (encrypted transfers only)<input type="password" autoComplete="off" value={backupPass} maxLength={256} onChange={e=>setBackupPass(e.target.value)} placeholder="12 or more characters"/></label>;
   const recent=mostRecent(slots.slots),level=profile?levelFor(profile.xp):1,stats=heroStats(profile);
   const serviceAvailable=Boolean(service&&world?.nearbyService===service.id&&!encounter);
@@ -1222,7 +1263,7 @@ export default function SapphireAdventure(){
     case '21':content=<ItemInventory key={profile?.id||'guest'} profile={profile} encounter={encounter} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} initialItem={itemId} onSelect={setItemId} go={go} back={back}/>;break;
     case '22':content=<CraftingShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onCraft={()=>requestConfirm('Craft 1 Recovery Tonic using 2 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter)throw Error('Visit a service marker to craft.');if(p.inventory.recoveryTonic>=100000)throw Error('Inventory limit reached.');return craftTonic(p);},'Recovery Tonic crafted'))}/>;break;
     case '23':content=<DungeonEntrance profile={profile} world={world} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onDetails={()=>{const s=current.current;if(s.profile&&s.running&&s.candidate?.id===candidate?.id&&candidate&&!s.encounter)go('36');}}/>;break;
-    case '24':content=<>{pane(0,nav(['29']))}{pane(1,<>{world?.encounters?.length?world.encounters.map(e=><Btn key={e.id} primary={seenEnemy?.id===e.id} onClick={()=>setEnemyId(e.id)}>{e.label} · {e.completed?'Defeated':'Discovered'}</Btn>):<p>No enemies discovered.</p>}</>)}{pane(2,seenEnemy?<><h2>{seenEnemy.label}</h2>{enemyFormation(seenEnemy,1).map(e=><div key={e.id}><EnemyPortrait enemy={e}/><StatRows stats={{HP:e.maxHp,Attack:e.atk,Defense:e.def,Speed:e.spd}}/><p>{tacticFor(e.strategy,e.archetype)}</p></div>)}<small>Base stats; formation scales with party size.</small></>:<p>Explore to discover enemy entries.</p>)}</>;break;
+    case '24':content=<Bestiary key={profile?.id||'guest'} profile={profile} world={world} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '25':content=<FastTravel profile={profile} world={world} encounter={encounter} destination={destination} onSelect={setDestination} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{const profileId=current.current.profile?.id;if(!profileId||!region)return;requestConfirm('Travel to '+region.name+'?',()=>{if(transact(p=>{if(p.id!==profileId)throw Error('Active character changed. Select a destination again.');const liveRegion=current.current.world?.regions.find(r=>r.id===region.id);if(!liveRegion||!Number.isFinite(liveRegion.minX)||!Number.isFinite(liveRegion.maxX)||liveRegion.maxX<=liveRegion.minX)throw Error('Destination is no longer available.');return travelTo(p,liveRegion);},'Arrived at '+region.name)){post('restore',current.current.profile.world);post('pause',false);root('10');}});}}/>;break;
     case '26':content=<Recruitment profile={profile} encounter={encounter} selected={selectedCompanion} member={member} onSelect={setCompanionId} onRecruit={m=>requestConfirm('Recruit '+m.name+'?',()=>transact(p=>recruitCompanion(p,m.id),m.name+' joined'))} original={original} layout={screen.layout} go={go} back={back}/>;break;
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;

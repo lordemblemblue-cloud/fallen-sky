@@ -18,7 +18,7 @@ test('refined static frames are cached and all panels fit the normalized canvas'
 import {STAGED_ORIGINAL_ART,stagedOriginalFor,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 test('staged original artwork uses only explicit owner-media WebP URLs',()=>{
  const allowed=/^https:\/\/media\.base44\.com\/images\/public\/6af625cd654fa5b8954442ce\/[a-zA-Z0-9_-]+\.webp$/;
- assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','25','26','27','30','31','32','33','35','36','38','39','40','42','43','44','45','46','47']);
+ assert.deepEqual(Object.keys(STAGED_ORIGINAL_ART).sort(),['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','30','31','32','33','35','36','38','39','40','42','43','44','45','46','47']);
  for(const [id,entry] of Object.entries(STAGED_ORIGINAL_ART)){
   assert.ok(Object.hasOwn(UI_SCREENS,id));assert.equal(stagedOriginalFor(id),entry);
   assert.equal(entry.mode,'full');assert.match(entry.url,allowed);assert.ok(entry.source);
@@ -355,4 +355,14 @@ test('original item inventory displays only owned catalog items and delegates gu
  for(const marker of ['Object.entries(ITEMS).filter','(inv[key]||0)>0','Math.ceil(matches.length/20)','profile.hp<hpMax','material&&serviceAvailable','!encounter','disabled={!enabled}',"go(tonic?'46':equipment?'39':'22')",'onSelect(id)'])assert.ok(section.includes(marker),marker);
  for(const forbidden of ['transact(','heal(p)','equipItem(p','craftTonic(p'])assert.ok(!section.includes(forbidden),forbidden);
  assert.match(page,/case '21':content=<ItemInventory/);
+});
+
+test('original bestiary shows real encounter and formation records without inventing drop data',()=>{
+ assert.equal(stagedOriginalFor('24').wideOnly,true);
+ assert.ok(templateUrl('24').startsWith('data:image/svg+xml,'));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('function Bestiary('),page.indexOf('function SaveToast('));
+ for(const marker of ['world?.encounters','completed.includes(e.id)','enemyFormation(selected,1)','enemyFormation(selected,activeSize)','tacticFor(lead.strategy,lead.archetype)','Original cover illustration','No drop tables or elemental weaknesses','Math.ceil(matches.length/12)'])assert.ok(section.includes(marker),marker);
+ for(const forbidden of ['rewardVictory(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
+ assert.match(page,/case '24':content=<Bestiary/);
 });

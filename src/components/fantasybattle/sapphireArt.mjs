@@ -44,6 +44,7 @@ export function templateUrl(id){if(!Object.hasOwn(UI_SCREENS,id))return '';if(!u
 // in-game preview. Only these explicitly uploaded URLs are accepted. The
 // original local-asset registry is reserved for final, approved repository art.
 export const STAGED_ORIGINAL_ART=Object.freeze({
+ '24':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/f92a10cff5a672300ec2005a867cb0be_fantasy-battle-24-runtime.webp',source:'Original Fantasy Battle template batch 10 — 24.webp',mode:'full',wideOnly:true}),
  '21':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/8c8663a0af947f6fff42c37f9812c69f_fantasy-battle-21-runtime.webp',source:'Original Fantasy Battle template batch 03 — 21.webp',mode:'full',wideOnly:true}),
  '39':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/9aecca31052646b3d7df3490f56d8b98_fantasy-battle-39-runtime.webp',source:'Moonlit Saber Item Comparison.png — original template batch 10',mode:'full',wideOnly:true}),
  '46':Object.freeze({url:'https://media.base44.com/images/public/6af625cd654fa5b8954442ce/f0141d5a81d619fb4956e8381e21c005_fantasy-battle-46-runtime.webp',source:'Original Fantasy Battle template batch 04 — 46.webp',mode:'full',wideOnly:true}),
