@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **FINALE-20261127 — M18–M20 emotional pacing (draft):** [A world worth waking in](FINALE_20261127_M18_M20_EMOTIONAL_PACING.md). Five candidate beats, three chapter terrain deltas; preserve R64A/R65/R84, R98 causality and R111 unknowns. No new outcome, reward or implementation.
+
 > **CHRON-20261127 — two-life chronology and dialogue (draft):** [The hand that remembers](CHRON_20261127_M04_M06_M09_M10_DIALOGUE.md). Five candidate scene variants and terrain deltas; M05 physical death, M09/M10 actual overlap, no Celestial Sight. R111 chronology decision remains open. Not built or verified.
 
 > **POL-20261127 — political dialogue refinement (draft):** [The price of an accusation](POL_20261127_M14_M17_POLITICAL_DIALOGUE.md). Four candidate scene variants M14–M17, existing anchors and acceptance deltas; preserve R53/R107 selection, no new objectives or rewards, no retired Three Roads restoration. Not built or verified.
