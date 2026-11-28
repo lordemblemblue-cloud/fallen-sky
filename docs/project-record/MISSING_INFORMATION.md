@@ -157,6 +157,14 @@ These come from the story documents' own open questions (`docs/game3d/threads-of
 
 ---
 
+### MI-FS-P4 Reward transaction integration and provider evidence (open)
+- **Project:** Fallen Sky. **Feature:** FS-22 / WP-FS-09 / FS-D14, Blacksmith and quest reward authority.
+- **Completed:** R139 contract; R140–R149 isolated fixtures; [R150 gap map](../game3d/threads-of-our-pain/R150_REWARD_AUTHORITY_RUNTIME_GAP_MAP.md) maps all 20 cases and reproduces three client-path gaps using actual source excerpts with injected I/O.
+- **Missing:** deployed SDK and conditional-update/upsert guarantees for Game3D entities; actual discovery function/schema; disposable staging scope and checkout runner; approval of legacy ambiguous-ID reconciliation, restore semantics, and client/server application strategy.
+- **Why required:** no proof of multi-record atomicity or safe legacy migration; local receipt replay can double-charge in the diagnostic harness. Preserve guest-only entry and existing upgrades.
+- **Questions:** Can the implementation lead verify deployed provider capabilities on disposable records, obtain the exact discovery source and run the R147/R150 Node suites? After evidence, does owner authorize a narrowly scoped implementation-ready package (no live migration until separately reviewed)?
+- **Files:** provider/deployment evidence and test outputs; no credentials in repo. **Affected:** Character Vault, itemUpgrade, material inventory, discovery claims, quest rewards, NG+ and backup restore. **Can continue:** exact checkout tests, non-mutating provider review, other ready packages.
+
 ## Group FS-W. Fallen Sky world and bosses
 
 ### MI-FS-W1 The world that replaces the platform
