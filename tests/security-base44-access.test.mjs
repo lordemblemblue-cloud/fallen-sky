@@ -128,3 +128,32 @@ test('server validates clan membership and channel roles before reading chat', (
   assert.doesNotMatch(client, /entities\.ClanMessage\.(filter|list|get|subscribe)/);
   assert.doesNotMatch(client, /base44\.asServiceRole/);
 });
+
+test('guest save streaming preserves valid UTF-8 including split characters', async () => {
+  const { readBoundedGuestBody } = await import('../base44/shared/readBoundedGuestBody.mjs');
+  const raw = JSON.stringify({ name: '月🌙é' });
+  const bytes = new TextEncoder().encode(raw);
+  const body = new ReadableStream({ start(c) { for (const byte of bytes) c.enqueue(Uint8Array.of(byte)); c.close(); } });
+  assert.equal(await readBoundedGuestBody({ body }, raw.length), raw);
+  assert.equal(await readBoundedGuestBody(new Request('https://example.test', { method: 'POST', body: '' })), '');
+});
+
+test('guest save streaming cancels oversized bodies before consuming the remainder', async () => {
+  const { readBoundedGuestBody } = await import('../base44/shared/readBoundedGuestBody.mjs');
+  for (const chunk of [new Uint8Array(40).fill(97), new Uint8Array(11).fill(97)]) {
+    let cancelled = false;
+    const body = new ReadableStream({ start(c) { c.enqueue(chunk); }, cancel() { cancelled = true; } });
+    assert.equal(await readBoundedGuestBody({ body }, 10), null);
+    assert.equal(cancelled, true);
+    assert.equal(body.locked, false);
+  }
+});
+
+test('guest save request size enforcement precedes parsing and privileged access', () => {
+  const source = readFileSync(new URL('../base44/functions/guestCharacterVault/entry.ts', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /await req\.text\(/);
+  assert.match(source, /const raw = await readBoundedGuestBody\(req\)/);
+  assert.match(source, /if \(raw === null\) return json\(\{ error: 'Save request is too large' \}, 413\)/);
+  assert.ok(source.indexOf('await readBoundedGuestBody(req)') < source.indexOf('JSON.parse(raw'));
+  assert.ok(source.indexOf('JSON.parse(raw') < source.indexOf('const base44 = createClientFromRequest(req)'));
+});

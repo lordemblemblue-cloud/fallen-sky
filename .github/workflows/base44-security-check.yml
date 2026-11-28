@@ -6,6 +6,7 @@ on:
     paths:
       - 'base44/entities/**'
       - 'base44/functions/**'
+      - 'base44/shared/**'
       - 'src/**'
       - 'server/**'
       - 'package.json'
@@ -19,6 +20,7 @@ on:
     paths:
       - 'base44/entities/**'
       - 'base44/functions/**'
+      - 'base44/shared/**'
       - 'src/**'
       - 'server/**'
       - 'package.json'
