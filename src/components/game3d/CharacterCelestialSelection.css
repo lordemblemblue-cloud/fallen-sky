@@ -155,3 +155,56 @@
 .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-scene {
   background-image:linear-gradient(180deg,rgba(8,16,44,.1) 0%,rgba(3,10,31,.04) 46%,rgba(4,9,30,.30) 82%,rgba(5,8,24,.62) 100%),url("https://media.base44.com/images/public/6af625cd654fa5b8954442ce/6441dedadbf552e1a9782302a29003db_a_cinematic_ultra_detailed_fantasy_sci_fi_landsca.png");
 }
+
+/* Owner's reference: open gold typography, circular roster, clean center,
+ * footer on the right. Narrow layouts retain existing responsive controls. */
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-page-title {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-info-rail::before {content:none}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-chronicle-tabs {backdrop-filter:none;-webkit-backdrop-filter:none}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-celestial-meter {display:block;min-width:30px;height:4px;border-radius:5px;background:#a7aec34d;overflow:hidden}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-celestial-meter>i {display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#e9ae5c,#ffe1a0);box-shadow:0 0 7px #ffca70}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-character-details>div.axe-celestial-meter-row {display:grid;grid-template-columns:minmax(55px,1fr) minmax(35px,2fr) auto;align-items:center;gap:10px}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-celestial-meter-row dd {white-space:nowrap}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-play {position:relative}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-play::before, .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-play::after {content:"✧";position:absolute;top:50%;transform:translateY(-50%);color:#ffe0a1;font-size:20px;pointer-events:none}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-play::before {left:-18px}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-play::after {right:-18px}
+@media(min-width:1100px) and (min-height:620px) {
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-celestial-identity {left:16.5%;top:12%;width:18%}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-xross-roster {left:5%;top:15%;bottom:24%;width:9%;max-width:none;--cross-step:clamp(76px,16vh,160px)}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-heading {position:fixed;right:4%;top:6%;justify-content:flex-end;letter-spacing:.2em;font:500 13px/1.4 Georgia,serif;border-bottom:1px solid #e3b86f80;padding:0 0 10px}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-track::before {width:55%;left:12%;border-right-color:#f4cd8d;filter:drop-shadow(0 0 4px #d9a85e)}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-guide {display:none}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-slot {width:100%;transform:translate(calc(14px - var(--cross-distance)*18px),calc(-50% + var(--cross-offset)*var(--cross-step))) scale(calc(1 - var(--cross-distance)*.09))}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-slot .axe-crossline-choice.axe-login-roster-entry {display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;padding:0}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-celestial-medallion {width:clamp(64px,6.5vw,112px)}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-name, .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-level {position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-actions {position:fixed;right:3%;bottom:8%;width:30%;max-width:none;justify-content:flex-end;gap:0 9px}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-actions .axe-crossline-action {font:500 clamp(10px,.84vw,14px)/1.35 Georgia,serif;color:#fff0d8}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-crossline-pager {align-self:center}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-stats-panel.axe-login-info-rail {top:14%;bottom:17%;width:28%}
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-bottom-action {bottom:8%}
+}
+/* The existing faction and avatar editor share the approved scenic art and
+ * color treatment, not the selection-only controls or saved character data. */
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-scene, .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="faction"] .axe-login-scene {
+  background-image:linear-gradient(180deg,rgba(4,10,27,.12),rgba(3,8,22,.28)),url("https://media.base44.com/images/public/6af625cd654fa5b8954442ce/6441dedadbf552e1a9782302a29003db_a_cinematic_ultra_detailed_fantasy_sci_fi_landsca.png");
+  filter:brightness(.82) saturate(1.05);
+}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-scrim {background:radial-gradient(ellipse at center,transparent 30%,#07102180 100%)}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-shell.creator-embedded,
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-studio {background:transparent;--cc-accent:#f3ce8a;--cc-ink:#fff0d8;--cc-dim:#e6d7bd;--cc-faint:#c5b89e;--cc-line:#d8b67442;--cc-line-strong:#e4ba7180}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-panel {background:linear-gradient(90deg,#061126d9,#09182e9c 66%,transparent);border:0;border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-panel::before,
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-panel-sheen {display:none}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-panel-head h2 {font-family:Georgia,serif;color:#ffe0a1}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-panel-head p,
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-brand {color:#f0ce92}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-rail {background:#09162a80;border:1px solid #d9ad6459;box-shadow:none}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-save {border:1px solid #f4cc83;color:#ffe5ad;background:linear-gradient(#28364c,#0a1324);border-radius:16px 4px;box-shadow:inset 0 0 0 2px #18243a,0 0 12px #e3b66b44}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-next {color:#e8d5b0;border-color:#d8b67480}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="faction"] .axe-fd-details {background:linear-gradient(90deg,transparent,#07152cc9 22%,#07152cc9 80%,transparent);box-shadow:none}
+.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="faction"] .axe-fd-detail-head h2, .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="faction"] .axe-fd-overline {color:#ffe0a1}
+@media(max-width:840px) {
+  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="creator"] .axe-login-creator-inworld .creator-panel {background:linear-gradient(180deg,#07152ce8,#061126f5)}
+}
