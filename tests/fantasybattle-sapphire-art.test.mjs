@@ -111,7 +111,7 @@ test('original bonds interface reads actual recruited companion progression with
  assert.ok(templateUrl('30').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function CompanionBonds('),page.indexOf('function SaveToast('));
- for(const marker of ['fa-original-bonds','memberFor(profile','state.bond','bond>=75','bond>=25','max={100}','Practice and repeat victories do not count','No bond-based statistic bonuses','no rewards are claimable','<Btn disabled>Gifts','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['fa-original-bonds','memberFor(profile','state.bond','bond>=75','bond>=25','max={100}','Practice and repeat victories do not count','No bond-based statistic bonuses','no rewards are claimable','companionGiftQuote(profile,selected?.id)','bondConversation(selected?.id,state)','disabled={!canGift}','onGift(selected.id,quote.bond)','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
  assert.match(page,/case '30':content=<CompanionBonds/);
  assert.ok(!section.includes('transact('));
 });
