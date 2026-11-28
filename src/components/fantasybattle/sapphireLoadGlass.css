@@ -37,3 +37,34 @@
 .reduced-motion .fa-glass-progress::-webkit-progress-value{transition:none}
 
 .fa-glass-slow,.fa-glass-load-error{padding:10px 12px;margin:0;border-left:2px solid #d1b784;background:#0b193980;color:#f1dfbb;border-radius:4px;overflow-wrap:anywhere}.fa-glass-load-error{border-color:#e8a39d;color:#ffe1dc}
+
+/* Owner-approved panoramic loading scene. No boxed panel or browser chrome.
+   The existing clean world illustration remains behind all live controls. */
+.fa-loading-scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;overflow:auto;padding:clamp(14px,5vh,56px) clamp(16px,9vw,160px);background:radial-gradient(ellipse at 50% 54%,#091b39c9 0%,#152e55a6 30%,#213e684d 55%,transparent 79%);isolation:isolate}
+.fa-loading-scene::before,.fa-loading-scene::after{content:"";position:absolute;z-index:-1;pointer-events:none;left:-8%;right:-8%;height:30%;border-radius:48% 62% 48% 65% / 35% 55% 35% 55%;background:linear-gradient(176deg,transparent 12%,#8cc5ff13 34%,#c2dfff36 48%,#67a6ed24 57%,transparent 83%);box-shadow:0 -1px 20px #a8d8ff26;filter:blur(2px);transform:rotate(-5deg);animation:fa-loading-mist 9s ease-in-out infinite alternate}
+.fa-loading-scene::before{top:30%}.fa-loading-scene::after{top:55%;transform:rotate(4deg);animation-delay:-4s}
+@keyframes fa-loading-mist{from{translate:-3% 0;opacity:.5}to{translate:3% -8px;opacity:1}}
+.fa-loading-content{box-sizing:border-box;position:relative;width:min(100%,1120px);margin:auto;display:flex;flex-direction:column;gap:clamp(10px,2vh,24px);color:#f5ecd9;line-height:1.4;font-size:clamp(14px,1.5vw,21px);text-shadow:0 2px 7px #07132e;min-width:0}
+.fa-loading-content .fa-glass-load-heading{text-align:center;justify-items:center;border:0;padding:0 0 clamp(6px,1.3vh,16px);gap:6px}
+.fa-loading-content .fa-glass-load-heading h1{font-size:clamp(30px,5vw,72px);line-height:1.08;overflow-wrap:anywhere;letter-spacing:.005em}
+.fa-loading-content .fa-glass-load-heading p{font-size:clamp(15px,1.8vw,24px);color:#e5edf9}
+.fa-loading-content .fa-glass-kicker{color:#f2dfb8;letter-spacing:.22em}
+.fa-loading-emblem{display:block;color:#c4efff;font-size:clamp(26px,4vh,48px);line-height:1;text-shadow:0 0 14px #64b9ff,0 0 5px #fff}
+.fa-loading-content .fa-glass-loading-status{gap:8px;align-items:center}
+.fa-loading-content .fa-glass-loading-status small{color:#e2eaf5}
+.fa-loading-content .fa-glass-progress{height:clamp(12px,2.2vh,20px);border-color:#b8d9f0bb;background:#0a1d3999;box-shadow:0 0 14px #7cbcff60,inset 0 0 7px #e7f5ff33}
+.fa-loading-content .fa-glass-progress::-webkit-progress-bar{background:#0a1d3999}
+.fa-loading-content .fa-glass-progress::-webkit-progress-value{background:linear-gradient(90deg,#3b82f6,#78caff 70%,#c4faff);box-shadow:0 0 13px #97e6ff}
+.fa-loading-content .fa-glass-progress::-moz-progress-bar{background:linear-gradient(90deg,#3b82f6,#78caff 70%,#c4faff)}
+.fa-loading-content .fa-glass-loading-steps{padding-inline:clamp(0px,4vw,50px);gap:clamp(6px,1.2vh,12px)}
+.fa-loading-content .fa-glass-loading-steps li[data-state="active"] span{filter:drop-shadow(0 0 6px #ffdb8b)}
+.fa-loading-content .fa-glass-loading-hint{text-align:center;position:relative;padding-top:12px;color:#e4eef9}
+.fa-loading-content .fa-glass-loading-hint::before{content:"";position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,#e6d7b4b0,transparent)}
+.fa-loading-content>.fa-button{align-self:flex-end;min-width:clamp(110px,16vw,200px)}
+.fa-loading-content .fa-button{min-height:44px;border-radius:999px;background:linear-gradient(150deg,#b4dbff3b,#132b5378 55%,#83bce74d);border:1px solid #c7eaff9e;box-shadow:inset 0 0 12px #c1e8ff40,0 0 14px #98d4ff33}
+.fa-loading-content .fa-glass-slow,.fa-loading-content .fa-glass-load-error{border:0;background:transparent;text-align:center;padding:0;color:#f8e2bc}
+.fa-loading-content .fa-glass-load-error{color:#ffe1dc}
+@media(max-width:700px){.fa-loading-scene{padding:16px 6vw}.fa-loading-content{font-size:14px}.fa-loading-content .fa-glass-kicker{letter-spacing:.12em}.fa-loading-content .fa-glass-loading-status small{font-size:.75em}}
+@media(max-height:540px){.fa-loading-scene{padding:10px 7vw;align-items:flex-start}.fa-loading-content{gap:7px;font-size:14px}.fa-loading-content .fa-glass-load-heading h1{font-size:clamp(25px,6vh,36px)}.fa-loading-content .fa-glass-load-heading{gap:3px;padding:0}.fa-loading-emblem{font-size:22px}.fa-loading-content .fa-glass-loading-steps{gap:3px}.fa-loading-content .fa-glass-loading-hint{padding-top:6px}.fa-loading-content .fa-button{min-height:36px}}
+@media(prefers-reduced-motion:reduce){.fa-loading-scene::before,.fa-loading-scene::after{animation:none}}
+.reduced-motion .fa-loading-scene::before,.reduced-motion .fa-loading-scene::after{animation:none}

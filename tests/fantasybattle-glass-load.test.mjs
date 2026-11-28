@@ -61,4 +61,21 @@ test('cancel, local backup, mobile and reduced motion remain supported',()=>{
 });
 
 test('slow status explains waiting without changing progress',()=>{assert.match(src,/setTimeout\(\(\)=>setSlowLoad\(true\),8000\)/);assert.match(loading,/slowLoad&&/);assert.doesNotMatch(loading,/setTimeout/);});
-test('loading failure preserves glass recovery and blocks late messages',()=>{assert.match(src,/case '47':content=<div className="fa-glass-load-layout/);assert.match(src,/loadFailure\?'Unable to load':'Unable to continue'/);assert.match(src,/id==='35'\)setLoadFailure\(true\)/);assert.match(src,/e.type==='error'&&!failedLoad.current/);assert.match(src,/startReady.current\|\|restorePending.current/);assert.match(src,/clearTimeout\(startTimer.current\);clearTimeout\(timeoutRef.current\)/);});
+test('loading failure preserves glass recovery and blocks late messages',()=>{assert.match(src,/case '47':content=<div className=\{loadFailure\?"fa-loading-scene"/);assert.match(src,/loadFailure\?'Unable to load':'Unable to continue'/);assert.match(src,/id==='35'\)setLoadFailure\(true\)/);assert.match(src,/e.type==='error'&&!failedLoad.current/);assert.match(src,/startReady.current\|\|restorePending.current/);assert.match(src,/clearTimeout\(startTimer.current\);clearTimeout\(timeoutRef.current\)/);});
+
+test('loading uses panoramic scene, not the save menu box',()=>{
+ assert.match(loading,/fa-loading-scene/);
+ assert.match(loading,/fa-loading-content/);
+ assert.doesNotMatch(loading,/fa-glass-load-panel/);
+ assert.match(css,/\.fa-loading-scene\{[^}]*justify-content:center/);
+ assert.match(css,/\.fa-loading-content\{[^}]*width:min\(100%,1120px\)/);
+});
+test('world startup has one compatibility attempt and stale frame messages are ignored',()=>{
+ assert.match(src,/run.webgl\?30000:15000/);
+ assert.match(src,/if\(run.webgl\)\{setRunning\(false\);fail\(message\);return;\}/);
+ assert.match(src,/worldRunRef.current=next;restorePending.current=false;setLoadStage\(1\)/);
+ assert.match(src,/e.data.run===String\(worldRunRef.current.id\)/);
+ assert.match(src,/key=\{worldRun.id\}/);
+ const route=readFileSync(new URL('../src/routes/fantasy-battle-world.jsx',import.meta.url),'utf8');
+ assert.match(route,/\.\.\.event,run/);
+});
