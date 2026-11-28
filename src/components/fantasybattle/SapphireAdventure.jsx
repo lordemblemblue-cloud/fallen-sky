@@ -10,6 +10,8 @@ import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionG
 import './fantasybattle.css';
 import './sapphireAdventure.css';
 import './sapphireExplorationHud.css';
+import NewGameSetup from './NewGameSetup.jsx';
+import './newGameSetup.css';
 import './sapphireLoadGlass.css';
 import {loadingMilestones} from './core/loadingMilestones.mjs';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
@@ -104,36 +106,6 @@ const EMPTY={slots:[],error:null};
 const fmt=(n)=>new Intl.NumberFormat('en-US').format(n);
 const skillName=id=>ACTIONS[id]?.name||id;
 const isWorldScreen=id=>id==='10'||id==='09';
-
-// Onboarding only edits existing settings and a draft character; creation and save writes stay in their existing guarded flows.
-function FirstTimeSetup({name,onName,appearance,onAppearance,settings,onSettings,validCount,saveError,original,layout,back,onCreate,onLoad,onSettingsPage,onTutorial}){
- const [section,setSection]=useState('profile');
- const selected=Object.hasOwn(APPEARANCES,appearance)?appearance:'silver';
- const sections=[['profile','Profile'],['display','Display'],['audio','Audio'],['controls','Controls'],['save','Local saves'],['confirm','Review']];
- const selectSection=key=>{setSection(key);document.getElementById('fa-setup-'+key)?.focus();};
- const nav=sections.map(([key,label])=><Btn key={key} primary={section===key} aria-current={section===key?'step':undefined} onClick={()=>selectSection(key)}>{label}</Btn>);
- const nameInput=<input aria-label="Adventurer name" placeholder="Enter character name" value={name} maxLength={40} autoComplete="off" onChange={e=>onName(e.target.value)}/>;
- const swatches=Object.entries(APPEARANCES).map(([key,a])=><Btn key={key} className="fa-setup-swatch" title={a.name} aria-label={a.name} aria-pressed={selected===key} onClick={()=>onAppearance(key)}><span style={{background:a.swatch}} aria-hidden="true"/></Btn>);
- const quality=<select aria-label="Graphics quality" value={settings.quality} onChange={e=>{const value=e.target.value;if(['performance','balanced','high','cinematic'].includes(value))onSettings({quality:value});}}>{['performance','balanced','high','cinematic'].map(q=><option value={q} key={q}>{q[0].toUpperCase()+q.slice(1)}</option>)}</select>;
- const mute=<label><span>Mute battle audio</span><input type="checkbox" checked={settings.muted} onChange={e=>onSettings({muted:e.target.checked})}/></label>;
- const motion=<label><span>Reduce UI and clothing motion</span><input type="checkbox" checked={settings.reducedMotion} onChange={e=>onSettings({reducedMotion:e.target.checked})}/></label>;
- const saveInfo=saveError?'Save storage could not be read. Review Settings before loading.':validCount?validCount+' valid local save'+(validCount===1?'':'s')+' available.':'No loadable saves on this browser.';
- const load=<Btn className="fa-setup-load" disabled={!validCount||Boolean(saveError)} onClick={onLoad}>Load Existing Save</Btn>;
- const create=<Btn primary className="fa-setup-begin" onClick={onCreate}>Continue to Character Creation</Btn>;
- if(original)return <div className="fa-original-setup">
-  <h2 className="fa-setup-title">Fantasy Battle</h2><p className="fa-setup-subtitle">First-time setup · Welcome, adventurer</p>
-  <nav className="fa-setup-nav" aria-label="Setup sections"><Btn primary onClick={()=>selectSection('profile')}>Setup</Btn>{nav}</nav>
-  <h3 className="fa-setup-heading profile">Create your profile</h3><section id="fa-setup-profile" tabIndex={-1} className="fa-setup-profile" aria-label="Draft character profile">
-   <div className="fa-setup-portrait"><ArcherPortrait profile={{appearance:selected}} small/></div><label className="fa-setup-name"><span>Adventurer name</span>{nameInput}</label><div className="fa-setup-appearance"><span>{APPEARANCES[selected].name}</span><div>{swatches}</div></div>
-  </section>
-  <h3 className="fa-setup-heading display">Display settings</h3><section id="fa-setup-display" tabIndex={-1} className="fa-setup-display"><label><span>Graphics quality</span>{quality}</label><div><span>Resolution</span><strong>Automatic</strong></div><div><span>Display mode</span><Btn onClick={onSettingsPage}>Settings</Btn></div><small>Renderer detected when the world loads.</small></section>
-  <h3 className="fa-setup-heading audio">Audio settings</h3><section id="fa-setup-audio" tabIndex={-1} className="fa-setup-audio">{mute}<p>Battle audio is {settings.muted?'muted':'enabled'}.</p><small>Preferences save immediately in this browser. Individual volume sliders are not available.</small></section>
-  <h3 className="fa-setup-heading controls">Control preferences</h3><section id="fa-setup-controls" tabIndex={-1} className="fa-setup-controls"><div><span>Input</span><strong>Keyboard / touch</strong></div><div><span>Control reference</span><Btn onClick={onTutorial}>Tutorial</Btn></div>{motion}</section>
-  <h3 className="fa-setup-heading save">Local save setup</h3><section id="fa-setup-save" tabIndex={-1} className="fa-setup-save"><strong>Local save · This browser</strong>{load}</section><section id="fa-setup-confirm" tabIndex={-1} className="fa-setup-review" aria-label="Review setup"><p>No account required. Save to a slot in the game.</p><p role="status">{saveInfo}</p><p>Character creation reviews your draft before entering the world.</p></section>
-  <Btn className="fa-setup-back" onClick={back}>Back</Btn>{create}
- </div>;
- return <><Panel rect={layout[0]}><h2>First-time setup</h2>{nav}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><section id="fa-setup-profile" tabIndex={-1}><h2>Create your profile</h2><ArcherPortrait profile={{appearance:selected}} small/>{nameInput}{swatches}<p>{APPEARANCES[selected].name}</p></section></Panel><Panel rect={layout[2]}><section id="fa-setup-display" tabIndex={-1}><h3>Display</h3>{quality}<Btn onClick={onSettingsPage}>Settings</Btn></section><section id="fa-setup-audio" tabIndex={-1}>{mute}</section><section id="fa-setup-controls" tabIndex={-1}>{motion}<Btn onClick={onTutorial}>Tutorial</Btn></section><section id="fa-setup-save" tabIndex={-1}><p>No account required. Saves stay on this browser.</p><p role="status">{saveInfo}</p>{load}</section><section id="fa-setup-confirm" tabIndex={-1}>{create}</section></Panel></>;
-}
 
 function Panel({rect,children,className=''}) {
   if(!rect)return null;
@@ -1299,7 +1271,9 @@ export default function SapphireAdventure(){
     // Remount even if loading from an active session.
     startTimer.current=setTimeout(()=>{setRunning(true);timeoutRef.current=setTimeout(()=>{if(!startReady.current)fail('The 3D world did not become ready. Check your graphics device and retry.');},30000);},0);
   };
-  const startNew=()=>{try{const p=selectAppearance(createProfile(name),creationAppearance);replaceProfile(p);go('20');}catch(e){setNotice(e.message);}};
+  const openNewGame=()=>{if(current.current.running)return;setName('');setCreationAppearance('silver');go('48');};
+  const nextNewGame=()=>{if(current.current.id==='48'&&!current.current.running&&!current.current.encounter&&name.trim())go('19');};
+  const startNew=()=>{const live=current.current;if(live.id!=='19'||live.running||live.encounter)return;try{const p=selectAppearance(createProfile(name),creationAppearance);const fresh=reloadSlots();const empty=!fresh.error?SLOT_IDS.find(s=>!fresh.slots.some(x=>x.id===s)):null;live.id='35';begin(p,empty||null,null);if(!empty)notify(fresh.error?'Save storage unavailable. This session is not autosaved.':'All save slots are occupied. This session is not autosaved.');}catch(e){setNotice(e.message);}};
   const enterNew=()=>{const p=current.current.profile;if(!p)return;const empty=SLOT_IDS.find(s=>!slots.slots.some(x=>x.id===s));begin(p,empty||null,null);};
   const leaveTitle=()=>{setLoadFailure(false);setSlowLoad(false);confirmGate.current.cancel();saveBaseline.current=null;lastPositionSave.current=null;setBackupPass('');clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);restorePending.current=false;failedLoad.current=true;clearTimeout(battleTimer.current);setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
   const requestConfirm=(message,action)=>{const ticket=confirmGate.current.open(message,action,current.current);if(ticket){setPending(ticket);go('40');}};
@@ -1387,14 +1361,16 @@ export default function SapphireAdventure(){
   const buttons=(...children)=><div className="fa-buttons">{children}</div>;
   const pane=(i,content,cls)=> <Panel key={i} rect={screen.layout[i]} className={cls}>{content}</Panel>;
   const customLoad=id==='02'||id==='35'||(id==='47'&&loadFailure);
-  const original=useStagedOriginal(customLoad?null:id);
+  const onboarding=id==='48'||id==='19';
+  const newGameStorage=slots.error?'unavailable':SLOT_IDS.some(s=>!slots.slots.some(x=>x.id===s))?'available':'full';
+  const original=useStagedOriginal(customLoad||onboarding?null:id);
   const manualSave=()=>{const target=selected,profileId=current.current.profile?.id,previous=slots.slots.find(x=>x.id===target),occupied=Boolean(previous);let used=false;const perform=()=>{if(used)return;used=true;const live=current.current;if(!profileId||live.profile?.id!==profileId||live.encounter){notify('Character or combat state changed. Select a save again.');return;}save(target,occupied,live.profile,previous?.stamp??null);};if(occupied)requestConfirm('Overwrite slot '+target+'? Existing progress in this slot will be replaced.',perform);else perform();};
   let content;
   switch(id){
     case '01':content=original?<div className="fa-original-menu">
       <h1 className="fa-art-sr">Fantasy Battle — Sapphire Sumi</h1>
       <p className="fa-menu-subtitle">Fantasy Battle</p>
-      <Btn className="fa-painted-button fa-menu-start" primary onClick={()=>go('48')}><span className="fa-art-sr">Start New Game</span></Btn>
+      <Btn className="fa-painted-button fa-menu-start fa-new-game-label" primary onClick={openNewGame}><span>New Game</span></Btn>
       <Btn className="fa-painted-button fa-menu-continue" disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}><span className="fa-art-sr">Continue</span></Btn>
       <Btn className="fa-painted-button fa-menu-load" disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}><span className="fa-art-sr">Load Game</span></Btn>
       <Btn className="fa-painted-button fa-menu-settings" onClick={()=>go('03')}><span className="fa-art-sr">Settings</span></Btn>
@@ -1402,18 +1378,9 @@ export default function SapphireAdventure(){
       {recent&&<div className="fa-menu-portrait"><ArcherPortrait profile={recent.profile}/></div>}
       <div className="fa-menu-save">{recent?<><strong>{recent.profile.name}</strong><small>Level {levelFor(recent.profile.xp)}</small></>:<span>No saved game</span>}</div>
       {slots.error&&<small className="fa-menu-error" role="alert">{slots.error}</small>}
-    </div>:pane(0,<><div className="fa-title-mark" aria-hidden="true">✧</div><h1>Fantasy Battle</h1><p className="fa-title-subtitle">A Sapphire Sumi adventure</p><div className="fa-title-divider" aria-hidden="true"/><Btn primary onClick={()=>go('48')}>Start New Game</Btn><Btn disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}>Continue</Btn><Btn disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}>Load Game</Btn><Btn onClick={()=>go('03')}>Settings</Btn><a className="fa-button" href="/">Back to Games</a>{slots.error&&<small role="alert">{slots.error}</small>}</>);break;
-    case '48':content=<FirstTimeSetup name={name} onName={setName} appearance={creationAppearance} onAppearance={setCreationAppearance} settings={settings} onSettings={applySettings} validCount={validSlots.length} saveError={slots.error} original={original} layout={screen.layout} back={back} onCreate={()=>{const s=current.current;if(s.id==='48'&&!s.running&&!s.encounter)go('19');}} onLoad={()=>{const s=current.current;if(s.id!=='48'||s.running||s.encounter)return;const fresh=reloadSlots(),latest=mostRecent(fresh.slots);if(fresh.error||!latest){notify('No loadable saves on this browser.');return;}setSelected(latest.id);go('02');}} onSettingsPage={()=>go('03')} onTutorial={()=>{setLesson(0);go('34');}}/>;break;
-    case '19':content=original?<div className="fa-original-creation">
-      <section className="fa-creation-appearances" aria-label="Supported appearance presets"><p>Choose your archer appearance.</p>{Object.entries(APPEARANCES).map(([key,a])=><Btn key={key} primary={creationAppearance===key} aria-pressed={creationAppearance===key} onClick={()=>setCreationAppearance(key)}><span className="fa-swatch" style={{backgroundColor:a.swatch}} aria-hidden="true"/><span>{a.name}</span></Btn>)}<small>More customization options may be added in future updates.</small></section>
-      <div className="fa-creation-viewer"><ArcherPortrait profile={{appearance:creationAppearance}}/></div>
-      <label className="fa-creation-name"><span className="fa-art-sr">Character name</span><input maxLength={40} value={name} onChange={e=>setName(e.target.value)} placeholder="Enter character name" autoComplete="off"/></label>
-      <div className="fa-creation-class"><strong>Archer</strong><span>Ranged combat · Bow</span></div>
-      <section className="fa-creation-class-info"><h2>Starting class</h2><p>Begin as the playable Archer. Unlock additional abilities through progression and recruit companions during your journey.</p><small>Appearance presets change the actual character tint.</small></section>
-      <div className="fa-creation-description"><strong>{APPEARANCES[creationAppearance].name}</strong><span>Selected appearance</span></div>
-      <Btn className="fa-painted-button fa-creation-back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
-      <Btn className="fa-painted-button fa-creation-start" primary disabled={!name.trim()} onClick={startNew}><span className="fa-art-sr">Create character and start journey</span></Btn>
-    </div>:<>{pane(0,<><Btn onClick={back}>Back</Btn></>)}{pane(1,<><h2>Silver Archer</h2><ArcherPortrait/><p>The existing playable bow class.</p></>)}{pane(2,<><label>Adventurer name<input value={name} maxLength={40} onChange={e=>setName(e.target.value)} placeholder="Enter name"/></label><Btn primary disabled={!name.trim()} onClick={startNew}>Create</Btn></>)}</>;break;
+    </div>:pane(0,<><div className="fa-title-mark" aria-hidden="true">✧</div><h1>Fantasy Battle</h1><p className="fa-title-subtitle">A Sapphire Sumi adventure</p><div className="fa-title-divider" aria-hidden="true"/><Btn primary onClick={openNewGame}>New Game</Btn><Btn disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}>Continue</Btn><Btn disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}>Load Game</Btn><Btn onClick={()=>go('03')}>Settings</Btn><a className="fa-button" href="/">Back to Games</a>{slots.error&&<small role="alert">{slots.error}</small>}</>);break;
+    case '48':content=<NewGameSetup step="character" name={name} onName={setName} settings={settings} onSettings={applySettings} back={back} onNext={nextNewGame} onStart={startNew} onSettingsPage={()=>go('03')} focusRef={focusRef} storageState={newGameStorage}/>;break;
+    case '19':content=<NewGameSetup step="settings" name={name} onName={setName} settings={settings} onSettings={applySettings} back={back} onNext={nextNewGame} onStart={startNew} onSettingsPage={()=>go('03')} focusRef={focusRef} storageState={newGameStorage}/>;break;
     case '20':content=original?<div className="fa-original-selection">
       <section className="fa-selection-character">{profile&&<><ArcherPortrait profile={profile} small/><strong>{profile.name}</strong><span>{appearanceFor(profile).name}</span></>}</section>
       <section className="fa-selection-extra"><p>{profile?'Your new adventurer is ready.':'Create a character or load a saved game.'}</p><Btn onClick={back}>Back</Btn></section>
@@ -1423,9 +1390,9 @@ export default function SapphireAdventure(){
       <div className="fa-selection-skills" aria-label="Learned abilities">{profile&&availableActions(level).slice(0,4).map(k=><div key={k} title={ACTIONS[k]?.name}><SkillArt id={k}/><span className="fa-art-sr">{ACTIONS[k]?.name}</span></div>)}</div>
       <div className="fa-selection-saves" aria-label="Existing save profiles">{SLOT_IDS.map(s=>{const record=slots.slots.find(x=>x.id===s),valid=record?.status==='valid';return <Btn key={s} className="fa-painted-button fa-selection-save" disabled={!valid} onClick={()=>{setSelected(s);go('02');}}><span className="fa-selection-save-portrait">{valid&&<ArcherPortrait profile={record.profile}/>}</span><span className="fa-selection-save-label"><strong>Slot {s} · {valid?record.profile.name:record?'Damaged':'Empty'}</strong>{valid&&<small>Level {levelFor(record.profile.xp)}</small>}</span></Btn>;})}</div>
       <Btn className="fa-painted-button fa-selection-start" primary disabled={!profile} onClick={enterNew}><span className="fa-art-sr">Enter world</span></Btn>
-      <Btn className="fa-painted-button fa-selection-new" onClick={()=>go('19')}><span className="fa-art-sr">New character</span></Btn>
+      <Btn className="fa-painted-button fa-selection-new" onClick={openNewGame}><span className="fa-art-sr">New character</span></Btn>
       <Btn className="fa-painted-button fa-selection-load" disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}><span className="fa-art-sr">Load game</span></Btn>
-    </div>:<>{pane(0,<>{profile&&<p>{profile.name}</p>}<Btn onClick={()=>go('19')}>Create Character</Btn></>)}{pane(1,<ArcherPortrait profile={profile}/>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile} onClick={enterNew}>Enter World</Btn><Btn onClick={back}>Back</Btn></>)}</>;break;
+    </div>:<>{pane(0,<>{profile&&<p>{profile.name}</p>}<Btn onClick={openNewGame}>Create Character</Btn></>)}{pane(1,<ArcherPortrait profile={profile}/>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile} onClick={enterNew}>Enter World</Btn><Btn onClick={back}>Back</Btn></>)}</>;break;
     case '02':content=<div className="fa-glass-load-layout">
       <section className="fa-glass-load-panel" aria-labelledby="fa-load-heading">
         <header className="fa-glass-load-heading"><span className="fa-glass-kicker">Sapphire Sumi · Local adventures</span><h1 id="fa-load-heading" tabIndex={-1} ref={focusRef}>Load Game</h1><p>Select a saved journey to continue.</p></header>
@@ -1588,16 +1555,16 @@ export default function SapphireAdventure(){
     </div>:pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
-  const template=id==='10'?null:customLoad?null:original?.url||templateUrl(id);
+  const template=id==='10'?null:customLoad||onboarding?null:original?.url||templateUrl(id);
   const artwork=original?{mode:'original-full',asset:null}:artFor(id==='47'&&loadFailure?'35':id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
     {running?<iframe className="fa-world" ref={frame} src="/fantasy-battle-world" title="Sapphire Wilds 3D world" tabIndex={id==='10'?0:-1} style={{pointerEvents:id==='10'?'auto':'none'}}/>:<div className="fa-title-art"/>}
     {encounter&&arenaReady&&profile&&<BattleSurface key={encounter.token} encounter={encounter} profile={profile} paused={id!=='09'} muted={settings.muted} reducedMotion={settings.reducedMotion} quality={settings.quality} stageRef={stageRef} onHud={handleBattleHud} onError={(message,token)=>{if(isCurrentEncounter(current.current.encounter,token))fail(message);}}/>}
     {artwork.mode==='cinematic'&&<div className={'fa-cinematic-art'+(artwork.asset==='title-original'?' title-original':'')} aria-hidden="true" style={{'--fa-scene-art':'url("'+artworkUrl+'")'}}/>}
-    <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-glass-load={customLoad?'true':undefined} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
-      {!customLoad&&id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
-      {!customLoad&&!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
+    <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-glass-load={customLoad?'true':undefined} data-new-game={onboarding?'true':undefined} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
+      {!onboarding&&!customLoad&&id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
+      {!onboarding&&!customLoad&&!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
       {content}
     </div>
     {saveStatus?<SaveToast status={saveStatus}/>:notice&&<aside className="fa-notice" role="status">{notice}</aside>}
