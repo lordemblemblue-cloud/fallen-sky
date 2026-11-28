@@ -598,3 +598,43 @@ test('main path funds level four and Moonfall before Gatekeeper without optional
  assert.equal(A.rewardVictory(p,{id:'wilds_astral_elite',practice:true}).firstVictory,false);
  assert.deepEqual(encounterReward({id:'unknown',category:'Elite'}),{xp:50,gold:45,ore:2});
 });
+
+import {encounterRecoverySupply} from '../src/components/fantasybattle/core/encounterRewards.mjs';
+test('targeted tonics heal one recruited active or reserve member, clamp and preserve bond and formation',()=>{
+ let p=A.createProfile('Recovery');
+ assert.equal(A.recoveryQuote(p,'groveArcher').ok,false);
+ assert.throws(()=>A.heal(p,{recipient:'groveArcher'}));
+ for(const m of A.ROSTER){p=A.rewardVictory(p,{id:m.requiredEncounter}).profile;p=A.recruitCompanion(p,m.id);}
+ p=A.configureParty(p,{id:'mistScout',active:false});
+ p=A.rewardVictory(p,{id:'recovery-test'},60,[{id:'groveArcher',hp:20},{id:'pilgrimWarden',hp:110}]).profile;
+ p={...p,inventory:{...p.inventory,recoveryTonic:5}};
+ const before=p,warden=A.memberFor(p,'pilgrimWarden'),q=A.recoveryQuote(p,'groveArcher');
+ assert.equal(q.amount,40);assert.equal(q.next,60);
+ p=A.heal(p,{recipient:'groveArcher'});assert.equal(A.memberFor(p,'groveArcher').hp,60);
+ assert.equal(p.hp,60);assert.equal(p.inventory.recoveryTonic,4);
+ assert.equal(A.memberFor(p,'groveArcher').bond,A.memberFor(before,'groveArcher').bond);
+ assert.equal(A.memberFor(p,'pilgrimWarden').hp,warden.hp);assert.equal(p.party.front,before.party.front);
+ p=A.heal(p,{recipient:'pilgrimWarden'});assert.equal(A.memberFor(p,'pilgrimWarden').hp,135);
+ assert.throws(()=>A.heal(p,{recipient:'pilgrimWarden'}));
+ p={...p,party:{...p.party,extra:{...p.party.extra,mistScout:{...A.memberFor(p,'mistScout'),hp:10}}}};
+ p=A.heal(p,{recipient:'mistScout'});assert.equal(A.memberFor(p,'mistScout').hp,50);assert.equal(A.memberFor(p,'mistScout').active,false);
+ p=A.heal(p);assert.equal(p.hp,100);assert.equal(p.inventory.recoveryTonic,1);
+ assert.equal(A.recoveryQuote({...p,inventory:{...p.inventory,recoveryTonic:0}},'hero').ok,false);
+ assert.throws(()=>A.heal(p,{recipient:'__proto__'}));assert.ok(A.isProfile(p));
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+});
+test('campaign recovery supplies are finite, first-victory only and inventory capped',()=>{
+ let p=A.createProfile('Supply'),total=0;
+ for(const id of Object.keys(ENCOUNTER_REWARDS)){
+  const amount=encounterRecoverySupply({id}),before=p.inventory.recoveryTonic;
+  assert.equal(encounterRecoverySupply({id,practice:true}),0);
+  assert.equal(A.rewardVictory(p,{id,practice:true}).profile,p);
+  const v=A.rewardVictory(p,{id});assert.equal(v.profile.inventory.recoveryTonic,before+amount);
+  assert.equal(v.loot.find(l=>l.id==='recoveryTonic')?.count??0,amount);
+  assert.equal(A.rewardVictory(v.profile,{id}).profile,v.profile);p=v.profile;total+=amount;
+ }
+ assert.equal(total,13);assert.equal(p.inventory.recoveryTonic,14);
+ const cap=A.rewardVictory({...A.createProfile('Cap'),inventory:{...A.createProfile('Cap').inventory,recoveryTonic:99999}},{id:'wilds_sanctuary_guard'});
+ assert.equal(cap.profile.inventory.recoveryTonic,100000);assert.equal(cap.loot.find(l=>l.id==='recoveryTonic').count,1);
+ assert.ok(A.isProfile(cap.profile));
+});
