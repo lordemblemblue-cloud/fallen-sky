@@ -1,0 +1,27 @@
+name: Equipment request security regression
+on:
+  pull_request:
+    paths:
+      - 'base44/functions/equipmentLoadout/**'
+      - 'base44/shared/equipmentRequestValidation.mjs'
+      - 'tests/security-equipment-request.test.mjs'
+      - '.github/workflows/security-equipment-request.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'base44/functions/equipmentLoadout/**'
+      - 'base44/shared/equipmentRequestValidation.mjs'
+      - 'tests/security-equipment-request.test.mjs'
+      - '.github/workflows/security-equipment-request.yml'
+permissions:
+  contents: read
+jobs:
+  equipment-request:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/security-equipment-request.test.mjs

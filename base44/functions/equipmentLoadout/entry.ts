@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 import { isEquipmentSlot, itemFitsSlot } from '../../shared/equipmentSlots.ts';
+import { validateEquipmentRequest } from '../../shared/equipmentRequestValidation.mjs';
 import { hasLivePvpMatch } from '../../shared/matchLock.ts';
 import { effectiveCardStats, normalizedCardBaseStats } from '../../shared/cardStats.ts';
 import { optionalRecord } from '../../shared/combatProfile.ts';
@@ -84,9 +85,10 @@ Deno.serve(async (req) => {
     const base44 = createClientFromRequest(req);
     const user = await base44.auth.me();
     if (!user) return json({ error:'Unauthorized' }, 401);
-    const { action='getState', data={} } = await req.json().catch(() => ({}));
+    const validated = validateEquipmentRequest(await req.json().catch(() => null), isEquipmentSlot);
+    if (validated.error) return json({ error:validated.error }, 400);
+    const { action, data } = validated;
     const svc = base44.asServiceRole.entities;
-    if (!['getState','equip','unequip','clear'].includes(action)) return json({ error:'Unknown equipment action' }, 400);
     if (['equip','unequip','clear'].includes(action)) {
       try {
         if (await hasLivePvpMatch(svc, user.id)) return json({ error:'Finish your match first' }, 409);
@@ -140,6 +142,8 @@ Deno.serve(async (req) => {
     return json({ error:'Unknown equipment action' }, 400);
   } catch (error:any) {
     console.error('equipmentLoadout failed', error);
-    return json({ error:error instanceof Error ? error.message : 'Equipment request failed' }, Number(error?.status || 500));
+    const status = Number(error?.status || 500);
+    if (!Number.isInteger(status) || status < 400 || status > 499) return json({ error:'Equipment request failed' }, 500);
+    return json({ error:error instanceof Error ? error.message : 'Equipment request failed' }, status);
   }
 });
