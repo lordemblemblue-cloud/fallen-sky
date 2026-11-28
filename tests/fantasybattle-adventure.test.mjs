@@ -700,7 +700,9 @@ test('continuous mandatory campaign with actual earned resources and two forward
   }
   return {id:'complete',used,rest,finished:route.length,gold:p.gold,ore:p.inventory.sapphireOre,tonics:p.inventory.recoveryTonic};
  }
- const runs=Array.from({length:64},(_,i)=>run(i+1)),complete=runs.filter(r=>r.id==='complete');
- assert.ok(complete.length>=16,'at least 16 of 64 no-retry runs complete');
+ const runs=Array.from({length:128},(_,i)=>run(i+1)),complete=runs.filter(r=>r.id==='complete');
+ assert.ok(complete.length>=48,'at least 48 of 128 no-retry runs complete');
+ for(const batch of [runs.slice(0,64),runs.slice(64)])assert.ok(batch.filter(r=>r.id==='complete').length>=20,'both independent seed batches remain viable');
+ assert.ok(runs.filter(r=>r.id==='wilds_sanctuary_boss').length<=20,'Gatekeeper must not dominate route failures');
  assert.ok(complete.every(r=>r.finished===11&&r.rest<=2&&r.used<=14&&r.gold>=0&&r.tonics>=0));
 });
