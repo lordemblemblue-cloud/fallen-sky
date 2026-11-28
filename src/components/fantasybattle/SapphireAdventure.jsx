@@ -16,6 +16,7 @@ import { ItemArt, SkillArt } from './SapphireIcons.jsx';
 import { weaponEligible, weaponMetadata, enhancementLevel } from './core/weaponCatalog.mjs';
 import { GROVE_STORY, groveStoryState } from './core/groveStory.mjs';
 import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
+import {encounterReward} from './core/encounterRewards.mjs';
 import {serviceFor,liveService} from './core/worldInteractions.mjs';
 import {createConfirmationGate} from './core/confirmationGate.mjs';
 import {bondConversation,BOND_GIFT} from './core/companionBonds.mjs';
@@ -540,7 +541,7 @@ function DungeonEntrance({profile,world,candidate,encounter,running,original,lay
   const roster=<>{enemies.length?enemies.map(e=><div className="fa-entrance-enemy" key={e.id}><EnemyPortrait enemy={e}/><strong>{e.name}</strong><small>HP {e.maxHp}</small></div>):<p>No enemy formation available.</p>}</>;
   const stats=<StatRows stats={{'Encounter type':category,'Enemy HP':lead?.maxHp??'—','Enemy attack':lead?.atk??'—','Enemy defense':lead?.def??'—'}}/>;
   const details=<><p>{description}</p>{completed&&<p>Previously defeated. First-victory rewards cannot be earned again.</p>}</>;
-  const rewards=<p>{completed?'First-victory rewards already recorded.':ready?'First victory may award XP, gold and loot. No reward is granted at entry.':'No rewards available to preview.'}</p>;
+  const rewards=<p>{completed?'First-victory rewards already recorded.':ready?('First victory: '+encounterReward(candidate).xp+' XP · '+encounterReward(candidate).gold+' gold · '+encounterReward(candidate).ore+' ore, plus equipment where available. No reward is granted at entry.'):'No rewards available to preview.'}</p>;
   const controls=<><Btn primary className="fa-entrance-confirm" disabled={!ready} onClick={onDetails}>Encounter Details</Btn><Btn className="fa-entrance-leave" onClick={back}>Leave</Btn></>;
   if(original)return <div className="fa-original-entrance">
     <h2 className="fa-entrance-title">Dungeon Entrance</h2>
@@ -571,7 +572,7 @@ function BossIntroduction({profile,candidate,encounter,running,original,layout,o
   const roster=enemies.map(e=><Btn key={e.id} primary={selected?.id===e.id} aria-pressed={selected?.id===e.id} onClick={()=>setSelectedId(e.id)}><EnemyPortrait enemy={e} small/><strong>{e.name}</strong><small>HP {e.maxHp}</small></Btn>);
   const details=<StatRows stats={{HP:selected?.maxHp??'—',Attack:selected?.atk??'—',Defense:selected?.def??'—',Speed:selected?.spd??'—'}}/>;
   const tactics=<>{enemies.map(e=><div className="fa-boss-tactic" key={e.id}><EnemyPortrait enemy={e} small/><div><strong>{e.name}</strong><p>{tacticFor(e.strategy,e.archetype)}</p></div></div>)}{!enemies.length&&<p>No encounter data available.</p>}</>;
-  const reward=completed?'First-victory rewards already recorded.':ready?'First eligible victory awards XP, gold and loot.':'No reward preview available.';
+  const reward=completed?'First-victory rewards already recorded.':ready?('First eligible victory: '+encounterReward(candidate).xp+' XP · '+encounterReward(candidate).gold+' gold · '+encounterReward(candidate).ore+' ore, plus equipment where available.'):'No reward preview available.';
   const enter=<Btn primary className="fa-boss-enter" disabled={!ready} onClick={onEnter}>Enter Battle</Btn>;
   if(original)return <div className="fa-original-boss">
     <h2 className="fa-boss-title">{category==='Boss'?'Boss Introduction':'Encounter Introduction'}</h2>
@@ -645,7 +646,7 @@ function BattleVictory({profile,encounter,result,hud,original,layout,onContinue,
   const allies=units.filter(u=>u.team==='player'),enemies=units.filter(u=>u.team==='enemy');
   const currentLevel=profile?levelFor(profile.xp):0,previousLevel=profile?levelFor(Math.max(0,profile.xp-xp)):0;
   const rows=allies.map(u=><div key={u.id} className="fa-victory-member"><div className="fa-victory-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-victory-member-data"><strong>{u.name}</strong><small>{u.id==='hero'?'Level '+previousLevel+(currentLevel>previousLevel?' → '+currentLevel+' · Level up':''):'Companion'} · {u.hp===0?'Down':'Survived'}</small><progress aria-label={u.name+' final health'} value={u.hp} max={u.maxHp}/><small>Final HP {u.hp}/{u.maxHp}{u.id==='hero'?' · +'+xp+' XP':''}</small></div></div>);
-  const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':xp===0?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(skillName).join(', ')}</p>}</>;
+  const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':result.firstVictory===false?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(skillName).join(', ')}</p>}</>;
   const sanctuaryCleared=verified&&!encounter.practice&&encounter.id==='wilds_sanctuary_boss'&&profile.world.completedEncounters.includes('wilds_sanctuary_boss');
   const astralCleared=verified&&!encounter.practice&&encounter.id==='wilds_astral_elite'&&profile.world.completedEncounters.includes('wilds_astral_elite');
   const summary=<><p>Result: {verified?'Victory':'Unavailable'}</p>{astralCleared&&<p>The Vanguard has fallen. Review the journal to record the final chapter objectives.</p>}{sanctuaryCleared&&<p>The Gatekeeper has fallen silent. Review the journal to record the sanctuary objectives.</p>}<p>Rounds: {verified?hud.round:'—'}</p><p>Enemies defeated: {enemies.filter(u=>u.hp===0).length}/{enemies.length}</p><p>Allies standing: {allies.filter(u=>u.hp>0).length}/{allies.length}</p><p>Experience: +{xp}</p><p>Gold: +{gold}</p><small>Duration, damage totals and battle ranks are not tracked in this build.</small></>;
