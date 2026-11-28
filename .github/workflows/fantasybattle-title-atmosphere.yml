@@ -1,0 +1,38 @@
+name: Fantasy Battle title atmosphere checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/components/fantasybattle/titleMist.css'
+      - 'src/components/fantasybattle/SapphireAdventure.jsx'
+      - 'src/components/fantasybattle/sapphireAdventure.css'
+      - 'src/routes/fantasy-battle.jsx'
+      - 'public/fantasybattle/sapphire/effects/**'
+      - 'tests/fantasybattle-title-mist.test.mjs'
+      - 'scripts/check-fantasybattle-title-browser.py'
+      - '.github/workflows/fantasybattle-title-atmosphere.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  title-atmosphere:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Run title atmosphere contract tests
+        run: node --test tests/fantasybattle-title-mist.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated browser test dependency
+        run: |
+          python -m pip install playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Check title layout, input, graphics tiers and reduced motion in Chromium
+        run: python scripts/check-fantasybattle-title-browser.py
