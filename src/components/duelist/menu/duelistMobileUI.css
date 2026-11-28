@@ -173,7 +173,7 @@
   html .dxt-page--reference .dcm-milestone { min-height:45px; }
   html .dxt-page--reference .dcm-confirm { min-height:42px; }
 
-  /* Story and settings use genuine content panes with scroll instead of
+  /* Story uses genuine content panes with scroll instead of
      the cropped desktop illustration creating unreachable tap targets. */
   html .dxt-page--reference .dsm-story { position:absolute; inset:0 0 52px; overflow-y:auto; }
   html .dxt-page--reference .dsm-frame {
@@ -194,43 +194,9 @@
   html .dxt-page--reference .dsm-scene { min-height:130px; aspect-ratio:16/7; }
   html .dxt-page--reference .dsm-detail { grid-row:3; min-height:260px; }
 
-  html .dxt-page--reference .dxr-art--settings {
-    position:absolute; inset:0 0 52px;
-    display:flex; flex-direction:column; gap:10px; padding:45px 12px 16px;
-    overflow-y:auto; overscroll-behavior:contain;
-    background:linear-gradient(145deg,#102d4e,#09203c 54%,#06172d);
-  }
-  /* flex:none: each pane keeps its content height and the column scrolls.
-     Shrinking them (flex-shrink + min-height:0) let the controls pane cover
-     the second row of tabs and the buttons cover the text. */
-  html .dxt-page--reference .dxr-art--settings :is(.dxr-settings-tabs,.dxr-settings-controls,.dxr-settings-preview,.dxr-settings-actions) {
-    position:relative; inset:auto; width:100%; height:auto; flex:none;
-    margin:0; min-height:0; max-height:none;
-  }
-  /* From 801px wide the desktop sheet stacks these tabs in a full-width
-     column; with wrap that sent five of the six tabs off the right edge. */
-  html .dxt-page--reference .dxr-art--settings .dxr-settings-tabs {
-    display:flex; flex-direction:row; flex-wrap:wrap; gap:5px; padding:8px;
-    border:1px solid rgba(158,196,228,.31);
-    background:rgba(11,29,53,.9); border-radius:5px;
-  }
-  html .dxt-page--reference .dxr-art--settings .dxr-settings-tabs button {
-    flex:1 1 28%; width:auto; min-height:43px; padding:5px;
-    justify-content:center; text-align:center;
-  }
-  html .dxt-page--reference .dxr-art--settings :is(.dxr-settings-controls,.dxr-settings-preview) {
-    padding:10px; overflow:visible;
-    border:1px solid rgba(158,196,228,.31);
-    background:rgba(11,29,53,.9); border-radius:5px;
-  }
-  /* Revert / Apply / Close stay in reach while the panes scroll under them
-     (-16px cancels the column's bottom padding). */
-  html .dxt-page--reference .dxr-art--settings .dxr-settings-actions {
-    position:sticky; bottom:-16px; z-index:3; padding:6px 0 16px;
-    display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px;
-    background:linear-gradient(180deg,rgba(7,24,45,0),#07182d 30%);
-  }
-  html .dxt-page--reference .dxr-art--settings .dxr-settings-actions .dxr-action { min-height:44px; height:auto; }
+  /* Settings has no rules here. Its liquid-glass surface (duelistReferenceMenus.css,
+     .dxr-art--settings.dxr-settings-glass, since 691325e7 and 10d5dc81) carries its own
+     landscape-phone layout and outranks this sheet; the old settings overrides were dead. */
 
   /* In-match readability: only on touch-capable Duelist. A small desktop
      browser window must keep keyboard skill/shop buttons available. Dock HP
