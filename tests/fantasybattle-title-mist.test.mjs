@@ -31,7 +31,7 @@ test('fog uses a pre-extended repeating strip moving exactly one tile to the rig
 });
 test('four bands retain distinct speed and opacity',()=>{
  for(const [name,duration,opacity] of [['left-upper','24s','.37'],['left-lower','34s','.46'],['right-upper','30s','.22'],['right-lower','40s','.28']]){
-  const start=css.indexOf('.fa-scene-mist-'+name+' {');
+  const start=css.indexOf('\n.fa-scene-mist-'+name+' {');
   assert.ok(start>=0,name);
   const rule=css.slice(start,css.indexOf('}',start));
   assert.ok(rule.includes('--fa-mist-duration: '+duration),name);
