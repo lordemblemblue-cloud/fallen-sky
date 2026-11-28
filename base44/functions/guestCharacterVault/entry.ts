@@ -1,5 +1,6 @@
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.63';
 import { checkCharacterSave, fingerprintCharacterSave } from '../../shared/characterSaveRules.ts';
+import { readBoundedGuestBody } from '../../shared/readBoundedGuestBody.mjs';
 
 // Deliberately passwordless guest play: no Base44 auth.me() and no user entity.
 // Authorization is possession of a high-entropy recovery code. The entity is
@@ -76,8 +77,8 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: cors });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
   try {
-    const raw = await req.text();
-    if (raw.length > 1_100_000) return json({ error: 'Save request is too large' }, 413);
+    const raw = await readBoundedGuestBody(req);
+    if (raw === null) return json({ error: 'Save request is too large' }, 413);
     const payload = JSON.parse(raw || '{}');
     const action = String(payload.action || '');
     const data = payload.data && typeof payload.data === 'object' ? payload.data : {};
