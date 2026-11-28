@@ -38,7 +38,7 @@ test('character statistics art is optional and uses live profile and equipment d
  assert.match(templateUrl('05'),/^data:image\/svg\+xml,/);
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf("case '05':"),page.indexOf("case '06':"));
- for(const marker of ['fa-original-character','profile.hp','stats.maxHp','stats.atk','stats.def','stats.spd','pointsFor(profile)','gearFor(profile','availableActions(level)','statPanel'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['fa-original-character','profile.hp','stats.maxHp','stats.atk','stats.def','stats.spd','pointsFor(profile)','gearFor(profile','learnedSkills(level)','statPanel'])assert.ok(section.includes(marker),marker);
 });
 
 test('equipment plate uses original image with actual owned inventory and existing equip transactions',()=>{
@@ -63,7 +63,7 @@ test('skillbook original plate uses real battle actions and automatic progressio
  assert.ok(templateUrl('12').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function Skillbook('),page.indexOf('function SaveToast('));
- for(const marker of ['fa-original-skillbook','ACTION_ORDER.map','availableActions(level)','ACTIONS[selectedId]','learnedAt[selectedId]','action.focusCost','action.focusGain','setSelectedId(id)','<Panel rect={layout[0]}','No manual skill upgrades'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['fa-original-skillbook','ACTION_ORDER.map','availableActions(level)','ACTIONS[selectedId]','learnedAt[selectedId]','action.focusCost','action.focusGain','setSelectedId(id)','<Panel rect={layout[0]}','No manual skill upgrades','fa-skillbook-ultimate-nodes','ultimateChoice','setSelectedId(ULTIMATE_ID)'])assert.ok(section.includes(marker),marker);
  assert.match(page,/case '12':content=<Skillbook/);
 });
 
@@ -236,7 +236,7 @@ test('original exploration HUD uses live world input and releases held movement'
  assert.equal(stagedOriginalFor('10').transparent,true);
  assert.ok(templateUrl('10').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
- const section=page.slice(page.indexOf('function OriginalExplorationHud('),page.indexOf('function SaveToast('));
+ const section=page.slice(page.indexOf('function OriginalExplorationHud('),page.indexOf('function BattleVictory('));
  for(const marker of ['activeRoster(profile)','memberFor(profile,m.id).hp','memberStats(profile,m.id).maxHp','RegionMap world={world} profile={profile}','world?.nearby','profile?.quests.grove','onPointerCancel','onLostPointerCapture','held.current.clear()', "window.addEventListener('blur',release)", "send.current('move',{key,value:false})", "post('interact')","post('jump')"])assert.ok(section.includes(marker),marker);
  assert.match(page,/case '10':content=original\?<OriginalExplorationHud/);
  const css=readFileSync(new URL('../src/components/fantasybattle/sapphireAdventure.css',import.meta.url),'utf8');
