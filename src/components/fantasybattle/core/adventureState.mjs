@@ -247,6 +247,17 @@ export function enhanceWeapon(p) {
   if(!weaponEligible(p,id)||!p.inventory[id]||lv>=5||p.gold<cost||p.inventory.sapphireOre<1)throw Error('Enhancement requires gold, ore and a weapon below +5.');
   return {...p,gold:p.gold-cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-1},enhancements:{...p.enhancements,[id]:lv+1}};
 }
+// Combine is an alternative to ore enhancement, consuming a spare copy of the equipped bow.
+export function combineQuote(p){
+ const id=p?.equipped,level=enhancementLevel(p,id),cost=5+level*5,owned=p?.inventory?.[id]??0;
+ const reason=!p||!weaponEligible(p,id)||!owned?'Equip an eligible bow first.':id==='starterBow'?'Starter bow cannot be combined.':level>=5?'Maximum enhancement reached.':owned<2?'Requires one spare copy of the equipped bow.':p.gold<cost?'Insufficient gold.':null;
+ return {ok:!reason,reason,id,level,cost,owned};
+}
+export function combineWeapon(p){
+ if(!isProfile(p))throw Error('Invalid profile.');
+ const q=combineQuote(p);if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.cost,inventory:{...p.inventory,[q.id]:q.owned-1},enhancements:{...p.enhancements,[q.id]:q.level+1}};
+}
 // Each recipe creates an existing catalog item; no new inventory keys or save migration.
 const recipe=(id,category,ore,gold,level)=>Object.freeze({id,category,ore,gold,level});
 export const RECIPES=Object.freeze({
