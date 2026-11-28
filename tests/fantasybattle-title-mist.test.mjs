@@ -24,7 +24,7 @@ test('mist repeats by an exact positive horizontal tile distance',()=>{
 test('both reduced motion settings suppress the decoration',()=>{
   assert.ok(css.includes('.fa-root.reduced-motion .fa-original-menu::before'));
   assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'));
-  assert.equal((css.match(/display: none;/g)||[]).length,2);
+  assert.ok((css.match(/display: none;/g)||[]).length>=2);
 });
 
 test('right-side fog is confined to original art and preserves the left menu layout',()=>{
@@ -46,4 +46,29 @@ test('right-side bands honor in-game and system reduced motion',()=>{
   assert.ok(reduced.includes('.fa-root.reduced-motion '+selector+pseudo));
   assert.ok(system.includes(selector+pseudo));
  }
+});
+
+const adventure=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+test('living scenery is mounted inside the original title plate only',()=>{
+ const start=adventure.lastIndexOf('className="fa-template"');
+ const scene=adventure.indexOf('className="fa-title-scene"',start);
+ const header=adventure.indexOf('{!isWorldScreen(id)',scene);
+ assert.ok(start>=0&&scene>start&&header>scene);
+ const markup=adventure.slice(start,header);
+ assert.ok(markup.includes("original&&id==='01'&&!settings.reducedMotion"));
+ assert.ok(markup.includes('data-quality={settings.quality}'));
+ for(const name of ['moon-glow','waterfall-1','waterfall-2','waterfall-3','sparkles','petals']) assert.ok(markup.includes('fa-scene-'+name),name);
+ assert.ok(css.includes('.fa-ui[data-screen="01"][data-staged-original="true"] .fa-title-scene'));
+ assert.match(css,/\.fa-title-scene\s*\{[^}]*inset: 0;[^}]*pointer-events: none/);
+});
+test('waterfall texture scrolls down and scene motion stays lightweight',()=>{
+ assert.ok(css.includes('to { transform: translateY(64px); }'));
+ assert.ok(css.includes('transparent 43px 64px'));
+ assert.ok(css.includes('fa-scene-moon-breathe'));
+ assert.ok(css.includes('fa-scene-sparkle'));
+ assert.ok(css.includes('fa-scene-petal'));
+ assert.ok(css.includes('[data-quality="performance"] .fa-scene-petals i:nth-child(n+3)'));
+ assert.ok(css.includes('[data-quality="balanced"] .fa-scene-petals i:nth-child(n+5)'));
+ assert.ok(css.includes('.fa-root.reduced-motion .fa-title-scene { display: none; }'));
+ assert.match(css,/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.fa-title-scene \{ display: none; \}/);
 });
