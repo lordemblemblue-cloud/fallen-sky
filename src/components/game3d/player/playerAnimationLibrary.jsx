@@ -18,6 +18,12 @@ export const MOBILITY_PACK_SLOTS = Object.freeze({
   Swim_Idle: 'swimIdle',
   Swim_Forward: 'swimForward',
   Glide_Hang: 'glideHang', // hanging from the glider (player/playerGlide.mjs)
+  // the jump set and the fall (Animation Studio, Blender-keyframed; they replace the code-made placeholders of
+  // player/playerMovementFallbackClips.js, which stay as the last resort when the pack cannot load)
+  Jump_Start: 'jumpStart',
+  Jump_Loop: 'jumpLoop',
+  Jump_Land: 'jumpLand',
+  Fall_Loop: 'fallLoop',
 });
 
 const norm = (value = '') => value.toLowerCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
