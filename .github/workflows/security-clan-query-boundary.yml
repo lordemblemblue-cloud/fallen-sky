@@ -1,0 +1,25 @@
+name: Clan query authorization regression
+on:
+  pull_request:
+    paths:
+      - 'base44/functions/secureClanAccess/**'
+      - 'tests/security-clan-query-boundary.test.mjs'
+      - '.github/workflows/security-clan-query-boundary.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'base44/functions/secureClanAccess/**'
+      - 'tests/security-clan-query-boundary.test.mjs'
+      - '.github/workflows/security-clan-query-boundary.yml'
+permissions:
+  contents: read
+jobs:
+  clan-query-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/security-clan-query-boundary.test.mjs
