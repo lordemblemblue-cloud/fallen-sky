@@ -1,3 +1,4 @@
+import './fantasybattle-glass-load.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {UI_SCREENS} from '../src/components/fantasybattle/uiCatalog.mjs';
