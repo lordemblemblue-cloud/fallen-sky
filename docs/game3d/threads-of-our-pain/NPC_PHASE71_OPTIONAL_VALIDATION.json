@@ -1,0 +1,988 @@
+{
+  "status": "STATIC_ONLY",
+  "parentHead": "ef93de47708c77d1d1334f38256891403bf433ef",
+  "pins": [
+    {
+      "name": "R61_STABLE_ID_INDEX.md",
+      "sha": "8c40d3963960ff682be64de24247ff1c8aea7fe0"
+    },
+    {
+      "name": "R129_SOURCE_TO_PRODUCTION_READINESS_MATRIX.md",
+      "sha": "9df10c0828fd2f32d2be6061cd14e68defd0fed2"
+    },
+    {
+      "name": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+      "sha": "e7d3fff802ff9b261d6f4fb978b9ee3305ecfaef"
+    },
+    {
+      "name": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+      "sha": "88fa2531c51f0ea097c6ecac42ca868beb31e668"
+    },
+    {
+      "name": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+      "sha": "a959dc8b8859b22dfed8c195cc6e9ae659a9d02d"
+    },
+    {
+      "name": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+      "sha": "8aae0a290654c2fc307db5dc897821700bc6a28f"
+    },
+    {
+      "name": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+      "sha": "2026183208ceef15164ae7cc35dfb5c5812c79f0"
+    },
+    {
+      "name": "R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md",
+      "sha": "af2ffdb8a285c8748683b288e76ce349f78d2d05"
+    },
+    {
+      "name": "NPC_PHASE42_REGISTRY.json",
+      "sha": "3e9772a2bb9938fcaa890eb7c81bc1aa769de516"
+    },
+    {
+      "name": "NPC_PHASE61_DISCOVERY_FRAMEWORK.json",
+      "sha": "0f9afe001ebff29a9e8fa4c051685e0b14b7534d"
+    },
+    {
+      "name": "NPC_PHASE70_NGPLUS_CONTRACT.json",
+      "sha": "e00e13182ec21c14e96c91da7ac1574958b7c12c"
+    }
+  ],
+  "checks": [
+    {
+      "name": "55 canonical side quests",
+      "ok": true
+    },
+    {
+      "name": "50 canonical discoveries",
+      "ok": true
+    },
+    {
+      "name": "105 classifications unique",
+      "ok": true
+    },
+    {
+      "name": "30 principal coordination candidates",
+      "ok": true
+    },
+    {
+      "name": "55 coordinator assignments",
+      "ok": true
+    },
+    {
+      "name": "S01 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S01 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S02 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S02 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S03 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S03 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S04 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S04 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S05 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S05 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S06 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S06 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S07 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S07 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S08 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S08 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S09 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S09 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S10 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S10 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S11 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S11 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S12 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S12 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S13 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S13 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S14 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S14 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S15 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S15 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S16 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S16 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S17 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S17 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S18 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S18 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S19 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S19 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S20 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S20 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S21 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S21 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S22 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S22 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S23 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S23 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S24 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S24 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S25 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S25 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S26 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S26 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S27 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S27 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S28 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S28 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S29 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S29 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S30 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S30 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S31 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S31 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S32 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S32 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S33 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S33 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S34 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S34 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S35 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S35 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S36 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S36 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S37 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S37 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S38 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S38 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S39 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S39 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S40 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S40 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S41 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S41 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S42 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S42 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S43 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S43 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S44 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S44 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S45 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S45 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S46 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S46 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S47 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S47 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S48 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S48 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S49 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S49 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S50 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S50 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S51 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S51 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S52 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S52 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S53 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S53 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S54 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S54 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "S55 source and classification",
+      "ok": true
+    },
+    {
+      "name": "S55 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D01 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D01 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D02 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D02 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D03 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D03 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D04 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D04 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D05 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D05 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D06 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D06 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D07 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D07 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D08 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D08 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D09 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D09 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D10 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D10 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D11 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D11 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D12 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D12 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D13 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D13 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D14 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D14 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D15 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D15 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D16 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D16 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D17 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D17 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D18 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D18 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D19 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D19 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D20 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D20 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D21 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D21 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D22 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D22 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D23 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D23 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D24 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D24 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D25 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D25 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D26 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D26 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D27 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D27 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D28 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D28 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D29 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D29 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D30 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D30 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D31 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D31 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D32 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D32 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D33 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D33 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D34 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D34 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D35 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D35 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D36 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D36 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D37 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D37 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D38 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D38 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D39 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D39 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D40 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D40 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D41 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D41 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D42 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D42 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D43 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D43 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D44 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D44 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D45 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D45 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D46 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D46 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D47 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D47 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D48 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D48 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D49 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D49 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "D50 source and classification",
+      "ok": true
+    },
+    {
+      "name": "D50 disabled no reward/runtime binding",
+      "ok": true
+    },
+    {
+      "name": "all side giver bindings unresolved",
+      "ok": true
+    },
+    {
+      "name": "Hesper subject",
+      "ok": true
+    },
+    {
+      "name": "goddess thematic",
+      "ok": true
+    },
+    {
+      "name": "S09 proposal not approved",
+      "ok": true
+    },
+    {
+      "name": "S27 proposal not approved",
+      "ok": true
+    },
+    {
+      "name": "S29 proposal not approved",
+      "ok": true
+    },
+    {
+      "name": "S34 proposal not approved",
+      "ok": true
+    },
+    {
+      "name": "S39 proposal not approved",
+      "ok": true
+    },
+    {
+      "name": "S53 proposal not approved",
+      "ok": true
+    },
+    {
+      "name": "S55 proposal not approved",
+      "ok": true
+    },
+    {
+      "name": "S10 valid access dependency",
+      "ok": true
+    },
+    {
+      "name": "S43 D01 entitlement",
+      "ok": true
+    },
+    {
+      "name": "S29 distinct sources",
+      "ok": true
+    },
+    {
+      "name": "S27 both repairs",
+      "ok": true
+    },
+    {
+      "name": "S55 pending",
+      "ok": true
+    },
+    {
+      "name": "D50 prior commitment",
+      "ok": true
+    },
+    {
+      "name": "second vista",
+      "ok": true
+    },
+    {
+      "name": "positive closure",
+      "ok": true
+    },
+    {
+      "name": "no optional main gate but local dependencies",
+      "ok": true
+    }
+  ]
+}
