@@ -272,7 +272,7 @@ export function ascendSet(p,wearer='hero'){
 }
 // Gems are formed in place from ore. One permanent socket record per wearer and item type.
 export function socketQuote(p,wearer,key,gem){
- const existing=socketFor(p,wearer,key),same=existing?.gem===gem,rank=same?existing.rank:0;
+ const existing=socketFor(p,wearer,key),same=Boolean(existing&&existing.gem===gem),rank=same?existing.rank:0;
  const cost=20+rank*20,ore=2+rank;
  const eligible=wearer==='hero'||ROSTER.some(m=>m.id===wearer&&memberFor(p,wearer).recruited);
  const reason=!p||!eligible?'Select a recruited party member.':!equippedSocketItems(p,wearer).includes(key)?'Equip an eligible item first.':!Object.hasOwn(SOCKET_GEMS,gem)?'Choose a valid gem.':rank>=MAX_SOCKET_RANK?'Maximum gem rank reached.':p.gold<cost?'Insufficient gold.':(p.inventory.sapphireOre??0)<ore?'Insufficient Sapphire Ore.':null;
