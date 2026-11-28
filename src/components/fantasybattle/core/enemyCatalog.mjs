@@ -7,18 +7,18 @@ const tier=(hp,atk,def,spd,level,category='Normal')=>Object.freeze({hp,atk,def,s
 export const ENCOUNTER_BALANCE=Object.freeze({
  wilds_grove_01:tier(86,9,9,9,1),
  wilds_pilgrimage_01:tier(125,11,11,10,1),
- wilds_pilgrimage_02:tier(140,12,12,10,1),
+ wilds_pilgrimage_02:tier(130,11,12,10,1),
  wilds_waterfall_01:tier(160,13,12,12,1),
  wilds_cave_01:tier(170,14,13,12,2),
  wilds_heights_01:tier(180,15,13,13,2),
- wilds_heights_02:tier(200,16,15,12,2),
+ wilds_heights_02:tier(190,15,15,12,2),
  wilds_heights_elite:tier(240,18,17,13,2,'Elite'),
  wilds_sanctuary_guard:tier(260,19,18,13,3,'Elite'),
- wilds_sanctuary_boss:tier(250,16,15,14,3,'Boss'),
+ wilds_sanctuary_boss:tier(220,15,14,14,4,'Boss'),
  wilds_moonveil_01:tier(245,19,18,15,4),
  wilds_moonveil_elite:tier(280,18,18,15,4,'Elite'),
  wilds_astral_01:tier(280,21,20,16,4),
- wilds_astral_elite:tier(300,18,18,16,5,'Elite')
+ wilds_astral_elite:tier(290,18,18,16,6,'Elite')
 });
 export const encounterBalance=id=>Object.hasOwn(ENCOUNTER_BALANCE,id)?ENCOUNTER_BALANCE[id]:null;
 export function enemyFormation(encounter,partySize=1){
