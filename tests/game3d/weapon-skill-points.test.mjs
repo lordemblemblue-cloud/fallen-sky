@@ -29,8 +29,16 @@ test('level rewards grow to support two and a half 200-point weapons', () => {
   assert.equal(weaponSkillPointsEarned(60), 240);
   assert.equal(weaponSkillPointsEarned(80), 361);
   assert.equal(weaponSkillPointsEarned(100), 502);
-  assert.equal(weaponSkillPointsEarned(101), 502);
-  for (let level = 2; level <= 100; level++) {
+  // past 100 the same rule carries on to the level cap, 155 (owner, 2026-11-19)
+  assert.equal(weaponSkillPointsAtLevel(101), 8);
+  assert.equal(weaponSkillPointsAtLevel(120), 9);
+  assert.equal(weaponSkillPointsAtLevel(140), 10);
+  assert.equal(weaponSkillPointsAtLevel(155), 10);
+  assert.equal(weaponSkillPointsAtLevel(156), 0);
+  assert.equal(weaponSkillPointsEarned(101), 510);
+  assert.equal(weaponSkillPointsEarned(155), 994);
+  assert.equal(weaponSkillPointsEarned(156), 994);
+  for (let level = 2; level <= 155; level++) {
     assert.equal(weaponSkillPointsEarned(level) - weaponSkillPointsEarned(level-1),
       weaponSkillPointsAtLevel(level));
   }
@@ -47,8 +55,9 @@ test('spending two full trees leaves exactly 102 points for the third', () => {
   save = spend(save, 100, 'defense', 3, 12);
   assert.equal(weaponSkillPointsSpent(save), 502);
   assert.deepEqual(weaponSkillState(save, 100), {
-    earned: 502, spent: 502, available: 0, nextLevelReward: 0,
+    earned: 502, spent: 502, available: 0, nextLevelReward: 8, // level 101 pays 8 since the cap is 155
   });
+  assert.equal(weaponSkillState(save, 155).nextLevelReward, 0);
   assert.equal(checkWeaponSkillPoints(save, 100).length, 0);
   assert.equal(investWeaponSkillPoints(save, 100, 'defense', 3, 1).reason, 'NOT_ENOUGH_SKILL_POINTS');
 });
@@ -101,4 +110,18 @@ test('investments never mutate a prior save, and invalid quantities are rejected
   assert.equal(investWeaponSkillPoints(blank, 100, 'damage', 0, -1).ok, false);
   assert.equal(investWeaponSkillPoints(blank, 100, 'damage', 0, 0).ok, false);
   assert.equal(investWeaponSkillPoints(blank, 100, 'damage', 9, 1).ok, false);
+});
+
+// R156: preserve the old entitlement curve and verify the new boundary.
+test('all old-level entitlements stay unchanged and all paths fund at 113', () => {
+  let expected=0;
+  for(let level=1;level<=100;level++) {
+    if(level>1) expected+=3+Math.floor(level/20);
+    assert.equal(weaponSkillPointsEarned(level),expected);
+  }
+  const full=blankWeaponSkillPoints();
+  for(const path of ['damage','range','defense']) full.nodes[path]=[...WEAPON_SKILL_TIERS];
+  assert.ok(checkWeaponSkillPoints(full,112).some(x=>x.includes('exceed')));
+  assert.deepEqual(checkWeaponSkillPoints(full,113),[]);
+  assert.equal(weaponSkillState(full,155).available,394);
 });
