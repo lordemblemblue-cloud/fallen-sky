@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **CHRON-20261127 — two-life chronology and dialogue (draft):** [The hand that remembers](CHRON_20261127_M04_M06_M09_M10_DIALOGUE.md). Five candidate scene variants and terrain deltas; M05 physical death, M09/M10 actual overlap, no Celestial Sight. R111 chronology decision remains open. Not built or verified.
+
 > **POL-20261127 — political dialogue refinement (draft):** [The price of an accusation](POL_20261127_M14_M17_POLITICAL_DIALOGUE.md). Four candidate scene variants M14–M17, existing anchors and acceptance deltas; preserve R53/R107 selection, no new objectives or rewards, no retired Three Roads restoration. Not built or verified.
 
 > **R141 — SQLite transaction and recovery fixture:** [Draft PR #420](https://github.com/lordemblemblue-cloud/fallen-sky/pull/420), [local test evidence](https://github.com/lordemblemblue-cloud/fallen-sky/blob/test/r140-reward-transaction-fixture/tests/fixtures/r141/README.md). 11/11 new local tests passed; committed blob matched. Disposable SQLite workers, rollback, lost reply, prior-cycle pending recovery and asynchronous projection; no Base44 concurrency guarantee or live implementation. Next R142 authority handler/schema and lock/crash testing.
