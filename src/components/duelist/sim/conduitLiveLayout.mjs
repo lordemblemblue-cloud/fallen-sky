@@ -60,9 +60,17 @@ function anchor(p){
  return nodes.filter(n=>Math.abs(n.pos.y-p.y)<.5).sort((a,b)=>distance(a.pos,p)-distance(b.pos,p)).slice(0,6)
   .find(n=>probeConduitWalk(registry,p,n.pos).ok);
 }
+// The graph node a route starts or ends at. The same-level walkable node comes first, as before. A fighter on a
+// ramp (between node levels) or in a corner with no straight line to its six nearest same-level nodes had none, so
+// conduitBotPath returned no route and the bot stood still for the rest of the match (and so did every bot chasing
+// it). Then try the nearest nodes at any level that it can walk to, and last the nearest node outright.
+function routeEnd(p){
+ const near=()=>nodes.slice().sort((a,b)=>distance(a.pos,p)-distance(b.pos,p));
+ return anchor(p)??near().slice(0,16).find(n=>Math.abs(n.pos.y-p.y)<3.5&&probeConduitWalk(registry,p,n.pos).ok)??near()[0]??null;
+}
 export function conduitBotPath(from,to){
  if(Math.abs(from.y-to.y)<.16&&distance(from,to)<8&&probeConduitWalk(registry,from,to).ok)return [{x:to.x,y:to.y,z:to.z}];
- const a=anchor(from),b=anchor(to);if(!a||!b)return [];
+ const a=routeEnd(from),b=routeEnd(to);if(!a||!b)return [];
  const route=routeAdapter.findRoute(a.id,b.id);if(!route)return [];
  const points=[a.pos];for(const seg of route.segments)points.push(...seg.points.slice(1));
  if(probeConduitWalk(registry,b.pos,to).ok)points.push(to);
