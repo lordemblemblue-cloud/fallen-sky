@@ -50,3 +50,24 @@ test('glass system retains small HUDs and real status messages',()=>{
 test('glass supports narrow screens, focus and reduced motion',()=>{
  for(const marker of ['@media(max-width:700px)','@media(max-height:540px)','@media(max-width:380px)','@media(prefers-reduced-motion:reduce)',':focus-visible'])assert.ok(css.includes(marker),marker);
 });
+
+test('compact workspace fallback uses document flow without touching original plates or HUDs',()=>{
+ assert.match(css,/@media\(max-aspect-ratio:4\/3\),\(max-width:849px\),\(max-height:499px\)/);
+ assert.match(css,/not\(\[data-staged-original="true"\]\)>\.fa-template\{display:none\}/);
+ assert.match(css,/not\(\[data-staged-original="true"\]\)>\.fa-panel\{position:relative!important;inset:auto!important;width:100%!important;height:auto!important/);
+ assert.match(css,/\.fa-ui\.page:is\(\[data-glass-kind="workspace"\],\[data-glass-kind="event"\],\[data-glass-kind="pause"\],\[data-glass-kind="title"\]\):not\(\[data-staged-original="true"\]\)\{display:flex;flex-direction:column/);
+});
+test('long live labels and compact glass controls are allowed to wrap without shrinking',()=>{
+ assert.match(css,/\.fa-glass-load-panel>\*\{flex-shrink:0;min-width:0\}/);
+ assert.match(css,/\.fa-glass-slot-info strong\{white-space:normal;overflow-wrap:anywhere/);
+ assert.match(css,/scrollbar-gutter:stable/);
+ assert.match(css,/\.fa-settings-row\{grid-template-columns:minmax\(0,1fr\);gap:7px\}/);
+ assert.match(css,/@media\(pointer:coarse\)/);
+});
+test('live small hero portraits use the cached celestial capture while companion and palette previews remain distinct',()=>{
+ assert.doesNotMatch(src,/<ArcherPortrait profile=\{profile\} small(?:=\{small\})?\/>/);
+ assert.match(src,/<ArcherPortrait profile=\{profile\} small newHero\/>/);
+ assert.match(src,/<ArcherPortrait profile=\{profile\} small=\{small\} newHero\/>/);
+ assert.match(src,/if\(newHero&&!companion\)return <CelestialHeroPortrait/);
+ assert.match(src,/<ArcherPortrait profile=\{\{\.\.\.profile,appearance:preview\}\}/);
+});
