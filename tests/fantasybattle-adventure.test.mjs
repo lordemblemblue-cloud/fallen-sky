@@ -358,3 +358,19 @@ test('companion gifts require recruitment and ore, preserve other members and ca
  const max=A.giveCompanionGift(p,'groveArcher');assert.equal(A.memberFor(max,'groveArcher').bond,100);assert.throws(()=>A.giveCompanionGift(max,'groveArcher'));
  assert.ok(A.isProfile(max));assert.equal(p.party.bond,98);
 });
+
+test('combine consumes only a spare bow, shares enhancement cap and preserves save compatibility',()=>{
+ let p={...A.createProfile('Combiner'),gold:1000};
+ assert.equal(A.combineQuote(p).ok,false);assert.throws(()=>A.combineWeapon(p));
+ p=A.buyItem(p,'sapphireBow',2);p=A.equipItem(p,'sapphireBow');
+ const before=p,q=A.combineQuote(p),stats=A.heroStats(p);assert.ok(q.ok);assert.equal(q.cost,5);
+ p=A.combineWeapon(p);
+ assert.equal(p.inventory.sapphireBow,1);assert.equal(p.equipped,'sapphireBow');assert.equal(p.gold,before.gold-5);
+ assert.equal(A.heroStats(p).atk,stats.atk+2);assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre);
+ assert.throws(()=>A.combineWeapon(p));assert.equal(before.inventory.sapphireBow,2);
+ p={...p,inventory:{...p.inventory,sapphireOre:4,sapphireBow:2}};
+ for(let i=0;i<4;i++)p=A.enhanceWeapon(p);
+ assert.equal(p.enhancements.sapphireBow,5);assert.equal(A.combineQuote(p).ok,false);assert.throws(()=>A.combineWeapon(p));
+ assert.ok(A.isProfile(p));assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ const insufficient={...before,gold:0};assert.throws(()=>A.combineWeapon(insufficient));
+});
