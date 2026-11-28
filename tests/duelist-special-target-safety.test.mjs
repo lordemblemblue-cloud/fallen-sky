@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+/* global structuredClone */
 import { evaluateSpecial, CLASSES } from '../src/components/duelist/core/classes.mjs';
 
 // These are pure validation contracts. No packet authentication, meter debit,

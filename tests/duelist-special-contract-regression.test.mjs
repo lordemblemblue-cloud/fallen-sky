@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+/* global structuredClone */
 import {
   CLASS_IDS, CLASSES, SPECIAL_MAX, SPECIAL_CHARGE, awardSpecialCharge,
   classAbilityMove, visibleClassAbilities, evaluateSpecial,

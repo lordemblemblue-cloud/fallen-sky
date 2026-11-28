@@ -5,6 +5,7 @@
 // checked in source like the sibling tests.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { URL } from 'node:url';
 import { readFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { buildSync } from 'esbuild';

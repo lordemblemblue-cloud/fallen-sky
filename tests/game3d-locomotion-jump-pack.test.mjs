@@ -6,6 +6,7 @@
 // loops, and a take-off that ends where the airborne loop begins.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { URL } from 'node:url';
 import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
