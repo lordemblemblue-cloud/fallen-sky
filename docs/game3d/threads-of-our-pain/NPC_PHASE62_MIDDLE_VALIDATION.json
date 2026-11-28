@@ -1,0 +1,776 @@
+{
+  "status": "STATIC_ONLY",
+  "sourceHead": "90fc119fac07501931883b377377effed8c3838c",
+  "pins": [
+    {
+      "name": "NPC_PHASE42_REGISTRY.json",
+      "sha": "3e9772a2bb9938fcaa890eb7c81bc1aa769de516"
+    },
+    {
+      "name": "NPC_PHASE54_M07_INTAKE.json",
+      "sha": "156d0c88974dd181f6b4c9138df8b81342fa3978"
+    },
+    {
+      "name": "NPC_PHASE55_M08_INTAKE.json",
+      "sha": "a1e26f6ccafd0e4b12d800d36b9bd16721b3c07b"
+    },
+    {
+      "name": "NPC_PHASE56_M09_INTAKE.json",
+      "sha": "261ea0e970e9fe1a49d9f06777863438f1c79cfe"
+    },
+    {
+      "name": "NPC_PHASE57_M10_INTAKE.json",
+      "sha": "6105d2a6a19be3fa1e0994c6a6259e2c49cf2672"
+    },
+    {
+      "name": "NPC_PHASE58_M11_INTAKE.json",
+      "sha": "8d0fce1dcc1d3994f283a122e05e91da566ff724"
+    },
+    {
+      "name": "NPC_PHASE59_M12_INTAKE.json",
+      "sha": "5b0d70c122ade9192cf14e158ed797be36d6c1e1"
+    },
+    {
+      "name": "NPC_PHASE60_M13_INTAKE.json",
+      "sha": "c0db381b717e7a91c05e7c4b613b243da4e2c847"
+    },
+    {
+      "name": "NPC_PHASE61_DISCOVERY_FRAMEWORK.json",
+      "sha": "0f9afe001ebff29a9e8fa4c051685e0b14b7534d"
+    }
+  ],
+  "completionAliases": {
+    "M07": "HISTORIAN_DEBRIEF",
+    "M08": "ROUTE_ACCEPTED",
+    "M09": "M09_COMPLETE",
+    "M10": "M10_COMPLETE",
+    "M11": "M11_COMPLETE",
+    "M12": "M12_COMPLETE",
+    "M13": "M13_COMPLETE"
+  },
+  "namespace": "questId:localMilestoneId",
+  "checks": [
+    {
+      "name": "canonical main IDs",
+      "ok": true
+    },
+    {
+      "name": "canonical side IDs",
+      "ok": true
+    },
+    {
+      "name": "canonical discovery IDs",
+      "ok": true
+    },
+    {
+      "name": "30 unique draft NPCs",
+      "ok": true
+    },
+    {
+      "name": "55 unique side coordination assignments",
+      "ok": true
+    },
+    {
+      "name": "7 ordered chapter manifests",
+      "ok": true
+    },
+    {
+      "name": "M07 disabled source only",
+      "ok": true
+    },
+    {
+      "name": "M07 local IDs unique",
+      "ok": true
+    },
+    {
+      "name": "M07 predecessor declared",
+      "ok": true
+    },
+    {
+      "name": "M07 terminal alias",
+      "ok": true
+    },
+    {
+      "name": "M07 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M07 optional references canonical",
+      "ok": true
+    },
+    {
+      "name": "M07 no optional gate",
+      "ok": true
+    },
+    {
+      "name": "M07 chronology pending",
+      "ok": true
+    },
+    {
+      "name": "M07 actor binding unresolved",
+      "ok": true
+    },
+    {
+      "name": "M07 NPC candidates mapped",
+      "ok": true
+    },
+    {
+      "name": "M08 disabled source only",
+      "ok": true
+    },
+    {
+      "name": "M08 local IDs unique",
+      "ok": true
+    },
+    {
+      "name": "M08 predecessor declared",
+      "ok": true
+    },
+    {
+      "name": "M08 terminal alias",
+      "ok": true
+    },
+    {
+      "name": "M08 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M08 optional references canonical",
+      "ok": true
+    },
+    {
+      "name": "M08 no optional gate",
+      "ok": true
+    },
+    {
+      "name": "M08 chronology pending",
+      "ok": true
+    },
+    {
+      "name": "M08 actor binding unresolved",
+      "ok": true
+    },
+    {
+      "name": "M08 NPC candidates mapped",
+      "ok": true
+    },
+    {
+      "name": "M09 disabled source only",
+      "ok": true
+    },
+    {
+      "name": "M09 local IDs unique",
+      "ok": true
+    },
+    {
+      "name": "M09 predecessor declared",
+      "ok": true
+    },
+    {
+      "name": "M09 terminal alias",
+      "ok": true
+    },
+    {
+      "name": "M09 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M09 optional references canonical",
+      "ok": true
+    },
+    {
+      "name": "M09 no optional gate",
+      "ok": true
+    },
+    {
+      "name": "M09 chronology pending",
+      "ok": true
+    },
+    {
+      "name": "M09 actor binding unresolved",
+      "ok": true
+    },
+    {
+      "name": "M09 NPC candidates mapped",
+      "ok": true
+    },
+    {
+      "name": "M10 disabled source only",
+      "ok": true
+    },
+    {
+      "name": "M10 local IDs unique",
+      "ok": true
+    },
+    {
+      "name": "M10 predecessor declared",
+      "ok": true
+    },
+    {
+      "name": "M10 terminal alias",
+      "ok": true
+    },
+    {
+      "name": "M10 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M10 optional references canonical",
+      "ok": true
+    },
+    {
+      "name": "M10 no optional gate",
+      "ok": true
+    },
+    {
+      "name": "M10 chronology pending",
+      "ok": true
+    },
+    {
+      "name": "M10 actor binding unresolved",
+      "ok": true
+    },
+    {
+      "name": "M10 NPC candidates mapped",
+      "ok": true
+    },
+    {
+      "name": "M11 disabled source only",
+      "ok": true
+    },
+    {
+      "name": "M11 local IDs unique",
+      "ok": true
+    },
+    {
+      "name": "M11 predecessor declared",
+      "ok": true
+    },
+    {
+      "name": "M11 terminal alias",
+      "ok": true
+    },
+    {
+      "name": "M11 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M11 optional references canonical",
+      "ok": true
+    },
+    {
+      "name": "M11 no optional gate",
+      "ok": true
+    },
+    {
+      "name": "M11 chronology pending",
+      "ok": true
+    },
+    {
+      "name": "M11 actor binding unresolved",
+      "ok": true
+    },
+    {
+      "name": "M11 NPC candidates mapped",
+      "ok": true
+    },
+    {
+      "name": "M12 disabled source only",
+      "ok": true
+    },
+    {
+      "name": "M12 local IDs unique",
+      "ok": true
+    },
+    {
+      "name": "M12 predecessor declared",
+      "ok": true
+    },
+    {
+      "name": "M12 terminal alias",
+      "ok": true
+    },
+    {
+      "name": "M12 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M12 optional references canonical",
+      "ok": true
+    },
+    {
+      "name": "M12 no optional gate",
+      "ok": true
+    },
+    {
+      "name": "M12 chronology pending",
+      "ok": true
+    },
+    {
+      "name": "M12 actor binding unresolved",
+      "ok": true
+    },
+    {
+      "name": "M12 NPC candidates mapped",
+      "ok": true
+    },
+    {
+      "name": "M13 disabled source only",
+      "ok": true
+    },
+    {
+      "name": "M13 local IDs unique",
+      "ok": true
+    },
+    {
+      "name": "M13 predecessor declared",
+      "ok": true
+    },
+    {
+      "name": "M13 terminal alias",
+      "ok": true
+    },
+    {
+      "name": "M13 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M13 optional references canonical",
+      "ok": true
+    },
+    {
+      "name": "M13 no optional gate",
+      "ok": true
+    },
+    {
+      "name": "M13 chronology pending",
+      "ok": true
+    },
+    {
+      "name": "M13 actor binding unresolved",
+      "ok": true
+    },
+    {
+      "name": "M13 NPC candidates mapped",
+      "ok": true
+    },
+    {
+      "name": "57 qualified nodes",
+      "ok": true
+    },
+    {
+      "name": "RETURN15 collision isolated",
+      "ok": true
+    },
+    {
+      "name": "all edges resolve",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 0",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 1",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 2",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 3",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 4",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 5",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 6",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 7",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 8",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 9",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 10",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 11",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 12",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 13",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 14",
+      "ok": true
+    },
+    {
+      "name": "legal cross-chapter order 15",
+      "ok": true
+    },
+    {
+      "name": "missing M07:M07_TRAIL blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M07:ANCIENT_MARK_INSPECTED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M07:ORIGINAL_ROUTE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M07:FRESH_MARK_AUTHORED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M07:ORIGINAL_EXIT blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M07:RETURN15 blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M07:TEST_ROUTE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M07:HISTORIAN_DEBRIEF blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M08:ARCHIVE_ENTER blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M08:LYRA_TOPIC blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M08:DAMAGED_INSPECTED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M08:COPY_COMPARED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M08:NOTICE18_INSPECTED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M08:RETURN15 blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M08:ROUTE_ACCEPTED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M09:M09_APPROACH blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M09:OBSERVED_RITUAL blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M09:SEAL_CONTACT_CONFIRMED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M09:OVERLAP_ACTIVE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M09:OLDER_WITNESS blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M09:M09_COMPLETE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:M10_INTERCEPTED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:CHILD_SAFE_ARCH blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:DEFENSE_1 blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:DEFENSE_2 blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:DEFENSE_3 blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:CHILD_EXIT_SAFE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:OLDER_RETREAT_SAFE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:SEAM_CLOSED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M10:M10_COMPLETE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:REFUGE_ARRIVAL blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:FAMILY_INTRO blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:VENT_RESTORED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:MEDICINE_DELIVERED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:CORRIDOR_SECURE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:FAMILY_RETURN blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:REST_SAFE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M11:M11_COMPLETE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:M12_HEARD blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:FAMILY15_INTRO blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:EMBLEM15_OBSERVED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:REGISTER_COMPARED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:MIGRATE18_SAFE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:FAMILY18_REVISIT blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:EMBLEM18_OBSERVED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:MELODY18_CONFIRMED blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:RETURN15_SAFE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M12:M12_COMPLETE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_APPROACH blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_FIXED_EVIDENCE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_MIGRATE18 blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_ESCORT_SAFE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_ROOF_READY blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_NAMES blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_RETURN15 blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_REPORT blocks completion",
+      "ok": true
+    },
+    {
+      "name": "missing M13:M13_COMPLETE blocks completion",
+      "ok": true
+    },
+    {
+      "name": "M06 incomplete blocks entry",
+      "ok": true
+    },
+    {
+      "name": "duplicate milestone rejected",
+      "ok": true
+    },
+    {
+      "name": "unqualified return rejected",
+      "ok": true
+    },
+    {
+      "name": "wrong chapter return rejected",
+      "ok": true
+    },
+    {
+      "name": "M07 mark separate from crest",
+      "ok": true
+    },
+    {
+      "name": "M08 public crest passes M09",
+      "ok": true
+    },
+    {
+      "name": "M09 M10 pre-strike seam",
+      "ok": true
+    },
+    {
+      "name": "M10 no goddess defeat",
+      "ok": true
+    },
+    {
+      "name": "M10 exit receipts before closure",
+      "ok": true
+    },
+    {
+      "name": "M11 M12 distinct family continuity",
+      "ok": true
+    },
+    {
+      "name": "M11 M12 motif/emblem continuity",
+      "ok": true
+    },
+    {
+      "name": "M11 aid retained in M12",
+      "ok": true
+    },
+    {
+      "name": "M13 no M14 spoiler",
+      "ok": true
+    },
+    {
+      "name": "50 discoveries canonical disabled",
+      "ok": true
+    },
+    {
+      "name": "discovery claim and vista",
+      "ok": true
+    },
+    {
+      "name": "discovery legacy history retained",
+      "ok": true
+    },
+    {
+      "name": "discovery exit independent",
+      "ok": true
+    },
+    {
+      "name": "discovery side quest independent",
+      "ok": true
+    },
+    {
+      "name": "lifetime entitlement retained",
+      "ok": true
+    }
+  ],
+  "nodes": 57,
+  "edges": 61,
+  "localCollisions": [
+    [
+      "RETURN15",
+      2
+    ]
+  ],
+  "optionalRefs": [
+    "D07",
+    "D13",
+    "D14",
+    "D19",
+    "D26",
+    "S09",
+    "S13",
+    "S16",
+    "S17",
+    "S23",
+    "S39"
+  ],
+  "candidateIds": [
+    "FS_NPC_003",
+    "FS_NPC_006",
+    "FS_NPC_012",
+    "FS_NPC_013",
+    "FS_NPC_014",
+    "FS_NPC_015",
+    "FS_NPC_016",
+    "FS_NPC_017",
+    "FS_NPC_018",
+    "FS_NPC_019",
+    "FS_NPC_020",
+    "FS_NPC_022",
+    "FS_NPC_023",
+    "FS_NPC_026",
+    "FS_NPC_028"
+  ]
+}

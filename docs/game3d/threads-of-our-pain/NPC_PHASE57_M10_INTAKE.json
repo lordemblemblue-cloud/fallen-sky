@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M10",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M10.md",
+    "M09.md",
+    "M11.md",
+    "R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md",
+    "R106_M01-M10_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md",
+    "R116_M09_M10_SANCTUARY_INTERCEPTION_CONSTRUCTION_PROMPTS.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "input": {
+    "from": "M09_COMPLETE",
+    "eligibility": "M10_READY",
+    "beat": "PRE_STRIKE",
+    "requiredState": [
+      "both actor placements",
+      "active perspective",
+      "threshold phase",
+      "safe egress",
+      "observed clues"
+    ],
+    "attackAlreadyOccurred": false
+  },
+  "stages": [
+    {
+      "id": "M10_INTERCEPTED",
+      "control": "AUTHORED",
+      "anchor": "INTERCEPT_OLDER/YOUNGER",
+      "evidence": "Resume exact M09 pre-strike state; physical older guard intercept, safe placement and younger resemblance cue",
+      "requires": [
+        "M09_COMPLETE"
+      ]
+    },
+    {
+      "id": "CHILD_SAFE_ARCH",
+      "control": "PRESERVED",
+      "anchor": "CHILD_ARCH",
+      "evidence": "Younger physically reaches sheltered arch via pier or recess; verify child and older safe staging before control transfer",
+      "requires": [
+        "M10_INTERCEPTED"
+      ]
+    },
+    {
+      "id": "DEFENSE_1",
+      "control": "ORIGINAL",
+      "anchor": "TELEGRAPH_LANE",
+      "evidence": "Complete first active defense interval, verify next protected child wait and collision",
+      "requires": [
+        "CHILD_SAFE_ARCH"
+      ]
+    },
+    {
+      "id": "DEFENSE_2",
+      "control": "ORIGINAL",
+      "anchor": "TELEGRAPH_ARC",
+      "evidence": "Complete second active defense interval and next safe wait",
+      "requires": [
+        "DEFENSE_1"
+      ]
+    },
+    {
+      "id": "DEFENSE_3",
+      "control": "ORIGINAL",
+      "anchor": "TELEGRAPH_RING",
+      "evidence": "Complete third active interval and safe breather; child exterior retreat ready",
+      "requires": [
+        "DEFENSE_2"
+      ]
+    },
+    {
+      "id": "CHILD_EXIT_SAFE",
+      "control": "PRESERVED",
+      "anchor": "EXIT_SAFE15",
+      "evidence": "Return control safely; actual walking escape by ledge or ramp to verified floor",
+      "requires": [
+        "DEFENSE_3"
+      ]
+    },
+    {
+      "id": "OLDER_RETREAT_SAFE",
+      "control": "ORIGINAL",
+      "anchor": "EXIT_SAFE18",
+      "evidence": "After child safe receipt, older physically withdraws via broken lintel; verify floor",
+      "requires": [
+        "CHILD_EXIT_SAFE"
+      ]
+    },
+    {
+      "id": "SEAM_CLOSED",
+      "control": "AUTHORED",
+      "anchor": "SEAM_CLOSE",
+      "evidence": "Both bodies safely outside; no occupied collision unload; local threshold closes, goddess remains dangerous",
+      "requires": [
+        "OLDER_RETREAT_SAFE"
+      ]
+    },
+    {
+      "id": "M10_COMPLETE",
+      "control": "ORIGINAL",
+      "anchor": "M11_ROAD",
+      "evidence": "Attendant gives mining refuge directions; completion and M11 eligibility only",
+      "requires": [
+        "SEAM_CLOSED"
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "role": "younger protagonist",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "older protagonist",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "Unknown Woman",
+      "reality": "AUTHORIZED_DIVINE",
+      "proposedNpcId": "FS_NPC_030",
+      "runtimeId": null,
+      "questGiver": false
+    },
+    {
+      "role": "shelter attendant",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "encounter": {
+    "objective": "PROTECT_AND_SURVIVE",
+    "goddessDefeated": false,
+    "progressIndicator": "DEFENSE_SEGMENTS_NOT_BOSS_HP",
+    "weaponRoles": [
+      "DAMAGE",
+      "RANGE",
+      "DEFENSE"
+    ],
+    "movementOnlyAllowed": true,
+    "interception": {
+      "authored": true,
+      "reactionTimeGate": false,
+      "resourceCost": false,
+      "forcedEquipment": false,
+      "skipPreservesActualEvent": true
+    },
+    "intervals": [
+      {
+        "id": "DEFENSE_1",
+        "activeSeconds": 12,
+        "attack": "STRAIGHT_PULSE",
+        "anticipationSeconds": 1.2,
+        "recoverySeconds": null
+      },
+      {
+        "id": "DEFENSE_2",
+        "activeSeconds": 12,
+        "attack": "WIDENING_ARC",
+        "anticipationSeconds": 1.4,
+        "recoverySeconds": 1.6
+      },
+      {
+        "id": "DEFENSE_3",
+        "activeSeconds": 12,
+        "attack": "DELAYED_RING_THEN_SEAL_WAVE",
+        "anticipationSeconds": 1.5,
+        "recoverySeconds": null
+      }
+    ],
+    "tuningStatus": "PROPOSED_UNTESTED",
+    "pauseConditions": [
+      "dialogue",
+      "accessibility_menu",
+      "loading",
+      "outside_defense_area"
+    ],
+    "retry": {
+      "restoreCurrentIntervalHealthResources": true,
+      "retainCompletedIntervals": true,
+      "guideReturn": true
+    },
+    "childMovement": "VERIFIED_NEXT_SAFE_WAIT_AND_COLLISION",
+    "debris": {
+      "anchor": "EMPTY_DEBRIS_RECESS",
+      "requiresUnoccupied": true,
+      "neverBlocksSoleExit": true,
+      "omitIfOccupied": true
+    },
+    "assist": "longer warnings and reduced pressure; no story changes"
+  },
+  "controls": {
+    "actualRigCount": 2,
+    "maxSimultaneousPlayerControlled": 1,
+    "sharedCollision": true,
+    "noFullDualWorlds": true,
+    "resetTargetOnSwap": true,
+    "safeDestinationBeforeSwap": true
+  },
+  "knowledge": {
+    "womanLabel": "Unknown Woman",
+    "olderRecognizesChildAsSelf": false,
+    "youngerRecognizesResemblance": true,
+    "youngerConfirmsIdentity": false,
+    "womanQuestionIsHypothesis": true,
+    "routeKnowledge": "OLDER_LIFE_EXPERIENCE_AND_INTERVENTION",
+    "noCelestialSight": true
+  },
+  "routes": {
+    "child": [
+      "INTERCEPT",
+      "CHILD_PIER or WALL_RECESS",
+      "CHILD_ARCH",
+      "CHILD_LEDGE or RAMP",
+      "EXIT_SAFE15"
+    ],
+    "older": [
+      "INTERCEPT",
+      "DEFENSE_RING",
+      "RETREAT_LINTEL",
+      "EXIT_SAFE18",
+      "M11_ROAD"
+    ],
+    "requiredExitReceipts": [
+      "CHILD_EXIT_SAFE",
+      "OLDER_RETREAT_SAFE"
+    ],
+    "closeOnlyWhenBothOnSafeFloor": true,
+    "neverUnloadOccupiedCollision": true,
+    "transforms": null
+  },
+  "completion": {
+    "next": "M11_READY",
+    "autoAccept": false,
+    "ordinaryMainXpProposed": true,
+    "rewardGrant": false,
+    "divineLoot": false,
+    "newPower": false,
+    "originalRefugeOnly": true
+  },
+  "optionalDependencies": [],
+  "prohibitions": [
+    "goddess defeat",
+    "boss loot",
+    "mandatory focus",
+    "mandatory glide",
+    "required special skill",
+    "forced lock-on",
+    "model swap illusion",
+    "cross-world inventory transfer",
+    "confirmed identity",
+    "early M12 physical visit",
+    "runtime activation"
+  ]
+}

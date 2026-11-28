@@ -1,0 +1,437 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M15",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "R35-R38_RECOVERED_SOURCE.md",
+    "R92_M13-M15_SOURCE_GROUNDED_SCENE_REFINEMENTS.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R119_M15_M16_GATE_FIELDS_AND_WITNESS_CONSTRUCTION_PROMPTS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "M15_BRIEF",
+      "reality": "PRESERVED",
+      "anchor": "WARDEN15",
+      "requires": [
+        "M14_COMPLETE"
+      ],
+      "evidence": "Actual warden briefing; preserve M14 report disposition"
+    },
+    {
+      "id": "INCIDENT_OBSERVED",
+      "reality": "PRESERVED",
+      "anchor": "CART_SCENE",
+      "requires": [
+        "M15_BRIEF"
+      ],
+      "evidence": "Actual scene encounter; individual evidence receipts separate; investigation may remain incomplete"
+    },
+    {
+      "id": "INCIDENT_DECIDED",
+      "reality": "PRESERVED",
+      "anchor": "CHECKPOINT_JUNCTION",
+      "requires": [
+        "INCIDENT_OBSERVED"
+      ],
+      "evidence": "Local stand-down only with both distinct core observations and driver statement; otherwise unresolved or declined"
+    },
+    {
+      "id": "EVAC_READY",
+      "reality": "PRESERVED",
+      "anchor": "WARDEN15",
+      "requires": [
+        "INCIDENT_DECIDED"
+      ],
+      "evidence": "Actual route guidance and protected gathering points; service path always available"
+    },
+    {
+      "id": "CIVILIAN_A_SAFE",
+      "reality": "PRESERVED",
+      "anchor": "GROUP_A",
+      "requires": [
+        "EVAC_READY"
+      ],
+      "evidence": "Verify actual family arrival at receiving yard"
+    },
+    {
+      "id": "CIVILIAN_B_SAFE",
+      "reality": "PRESERVED",
+      "anchor": "GROUP_B",
+      "requires": [
+        "EVAC_READY"
+      ],
+      "evidence": "Verify actual merchant/cart arrival at receiving yard"
+    },
+    {
+      "id": "CIVILIAN_C_SAFE",
+      "reality": "PRESERVED",
+      "anchor": "GROUP_C",
+      "requires": [
+        "EVAC_READY"
+      ],
+      "evidence": "Verify actual separated travelers arrival at receiving yard"
+    },
+    {
+      "id": "SHELTER15",
+      "reality": "PRESERVED",
+      "anchor": "SHELTER15",
+      "requires": [
+        "CIVILIAN_A_SAFE",
+        "CIVILIAN_B_SAFE",
+        "CIVILIAN_C_SAFE"
+      ],
+      "evidence": "All three independent arrivals, stable staffed shelter"
+    },
+    {
+      "id": "MIGRATION_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "ENTRY18",
+      "requires": [
+        "SHELTER15"
+      ],
+      "evidence": "Authored safe transfer, retain separate equipment and actor state"
+    },
+    {
+      "id": "ORIGINAL_BRIEF",
+      "reality": "ORIGINAL",
+      "anchor": "GUARD18",
+      "requires": [
+        "MIGRATION_SAFE"
+      ],
+      "evidence": "Actual guard briefing; scout route optionally"
+    },
+    {
+      "id": "FENCE_SECURED",
+      "reality": "ORIGINAL",
+      "anchor": "FENCE_HOLD",
+      "requires": [
+        "ORIGINAL_BRIEF"
+      ],
+      "evidence": "Actual protected passage at exterior fence; guard support and all roles viable"
+    },
+    {
+      "id": "FINAL_PASSAGE_SECURED",
+      "reality": "ORIGINAL",
+      "anchor": "CROSSING_HOLD or LOWER_BYPASS",
+      "requires": [
+        "FENCE_SECURED"
+      ],
+      "evidence": "Hold retreat lane or coordinate lower bypass; no kill quota"
+    },
+    {
+      "id": "SHELTER18",
+      "reality": "ORIGINAL",
+      "anchor": "SHELTER18",
+      "requires": [
+        "FINAL_PASSAGE_SECURED"
+      ],
+      "evidence": "Verify actual final original civilian arrival"
+    },
+    {
+      "id": "RETURN15",
+      "reality": "PRESERVED",
+      "anchor": "RETURN_SAFE",
+      "requires": [
+        "SHELTER18"
+      ],
+      "evidence": "Safe authored return; prior arrivals retained"
+    },
+    {
+      "id": "REPORT_SENT",
+      "reality": "PRESERVED",
+      "anchor": "WARDEN15",
+      "requires": [
+        "RETURN15"
+      ],
+      "evidence": "Actual report of local outcome, civilian arrivals and separate original invasion; selected emphasis"
+    },
+    {
+      "id": "M15_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "M16_MESSENGER",
+      "requires": [
+        "REPORT_SENT"
+      ],
+      "evidence": "Receive existing border-town witness lead; M16 eligibility only"
+    }
+  ],
+  "actors": [
+    {
+      "role": "warden",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "assistant",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "farmer",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "messenger",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "driver",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "officers",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "bell keeper",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "family",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "merchant",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "travelers",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "shelter helper",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "Sable Vey",
+      "reality": "PRESERVED",
+      "proposedNpcId": "FS_NPC_011",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "civilian group",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "shelter attendant",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_007",
+      "name": "Garran Stoneward",
+      "relationship": "Gate Warden association; not confirmed Gate Fields warden identity"
+    },
+    {
+      "id": "FS_NPC_024",
+      "name": "Cassian Valeward",
+      "relationship": "S34 commander candidate; not automatically a Gate Fields officer"
+    },
+    {
+      "id": "FS_NPC_021",
+      "name": "Mara Hearthwood",
+      "relationship": "Shelter thematic association only"
+    },
+    {
+      "id": "FS_NPC_022",
+      "name": "Garrick Ironheart",
+      "relationship": "Equipment and wartime supply thematic association only"
+    },
+    {
+      "id": "FS_NPC_025",
+      "name": "Master Hesper",
+      "relationship": "Unresolved investigation subject; no confirmed involvement"
+    }
+  ],
+  "incident": {
+    "observations": [
+      "CARGO_TALLY",
+      "ISSUE_MARKER"
+    ],
+    "testimony": "DRIVER_STATEMENT",
+    "minimumDistinctObservations": 2,
+    "driverRequiredForStandDown": true,
+    "optionalS29Substitutes": false,
+    "outcomes": [
+      "LOCAL_STAND_DOWN",
+      "UNRESOLVED_OR_DECLINED"
+    ],
+    "interventionChoices": [
+      "warden_review",
+      "safe_driver_account",
+      "official_list_discussion"
+    ],
+    "returnBeforeEvacuation": true,
+    "closure": "AUTHORED_CHECKPOINT_NOT_CLOCK",
+    "lateEvidenceChangesDecision": false,
+    "globalWarEscalatesBoth": true,
+    "culprit": "UNCONFIRMED"
+  },
+  "civilianRescue": {
+    "groups": [
+      {
+        "id": "A",
+        "role": "family near culvert"
+      },
+      {
+        "id": "B",
+        "role": "merchant with damaged cart"
+      },
+      {
+        "id": "C",
+        "role": "separated travelers"
+      }
+    ],
+    "anyOrder": true,
+    "actualArrivalRequired": true,
+    "missingGroupState": "WAITING_AT_LAST_SAFE_NODE",
+    "injuredOptions": [
+      "assisted_walk",
+      "staffed_intermediate_shelter_with_helper"
+    ],
+    "farmLaneRequires": "LOCAL_STAND_DOWN",
+    "servicePathAlwaysAvailable": true,
+    "routeClosureRequiresClearOccupancy": true,
+    "allRoleWalking": true,
+    "forcedCivilianDeath": false,
+    "killQuota": false,
+    "shelterCombat": false,
+    "retryRetainsArrivals": true
+  },
+  "original": {
+    "cause": "EXTERNAL_INVASION",
+    "humanFactionWar": false,
+    "distinctActors": true,
+    "retainExistingEquipment": true,
+    "encounterStages": [
+      "FENCE_SECURED",
+      "FINAL_PASSAGE_SECURED"
+    ],
+    "finalRoutes": [
+      "crossing_hold",
+      "guard_lower_bypass"
+    ],
+    "weaponRoles": [
+      "DAMAGE",
+      "RANGE",
+      "DEFENSE"
+    ],
+    "guardSupport": true,
+    "scoutingOptional": true,
+    "enemyCountsAndTiming": "UNRESOLVED_TUNING",
+    "killQuota": false,
+    "shelterCombat": false,
+    "noUntelegraphedReinforcement": true,
+    "retry": "GUARDED_CHECKPOINT_KEEP_ARRIVALS",
+    "actualFinalArrival": true,
+    "optionalOverlook": true
+  },
+  "migration": {
+    "authoredOnly": true,
+    "preflightCollisionControllerRigs": true,
+    "rollbackOnFailure": true,
+    "oneActiveReality": true
+  },
+  "choices": {
+    "preserveM14Report": [
+      "public_no_verified_culprit",
+      "private_all_three_representatives",
+      "request_neutral_civilian_access"
+    ],
+    "report": [
+      "document_disputed_accusation",
+      "request_neutral_shelters",
+      "preserve_independent_witnesses"
+    ],
+    "allLeadToM16": true,
+    "guaranteedCompliance": false,
+    "detainWitnessBeforeM16": false
+  },
+  "optionalIndependent": [
+    "S29",
+    "S34",
+    "D25",
+    "D39"
+  ],
+  "optionalNotes": {
+    "S29": "Actual evidence reference only, cannot replace core observations or driver",
+    "S34": "Separate refuge defense and acknowledgment; no M15 auto-credit",
+    "D25": "Separate shield claim and second vista",
+    "D39": "Independent bow progression; no M15 grant"
+  },
+  "knowledge": {
+    "publicCulprit": "UNCONFIRMED",
+    "goddessObjective": "DEVELOPER_ONLY",
+    "sameOrganizerForM14M15": "UNCONFIRMED",
+    "humanAgencyPreserved": true,
+    "originalAndPreservedEnemiesDistinct": true
+  },
+  "routes": {
+    "preserved": [
+      "ENTRY15",
+      "WARDEN15",
+      "CART_SCENE",
+      "CHECKPOINT_JUNCTION",
+      "GROUP_A/B/C",
+      "FARM_LANE if open or SERVICE_PATH",
+      "SHELTER15",
+      "MIGRATION_SAFE"
+    ],
+    "original": [
+      "ENTRY18",
+      "GUARD18",
+      "FENCE_HOLD",
+      "CROSSING_HOLD or LOWER_BYPASS",
+      "SHELTER18",
+      "optional OVERLOOK18",
+      "RETURN_SAFE"
+    ],
+    "transforms": null
+  },
+  "completion": {
+    "next": "M16_READY",
+    "autoAccept": false,
+    "rewardGrant": false,
+    "ordinaryMainXpProposed": true,
+    "newPower": false,
+    "globalWarEnds": false
+  },
+  "prohibitions": [
+    "forced faction",
+    "mandatory combat quota",
+    "inferred civilian death",
+    "cross-world equipment transfer",
+    "recreated assault",
+    "confirmed culprit",
+    "mandatory focus",
+    "mandatory glide",
+    "Celestial Sight",
+    "runtime activation"
+  ]
+}

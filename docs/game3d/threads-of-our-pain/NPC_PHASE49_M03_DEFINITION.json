@@ -1,0 +1,12 @@
+{
+  "id": "M03",
+  "reality": "PRESERVED",
+  "requires": [
+    "M02"
+  ],
+  "objectives": [
+    "boss_defeated",
+    "aftermath_acknowledged"
+  ],
+  "enabled": false
+}

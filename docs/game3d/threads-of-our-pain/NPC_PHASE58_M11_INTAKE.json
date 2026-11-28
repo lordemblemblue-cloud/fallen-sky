@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M11",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M11.md",
+    "M12.md",
+    "R52_M07-M13_VOICE_PASS.md",
+    "R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md",
+    "D13_S16.md",
+    "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "REFUGE_ARRIVAL",
+      "reality": "ORIGINAL",
+      "anchor": "GATE",
+      "requires": [
+        "M10_COMPLETE"
+      ],
+      "evidence": "Follow actual attendant directions, safe mine entry"
+    },
+    {
+      "id": "FAMILY_INTRO",
+      "reality": "ORIGINAL",
+      "anchor": "FAMILY_BAY",
+      "requires": [
+        "REFUGE_ARRIVAL"
+      ],
+      "evidence": "Observed introduction and melody; all conversation choices preserve names"
+    },
+    {
+      "id": "VENT_RESTORED",
+      "reality": "ORIGINAL",
+      "anchor": "VENT_LATCH",
+      "requires": [
+        "FAMILY_INTRO"
+      ],
+      "evidence": "Actual safe louver repair and restored airflow; ground release or service ramp"
+    },
+    {
+      "id": "MEDICINE_DELIVERED",
+      "reality": "ORIGINAL",
+      "anchor": "HEALER",
+      "requires": [
+        "FAMILY_INTRO"
+      ],
+      "evidence": "Actual main supply crate delivery and healer acceptance, not optional quest flag"
+    },
+    {
+      "id": "CORRIDOR_SECURE",
+      "reality": "ORIGINAL",
+      "anchor": "SUPPLY_FORK",
+      "requires": [
+        "VENT_RESTORED",
+        "MEDICINE_DELIVERED"
+      ],
+      "evidence": "Verify safe supply route and protection, no combat quota"
+    },
+    {
+      "id": "FAMILY_RETURN",
+      "reality": "ORIGINAL",
+      "anchor": "FAMILY_BAY",
+      "requires": [
+        "CORRIDOR_SECURE"
+      ],
+      "evidence": "Return to family; meal and conversation optional"
+    },
+    {
+      "id": "REST_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "REST_SAFE18",
+      "requires": [
+        "FAMILY_RETURN"
+      ],
+      "evidence": "Safe authored rest checkpoint"
+    },
+    {
+      "id": "M11_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "REST_SAFE15",
+      "requires": [
+        "REST_SAFE"
+      ],
+      "evidence": "Safe younger awakening and accessible melody recollection; no physical preserved mine or M12 family visit"
+    }
+  ],
+  "actors": [
+    {
+      "role": "Mira",
+      "relation": "mother",
+      "reality": "ORIGINAL",
+      "runtimeId": null,
+      "provisionalName": true
+    },
+    {
+      "role": "Renn",
+      "relation": "father",
+      "reality": "ORIGINAL",
+      "runtimeId": null,
+      "provisionalName": true
+    },
+    {
+      "role": "Tovin",
+      "relation": "son",
+      "reality": "ORIGINAL",
+      "runtimeId": null,
+      "provisionalName": true
+    },
+    {
+      "role": "steward",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "healer",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "worker",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "carrier",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "distinctM12Family": [
+    "Lessa",
+    "Neri",
+    "Calen"
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_019",
+      "name": "Amara Dawnveil",
+      "relationship": "Preserved healer and S16 coordinator candidate; not original healer"
+    },
+    {
+      "id": "FS_NPC_020",
+      "name": "Luma Everlight",
+      "relationship": "Distinct proposed refugee child; not Tovin; no required appearance"
+    },
+    {
+      "id": "FS_NPC_028",
+      "name": "Talia Ashwillow",
+      "relationship": "Proposed caretaker association; not Mira or confirmed steward"
+    }
+  ],
+  "vent": {
+    "alternatives": [
+      "ground_release_with_worker",
+      "service_ramp_latch"
+    ],
+    "requiresActualRepair": true,
+    "occupancyInterlock": true,
+    "resettable": true,
+    "nonlethal": true,
+    "cue": [
+      "cloth_streamer",
+      "lantern_flame",
+      "caption"
+    ]
+  },
+  "medicine": {
+    "alternatives": [
+      "defend_carrier",
+      "guard_ridge_bypass",
+      "clear_route_first"
+    ],
+    "requiresHealerReceipt": true,
+    "carrierRecovery": "GUARDED_SHELTER_RESTART",
+    "crateRecoverable": true,
+    "wardCombat": false,
+    "cureGuaranteed": false
+  },
+  "family": {
+    "introChoices": [
+      "ask_names",
+      "ask_needs",
+      "leave_quietly"
+    ],
+    "mealChoices": [
+      "eat",
+      "sit_without_eating",
+      "decline"
+    ],
+    "mealRequired": false,
+    "trustDeterminesHealth": false,
+    "survivalGuarantee": false,
+    "melody": {
+      "sharedMotif": "M11_M12_LULLABY",
+      "contour": "rising phrase then descending three notes",
+      "sameCompositionDifferentPerformance": true,
+      "recordingAvailable": false,
+      "accessibleCue": true
+    },
+    "emblem": {
+      "sharedDesign": "M11_M12_FAMILY_EMBLEM",
+      "original": "NECKLACE",
+      "preserved": "EMBROIDERED_CLOTH",
+      "distinctFrom": [
+        "M07_MARK_MESH",
+        "M07_CREST",
+        "D26",
+        "D30",
+        "D14_TOY",
+        "D24_KIT"
+      ],
+      "transfersItem": false
+    }
+  },
+  "optionalIndependent": [
+    "S16",
+    "D13"
+  ],
+  "s16": {
+    "requiresOwnSupplyAcquisition": true,
+    "requiresOwnDelivery": true,
+    "requiresOwnAcknowledgment": true,
+    "autoCompleteFromM11": false,
+    "autoCompleteFromD13": false,
+    "repeatPreviouslyAcceptedDelivery": false,
+    "reuseOnlyVerifiedMatchingReceipt": true,
+    "unrelatedDeliveryNotCredit": true,
+    "exactPhase": "UNRESOLVED"
+  },
+  "d13": {
+    "recipe": "Restorative Salve",
+    "claimAndSecondVistaRequired": true,
+    "olderPouchRetained": true,
+    "noM11RecipeGrant": true
+  },
+  "routes": {
+    "interior": [
+      "M10_ROAD",
+      "GATE",
+      "STEWARD",
+      "WARD",
+      "FAMILY_BAY",
+      "REST_SAFE18"
+    ],
+    "supply": [
+      "GATE",
+      "SUPPLY_FORK",
+      "EXTERIOR_LANE or RIDGE_BYPASS",
+      "HEALER"
+    ],
+    "vent": [
+      "WARD",
+      "SERVICE_RAMP",
+      "VENT_LANDING",
+      "WARD"
+    ],
+    "transforms": null,
+    "wardEnemySpawn": false
+  },
+  "completion": {
+    "next": "M12_READY",
+    "autoAccept": false,
+    "ordinaryMainXpProposed": true,
+    "rewardGrant": false,
+    "optionalQuestGate": false,
+    "youngerPhysicalMineVisit": false,
+    "actualM12FamilyEncounter": false,
+    "loadFailure": "RESTORE_SOURCE_REST_STATE"
+  },
+  "prohibitions": [
+    "medical cure promise",
+    "child health affected by trust",
+    "mandatory meal",
+    "ward combat",
+    "forced faction",
+    "optional recipe grant",
+    "paired focus gate",
+    "mandatory glide",
+    "cross-world item transfer",
+    "reincarnation confirmation",
+    "runtime activation"
+  ]
+}
