@@ -117,7 +117,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | SH-01 | Games hub (left/right menu; three tiles) | Implemented | PR #311; 14/14 | Hero PNG → WebP needs owner OK |
 | SH-02 | WebGPU renderer and recovery utilities shared by the games | Implemented | `src/lib/webgpu*`; targeted suites pass; the four hub-verified fixes merged 2026-11-27 | Physical-GPU check (PF-01) |
 | SH-03 | Mobile touch controls (shared component) | Implemented | `MobileTouchControls`; writes layout to localStorage on mount [mem] | — |
-| SH-04 | Guest saves: Fallen Sky vault, Fantasy Battle local slots, Duelist progress file | Testing required | three separate stores | Keep separate (directive §8); no forced sharing |
+| SH-04 | Guest saves: Fallen Sky vault, Fantasy Battle local slots, Duelist progress file | Testing required; Fallen Sky staging blocked | [R154 guest recovery](../game3d/threads-of-our-pain/R154_GUEST_CLOUD_SAVE_RECOVERY_PACKAGE.md): five positive actual-handler diagnostics, one concurrent save gap; private guest schema unregistered | Keep three stores separate; DP-03 / MI-FS-P4 staging and revision correction approval |
 | SH-05 | Project record and hand-off protocol | In progress | this folder | Owner review |
 
 ## Animation production
