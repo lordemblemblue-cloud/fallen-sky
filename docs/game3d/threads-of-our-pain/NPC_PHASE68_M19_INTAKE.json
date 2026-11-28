@@ -1,0 +1,414 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M19",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "R39-R41_RECOVERED_SOURCE.md",
+    "R64A_OWNER_ENDING_RECONCILIATION.md",
+    "R65_M19-M20_REVISED_FINALE.md",
+    "R98_M19_CAUSALITY_AND_CHARACTER_KNOWLEDGE.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R121_M19_M20_FINALE_AND_POSTGAME_CONSTRUCTION_PROMPTS.md",
+    "R76_OWNER_POSTGAME_CONTINUATION.md",
+    "R84_UNIFIED_NEW_GAME_PLUS_PROGRESSION_CONTRACT.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true,
+    "m05ExperiencedDeathPreserved": true
+  },
+  "stages": [
+    {
+      "id": "APPROACH",
+      "reality": "PRESERVED",
+      "anchor": "RIDGE_MARKER",
+      "evidence": "Observe bounded overlap; no portal",
+      "requires": [
+        "M18_COMPLETE"
+      ]
+    },
+    {
+      "id": "P_CIVILIANS_SAFE",
+      "reality": "PRESERVED",
+      "anchor": "COURTYARD",
+      "evidence": "Actual tracked group arrivals via raised or channel path",
+      "requires": [
+        "APPROACH"
+      ]
+    },
+    {
+      "id": "REST15_READY",
+      "reality": "PRESERVED",
+      "anchor": "REST15",
+      "evidence": "Safe rest; no active hazards or occupied closure",
+      "requires": [
+        "P_CIVILIANS_SAFE"
+      ]
+    },
+    {
+      "id": "INITIAL_MIGRATE18",
+      "reality": "ORIGINAL",
+      "anchor": "M18_SHELTER",
+      "evidence": "Authored safe transfer; actual rig/controller/collision readiness",
+      "requires": [
+        "REST15_READY"
+      ]
+    },
+    {
+      "id": "INITIAL_JUNCTION_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "JUNCTION",
+      "evidence": "Scout-assisted gate or intact bypass, verify route",
+      "requires": [
+        "INITIAL_MIGRATE18"
+      ]
+    },
+    {
+      "id": "INITIAL_ASSEMBLY",
+      "reality": "ORIGINAL",
+      "anchor": "ASSEMBLY",
+      "evidence": "Actual last visible group arrival; defend or assist guard",
+      "requires": [
+        "INITIAL_JUNCTION_SAFE"
+      ]
+    },
+    {
+      "id": "INITIAL_REPORT",
+      "reality": "ORIGINAL",
+      "anchor": "ROUTE_BOARD",
+      "evidence": "Separate verified, reported, unknown local statuses",
+      "requires": [
+        "INITIAL_ASSEMBLY"
+      ]
+    },
+    {
+      "id": "RETURN_FOR_PHASE_I",
+      "reality": "PRESERVED",
+      "anchor": "RING_ENTRY",
+      "evidence": "Safe authored return",
+      "requires": [
+        "INITIAL_REPORT"
+      ]
+    },
+    {
+      "id": "PHASE_I_FIRST_TETHER",
+      "reality": "PRESERVED",
+      "anchor": "NEAR_ANCHOR",
+      "evidence": "Actual defensive encounter and first tether interruption",
+      "requires": [
+        "RETURN_FOR_PHASE_I"
+      ]
+    },
+    {
+      "id": "PHASE_II_MIGRATE18",
+      "reality": "ORIGINAL",
+      "anchor": "ASSEMBLY",
+      "evidence": "Separate transfer at stable checkpoint",
+      "requires": [
+        "PHASE_I_FIRST_TETHER"
+      ]
+    },
+    {
+      "id": "PHASE_II_INSPECT",
+      "reality": "ORIGINAL",
+      "anchor": "SECOND_PASSAGE",
+      "evidence": "Actual brace and group position observations",
+      "requires": [
+        "PHASE_II_MIGRATE18"
+      ]
+    },
+    {
+      "id": "PHASE_II_PASSAGE_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "GUARD_BARRIER",
+      "evidence": "Actual defense or guard assist; verify local readiness and arrivals",
+      "requires": [
+        "PHASE_II_INSPECT"
+      ]
+    },
+    {
+      "id": "RETURN_FOR_PHASE_III",
+      "reality": "PRESERVED",
+      "anchor": "RING_SECTORS",
+      "evidence": "Safe authored return from shelter",
+      "requires": [
+        "PHASE_II_PASSAGE_SAFE"
+      ]
+    },
+    {
+      "id": "PHASE_III_FINAL_TETHER",
+      "reality": "PRESERVED",
+      "anchor": "FAR_ANCHOR",
+      "evidence": "Actual final tether interrupt; hostile goddess withdraws alive",
+      "requires": [
+        "RETURN_FOR_PHASE_III"
+      ]
+    },
+    {
+      "id": "CONVERGENCE_STOPPED",
+      "reality": "PRESERVED",
+      "anchor": "RING_SECTORS",
+      "evidence": "Immediate forced overlap stopped, shared life-force link persists; remove hazards",
+      "requires": [
+        "PHASE_III_FINAL_TETHER"
+      ]
+    },
+    {
+      "id": "SAFE_REVIEW",
+      "reality": "PRESERVED",
+      "anchor": "R65_M19_REVIEW",
+      "evidence": "Actual consent-scoped testimony, full equal branch consequences, safe exit",
+      "requires": [
+        "CONVERGENCE_STOPPED"
+      ]
+    },
+    {
+      "id": "BRANCH_COMMITTED",
+      "reality": "BRANCH_TRANSITION",
+      "anchor": "R65_M19_REVIEW",
+      "evidence": "Explicit approved confirmation and durable immutable branch receipt; shipping disabled",
+      "requires": [
+        "SAFE_REVIEW"
+      ]
+    },
+    {
+      "id": "SAFE_DESTINATION",
+      "reality": "BRANCH_DESTINATION",
+      "anchor": "APPROVED_DESTINATION",
+      "evidence": "One age-18 avatar and stable floor; recover same committed branch",
+      "requires": [
+        "BRANCH_COMMITTED"
+      ]
+    },
+    {
+      "id": "M19_COMPLETE",
+      "reality": "BRANCH_DESTINATION",
+      "anchor": "APPROVED_DESTINATION",
+      "evidence": "M20 branch eligibility based on actual committed destination",
+      "requires": [
+        "SAFE_DESTINATION"
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "role": "Moon Goddess",
+      "proposedNpcId": "FS_NPC_004",
+      "reality": "AUTHORIZED_DIVINE",
+      "runtimeId": null
+    },
+    {
+      "role": "Unnamed Goddess",
+      "proposedNpcId": "FS_NPC_030",
+      "reality": "AUTHORIZED_DIVINE",
+      "runtimeId": null
+    },
+    {
+      "role": "keeper",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "scout",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "tracked civilians",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "scout",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "caregiver",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "resident",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "tracked civilians",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "evacuation": {
+    "preservedRoutes": [
+      "raised_path",
+      "channel_path"
+    ],
+    "originalInitialRoutes": [
+      "scout_gate",
+      "intact_bypass"
+    ],
+    "originalSecondRoutes": [
+      "creature_defense",
+      "guard_assistance"
+    ],
+    "separateInitialAndSecondReceipts": true,
+    "actualArrivalsRequired": true,
+    "reportClasses": [
+      "VERIFIED",
+      "REPORTED",
+      "UNKNOWN"
+    ],
+    "scope": "TRACKED_LOCAL_GROUPS_ONLY",
+    "forcedDeath": false,
+    "globalRescue": false,
+    "retryRetainsPriorArrivals": true,
+    "closureRequiresClearOccupancy": true
+  },
+  "encounter": {
+    "phases": [
+      "P_FIRST_TETHER",
+      "O_SECOND_PASSAGE",
+      "P_FINAL_TETHER"
+    ],
+    "tethers": 2,
+    "roles": [
+      "DAMAGE",
+      "RANGE",
+      "DEFENSE"
+    ],
+    "accessibleTetherInteraction": true,
+    "clearTelegraphs": true,
+    "killQuota": false,
+    "enemyCountsAndTiming": "UNRESOLVED_TUNING",
+    "hostileGoddessOutcome": "WITHDRAWS_NOT_KILLED",
+    "forcedConvergenceStopped": true,
+    "sharedLinkPersists": true,
+    "firstTetherCausedBraceDamage": "UNCONFIRMED",
+    "repairCausedFinalTetherFailure": "UNCONFIRMED",
+    "pauseDuringMenusLoadsDialogue": true,
+    "cleanupBeforeReview": true
+  },
+  "review": {
+    "choices": [
+      "SACRIFICE_RESTORATION",
+      "REFUSAL_FUSION"
+    ],
+    "noDefault": true,
+    "equalEmphasis": true,
+    "untimed": true,
+    "cancelAndLeave": true,
+    "skipCommits": false,
+    "hoverCommits": false,
+    "explicitConfirmRequired": true,
+    "privateConsentPreserved": true,
+    "keeperReportProvenance": "TESTIMONY_NOT_FIRSTHAND",
+    "productionConfirmEnabled": false
+  },
+  "branches": {
+    "SACRIFICE_RESTORATION": {
+      "oneAge18Existence": true,
+      "restoredReality": true,
+      "formerAge15Acquaintances": "ANCIENT_HISTORY_DECEASED",
+      "exactElapsedTime": null,
+      "mandatoryAmnesia": false,
+      "futureSpiritMigration": "UNAPPROVED_EXPANSION",
+      "separatePlayableAvatars": false
+    },
+    "REFUSAL_FUSION": {
+      "oneAge18Existence": true,
+      "preservedLandformsOriginalScars": true,
+      "priorDeathTimelineReplaced": true,
+      "rebuildingCodaYearsApprox": 20,
+      "playableStartPhase": null,
+      "automaticAge38": false,
+      "universalSurvival": false,
+      "separatePlayableAvatars": false
+    }
+  },
+  "commitContract": {
+    "implemented": false,
+    "scope": "OWNER_CHARACTER_CAMPAIGN_CYCLE",
+    "oneImmutableReceipt": true,
+    "requiredApprovals": [
+      "R111_CHRONOLOGY",
+      "FINAL_CONSEQUENCES",
+      "ACTOR_LIFETIMES",
+      "DESTINATION_READINESS",
+      "SAVE_AND_OWNERSHIP_AUTHORITY"
+    ],
+    "retainLegitimatelyOwnedEquipment": true,
+    "retainEligibleQuestProgress": true,
+    "neverRecreateSoldConsumedDismantled": true,
+    "levelRetentionRequired": true,
+    "exactOtherCarryoverPolicy": "UNRESOLVED",
+    "beforeCommitFailure": "RESTORE_SOURCE",
+    "afterCommitFailure": "RECOVER_SAME_BRANCH",
+    "previewWritesCanonicalState": false
+  },
+  "migration": {
+    "authoredOnly": true,
+    "preflightCollisionControllerRigs": true,
+    "rollbackBeforeCommit": true,
+    "oneActiveReality": true,
+    "noNewOlderActorBeforeApprovedDestination": true,
+    "physicalDocumentTransfer": false
+  },
+  "optionalIndependent": [
+    "S13",
+    "S29",
+    "S41"
+  ],
+  "routes": {
+    "preserved": [
+      "M18_EXIT",
+      "RIDGE_MARKER",
+      "TURNOUT",
+      "RAISED_PATH/CHANNEL_PATH",
+      "COURTYARD",
+      "REST15",
+      "RING_ENTRY",
+      "NEAR_ANCHOR",
+      "RING_SECTORS",
+      "FAR_ANCHOR",
+      "DELIBERATION",
+      "SAFE_EXIT"
+    ],
+    "original": [
+      "M18_SHELTER",
+      "ROUTE_BOARD",
+      "JUNCTION",
+      "UPPER_PASSAGE/BYPASS",
+      "ASSEMBLY",
+      "GUARD_BARRIER",
+      "REST18"
+    ],
+    "transforms": null
+  },
+  "completion": {
+    "next": "M20_READY",
+    "autoAccept": false,
+    "rewardGrant": false,
+    "newPower": false,
+    "requiresBranchReceipt": true,
+    "requiresSafeDestination": true
+  },
+  "prohibitions": [
+    "obsolete separation/rebirth",
+    "forced sacrifice to win",
+    "third world selector",
+    "mandatory optional quest",
+    "player-controlled lethal act",
+    "confirmed invasion culprit",
+    "universal rescue",
+    "runtime activation"
+  ]
+}
