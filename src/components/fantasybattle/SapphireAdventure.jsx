@@ -9,6 +9,7 @@ import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalo
 import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
+import './sapphireExplorationHud.css';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
 import {isCurrentEncounter,currentSaveStamp} from './core/battleLifecycle.mjs';
 import {encryptBackup,importTransfer,MAX_ENCRYPTED_BYTES} from './core/encryptedBackup.mjs';
@@ -90,7 +91,7 @@ function useStagedOriginal(id){
     sync();query.addEventListener('change',sync);
     return()=>query.removeEventListener('change',sync);
   },[]);
-  const url=entry&&(!entry.wideOnly||wide)?entry.url:null;
+  const url=entry&&(!entry.wideOnly||wide||id==='10')?entry.url:null;
   const [loaded,setLoaded]=useState(null);
   useEffect(()=>{
     if(!url)return;
@@ -606,29 +607,55 @@ function OriginalCombatHud({hud,profile,encounter,onAction,onPause,onSkills}){
   </div>;
 }
 
-// Original exploration plate is transparent; the iframe remains the live world.
-function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onFocus}){
+// Crop the approved original HUD plate instead of rendering its unwanted baked-in frames.
+// Source rectangles are percentages of the original screen-10 plate.
+const EXPLORATION_ART_CROPS=Object.freeze({
+  status:[1.3,74,22.6,12],
+  quest:[1.3,10.3,24,17.9],
+  map:[82.7,1.3,16.8,27.4],
+  actions:[86.3,69,12.9,16.7],
+});
+function ExplorationArtSlice({part}){
+  const [x,y,w,h]=EXPLORATION_ART_CROPS[part];
+  return <span aria-hidden="true" className="fa-clean-art-slice" style={{backgroundSize:(10000/w)+'% '+(10000/h)+'%',backgroundPosition:(100*x/(100-w))+'% '+(100*y/(100-h))+'%'}}/>;
+}
+function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onFocus,original}){
   const [zoom,setZoom]=useState(1);
   const held=useRef(new Set()),send=useRef(post);send.current=post;
   const release=()=>{for(const key of held.current)send.current('move',{key,value:false});held.current.clear();};
   useEffect(()=>{window.addEventListener('blur',release);return()=>{window.removeEventListener('blur',release);release();};},[]);
-  const members=profile?[{id:'hero',name:profile.name,hp:profile.hp,maxHp:heroStats(profile).maxHp},...activeRoster(profile).map(m=>({...m,hp:memberFor(profile,m.id).hp,maxHp:memberStats(profile,m.id).maxHp}))]:[];
   const quest=profile?.quests.grove;
   const objective=campaignPrompt(profile)||(quest==='active'?'Defeat the Grove Spirit':quest==='complete'?'Return to the journal to complete the quest':quest==='available'?'A quest is available':quest==='claimed'?'Whispering Grove Spirit completed':'No tracked quest');
+  const maxHp=profile?heroStats(profile).maxHp:1;
+  const xp=profile?.xp||0;
   const moveButtons=[['left','←'],['right','→'],['in','↑'],['out','↓'],['run','Run']].map(([key,label])=><Btn key={key} aria-label={key==='run'?'Hold to run':'Hold to move '+key} onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);held.current.add(key);send.current('move',{key,value:true});}} onPointerUp={()=>{held.current.delete(key);send.current('move',{key,value:false});}} onPointerCancel={()=>{held.current.delete(key);send.current('move',{key,value:false});}} onLostPointerCapture={()=>{held.current.delete(key);send.current('move',{key,value:false});}}>{label}</Btn>);
-  return <div className="fa-original-explore">
-    <h2 className="fa-explore-quest-title">Quest Journal</h2><button className="fa-explore-objective" onClick={()=>go('08')}>{objective}</button>
-    <div className="fa-explore-region">{world?.region||'Loading world'}</div>
-    <button className="fa-explore-minimap" aria-label="Open live world map" onClick={()=>go('07')}><div style={{transform:'scale('+zoom+')'}}><RegionMap world={world} profile={profile} small/></div></button>
-    <Btn className="fa-explore-map-menu" onClick={onPause} aria-label="Open menu">☰</Btn><Btn className="fa-explore-map-journal" onClick={()=>go('08')} aria-label="Open quest journal">↗</Btn>
-    <div className="fa-explore-zoom"><Btn aria-label="Zoom in on minimap" disabled={zoom>=2} onClick={()=>setZoom(x=>Math.min(2,x+.25))}>+</Btn><Btn aria-label="Zoom out on minimap" disabled={zoom<=1} onClick={()=>setZoom(x=>Math.max(1,x-.25))}>−</Btn></div>
-    <section className="fa-explore-party" aria-label="Active party">{Array.from({length:4},(_,i)=>{const m=members[i];return <div className="fa-explore-member" key={m?.id||'empty'+i}><div className="fa-explore-portrait">{m&&(m.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={m} small/>)}</div><div className="fa-explore-member-data"><strong>{m?.name||'Empty slot'}</strong>{m?<><progress aria-label={m.name+' health'} max={m.maxHp} value={m.hp}/><small>HP {m.hp}/{m.maxHp}</small></>:<small>—</small>}</div></div>;})}</section>
-    <section className="fa-explore-progress" aria-label="Character progression"><div className="fa-explore-profile-icon">{profile&&<ArcherPortrait profile={profile} small/>}</div><div><strong>{profile?'Level '+levelFor(profile.xp):'No character'}</strong><progress aria-label="Progress to next level" value={(profile?.xp||0)%100} max={100}/><small>{profile?.xp||0} XP · {profile?.gold||0} gold</small></div></section>
-    <Btn className="fa-explore-interact" disabled={!world?.nearby} onClick={()=>post('interact')}>{world?.nearby?world.nearby+' · E':'No nearby interaction'}</Btn>
-    <Btn className="fa-explore-primary" aria-label="Jump" onClick={()=>post('jump')}>Jump</Btn><Btn className="fa-explore-secondary" aria-label="Skillbook" onClick={()=>go('12')}>Skills</Btn><Btn className="fa-explore-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn>
-    <nav className="fa-explore-nav" aria-label="Exploration menu"><Btn onClick={onPause}>Menu</Btn><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('06')}>Items</Btn><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('08')}>Journal</Btn><Btn onClick={()=>go('12')}>Skills</Btn><Btn onClick={()=>go('37')}>Events</Btn></nav>
-    <section className="fa-explore-move" aria-label="Movement controls">{moveButtons}<Btn onClick={onFocus}>WASD · Focus</Btn></section>
-    {notifications?.length>0&&<button className="fa-explore-notice" onClick={()=>go('37')} aria-label="View latest gameplay events">{notifications[0].message}</button>}
+  // Sapphire Adventure is currently local guest play. Never treat AI companions or
+  // empty roster slots as online players. A future online session must supply actual
+  // remote party membership before an exploration party list is mounted.
+  return <div className={'fa-clean-explore'+(original?' has-plate':'')} style={original?{'--fa-hud-art':'url("'+original.url+'")'}:undefined}>
+    <div className="fa-clean-left">
+      <section className="fa-clean-status" aria-label="Character health and experience"><ExplorationArtSlice part="status"/>
+        <div className="fa-clean-portrait">{profile&&<ArcherPortrait profile={profile} small/>}</div>
+        <div className="fa-clean-status-data">
+          <strong title={profile?.name}>{profile?.name||'No character'} · Lv {profile?levelFor(xp):'—'}</strong>
+          <div className="fa-clean-stat-row"><span>HP</span><progress className="fa-clean-hp" aria-label="Character health" max={maxHp} value={profile?.hp||0}/><small>{profile?.hp||0}/{maxHp}</small></div>
+          <div className="fa-clean-stat-row"><span>XP</span><progress className="fa-clean-xp" aria-label="Progress to next level" value={xp%100} max={100}/><small>{xp%100}/100</small></div>
+          <small>{xp} XP · {profile?.gold||0} gold</small>
+        </div>
+      </section>
+      <section className="fa-clean-quest" aria-label="Quest Journal"><ExplorationArtSlice part="quest"/><h2>Quest Journal</h2><button type="button" className="fa-clean-objective" onClick={()=>go('08')}>{objective}</button></section>
+    </div>
+    <section className="fa-clean-map" aria-label="Minimap"><ExplorationArtSlice part="map"/>
+      <button type="button" className="fa-clean-minimap" aria-label="Open live world map" onClick={()=>go('07')}><div style={{transform:'scale('+zoom+')'}}><RegionMap world={world} profile={profile} small/></div></button>
+      <Btn className="fa-clean-map-menu" onClick={onPause} aria-label="Open menu">☰</Btn><Btn className="fa-clean-map-journal" onClick={()=>go('08')} aria-label="Open quest journal">↗</Btn>
+      <div className="fa-clean-zoom"><Btn aria-label="Zoom in on minimap" disabled={zoom>=2} onClick={()=>{setZoom(x=>Math.min(2,x+.25));onFocus();}}>+</Btn><Btn aria-label="Zoom out on minimap" disabled={zoom<=1} onClick={()=>{setZoom(x=>Math.max(1,x-.25));onFocus();}}>−</Btn></div>
+    </section>
+    <section className="fa-clean-actions" aria-label="Exploration actions"><ExplorationArtSlice part="actions"/>
+      <Btn className="fa-clean-jump" aria-label="Jump" onClick={()=>{post('jump');onFocus();}}>Jump</Btn><Btn className="fa-clean-skills" aria-label="Skillbook" onClick={()=>go('12')}>Skills</Btn><Btn className="fa-clean-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn>
+    </section>
+    <section className="fa-clean-touch-move" aria-label="Touch movement controls">{moveButtons}</section>
+    {world?.nearby&&<Btn className="fa-clean-touch-interact" aria-label={'Interact with '+world.nearby} onClick={()=>post('interact')}>E</Btn>}
+    {notifications?.length>0&&<button type="button" className="fa-clean-notice" onClick={()=>go('37')} aria-label="View latest gameplay events">{notifications[0].message}</button>}
   </div>;
 }
 
@@ -1437,7 +1464,7 @@ export default function SapphireAdventure(){
     case '07':content=<WorldMap world={world} profile={profile} encounter={encounter} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{setDestination(region);go('25');}}/>;break;
     case '08':content=<QuestJournal key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} go={go} back={back} onCampaignAction={(questId,action)=>transact(p=>changeCampaignQuest(p,questId,action),action==='accept'?'Quest accepted':'Quest completed')} onClaim={()=>{if(transact(p=>{if(p.quests.grove!=='complete')throw Error('Quest is not ready to complete.');return claimGroveQuest(p);},'Quest completed'))go('44');}}/>;break;
     case '09':content=original?<OriginalCombatHud hud={hud} profile={profile} encounter={encounter} onAction={id=>{const s=current.current;if(s.id==='09'&&s.encounter)stageRef.current?.chooseAction(id);}} onPause={openPause} onSkills={()=>go('12')}/>:<>{pane(0,<><h2>{hud?'Round '+hud.round:'Preparing combat…'}</h2><div className="fa-turns">{hud?.order.map(o=><span className={o.active?'active':''} key={o.id}>{o.name}{o.action?' · '+o.action:''}</span>)}</div></>)}{pane(1,<>{hud?.units.filter(u=>u.team==='player').map(u=><div className={'fa-party-hud-row'+(hud.choosingUnit===u.id?' choosing':'')} key={u.id}>{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}<strong>{u.name}</strong><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp} · Focus {u.focus}/{u.maxFocus}{u.hp===0?' · Down':hud.pendingChoices?.[u.id]?' · Ready':''}</small></div>)}<small aria-live="polite">{hud?.log.at(-1)}</small></>)}{pane(2,<><small>{hud?.phase==='choose'?'Choose: '+(hud.units.find(u=>u.id===hud.choosingUnit)?.name||''):'Resolving round'}</small><div className="fa-combat-actions">{hud?.legal.map(a=><Btn key={a.id} className={'fa-action '+a.action.kind} disabled={!a.enabled} title={a.reason||a.action.summary} aria-label={a.action.name+' — '+(a.reason||a.action.summary)} onClick={()=>stageRef.current?.chooseAction(a.id)}><SkillArt id={a.id}/><span className="fa-action-label"><kbd>{a.action.hotkey}</kbd> {a.action.name}</span><small>{a.reason||a.action.summary}</small></Btn>)}</div></>)}{pane(3,<>{hud?.units.filter(u=>u.team==='enemy').map(u=><div key={u.id} className={'fa-enemy-hud'+(u.hp===0?' down':'')}><strong>{u.name}</strong><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small>{hud.intents?.filter(i=>i.unitId===u.id).map(i=><div key={i.unitId} className={'fa-enemy-intent '+i.kind}><SkillArt id={i.actionId}/><div>{i.phaseName&&<small className="fa-boss-phase">{i.phaseName}</small>}<strong>{i.name}</strong><small>{i.summary}{i.targetId?' · Targets current frontline':''}</small></div></div>)}</div>)}</>)}<div className="fa-hud-top"><Btn onClick={openPause}>Pause · Esc</Btn><Btn onClick={()=>go('12')}>Skills · K</Btn></div></>;break;
-    case '10':content=original?<OriginalExplorationHud profile={profile} world={world} notifications={notifications} post={post} go={go} onPause={openPause} onFocus={()=>frame.current?.focus()}/>:<>{pane(0,<><strong>{profile?.name}</strong><p>Level {level}</p><progress value={profile?.xp%100||0} max={100}/><small>{profile?.xp||0} total XP</small><progress value={profile?.hp||0} max={stats.maxHp}/><small>HP {profile?.hp||0}/{stats.maxHp} · Gold {profile?.gold||0}</small></>)}{pane(1,<button className="fa-map-button" onClick={()=>go('07')}><RegionMap world={world} profile={profile} small/></button>)}{pane(2,<><small>{world?.region}</small>{world?.nearby&&<Btn primary onClick={()=>post('interact')}>{world.nearby} · E</Btn>}{(campaignPrompt(profile)||profile?.quests.grove==='active')&&<p>Quest: {campaignPrompt(profile)||'Defeat the Grove Spirit'}</p>}</>)}{pane(3,<div className="fa-hud-buttons"><Btn onClick={openPause}>Menu</Btn><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('08')}>Journal</Btn><Btn onClick={()=>go('12')}>Skills</Btn></div>)}<div className="fa-touch">{[['left','←'],['right','→'],['in','↑'],['out','↓'],['run','Run']].map(([k,label])=><Btn key={k} onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);post('move',{key:k,value:true});}} onPointerUp={()=>post('move',{key:k,value:false})} onPointerCancel={()=>post('move',{key:k,value:false})} onLostPointerCapture={()=>post('move',{key:k,value:false})}>{label}</Btn>)}<Btn onClick={()=>post('jump')}>Jump</Btn></div><div className="fa-hud-top"><Btn onClick={()=>frame.current?.focus()}>Focus world · WASD · Shift run</Btn></div></>;break;
+    case '10':content=<OriginalExplorationHud profile={profile} world={world} notifications={notifications} post={post} go={go} onPause={openPause} onFocus={()=>frame.current?.focus()} original={original}/>;break;
     case '11':content=<PartyFormation key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} transact={transact} go={go} back={back} statPanel={statPanel}/>;break;
     case '12':content=<Skillbook key={profile?.id||'guest'} profile={profile} level={level} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '14':content=<BattleVictory profile={profile} encounter={encounter} result={result} hud={hud} original={original} layout={screen.layout} onContinue={victoryContinue} onItems={()=>go('38')} onDetails={()=>go('37')}/>;break;
@@ -1505,7 +1532,7 @@ export default function SapphireAdventure(){
     </div>:pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
-  const template=original?.url||templateUrl(id);
+  const template=id==='10'?null:original?.url||templateUrl(id);
   const artwork=original?{mode:'original-full',asset:null}:artFor(id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
@@ -1513,7 +1540,7 @@ export default function SapphireAdventure(){
     {encounter&&arenaReady&&profile&&<BattleSurface key={encounter.token} encounter={encounter} profile={profile} paused={id!=='09'} muted={settings.muted} reducedMotion={settings.reducedMotion} quality={settings.quality} stageRef={stageRef} onHud={handleBattleHud} onError={(message,token)=>{if(isCurrentEncounter(current.current.encounter,token))fail(message);}}/>}
     {artwork.mode==='cinematic'&&<div className={'fa-cinematic-art'+(artwork.asset==='title-original'?' title-original':'')} aria-hidden="true" style={{'--fa-scene-art':'url("'+artworkUrl+'")'}}/>}
     <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
-      <div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>
+      {id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
       {!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
       {original&&id==='35'&&<span className="fa-original-subtitle" aria-hidden="true">Fantasy Battle</span>}
       {content}
