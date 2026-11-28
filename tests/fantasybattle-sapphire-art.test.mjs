@@ -236,11 +236,13 @@ test('original exploration HUD uses live world input and releases held movement'
  assert.equal(stagedOriginalFor('10').transparent,true);
  assert.ok(templateUrl('10').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
- const section=page.slice(page.indexOf('function OriginalExplorationHud('),page.indexOf('function SaveToast('));
- for(const marker of ['activeRoster(profile)','memberFor(profile,m.id).hp','memberStats(profile,m.id).maxHp','RegionMap world={world} profile={profile}','world?.nearby','profile?.quests.grove','onPointerCancel','onLostPointerCapture','held.current.clear()', "window.addEventListener('blur',release)", "send.current('move',{key,value:false})", "post('interact')","post('jump')"])assert.ok(section.includes(marker),marker);
- assert.match(page,/case '10':content=original\?<OriginalExplorationHud/);
- const css=readFileSync(new URL('../src/components/fantasybattle/sapphireAdventure.css',import.meta.url),'utf8');
- assert.ok(css.includes('.fa-ui.hud[data-staged-original="true"][data-screen="10"]{background:transparent;pointer-events:none}'));
+ const section=page.slice(page.indexOf('function OriginalExplorationHud('),page.indexOf('// Victory is a read-only presentation'));
+ for(const marker of ['heroStats(profile).maxHp','profile?.hp||0','RegionMap world={world} profile={profile}','world?.nearby','profile?.quests.grove','onPointerCancel','onLostPointerCapture','held.current.clear()', "window.addEventListener('blur',release)", "send.current('move',{key,value:false})", "post('interact')","post('jump')"])assert.ok(section.includes(marker),marker);
+ assert.doesNotMatch(section,/activeRoster\(|Empty slot|No nearby interaction|fa-clean-actions/);
+ assert.match(page,/case '10':content=<OriginalExplorationHud/);
+ const css=readFileSync(new URL('../src/components/fantasybattle/sapphireExplorationHud.css',import.meta.url),'utf8');
+ assert.ok(css.includes('.fa-clean-explore'));
+ assert.ok(css.includes('pointer-events:none'));
 });
 
 test('original victory reports the resolved result without granting or reusing rewards',()=>{
