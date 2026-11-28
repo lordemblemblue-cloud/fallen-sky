@@ -10,7 +10,7 @@ Written 2026-11-27 from the recovery baseline (`main` `ab03f50a`). Each request 
 | FS-S. Fallen Sky story, quests, world | MI-FS-S1 to S8 | The campaign, the world rebuild, cinematics |
 | FS-P. Fallen Sky progression and balance | MI-FS-P1 to P3 | Gear tiers, curve, achievements |
 | FS-W. Fallen Sky world and bosses | MI-FS-W1, W2 | The platform switch-off, dungeons, bosses |
-| FB. Fantasy Battle | MI-FB-01 to 07 | Story, dungeons, skills, rewards, assets |
+| FB. Fantasy Battle | MI-FB-01 to 08 (answer MI-FB-08 first: it may change the core loop) | Story, dungeons, skills, rewards, assets, the battle system |
 | DA. Duelist Adventure | MI-DA-01 to 08 | Ranked, Custom, shop, progression, story, armour, animation |
 | X. Cross-project | MI-X-01, 02 | Canon scope, multiplayer identity |
 
@@ -201,6 +201,21 @@ These come from the story documents' own open questions (`docs/game3d/threads-of
 
 ### MI-FB-06 Achievements, relationships, tutorial, bestiary
 - **Missing:** the content and rules behind screens 28, 30, 34 and 24. **Completed:** UI shells. **Can continue:** everything else.
+
+### MI-FB-08 The 2026-11-28 direction: "play like child of light"
+- **Project:** Fantasy Battle.
+- **Feature or section:** exploration view and battle system (the owner's words, 2026-11-28: "we had a new 3d module this game is suppose to play like child of light").
+- **What has already been completed:** round-based KOTOR-style battles on the puppet rig (PR #310, owner direction of 2026-11-23); 3D exploration of the Sapphire Wilds and Sanctuary, loaded at `/fantasy-battle-world`, with four battle arenas (PR #398 and later); no earlier mention of this reference in any reachable source (FANTASY_BATTLE_RECORD §0a).
+- **What information is missing:** which "new 3d module" is meant; whether the battles change from rounds to a timeline with cast interrupts; whether exploration becomes side-view.
+- **Why this information is required:** it may replace the core loop of both exploration and combat. Building toward a guessed meaning would invent mechanics (directive §4) and could discard approved work.
+- **Specific questions that must be answered:**
+  1. Which "new 3d module" do you mean: the 3D world the game loads now (`/fantasy-battle-world`: the Sapphire Wilds exploration and the four battle arenas), or something from an earlier conversation? If the latter, which conversation or file?
+  2. Should the current round-based battles become timeline battles in which a hit during an enemy's cast interrupts it? If yes: who acts when (speeds, a shared timeline bar), what counts as casting, what an interrupt does (delay, cancel), and whether party members can be swapped mid-battle.
+  3. Should exploration become side-view, or stay in the 3D world? If side-view: does the 3D world become the backdrop, and do the 48 approved UI plates still apply as they are?
+  4. Is the reference about mechanics only? (The record assumes so: no name, characters, art, music or look from that game will be used.)
+- **Required files or assets:** the conversation or file where the "new 3d module" was made or approved, if it is not the current world; any timing numbers for the timeline.
+- **Other systems affected:** `core/battleRules.mjs` (turn order, Focus), `FantasyBattleStage.js`, enemy AI and skills, the 3D world frame, the battle and journal UI plates, saves (battle state), the animation timelines.
+- **Work that can continue without this information:** WP-FB-01 to WP-FB-04 (verification, README, Continue/Load UI tests, #423 visual QA); nothing new for exploration or combat.
 
 ### MI-FB-07 Economy and enemy scaling
 - **Missing:** approved prices, drops, XP, gold and difficulty curves (all provisional). **Affected:** PR #423, equipment, shop.

@@ -45,7 +45,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FS-21 | PvP/PK rules, faction governance | Testing required | WORLD_PVP_PK…, FACTION_GOVERNANCE… | Server APIs; FS-D8 |
 | FS-22 | Reward authority (R137–R145 contracts and fixtures) | In progress | PR #420 and #425 merged (#425 at 18:49); fixtures only, no runtime | FS-D14; WP-FS-09 gap map |
 | FS-23 | Luna mansion geometry (old map) | Superseded unless the recreated map needs it | issue #261; owner 2026-11-27 "not using the old map" | FS-D10 |
-| FS-24 | War of Three Roads (bands 1–2 built, flag off; band 3 written) | Implemented (kept switched off by the owner, 2026-11-27) | `docs/game3d/three-empires/OWNER_REQUESTS.md`; merged `0b6ca52d` | Nothing more is built; reuse of its systems for the Threads is FS-D16 |
+| FS-24 | War of Three Roads | Superseded: retired by the owner on 2026-11-27 ("Retire, keep tools"); the story left `src` (kept as a test sample), its quest, scene, people, monster and place tools stay behind four empty registries | merge `96e886bc` [checked in `main`]; [mem `three-empire-war-20261121.md`] | Whether the Threads builds on those tools and models: FS-D16 |
 | FS-25 | Cave-mouths branch `claude/wolfveil-cave-mouths-20261123` | Awaiting approval | conflicts with the 2026-11-25 removals | Close or keep (FS-D11) |
 
 ### Fallen Sky: story, quests and world (The Threads of Our Pain)
@@ -54,7 +54,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 |---|---|---|---|---|
 | FS-S01 | Story documentation for all 125 IDs (M01–M20, D01–D50, S01–S55) | Implemented (documentation only) | R61, R85, R86 | — |
 | FS-S02 | Chronology and causality decision (R111 P0) | Awaiting information | R111 §7 | MI-FS-S1 |
-| FS-S03 | P01 opening slice M01–M03, isolated low-poly blockout (R132 T00–T07) | In progress (assigned by the hub 2026-11-27 to session `local_cb70a7c5`) | R112 §4, R113, R130–R136; R136 §1 in the repo still reads "No owner approval recorded" | That session sends R136 D01–D08 to the owner as one request (MI-FS-S6); WP-FS-S1 |
+| FS-S03 | P01 opening slice M01–M03, isolated low-poly blockout (R132 T00–T07) | In progress (assigned by the hub 2026-11-27 to session `local_cb70a7c5`): the T00 return and the owner request are on `claude/top-p01-opening-forest-20261127` (`169c7634`, docs only); no ticket is approved until the owner fills R136's owner record | R112 §4, R113, R130–R136; [mem `threads-of-our-pain-p01.md`; branch checked] | Owner answers R136 D01–D08 (MI-FS-S6); WP-FS-S1 |
 | FS-S04 | NPC-phase work, Phases 44–67 (fixtures, validators, M07–M18 intakes) | Awaiting approval (verified 2026-11-27: 64/64, validators pass, nothing mounted, no new suite failure when merged with `main`; 19 lint `no-undef` errors in its tests and scripts) | stacked branch chain, head PR #433 `f58c30e6`; not in `main`; [handoffs/20261127-claude-npc-chain-test-run.md](handoffs/20261127-claude-npc-chain-test-run.md) | FS-S-D10 |
 | FS-S05 | Story-ID adapter rejecting unknown IDs (quest store accepts unknown IDs today) | Implementation-ready (isolated module) | R130 §5, R137 §1, Phase 43 risk 1 | WP-FS-S2 |
 | FS-S06 | Paired-discovery state model with the second vista (OWNER rule R66 §1) | Implementation-ready (disabled model) | R66, Phase 61 | WP-FS-S3 |
@@ -86,6 +86,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FB-11 | Final character, enemy, boss art and rigs; item icons; audio | Awaiting assets | shared archer rig, SVG layers | AS-01, AS-02 |
 | FB-12 | Engine-spec Studio and download panel on a test page `/fantasy-battle-studio`, with the Record WebM fix | Awaiting approval (owner "Yes, keep it"; merge pending) | branch `claude/fantasy-battle-studio-page-20261127` `7ab676cf` | Merge; reachable on the published site once merged (FB-D3) |
 | FB-13 | Release flag on before QA | Awaiting approval | `gamesHubCatalog.mjs:13` | FB-D3 |
+| FB-14 | Owner direction 2026-11-28: "play like child of light" (mechanics reference only: side-view exploration, timeline battles with cast interrupts; no use of that game's name, characters, art, music or look) | Awaiting information | FANTASY_BATTLE_RECORD §0a | MI-FB-08; part 2 stays on hold |
 
 ## Duelist Adventure
 
@@ -183,7 +184,7 @@ On `0b6ca52d` (3040 tests, 2884 pass, 156 fail) the list below holds except that
 |---|---|---|---|
 | PF-01 | WebGPU physical-GPU benchmark and preview/live matrix | Implementation-ready (needs a GPU and a deployment) | FRAME_METRICS_VALIDATION_20261125.md |
 | PF-02 | Low-poly part 2 (0 MB gate hops, draw-call cuts) and the four WebGPU fixes (slices, late compile, morph key, device loss) | Implemented (merged 2026-11-27 18:27) | merges `032897d9`, `fe1fe750`, `64070750`, `308b49f6`, `90430f32`; live re-check once a world is reachable |
-| PF-03 | Low-poly part 3 (per-area budgets for the five old areas) | In progress, but it targets the old map (superseded by the owner's 2026-11-27 map decision unless the hub retargets it) | [note `low-poly-world-handover.md`] |
+| PF-03 | Low-poly part 3 (per-area budgets for the five old areas) | Superseded: stopped 2026-11-28 because the old map is not loaded; branch `claude/low-poly-world-3-20261123` (`1b6b549f`) kept unmerged; its budgets (500 draw calls, 1.5 M triangles) carry to the new map under R87 | [mem `low-poly-world-20261122.md`; branch checked] |
 | PF-04 | Duelist armour performance | Awaiting approval | PR #384 |
 | PF-05 | Startup hangs (hub, Duelist) | Awaiting approval | PR #346 |
 
