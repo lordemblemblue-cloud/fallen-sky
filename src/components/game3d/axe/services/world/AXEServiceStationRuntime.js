@@ -42,7 +42,7 @@ export function buildAXEStationGeometry(assets, station) {
   // supporting the level workshop on natural sloped ground.
   add('box', 'stone', 0, -.46, 0, 4.8, 1, 4.2);
   add('box', 'edge', 0, .04, 0, 4.9, .12, 4.3);
-  let glow = null, light = null;
+  let glow = null, lightAnchor = null;
   const table = (x, z, width = 1.5) => {
     add('box', 'wood', x, 1.05, z, width, .14, .8);
     for (const sign of [-1, 1]) add('box', 'wood', x + sign * (width / 2 - .13), .52, z, .16, 1, .65);
@@ -52,7 +52,8 @@ export function buildAXEStationGeometry(assets, station) {
     add('box', 'iron', -1.45, 1.45, 1.2, 1.4, .65, .7);
     add('box', 'stone', -1.45, 2.2, 1.2, .65, 1.2, .65);
     glow = add('sphere', 'fire', -1.45, 1.1, .45, .42, .23, .35);
-    light = new THREE.PointLight(0xffa35c, 2.2, 8, 2); light.position.set(-1.45, 1.35, .15); group.add(light);
+    // where the runtime's one forge light sits while this is the nearest blacksmith (createAXEServiceStationRuntime)
+    lightAnchor = new THREE.Object3D(); lightAnchor.name = 'ForgeLightAnchor'; lightAnchor.position.set(-1.45, 1.35, .15); group.add(lightAnchor);
     add('box', 'stone', 0, .43, -.45, .78, .7, .7);
     add('box', 'iron', 0, .88, -.45, 1.15, .3, .45);
     add('cone', 'iron', .7, .9, -.45, .36, .6, .24, [0, 0, -Math.PI / 2]);
@@ -92,13 +93,19 @@ export function buildAXEStationGeometry(assets, station) {
     for (const x of [-1.7, 1.7]) add('box', 'wood', x, .9, 1.4, .12, 1.7, .4);
   }
   group.traverse(node => { if (node.isMesh) node.userData.axeStationId = station.id; });
-  return { group, glow, glowScale: glow?.scale.clone(), light };
+  return { group, glow, glowScale: glow?.scale.clone(), lightAnchor };
 }
 
 export function createAXEServiceStationRuntime({ scene, camera, renderer, context, sampleGround, isBlocked, getPlayers = () => [], onChanged = () => {} }) {
   let assets = null, disposed = false, nearest = null, previewGroup = null, elapsed = 0, nextLifecycle = 0, effectUntil = 0, focusStationId = null;
   let stationRecords = [], renderedStations = [];
   const visuals = new Map(), ray = new THREE.Raycaster(), pointer = new THREE.Vector2();
+  // One forge light for the nearest blacksmith, in the scene from the start and dark when none is near. A light per
+  // station shown and hidden by distance changed the scene's light count whenever the player walked up to a forge,
+  // and three.js then recompiled every lit material.
+  const forgeLight = new THREE.PointLight(0xffa35c, 0, 8, 2);
+  forgeLight.name = 'AXEStationForgeLight';
+  scene.add(forgeLight);
   const focusPosition = new THREE.Vector3(), focusTarget = new THREE.Vector3(), serviceCameraPosition = new THREE.Vector3();
   const prompt = document.createElement('div');
   prompt.className = 'axe-world-service-prompt'; prompt.style.cssText = 'position:absolute;left:50%;bottom:22%;transform:translateX(-50%);pointer-events:none;padding:8px 13px;border:1px solid #879db070;background:#111b25dc;color:#e1edf6;border-radius:4px;font:12px Georgia,serif;z-index:70;display:none';
@@ -170,18 +177,19 @@ export function createAXEServiceStationRuntime({ scene, camera, renderer, contex
       if (stationRecords.length && elapsed >= nextLifecycle) {
         nextLifecycle = elapsed + .25; tickAXEServiceStationLifecycle(); refreshVisibleStations();
       }
-      if (!visuals.size) { nearest = null; prompt.style.display = 'none'; return; }
+      if (!visuals.size) { nearest = null; forgeLight.intensity = 0; prompt.style.display = 'none'; return; }
       const c = context(), snapshot = getAXEServiceStationClientState();
-      let closestLight = null, closestDistance = Infinity; nearest = null;
+      let closestForge = null, closestDistance = Infinity; nearest = null;
       for (const station of renderedStations) {
         const visual = visuals.get(station.id); if (!visual) continue;
         const distance = stationDistance(c.player, station.position);
         visual.group.visible = station.region === c.region && distance <= AXE_STATION_CONFIG.visibilityRadius;
-        if (visual.light) { visual.light.visible = false; if (visual.group.visible && distance < closestDistance && distance < 22) { closestDistance = distance; closestLight = visual.light; } }
+        if (visual.lightAnchor && visual.group.visible && distance < closestDistance && distance < 22) { closestDistance = distance; closestForge = visual.lightAnchor; }
         if (visual.glow && visual.group.visible) visual.glow.scale.copy(visual.glowScale).multiplyScalar(1 + .045 * Math.sin(elapsed * 2));
         if (visual.group.visible && distance <= AXE_STATION_CONFIG.interactionRange && (!nearest || distance < nearest.distance)) nearest = { station, distance };
       }
-      if (closestLight) { closestLight.visible = true; closestLight.intensity = elapsed < effectUntil ? 3 : 2.2; }
+      if (closestForge) { closestForge.getWorldPosition(forgeLight.position); forgeLight.intensity = elapsed < effectUntil ? 3 : 2.2; }
+      else forgeLight.intensity = 0;
       const show = nearest && c.allowed && !window.__axeUiModalOpen && !window.__axeServiceModeOpen;
       prompt.style.display = show ? '' : 'none';
       if (show) {
@@ -194,6 +202,7 @@ export function createAXEServiceStationRuntime({ scene, camera, renderer, contex
       disposed = true; unmount(); clearPreview();
       renderer.domElement.removeEventListener('pointerdown', onPointer, true); window.removeEventListener('keydown', onKey, true);
       for (const visual of visuals.values()) scene.remove(visual.group);
+      scene.remove(forgeLight); forgeLight.dispose();
       visuals.clear(); assets?.dispose(); prompt.remove();
     },
   };

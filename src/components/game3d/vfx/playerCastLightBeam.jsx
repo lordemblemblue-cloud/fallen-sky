@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createSharedEffectLight } from './sharedEffectLight.mjs';
 
 const LIGHT_BEAM_URL = 'https://base44.app/api/apps/6876751a602125f45f1861b9/files/mp/public/6876751a602125f45f1861b9/1dec4b137_appearance_effect_light_beam.glb';
 let lightBeamPromise = null;
@@ -12,7 +13,16 @@ function loadBeam(loader) {
   return lightBeamPromise;
 }
 
-export function createPlayerCastLightBeam({ scene, loader, playerRef, getGroundY, duration = 0.45 }) {
+const BEAM_LIGHT_COLOR = new THREE.Color(0x8eeaff);
+const BEAM_LIGHT_HEIGHT = 0.7; // above the beam's ring
+const beamLightPosition = new THREE.Vector3();
+
+/** The beams' one light (vfx/sharedEffectLight.mjs); GameWorld3D creates it with the world. */
+export function createPlayerCastLight(scene) {
+  return createSharedEffectLight(scene, { name: 'PlayerCastLight', distance: 5 });
+}
+
+export function createPlayerCastLightBeam({ scene, loader, playerRef, getGroundY, duration = 0.45, castLight = null }) {
   const group = new THREE.Group();
   group.name = 'PlayerCastLightBeam';
 
@@ -28,9 +38,10 @@ export function createPlayerCastLightBeam({ scene, loader, playerRef, getGroundY
   core.position.y = 1.35;
   group.add(core);
 
-  const light = new THREE.PointLight(0x8eeaff, 0, 5);
-  light.position.y = 0.7;
-  group.add(light);
+  // GameWorld3D passes its shared castLight, so a cast never changes the scene's light count; without one the beam
+  // brings a light of its own, added and removed with it.
+  const ownLight = castLight ? null : createPlayerCastLight(scene);
+  const light = castLight || ownLight;
   scene.add(group);
 
   let t = 0;
@@ -73,7 +84,8 @@ export function createPlayerCastLightBeam({ scene, loader, playerRef, getGroundY
       core.scale.set(1 + Math.sin(t * 11) * 0.04, 1, 1 + Math.sin(t * 11) * 0.04);
       ringMat.opacity = 0.7 * alpha;
       coreMat.opacity = 0.42 * alpha;
-      light.intensity = 1.8 * alpha;
+      light.set(group, 1.8 * alpha, BEAM_LIGHT_COLOR,
+        beamLightPosition.set(group.position.x, group.position.y + BEAM_LIGHT_HEIGHT, group.position.z));
       if (asset) asset.visible = alpha > 0.03;
     },
     alive() { return !cancelled && !disposed && t < duration; },
@@ -82,6 +94,8 @@ export function createPlayerCastLightBeam({ scene, loader, playerRef, getGroundY
       if (disposed) return;
       disposed = true;
       window.removeEventListener('playerSkillCastCancel', onCancel);
+      light.release(group);
+      ownLight?.dispose();
       scene.remove(group);
       ringGeo.dispose(); ringMat.dispose();
       coreGeo.dispose(); coreMat.dispose();

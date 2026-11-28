@@ -24,8 +24,10 @@ await build({
   stdin: {
     contents: [
       "export * as THREE from 'three';",
-      `export { createPlayerCastLightBeam } from '${game3d}vfx/playerCastLightBeam.jsx';`,
-      `export { createSkillUseBurst, createLevelUpCelebration } from '${game3d}vfx/playerMomentEffects.jsx';`,
+      `export { createSharedEffectLight } from '${game3d}vfx/sharedEffectLight.mjs';`,
+      `export { createEffectLightPool, acquireEffectLight, EFFECT_LIGHT_POOL_SIZE } from '${game3d}vfx/effectLightPool.mjs';`,
+      `export { createPlayerCastLight, createPlayerCastLightBeam } from '${game3d}vfx/playerCastLightBeam.jsx';`,
+      `export { createSkillUseBurst, createSkillUseBurstLight, createLevelUpCelebration } from '${game3d}vfx/playerMomentEffects.jsx';`,
       `export { createHealEffect } from '${game3d}HealEffect.jsx';`,
       `export { createBiteEffect } from '${game3d}BiteEffect.jsx';`,
       `export { createLifeDrainEffect } from '${game3d}LifeDrainEffect.jsx';`,
@@ -33,6 +35,8 @@ await build({
       `export { createShadowTeleport } from '${game3d}ShadowTeleportEffect.jsx';`,
       `export { createFrostTornado } from '${game3d}FrostTornadoEffect.jsx';`,
       `export { createLightningStrike } from '${game3d}LightningStrikeEffect.jsx';`,
+      `export { createWeaponConstructFx, WEAPON_CONSTRUCT_SECONDS } from '${game3d}weapons/weaponConstructFx.js';`,
+      `export { buildAXEStationGeometry } from '${game3d}axe/services/world/AXEServiceStationRuntime.js';`,
     ].join('\n'),
     resolveDir: root,
   },
@@ -188,7 +192,7 @@ test('a cancelled cast beam is disposed on the next frame and leaves the cached 
   loader.arrive({ scene: asset });
   await flushMicrotasks();
   const group = scene.getObjectByName('PlayerCastLightBeam');
-  assert.equal(group.children.length, 4, 'ring, core, light and the GLB clone');
+  assert.equal(group.children.length, 3, 'ring, core and the GLB clone (its light sits in the scene, not the group)');
 
   let list = tickActiveEffects([beam], 1 / 60);
   assert.equal(list.length, 1);
@@ -209,12 +213,18 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
   scene.add(player);
   const at = (x, z) => () => ({ x, y: 0, z });
   const loader = deferredLoader();
+  // As GameWorld3D sets them up: the cast beam and skill-use burst share lights that exist with the world, and the
+  // other effects borrow from its effect light pool.
+  const castLight = fx.createPlayerCastLight(scene);
+  const burstLight = fx.createSkillUseBurstLight(scene);
+  const lightPool = fx.createEffectLightPool(scene);
+  const worldLights = [castLight.light, burstLight.light, ...lightPool.lights];
   const effects = {
     'cast light beam': () => fx.createPlayerCastLightBeam({
-      scene, loader, playerRef: { current: player }, getGroundY: () => 0, duration: 0.45,
+      scene, loader, playerRef: { current: player }, getGroundY: () => 0, duration: 0.45, castLight,
     }),
     'skill-use burst': () => fx.createSkillUseBurst({
-      scene, playerRef: { current: player }, getGroundY: () => 0, duration: 0.65,
+      scene, playerRef: { current: player }, getGroundY: () => 0, duration: 0.65, burstLight,
     }),
     'level-up celebration': () => fx.createLevelUpCelebration({
       scene, playerRef: { current: player }, getGroundY: () => 0,
@@ -228,21 +238,224 @@ test('every effect GameWorld3D puts on activeEffects leaves the scene once it fi
     'lightning strike': () => fx.createLightningStrike(scene, 2, 2, 0),
   };
   const before = sceneSnapshot(scene);
+  // Runs effects to the end, watching the scene's light count and the brightest world light every frame.
+  const runWatching = (list) => {
+    let frames = 0, mostLights = 0, brightest = 0;
+    while (list.length && frames < 600) {
+      list = tickActiveEffects(list, 1 / 30);
+      frames++;
+      mostLights = Math.max(mostLights, sceneSnapshot(scene).lights);
+      brightest = Math.max(brightest, ...worldLights.map((light) => light.intensity));
+    }
+    return { list, mostLights, brightest };
+  };
 
   for (const [name, create] of Object.entries(effects)) {
     const effect = create();
     assert.ok(sceneSnapshot(scene).objects > before.objects, `${name} adds to the scene while it plays`);
-    assert.deepEqual(runOut([effect], 1 / 30).list, [], `${name} finishes`);
+    const run = runWatching([effect]);
+    assert.deepEqual(run.list, [], `${name} finishes`);
+    assert.equal(run.mostLights, before.lights, `${name} never changes the scene's light count`);
+    if (name === 'shadow teleport') assert.equal(run.brightest, 0, 'the shadow teleport has no light');
+    else assert.ok(run.brightest > 0, `${name} lights the scene through a world light`);
     assert.deepEqual(sceneSnapshot(scene), before, `${name} leaves nothing behind`);
+    assert.equal(lightPool.busy(), 0, `${name} returns its pooled lights`);
   }
 
-  // Many casts at once, as in a fight. Live, the scene gained one light per skill cast and kept it.
+  // Many casts at once, as in a fight, more than the pool can light: the extra effects play without a light.
+  // Live, the scene gained a light per effect and three.js recompiled every lit material for each new count.
   const all = [];
   for (let round = 0; round < 3; round++) for (const create of Object.values(effects)) all.push(create());
-  assert.ok(sceneSnapshot(scene).lights >= before.lights + all.length);
-  assert.deepEqual(runOut(all, 1 / 30).list, []);
+  assert.equal(lightPool.busy(), fx.EFFECT_LIGHT_POOL_SIZE);
+  const crowd = runWatching(all);
+  assert.deepEqual(crowd.list, []);
+  assert.equal(crowd.mostLights, before.lights, 'no effect adds a light while the world lights are in place');
   assert.deepEqual(sceneSnapshot(scene), before);
+  assert.equal(lightPool.busy(), 0);
+  assert.ok(worldLights.every((light) => light.intensity === 0), 'all world lights dark again');
   assert.equal(globalThis.window.listenerCount('playerSkillCastCancel'), 0);
+});
+
+test('the effect light pool lends a fixed set of lights and never changes the scene light count', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  const pool = fx.createEffectLightPool(scene); // GameWorld3D creates it before the world's first frame
+  const before = sceneSnapshot(scene);
+  assert.equal(before.lights, fx.EFFECT_LIGHT_POOL_SIZE);
+
+  const borrowed = [];
+  for (let i = 0; i < fx.EFFECT_LIGHT_POOL_SIZE; i++) {
+    borrowed.push(fx.acquireEffectLight(scene, { color: 0xff2244, distance: 5 + i, position: { x: i, y: 1, z: 0 } }));
+  }
+  assert.ok(borrowed.every(Boolean));
+  assert.equal(fx.acquireEffectLight(scene, { color: 0x66ddff }), null, 'a busy pool lends nothing');
+
+  const [first] = borrowed;
+  first.set(3, { x: 7, y: 2, z: -1 });
+  assert.equal(first.light.intensity, 3);
+  assert.deepEqual(first.light.position.toArray(), [7, 2, -1]);
+  assert.equal(first.light.distance, 5);
+  assert.ok(first.light.color.equals(new THREE.Color(0xff2244)));
+  first.release();
+  first.release();
+  first.set(9); // a released handle changes nothing
+  assert.equal(first.light.intensity, 0);
+  assert.equal(pool.busy(), fx.EFFECT_LIGHT_POOL_SIZE - 1);
+
+  const again = fx.acquireEffectLight(scene, { color: 0x66ddff, distance: 12 });
+  assert.equal(again.light, first.light, 'a returned light is lent again');
+  assert.equal(again.light.distance, 12);
+  assert.ok(again.light.color.equals(new THREE.Color(0x66ddff)));
+  assert.deepEqual(sceneSnapshot(scene), before, 'lending and returning never add or remove a light');
+
+  pool.dispose();
+  pool.dispose();
+  assert.equal(sceneSnapshot(scene).lights, 0, 'world teardown removes the pool');
+  again.release(); // after teardown: harmless
+
+  // Without a pool (previews, tests) an effect gets a light of its own that leaves with it.
+  const own = fx.acquireEffectLight(scene, { color: 0xffffff, distance: 4 });
+  assert.equal(sceneSnapshot(scene).lights, 1);
+  own.release();
+  assert.equal(sceneSnapshot(scene).lights, 0);
+  assert.equal(fx.acquireEffectLight(null, {}), null);
+});
+
+test('skill casts light the scene through the shared beam and burst lights, so the light count never changes', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  const castLight = fx.createPlayerCastLight(scene); // GameWorld3D creates both before the world's first frame
+  const burstLight = fx.createSkillUseBurstLight(scene);
+  const before = sceneSnapshot(scene);
+  const playerRef = { current: { position: new THREE.Vector3(3, 0, -2) } };
+  const cast = (color) => [
+    fx.createPlayerCastLightBeam({
+      scene, loader: deferredLoader(), playerRef, getGroundY: () => 1, duration: 0.45, castLight,
+    }),
+    fx.createSkillUseBurst({ scene, playerRef, getGroundY: () => 1, color, duration: 0.65, burstLight }),
+  ];
+  // A sword skill and a bow skill overlapping.
+  let list = tickActiveEffects([...cast(0xffb347), ...cast(0x7fe7ff)], 0.06);
+  assert.equal(list.length, 4);
+  assert.equal(sceneSnapshot(scene).lights, before.lights, 'casting adds no light to the scene');
+
+  // Overlapping effects give what their separate lights at the same spot gave: summed intensity, mixed color.
+  const close = (a, b) => Math.abs(a - b) < 1e-9;
+  assert.ok(close(castLight.light.intensity, 2 * 1.8 * (0.06 / 0.12)), 'two beams fading in add up');
+  assert.ok(castLight.light.position.distanceTo(new THREE.Vector3(3, 1 + 0.04 + 0.7, -2)) < 1e-9);
+  assert.ok(close(burstLight.light.intensity, 2 * 3.2 * (1 - (0.06 / 0.65) ** 2)), 'two bursts add up');
+  assert.ok(burstLight.light.position.distanceTo(new THREE.Vector3(3, 1 + 1.2, -2)) < 1e-9);
+  const mixed = new THREE.Color(0xffb347).add(new THREE.Color(0x7fe7ff)).multiplyScalar(0.5);
+  assert.ok(close(burstLight.light.color.r, mixed.r) && close(burstLight.light.color.g, mixed.g)
+    && close(burstLight.light.color.b, mixed.b), 'equal bursts mix their weapon colors evenly');
+
+  list = runOut(list, 1 / 30).list;
+  assert.deepEqual(list, []);
+  assert.equal(castLight.light.intensity, 0, 'dark once the casts end');
+  assert.equal(burstLight.light.intensity, 0);
+  assert.deepEqual(sceneSnapshot(scene), before, 'both lights stay in the scene for the next cast');
+
+  castLight.dispose();
+  castLight.dispose();
+  burstLight.dispose();
+  assert.equal(sceneSnapshot(scene).lights, before.lights - 2, 'world teardown removes them');
+});
+
+test('a lightning strike keeps one set of materials across bolt rebuilds and disposes every material it showed', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  // Every material the strike puts in the scene, and whether it was disposed by the end.
+  const seen = new Map();
+  const collect = () => scene.traverse((node) => {
+    for (const material of [node.material].flat()) {
+      if (!material || seen.has(material)) continue;
+      seen.set(material, false);
+      material.addEventListener('dispose', () => seen.set(material, true));
+    }
+  });
+
+  let list = [fx.createLightningStrike(scene, 2, 2, 0)];
+  collect();
+  const atStart = seen.size;
+  let frames = 0;
+  while (list.length && frames < 600) { list = tickActiveEffects(list, 1 / 60); collect(); frames++; }
+
+  assert.deepEqual(list, []);
+  assert.ok(frames >= 40, 'the bolts are rebuilt every 35 ms over the ~0.8 s strike');
+  assert.equal(seen.size, atStart, 'rebuilding the bolts adds no materials');
+  assert.equal([...seen.values()].filter((disposed) => !disposed).length, 0, 'every material is disposed');
+});
+
+test('a weapon summon borrows a pooled light for its molten glow and never changes the light count', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  const scene = new THREE.Scene();
+  const pool = fx.createEffectLightPool(scene);
+  const construct = fx.createWeaponConstructFx({ scene });
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.9, 0.01).translate(0, 0.4, 0),
+    new THREE.MeshStandardMaterial({ color: 0x888888 }));
+  const root = new THREE.Group();
+  root.add(blade);
+  scene.add(root);
+  const before = sceneSnapshot(scene);
+
+  construct.play(root, { kind: 'blade', mode: 'build' });
+  let mostLights = 0, brightest = 0;
+  const seconds = fx.WEAPON_CONSTRUCT_SECONDS.build + fx.WEAPON_CONSTRUCT_SECONDS.settle + 0.2;
+  for (let t = 0; t < seconds; t += 1 / 30) {
+    construct.update(1 / 30);
+    mostLights = Math.max(mostLights, sceneSnapshot(scene).lights);
+    brightest = Math.max(brightest, ...pool.lights.map((light) => light.intensity));
+  }
+  assert.equal(construct.activeCount(), 0, 'the weapon has set');
+  assert.equal(mostLights, before.lights, 'summoning a weapon never adds a light');
+  assert.ok(brightest > 0, 'the molten glow lights a pooled light');
+  assert.equal(pool.busy(), 0, 'and gives it back');
+  construct.dispose();
+});
+
+test('a blacksmith station carries an anchor for the runtime\'s one forge light, not a light of its own', async () => {
+  const fx = await loadEffects();
+  const { THREE } = fx;
+  // Stands in for the runtime's shared station assets: every geometry and material name resolves.
+  const assets = {
+    geometries: new Proxy({}, { get: () => new THREE.BoxGeometry() }),
+    materials: new Proxy({}, { get: () => new THREE.MeshBasicMaterial() }),
+  };
+  const visual = fx.buildAXEStationGeometry(assets, { id: 'forge-1', groupId: 'blacksmith', position: { x: 10, y: 2, z: -4 } });
+  let lights = 0;
+  visual.group.traverse((node) => { if (node.isLight) lights++; });
+  assert.equal(lights, 0, 'the station brings no light');
+  assert.equal(visual.lightAnchor?.name, 'ForgeLightAnchor');
+  const anchorAt = visual.lightAnchor.getWorldPosition(new THREE.Vector3());
+  assert.ok(anchorAt.distanceTo(new THREE.Vector3(10 - 1.45, 2 + 1.35, -4 + 0.15)) < 1e-9, 'where the forge light used to sit');
+});
+
+test('loot drops and the service-station forge keep the scene light count fixed', () => {
+  const read = (file) => readFileSync(path.join(root, 'src/components/game3d', file), 'utf8');
+  const loot = read('WorldLootDrops.jsx');
+  assert.doesNotMatch(loot, /new THREE\.PointLight/, 'no light per drop');
+  assert.match(loot, /acquireEffectLight\(scene, \{ color: glowEntry\.hex, distance: 3\.5 \}\)/,
+    'one pooled glow on the drop nearest the player');
+  assert.match(loot, /glowRef\.current\.handle\.release\(\);/, 'the glow goes back once no drop is left');
+  assert.match(loot, /glowRef\.current\?\.handle\.release\(\);/, 'and when the loot layer unmounts');
+  assert.equal((loot.match(/disposeDropMesh\(/g) || []).length, 3, 'removed and picked-up drops free their meshes');
+
+  const station = read('axe/services/world/AXEServiceStationRuntime.js');
+  assert.equal((station.match(/new THREE\.PointLight/g) || []).length, 1, 'one forge light for every station');
+  assert.match(station, /const forgeLight = new THREE\.PointLight\(0xffa35c, 0, 8, 2\);[\s\S]{0,80}scene\.add\(forgeLight\);/);
+  assert.doesNotMatch(station, /[Ll]ight\.visible\s*=/, 'no light is shown or hidden by distance');
+  assert.match(station, /closestForge\.getWorldPosition\(forgeLight\.position\);/);
+  assert.match(station, /else forgeLight\.intensity = 0;/, 'dark when no forge is near');
+  assert.match(station, /scene\.remove\(forgeLight\); forgeLight\.dispose\(\);/);
+
+  // The forge light exists from the world's setup, before its first frame.
+  const world = read('GameWorld3D.jsx');
+  const runtimeAt = world.indexOf('const stationRuntime = createAXEServiceStationRuntime(');
+  assert.ok(runtimeAt > 0 && runtimeAt < world.indexOf('\n    animate();'));
 });
 
 test('GameWorld3D ticks its effects through the disposing list and disposes what is left on teardown', () => {
@@ -253,4 +466,17 @@ test('GameWorld3D ticks its effects through the disposing list and disposes what
   const teardown = world.slice(world.indexOf('rendererGuard.markDisposed();'));
   assert.ok(teardown.includes('cancelAnimationFrame(frameId);'), 'teardown stops the render loop');
   assert.match(teardown, /activeEffects\.current = disposeActiveEffects\(activeEffects\.current\);/);
+
+  // The cast lights exist before the first frame (the setup's closing animate() call), are handed to every beam and
+  // burst, and leave with the world.
+  const firstFrame = world.indexOf('\n    animate();');
+  for (const created of ['const playerCastLight = createPlayerCastLight(scene);',
+    'const skillUseBurstLight = createSkillUseBurstLight(scene);',
+    'const effectLightPool = createEffectLightPool(scene);']) {
+    const at = world.indexOf(created);
+    assert.ok(at > 0 && at < firstFrame, `${created} runs before the first frame`);
+  }
+  assert.match(world, /createPlayerCastLightBeam\(\{[^}]*castLight: playerCastLight,/);
+  assert.match(world, /createSkillUseBurst\(\{[\s\S]{0,300}?burstLight: skillUseBurstLight,/);
+  assert.match(teardown, /playerCastLight\.dispose\(\);\s+skillUseBurstLight\.dispose\(\);\s+effectLightPool\.dispose\(\);/);
 });

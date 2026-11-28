@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { acquireEffectLight } from './vfx/effectLightPool.mjs';
 
 /**
  * BiteEffect — animated upper/lower fangs that snap shut on the target.
@@ -52,9 +53,8 @@ export function createBiteEffect(scene, targetX, targetY, targetZ) {
   const flash = new THREE.Mesh(flashGeo, flashMat);
   group.add(flash);
 
-  // Subtle warm light
-  const light = new THREE.PointLight(0xffcc66, 0, 5);
-  group.add(light);
+  // Subtle warm light at the bite, borrowed from the world's effect light pool (vfx/effectLightPool.mjs)
+  const light = acquireEffectLight(scene, { color: 0xffcc66, distance: 5, position: group.position });
 
   let elapsed = 0;
   let alive = true;
@@ -82,10 +82,10 @@ export function createBiteEffect(scene, targetX, targetY, targetZ) {
       if (!flashed) {
         flashed = true;
         flashMat.opacity = 0.9;
-        light.intensity = 6;
+        light?.set(6);
       }
       flashMat.opacity = Math.max(0, 0.9 * (1 - k * 2));
-      light.intensity = Math.max(0, 6 * (1 - k));
+      light?.set(Math.max(0, 6 * (1 - k)));
       const fScale = 1 + k * 2;
       flash.scale.set(fScale, fScale, fScale);
     }
@@ -96,6 +96,7 @@ export function createBiteEffect(scene, targetX, targetY, targetZ) {
       lowerFangs.forEach((f) => { f.geo.dispose(); f.mat.dispose(); });
       flashGeo.dispose(); flashMat.dispose();
       scene.remove(group);
+      light?.release();
     }
   };
 
