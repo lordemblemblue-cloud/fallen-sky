@@ -5,7 +5,7 @@ import {
   Keyboard, LogOut, Monitor, MousePointerClick, Play, Settings2, Users, MessageSquare, BookOpen,
   LayoutDashboard, Move, RotateCcw,
   ShieldAlert, UserPlus, Volume2, VolumeX, X, Hammer, Trophy,
-  UserRound, ScrollText, PawPrint, Sparkles, Map as MapIcon, Flag,
+  UserRound, ScrollText, PawPrint, Sparkles, Flag,
 } from 'lucide-react';
 import {base44} from '@/api/base44Client';
 import {inkPaletteFor} from './render/inkWashLook';
@@ -307,6 +307,7 @@ export default function PauseMenu({
   const selectView=id=>{setConfirmAction(null);setError('');setView(id);};
   const openSettings=()=>{selectView('graphics');setSurface('settings');setLauncherGroup(null);};
   const openScoreboard=()=>{selectView('scoreboard');setSurface('settings');};
+  const openCharacterLogout=()=>{selectView('session');setSurface('settings');setConfirmAction('character');};
   const changeGraphics=next=>{
     const sanitized=game3dPauseGraphicsDefaults(next);
     setGraphics(sanitized);
@@ -438,7 +439,7 @@ export default function PauseMenu({
     overview:entry?['Game Settings','Adjust your experience before entering Wolfveil']
       :['Journey Menu','Your adventure is still running'],
     services:['Services','Choose a workstation or progression menu'],
-    scoreboard:['Scoreboard','Live world session and match status'],
+    scoreboard:['Ranked','Live world session and ranking status'],
     audio:['Audio','Adjust your game theme'],
     controls:['Controls','Choose how you move through the world'],
     graphics:['Graphics & Display','Tune the world to your device'],
@@ -516,13 +517,14 @@ export default function PauseMenu({
           </div>
         </div>
         <footer className="axe3d-pause__launcher-footer">
-          <button type="button" className="axe3d-pause__launcher-action"
-            aria-label="Open scoreboard" onClick={openScoreboard}>
-            <Trophy size={19} aria-hidden="true"/><span>Scoreboard</span>
+          <button type="button" className="axe3d-pause__launcher-action axe3d-pause__launcher-rank"
+            aria-label="Open ranked" onClick={openScoreboard}>
+            <Trophy size={16} aria-hidden="true"/><span>Ranked</span>
           </button>
-          <button type="button" className="axe3d-pause__launcher-action"
-            aria-label="Open map (M)" onClick={()=>onOpenMap?.()}>
-            <MapIcon size={19} aria-hidden="true"/><span>Map</span>
+          <button type="button" className="axe3d-pause__launcher-action axe3d-pause__launcher-logout"
+            aria-label="Character logout" onClick={openCharacterLogout}
+            disabled={typeof onReturnToCharacterSelect!=='function'}>
+            <DoorOpen size={18} aria-hidden="true"/><span>Character Logout</span>
           </button>
           <button type="button" className="axe3d-pause__launcher-settings"
             aria-label="Open game settings" title="Settings" onClick={openSettings}>
@@ -576,7 +578,7 @@ export default function PauseMenu({
           <div className="axe3d-pause__content axe3d-pause__scroller" key={view}>
             <div className="axe3d-pause__section-head">
               <div>
-                <span className="axe3d-pause__eyebrow">SYSTEM / {view.toUpperCase()}</span>
+                <span className="axe3d-pause__eyebrow">SYSTEM / {view==='scoreboard'?'RANKED':view.toUpperCase()}</span>
                 <h3>{heading[0]}</h3>
                 <p>{heading[1]}</p>
               </div>
@@ -598,7 +600,7 @@ export default function PauseMenu({
               {view==='overview'&&<>
                 {!entry&&<div className="axe3d-pause__quick-actions">
                   <button type="button" onClick={()=>selectView('services')}><Hammer size={19}/><span>Services</span><ChevronRight size={18}/></button>
-                  <button type="button" onClick={()=>selectView('scoreboard')}><Trophy size={19}/><span>Scoreboard</span><ChevronRight size={18}/></button>
+                  <button type="button" onClick={()=>selectView('scoreboard')}><Trophy size={19}/><span>Ranked</span><ChevronRight size={18}/></button>
                   <button type="button" onClick={()=>selectView('graphics')}><Settings2 size={19}/><span>Settings</span><ChevronRight size={18}/></button>
                 </div>}
                 <div className="axe3d-pause__hero">
@@ -642,12 +644,12 @@ export default function PauseMenu({
                 ))}
                 <p className="axe3d-pause__service-hint">Press C to open Character directly. Character does not open this Escape menu or the old Services strip.</p>
               </div>}
-              {view==='scoreboard'&&!entry&&<div className="axe3d-pause__scoreboard" aria-label="World scoreboard">
+              {view==='scoreboard'&&!entry&&<div className="axe3d-pause__scoreboard" aria-label="World rankings">
                 <div className="axe3d-pause__scoreboard-row"><span>World connection</span><strong>{presence.status==='connected'?'Online':presence.status==='full'?'Server full':presence.status==='connecting'?'Connecting':presence.status==='error'?'Unavailable':'Unknown'}</strong></div>
                 <div className="axe3d-pause__scoreboard-row"><span>Players in world</span><strong>{Number.isFinite(presence.count)?presence.count:'—'} / {presence.max||20}</strong></div>
                 <div className="axe3d-pause__scoreboard-empty"><Trophy size={24} aria-hidden="true"/>
-                  <strong>Match scores</strong>
-                  <p>No active match scores have been reported to this menu. The live world connection and player count above are real session data, not a simulated leaderboard.</p>
+                  <strong>Rankings</strong>
+                  <p>No ranked leaderboard data has been reported to this menu. The live world connection and player count above are real session data, not a simulated leaderboard.</p>
                 </div>
               </div>}
               {view==='audio'&&<div className="axe3d-pause__surface">
