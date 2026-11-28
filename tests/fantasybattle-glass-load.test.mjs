@@ -31,11 +31,12 @@ test('save menu uses only the right glass panel and actual valid saves',()=>{
  assert.match(menu,/newHero/);
  assert.match(css,/\.fa-glass-load-layout\{[^}]*justify-content:flex-end/);
 });
-test('old full UI plates and generic header do not cover either new panel',()=>{
+test('old full UI plates and generic header do not cover loading or New Game panels',()=>{
  assert.match(src,/const customLoad=id==='02'\|\|id==='35'/);
- assert.match(src,/useStagedOriginal\(customLoad\?null:id\)/);
- assert.match(src,/!customLoad&&id!=='10'&&<div/);
- assert.match(src,/!customLoad&&!isWorldScreen\(id\)/);
+ assert.match(src,/const onboarding=id==='48'\|\|id==='19'/);
+ assert.match(src,/useStagedOriginal\(customLoad\|\|onboarding\?null:id\)/);
+ assert.match(src,/!onboarding&&!customLoad&&id!=='10'&&<div/);
+ assert.match(src,/!onboarding&&!customLoad&&!isWorldScreen\(id\)/);
 });
 test('visible progress uses a real native value and accessible status',()=>{
  assert.match(loading,/value=\{loading.completed\} max=\{loading.total\}/);

@@ -1555,7 +1555,7 @@ export default function SapphireAdventure(){
     </div>:pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
-  const template=id==='10'?null:customLoad?null:original?.url||templateUrl(id);
+  const template=id==='10'||customLoad||onboarding?null:original?.url||templateUrl(id);
   const artwork=original?{mode:'original-full',asset:null}:artFor(id==='47'&&loadFailure?'35':id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
@@ -1563,8 +1563,8 @@ export default function SapphireAdventure(){
     {encounter&&arenaReady&&profile&&<BattleSurface key={encounter.token} encounter={encounter} profile={profile} paused={id!=='09'} muted={settings.muted} reducedMotion={settings.reducedMotion} quality={settings.quality} stageRef={stageRef} onHud={handleBattleHud} onError={(message,token)=>{if(isCurrentEncounter(current.current.encounter,token))fail(message);}}/>}
     {artwork.mode==='cinematic'&&<div className={'fa-cinematic-art'+(artwork.asset==='title-original'?' title-original':'')} aria-hidden="true" style={{'--fa-scene-art':'url("'+artworkUrl+'")'}}/>}
     <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-glass-load={customLoad?'true':undefined} data-new-game={onboarding?'true':undefined} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
-      {!customLoad&&id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
-      {!customLoad&&!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
+      {!onboarding&&!customLoad&&id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
+      {!onboarding&&!customLoad&&!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
       {content}
     </div>
     {saveStatus?<SaveToast status={saveStatus}/>:notice&&<aside className="fa-notice" role="status">{notice}</aside>}
