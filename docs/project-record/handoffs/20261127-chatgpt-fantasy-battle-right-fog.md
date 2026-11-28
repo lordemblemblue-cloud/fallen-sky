@@ -1,0 +1,3 @@
+## Fantasy Battle title screen: atmospheric right-side fog
+
+Owner approved 2026-11-27 in chat: extend the outlined left-to-right cloud effect to the scenery on the right, keeping the existing left-side animation. PR #453 already merged; this is a separate branch from main. Scope titleMist.css and its focused regression tests only. Original background, controls, gameplay and other screens unchanged. Use the existing decorative SVG; two softer atmospheric bands on the right 69%, layered directly over the original template background, with reduced-motion support. Browser visual and performance acceptance required before publication.
