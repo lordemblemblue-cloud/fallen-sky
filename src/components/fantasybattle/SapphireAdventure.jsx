@@ -1555,7 +1555,7 @@ export default function SapphireAdventure(){
     </div>:pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
-  const template=id==='10'||customLoad||onboarding?null:original?.url||templateUrl(id);
+  const template=id==='10'?null:customLoad||onboarding?null:original?.url||templateUrl(id);
   const artwork=original?{mode:'original-full',asset:null}:artFor(id==='47'&&loadFailure?'35':id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
