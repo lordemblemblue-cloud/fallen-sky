@@ -22,6 +22,25 @@ play out); no names, art, sounds or UI come from it.
 
 Layers live in `public/fantasybattle/archer/` with `parts.json` (each layer's origin on the sheet and its size).
 
+## Sapphire Adventure, the release flag and the test page
+
+- `/fantasy-battle` renders `SapphireAdventure.jsx`, the released game that other agents built on top of this duel:
+  - the approved 48-screen UI kit (`uiCatalog.mjs`, the `sapphire*.css` styles);
+  - an exploration world in an iframe (`/fantasy-battle-world`, `world/sapphireWorld.js`);
+  - campaign quests (`core/campaignQuests.mjs`), the party and companions;
+  - equipment, bows and accessories (`core/equipmentCatalog.mjs`, `core/weaponCatalog.mjs`);
+  - first-victory encounter loot (`ENCOUNTER_GEAR_REWARDS` in `core/adventureState.mjs`);
+  - three local save slots (localStorage key `fantasyBattle.sapphire.saves.v1`), with encrypted backup export and import.
+- Its battles run on this folder's `FantasyBattleStage`, with a transparent backdrop, party units and learned actions.
+- Design notes and status are in `docs/fantasybattle/` and `docs/project-record/FANTASY_BATTLE_RECORD.md`. The record
+  also lists this duel's defaults that the owner has not approved (FB-D8).
+- The release flag is `FANTASY_BATTLE_RELEASED` in `src/components/games/hub/gamesHubCatalog.mjs`; it is `true` on main.
+  - It sets the games-menu tile's status.
+  - It gates `/fantasy-battle` and `/fantasy-battle-world`: while it is false, both show "Coming soon" outside
+    development (`import.meta.env.DEV`).
+- `/fantasy-battle-studio` keeps this duel and its Studio drawer as a test page (the owner's request, 2026-11-27). It
+  opens under the same flag and is not linked from the games menu.
+
 ## Puppet API
 
 `stage.fighters.hero` (and `.rival`) in the page, `window.__fantasyBattle` from the console:
