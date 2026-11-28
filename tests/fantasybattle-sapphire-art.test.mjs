@@ -1,3 +1,6 @@
+import './fantasybattle-character-workspaces.test.mjs';
+import './fantasybattle-glass-load.test.mjs';
+import './fantasybattle-glass-system.test.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {UI_SCREENS} from '../src/components/fantasybattle/uiCatalog.mjs';
@@ -169,7 +172,7 @@ test('original dialogue plate uses actual world service availability and legal n
  assert.ok(templateUrl('13').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function NPCDialogue('),page.indexOf('function SaveToast('));
- for(const marker of ['fa-original-dialogue','profile&&serviceAvailable','profile?.quests.grove','service?.label','world?.region','disabled={!available||!enabled}','onClick={()=>go(id)}','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['fa-original-dialogue','profile&&serviceAvailable','profile?.quests.grove','service?.label','world?.region','disabled={!available||!enabled}','onClick={()=>go(id)}','fa-glass-conversation','fa-glass-dialogue-options'])assert.ok(section.includes(marker),marker);
  assert.ok(page.includes('world?.nearbyService===service.id&&!encounter'));
  assert.match(page,/case '13':content=<NPCDialogue/);
 });
@@ -236,9 +239,11 @@ test('original exploration HUD uses live world input and releases held movement'
  assert.equal(stagedOriginalFor('10').transparent,true);
  assert.ok(templateUrl('10').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
- const section=page.slice(page.indexOf('function OriginalExplorationHud('),page.indexOf('function SaveToast('));
- for(const marker of ['activeRoster(profile)','memberFor(profile,m.id).hp','memberStats(profile,m.id).maxHp','RegionMap world={world} profile={profile}','world?.nearby','profile?.quests.grove','onPointerCancel','onLostPointerCapture','held.current.clear()', "window.addEventListener('blur',release)", "send.current('move',{key,value:false})", "post('interact')","post('jump')"])assert.ok(section.includes(marker),marker);
- assert.match(page,/case '10':content=original\?<OriginalExplorationHud/);
+ const section=page.slice(page.indexOf('function OriginalExplorationHud('),page.indexOf('function BattleVictory('));
+ for(const marker of ['heroStats(profile).maxHp','value={profile?.hp||0}','value={xp%100}','fa-clean-status','fa-clean-quest','fa-clean-recovery','RegionMap world={world} profile={profile}','world?.nearby','profile?.quests.grove','onPointerCancel','onLostPointerCapture','held.current.clear()', "window.addEventListener('blur',release)", "send.current('move',{key,value:false})", "post('interact')","post('jump')"])assert.ok(section.includes(marker),marker);
+ assert.match(page,/case '10':content=<OriginalExplorationHud/);
+ assert.doesNotMatch(section,/activeRoster\(profile\)|memberFor\(profile,m\.id\)|fa-clean-party/);
+ assert.ok(page.includes("id!=='10'&&<div aria-hidden"));
  const css=readFileSync(new URL('../src/components/fantasybattle/sapphireAdventure.css',import.meta.url),'utf8');
  assert.ok(css.includes('.fa-ui.hud[data-staged-original="true"][data-screen="10"]{background:transparent;pointer-events:none}'));
 });

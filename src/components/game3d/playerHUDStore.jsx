@@ -18,6 +18,7 @@ import {
 import { getEquippedTitleAttributeBonuses, getEquippedTitleBonuses, subscribeTitles } from './progression/titleStore';
 import { consumeRestedForGain } from './restedXPStore';
 import { xpForLevel } from './gameWorldConfig';
+import { bankXPAboveCapRaise } from './progression/oldCapXPBank.mjs';
 import { characterScopedStorage, getActiveId, getStorageUser, subscribeCharacterChange } from './characterStorage';
 import { AXE_PRIMARY_STATS, createDefaultAXEPowerProgression, normalizeAXEPowerProgression } from './axe/progression/AXECharacterProgressionConfig';
 import { getRegisteredAXECoreBonuses, subscribeAXECores } from './axe/progression/AXECoreStore';
@@ -262,6 +263,7 @@ const buildDefault = () => {
   return {
     level: 1,
     xp: 0,
+    xpBankedAtOldCap: 0,
     xpForNext: 5,
     baseStats: { ...DEFAULT_PLAYER_STATS },
     unspentPoints: 0,
@@ -282,9 +284,11 @@ const loadState = () => {
       const base = migrateBaseStats(parsed.baseStats);
       const b = getBonuses();
       const derived = computeDerivedWithVanity(base, b);
+      const { xp, xpBankedAtOldCap } = bankXPAboveCapRaise(parsed, level, xpForLevel(level));
       return {
         level,
-        xp: level >= AXE_LEVEL_CAP ? 0 : Math.max(0, Number(parsed.xp) || 0),
+        xp,
+        xpBankedAtOldCap,
         // Always recompute: old level-100 capped saves serialized Infinity as null.
         // After expanding the cap, those players must be able to earn level 101.
         xpForNext: xpForLevel(level),
@@ -317,6 +321,7 @@ const persist = () => {
   storage.set(JSON.stringify({
     level: state.level,
     xp: state.xp,
+    ...(state.xpBankedAtOldCap > 0 ? { xpBankedAtOldCap: state.xpBankedAtOldCap } : {}),
     xpForNext: state.xpForNext,
     baseStats: state.baseStats,
     unspentPoints: state.unspentPoints,

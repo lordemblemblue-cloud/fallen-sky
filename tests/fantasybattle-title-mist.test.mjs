@@ -46,7 +46,7 @@ test('reduced motion suppresses the entire scene including all four fog bands',(
 test('living scenery is mounted inside the original title plate only',()=>{
  const start=adventure.lastIndexOf('className="fa-template"');
  const scene=adventure.indexOf('className="fa-title-scene"',start);
- const header=adventure.indexOf('{!isWorldScreen(id)',scene);
+ const header=adventure.indexOf("{!rightGlass&&glassKind!=='toast'&&!isWorldScreen(id)",scene);
  assert.ok(start>=0&&scene>start&&header>scene);
  const markup=adventure.slice(start,header);
  assert.ok(markup.includes("original&&id==='01'&&!settings.reducedMotion"));
@@ -69,7 +69,7 @@ test('waterfall texture scrolls down and scene motion stays lightweight',()=>{
 
 test('castle and plaza light are decorative overlays mounted inside the title scene',()=>{
  const start=adventure.lastIndexOf('className="fa-template"');
- const end=adventure.indexOf('{!isWorldScreen(id)',start);
+ const end=adventure.indexOf("{!rightGlass&&glassKind!=='toast'&&!isWorldScreen(id)",start);
  const markup=adventure.slice(start,end);
  for(const name of ['kingdom-light','portal-glow','foreground-breeze']) assert.ok(markup.includes('className="fa-scene-'+name+'"'),name);
  assert.match(css,/\.fa-title-scene > \*\s*\{[^}]*pointer-events: none/);
