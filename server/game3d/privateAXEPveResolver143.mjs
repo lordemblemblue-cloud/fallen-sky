@@ -1,7 +1,7 @@
 // 14.3: re-use the EXACT same shared AXE PvE outcome engine as the game
 // and dedicated duel gateway; never create a second damage formula.
 import {randomInt} from 'node:crypto';
-import {axeStrikeOutcomes,rollAXEStrike}
+import {axeStrikeOutcomes,rollAXEStrike,AXE_LEVEL_CAP}
  from '../../base44/shared/axePowerBudget.ts';
 
 const valid=n=>typeof n==='number'&&Number.isFinite(n);
@@ -9,7 +9,7 @@ const verifiedSheet=x=>x&&typeof x==='object'&&
  valid(x.damage)&&x.damage>=1&&x.damage<=100000&&
  valid(x.maxHP)&&x.maxHP>=1&&x.maxHP<=100000&&
  valid(x.defense)&&x.defense>=0&&x.defense<=100000&&
- Number.isInteger(x.level)&&x.level>=1&&x.level<=100;
+ Number.isInteger(x.level)&&x.level>=1&&x.level<=AXE_LEVEL_CAP;
 const cryptographicRoll=()=>randomInt(0,2**32)/2**32;
 
 export function createGame3DPrivateAXEPveResolvers143({

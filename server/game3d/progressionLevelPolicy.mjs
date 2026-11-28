@@ -1,6 +1,8 @@
 // Combat 10.4 — server-owned, deterministic level policy preview.
 // Never trust client level or external XP-total assertions. No XP is credited.
-export const MAX_CHARACTER_LEVEL=100;
+// The cap is the game's (155 since 2026-11-19); the preview XP curve below is unchanged.
+import {AXE_LEVEL_CAP} from '../../base44/shared/axePowerBudget.ts';
+export const MAX_CHARACTER_LEVEL=AXE_LEVEL_CAP;
 export const CHARACTER_LEVEL_POLICY_VERSION='game3d-level-preview-v1';
 const MAX_XP=9223372036854775807n;
 export function xpForNextLevel(level){
