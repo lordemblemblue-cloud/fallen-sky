@@ -1,0 +1,264 @@
+{
+  "status": "PINNED_UNMERGED_FINALE_GRAPH_ONLY",
+  "sourceRef": "1a1f2cd12fa3532d39fee2fc2ca5b25d66ba38bb",
+  "chapters": [
+    {
+      "name": "NPC_PHASE68_M19_INTAKE.json",
+      "sha": "b9d562e7901e5ad688e02542e979637be221e8df",
+      "questId": "M19",
+      "enabled": false,
+      "shippingBlocked": true,
+      "stages": [
+        {
+          "id": "APPROACH",
+          "requires": [
+            "M18_COMPLETE"
+          ]
+        },
+        {
+          "id": "P_CIVILIANS_SAFE",
+          "requires": [
+            "APPROACH"
+          ]
+        },
+        {
+          "id": "REST15_READY",
+          "requires": [
+            "P_CIVILIANS_SAFE"
+          ]
+        },
+        {
+          "id": "INITIAL_MIGRATE18",
+          "requires": [
+            "REST15_READY"
+          ]
+        },
+        {
+          "id": "INITIAL_JUNCTION_SAFE",
+          "requires": [
+            "INITIAL_MIGRATE18"
+          ]
+        },
+        {
+          "id": "INITIAL_ASSEMBLY",
+          "requires": [
+            "INITIAL_JUNCTION_SAFE"
+          ]
+        },
+        {
+          "id": "INITIAL_REPORT",
+          "requires": [
+            "INITIAL_ASSEMBLY"
+          ]
+        },
+        {
+          "id": "RETURN_FOR_PHASE_I",
+          "requires": [
+            "INITIAL_REPORT"
+          ]
+        },
+        {
+          "id": "PHASE_I_FIRST_TETHER",
+          "requires": [
+            "RETURN_FOR_PHASE_I"
+          ]
+        },
+        {
+          "id": "PHASE_II_MIGRATE18",
+          "requires": [
+            "PHASE_I_FIRST_TETHER"
+          ]
+        },
+        {
+          "id": "PHASE_II_INSPECT",
+          "requires": [
+            "PHASE_II_MIGRATE18"
+          ]
+        },
+        {
+          "id": "PHASE_II_PASSAGE_SAFE",
+          "requires": [
+            "PHASE_II_INSPECT"
+          ]
+        },
+        {
+          "id": "RETURN_FOR_PHASE_III",
+          "requires": [
+            "PHASE_II_PASSAGE_SAFE"
+          ]
+        },
+        {
+          "id": "PHASE_III_FINAL_TETHER",
+          "requires": [
+            "RETURN_FOR_PHASE_III"
+          ]
+        },
+        {
+          "id": "CONVERGENCE_STOPPED",
+          "requires": [
+            "PHASE_III_FINAL_TETHER"
+          ]
+        },
+        {
+          "id": "SAFE_REVIEW",
+          "requires": [
+            "CONVERGENCE_STOPPED"
+          ]
+        },
+        {
+          "id": "BRANCH_COMMITTED",
+          "requires": [
+            "SAFE_REVIEW"
+          ]
+        },
+        {
+          "id": "SAFE_DESTINATION",
+          "requires": [
+            "BRANCH_COMMITTED"
+          ]
+        },
+        {
+          "id": "M19_COMPLETE",
+          "requires": [
+            "SAFE_DESTINATION"
+          ]
+        }
+      ],
+      "completion": {
+        "next": "M20_READY",
+        "autoAccept": false,
+        "rewardGrant": false,
+        "newPower": false,
+        "requiresBranchReceipt": true,
+        "requiresSafeDestination": true
+      },
+      "review": {
+        "productionConfirmEnabled": false
+      }
+    },
+    {
+      "name": "NPC_PHASE69_M20_INTAKE.json",
+      "sha": "8e798d0ae7793270c7ca256a16b75bee81c8b6df",
+      "questId": "M20",
+      "enabled": false,
+      "shippingBlocked": true,
+      "commonStages": [
+        {
+          "id": "M20_ENTER",
+          "requires": [
+            "M19_COMPLETE"
+          ]
+        }
+      ],
+      "branchStages": {
+        "SACRIFICE_RESTORATION": [
+          {
+            "id": "A_AWAKEN",
+            "requires": [
+              "M20_ENTER"
+            ]
+          },
+          {
+            "id": "A_GRASS",
+            "requires": [
+              "A_AWAKEN"
+            ]
+          },
+          {
+            "id": "A_SKY",
+            "requires": [
+              "A_AWAKEN"
+            ]
+          },
+          {
+            "id": "A_RIDGE",
+            "requires": [
+              "A_AWAKEN"
+            ]
+          },
+          {
+            "id": "A_REALIZATION",
+            "requires": [
+              "A_GRASS",
+              "A_SKY",
+              "A_RIDGE"
+            ]
+          },
+          {
+            "id": "A_HISTORICAL_RECORD",
+            "requires": [
+              "A_REALIZATION"
+            ]
+          },
+          {
+            "id": "A_REFLECTION",
+            "requires": [
+              "A_HISTORICAL_RECORD"
+            ]
+          },
+          {
+            "id": "A_REST",
+            "requires": [
+              "A_REFLECTION"
+            ]
+          }
+        ],
+        "REFUSAL_FUSION": [
+          {
+            "id": "B_AWAKEN",
+            "requires": [
+              "M20_ENTER"
+            ]
+          },
+          {
+            "id": "B_ROUTE_BRIEF",
+            "requires": [
+              "B_AWAKEN"
+            ]
+          },
+          {
+            "id": "B_ASSIST",
+            "requires": [
+              "B_ROUTE_BRIEF"
+            ]
+          },
+          {
+            "id": "B_REST",
+            "requires": [
+              "B_ASSIST"
+            ]
+          },
+          {
+            "id": "B_CODA",
+            "requires": [
+              "B_REST"
+            ]
+          }
+        ]
+      },
+      "terminal": {
+        "id": "M20_COMPLETE",
+        "requiresByBranch": {
+          "SACRIFICE_RESTORATION": [
+            "A_REST"
+          ],
+          "REFUSAL_FUSION": [
+            "B_REST",
+            "B_CODA"
+          ]
+        }
+      },
+      "completion": {
+        "next": "POSTGAME_ELIGIBLE",
+        "autoAccept": false,
+        "rewardGrant": false,
+        "newPower": false,
+        "creditsDoNotReset": true,
+        "requiresActualCommittedBranch": true
+      },
+      "input": {
+        "immutableBranch": true
+      }
+    }
+  ]
+}
