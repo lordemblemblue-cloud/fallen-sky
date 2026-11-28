@@ -345,7 +345,10 @@ test('companion gifts require recruitment and ore, preserve other members and ca
   assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre-BOND_GIFT.cost);
   assert.equal(A.memberFor(p,m.id).bond,quote.bond+quote.gain);
   assert.deepEqual(A.memberStats(p,m.id),stats);
-  for(const other of A.ROSTER.filter(x=>x.id!==m.id))assert.deepEqual(A.memberFor(p,other.id),A.memberFor(before,other.id));
+  // Compare individual member state, not the legacy party container.
+  const memberSnapshot=(profile,id)=>{const {recruited,active,hp,bond}=A.memberFor(profile,id);return {recruited,active,hp,bond};};
+  for(const other of A.ROSTER.filter(x=>x.id!==m.id))assert.deepEqual(memberSnapshot(p,other.id),memberSnapshot(before,other.id));
+  assert.equal(A.partyFor(p).front,A.partyFor(before).front);
   const lines=[0,25,75].map(bond=>bondConversation(m.id,{recruited:true,bond}));
   assert.equal(new Set(lines).size,3);
  }
