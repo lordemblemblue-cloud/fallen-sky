@@ -114,6 +114,8 @@ test('the controls follow the player\'s bindings: presses, held keys, guard and 
   b.key('keydown', 'Tab');
   assert.equal(shopToggles, 1, 'Tab toggles the Battle Shop');
   controls.setPaused(true);
+  // the game reads every frame, also while paused: opening the shop lets go of a raised guard
+  assert.deepEqual(controls.read().presses, ['blockUp'], 'pausing for the shop drops the guard');
   b.key('keyup', 'Tab');
   b.key('keydown', 'Tab');
   assert.equal(shopToggles, 2, 'Tab also closes the shop while gameplay is paused');
