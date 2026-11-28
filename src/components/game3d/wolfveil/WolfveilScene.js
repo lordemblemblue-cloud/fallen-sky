@@ -435,7 +435,7 @@ export function createWolfveilVillage(scene,options={}){
       if(playerPosition)bakedRocks?.update(playerPosition.x,playerPosition.z-offsetZ); // LOD buckets
       plantCards?.update(frame); // baked plant cards sway with the live wind
       ownerModels?.update(frame); // uploaded foliage, no new authoritative collision
-      ownerGrassTiles?.update(); // remove late-loading outdated grass accents
+      ownerGrassTiles?.update(dt,playerPosition); // remove late-loading outdated grass accents; far-grass distance detail
       waterfall.update(frame);
       river.uniforms.uFlowTime.value=elapsed;
       river.updateAppearance?.(weather,options.sunLight,scene.fog);

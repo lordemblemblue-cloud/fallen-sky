@@ -10,6 +10,8 @@ import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
 import {copyNodes} from '../../../lib/webgpuNodeKit.js';
 import {clearOf} from './WolfveilForestLayout.js';
 import {WOLFVEIL_SITES} from './WolfveilLayout.js';
+import {createFarGrassLod} from './WolfveilFarGrassLod.mjs';
+import {game3dHiPolyRequested} from '../render/lowPolyWorld.mjs';
 
 export const WOLFVEIL_OWNER_GRASS_TILE=Object.freeze({
   original:'https://media.base44.com/files/public/6876751a602125f45f1861b9/9742a2995_Long_Grass_Tile_2m_Game3D.glb',
@@ -63,7 +65,7 @@ export function selectWolfveilOwnerGrassRoots(world,{gridMeters=WOLFVEIL_OWNER_G
 export function installWolfveilOwnerGrassTile(world,{groundCover,ownerModels,loader=new GLTFLoader(),
   onStatus=()=>{},plan=selectWolfveilOwnerGrassRoots}={}){
   if(!world?.group||!groundCover)return null;
-  let disposed=false,ready=false,error=null,installed=[],nearGeometry=null,farGeometry=null;
+  let disposed=false,ready=false,error=null,installed=[],nearGeometry=null,farGeometry=null,farLod=null;
   const listeners=new Set();
   const ownedSourceMeshes=[];
   const status=()=>({ready,failed:error?String(error?.message||error):null,
@@ -121,8 +123,10 @@ export function installWolfveilOwnerGrassTile(world,{groundCover,ownerModels,loa
       ownerGrassTile:true,sourceGLB:WOLFVEIL_OWNER_GRASS_TILE.original};
     return batch;
   };
-  const update=()=>{
+  const update=(dt=0,playerPosition=null)=>{
     if(!ready||disposed)return;
+    // Low-poly world part 3: far chunks follow the player (full tile within 85 m, half to 145 m, a quarter beyond).
+    farLod?.update(dt,playerPosition);
     // The owner's older accent GLB can finish loading after the replacement.
     // Hide it then too, rather than layering two conflicting grass styles.
     ownerModels?.group?.traverse(node=>{
@@ -180,6 +184,8 @@ export function installWolfveilOwnerGrassTile(world,{groundCover,ownerModels,loa
       for(const mesh of meshes)world.mesh(mesh);
       nearGeometry=near.geometry;farGeometry=far.geometry;
       installed=meshes;
+      // ?hiPoly=1 keeps the full far tile everywhere (WolfveilFarGrassLod.mjs)
+      if(!game3dHiPolyRequested())farLod=createFarGrassLod({root:world.group,sourceGeometry:far.geometry});
       // Swap only after BOTH GLBs were successfully decoded and placed.
       for(const mesh of affected)mesh.visible=false;
       ready=true;update();notify();
@@ -195,6 +201,7 @@ export function installWolfveilOwnerGrassTile(world,{groundCover,ownerModels,loa
     onReady(fn){if(typeof fn!=='function')return ()=>{};listeners.add(fn);if(ready)fn();
       return ()=>listeners.delete(fn);},
     dispose(){disposed=true;listeners.clear();
+      farLod?.dispose();farLod=null; // every chunk gets its own far tile back before the geometry checks below
       for(const mesh of installed)mesh.parent?.remove(mesh);
       // A far geometry can be loaded for the meadow without an in-village
       // far batch; by now the streamed meadow has already been disposed.

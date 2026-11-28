@@ -52,7 +52,39 @@ test('zombie camps spawn only in the east, north and west area scenes', () => {
   assert.equal(zombieCampsCanSpawnInArea(planned, null), true, 'the whole valley keeps them');
 });
 
+test('valley far-grass chunks follow the player: full tile within 85 m, half to 145 m, a quarter beyond', async () => {
+  const { createFarGrassLod, farGrassLevel } = await import('../src/components/game3d/wolfveil/WolfveilFarGrassLod.mjs');
+  assert.equal(farGrassLevel(40), 'near'); assert.equal(farGrassLevel(100), 'mid'); assert.equal(farGrassLevel(300), 'far');
+  // a far tile like the owner's: 72 blades of 10 triangles
+  const blades = []; const index = [];
+  for (let b = 0; b < 72; b++) { const base = blades.length / 3; for (let r = 0; r < 6; r++) blades.push(b * 0.03, r * 0.2, 0, b * 0.03 + 0.02, r * 0.2, 0); for (let r = 0; r < 5; r++) { const a = base + r * 2; index.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); } }
+  const tile = new THREE.BufferGeometry();
+  tile.setAttribute('position', new THREE.Float32BufferAttribute(blades, 3)); tile.setIndex(index);
+  const root = new THREE.Group();
+  const chunkAt = (x, z, name) => { const m = new THREE.InstancedMesh(tile, new THREE.MeshBasicMaterial(), 1); m.name = name; m.position.set(x, 0, z); root.add(m); return m; };
+  const near = chunkAt(10, 0, 'SWV_Owner_LongGrass_Tile_2m_Far_0:0');
+  const mid = chunkAt(110, 0, 'WV_Area_town_SWV_Owner_LongGrass_Tile_2m_Far_1:0');
+  const far = chunkAt(400, 0, 'SWV_Owner_LongGrass_Tile_2m_Far_6:0');
+  const other = chunkAt(400, 0, 'SWV_Owner_LongGrass_Tile_2m_Near_6:0');
+  root.updateMatrixWorld(true);
+  const lod = createFarGrassLod({ root, sourceGeometry: tile });
+  lod.update(1, { x: 0, z: 0 });
+  assert.equal(near.geometry, tile);
+  assert.equal(mid.geometry.index.count / 3, 360);
+  assert.equal(far.geometry.index.count / 3, 180);
+  assert.equal(other.geometry, tile, 'near tiles are never thinned');
+  lod.update(1, { x: 400, z: 0 }); // the player walks over: that chunk gets its full tile back
+  assert.equal(far.geometry, tile);
+  assert.equal(near.geometry.index.count / 3, 180);
+  lod.dispose();
+  assert.equal(near.geometry, tile, 'dispose gives every chunk its original tile');
+});
+
 test('the game uses it; ?hiPoly=1 keeps the earlier behaviour; a zombie release cannot throw into the game loop', () => {
+  const grass = read('src/components/game3d/wolfveil/WolfveilGrassTileReplacement.js');
+  assert.match(grass, /if\(!game3dHiPolyRequested\(\)\)farLod=createFarGrassLod\(\{root:world\.group,sourceGeometry:far\.geometry\}\);/);
+  assert.match(grass, /farLod\?\.update\(dt,playerPosition\);/);
+  assert.match(read('src/components/game3d/wolfveil/WolfveilScene.js'), /ownerGrassTiles\?\.update\(dt,playerPosition\);/);
   assert.match(read('src/components/game3d/npc/axeAnimatedQuestNpcGLB.mjs'),
     /if\(!game3dHiPolyRequested\(\)\)model\.userData\.parkedEffects=hideParkedEffectMeshes\(model,embeddedIdleClip\);/);
   const zombie = read('src/components/game3d/wolfveil/WolfveilZombieHordeRuntime.js');
