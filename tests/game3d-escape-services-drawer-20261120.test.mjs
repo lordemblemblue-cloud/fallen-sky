@@ -123,3 +123,19 @@ test('C/K/Escape close both the active workspace and the expanded Services row',
   assert.match(controller,/publish\(\{ \.\.\.initial\(\), message \}\)/);
   assert.match(hud,/\{showServicesNavigation && <AXEServicesNavigation/);
 });
+
+
+test('approved celestial selection and clean artwork remain connected to the live entry screen',()=>{
+  const entry=read('src/components/game3d/CharacterLoginScreen.jsx');
+  const theme=read('src/components/game3d/CharacterCelestialSelection.css');
+  const backdrop=read('src/components/game3d/CharacterLiquidGlassEntry.css');
+  const game=read('src/pages/GameView.jsx');
+  assert.match(entry,/import '\.\/CharacterCelestialSelection\.css'/);
+  assert.match(entry,/data-selection-theme=\{step==='select'\?'celestial-v2':undefined\}/);
+  assert.match(entry,/axe-celestial-medallion/);
+  assert.match(theme,/\.axe-login-xross-roster\s*\{\s*left:3%;right:auto;/);
+  assert.match(theme,/\.axe-login-stats-panel\.axe-login-info-rail\s*\{\s*left:auto;right:3%;/);
+  assert.match(backdrop,/6441dedadbf552e1a9782302a29003db/);
+  assert.doesNotMatch(backdrop,/09be16905_game3d_celestial_scene_backdrop/);
+  assert.match(game,/import '\.\.\/components\/game3d\/hud\/FallenSkyCelestialWorld\.css'/);
+});
