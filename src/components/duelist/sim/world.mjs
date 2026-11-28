@@ -24,6 +24,10 @@ export const BODY_RADIUS = 0.4; // metres, for reach and for keeping bodies apar
 // Knockback starts fast and eases off (exponential decay): a hit's knockback distance d starts it at
 // d * KNOCKBACK_DECAY m/s and it travels about d metres.
 export const KNOCKBACK_DECAY = 8;
+// A push slides the body it knocks down along the floor (owner, 2026-11-22): its knockback eases off at this slower
+// rate while the body lies there, so it travels the same distance over about the time it lies (KNOCKDOWN.lie), and
+// it is not lifted off its feet.
+export const SLIDE_DECAY = 4;
 export const GRIP_HOLD = Object.freeze({ distance: 2.3, lift: 1.1 }); // where a gripped body hangs
 export const PROJECTILE_SPEED = Object.freeze({ bowShot: 60, sniperShot: 140 });
 export const PROJECTILE_HEIGHT = 1.35;
@@ -88,6 +92,7 @@ function newBody(x, z, yaw, y=0) {
     jumped: false, airJumpAt: null, airDashReady: false,
     intent: { x: 0, z: 0 }, run: false, sprint: false, strafe: false,
     kx: 0, kz: 0, // knockback velocity (m/s)
+    slideUntil: -Infinity, // a push's slide along the floor: its knockback eases off at SLIDE_DECAY until then
     motion: null, // root motion of the current move: { id, dir: {x,z}, from, to, distance, done }
     moving: false, speed: 0,
   };
@@ -676,7 +681,7 @@ function moveBody(world, fighter, body, dt, now) {
   // knockback, decaying
   vx += body.kx;
   vz += body.kz;
-  const decay = Math.exp(-KNOCKBACK_DECAY * dt);
+  const decay = Math.exp(-(now < body.slideUntil ? SLIDE_DECAY : KNOCKBACK_DECAY) * dt);
   body.kx *= decay;
   body.kz *= decay;
   if (Math.hypot(body.kx, body.kz) < 0.05) { body.kx = 0; body.kz = 0; }
@@ -829,9 +834,16 @@ function collect(effects, outcome, attacker, defender, world) {
       let dz = to.z - from.z;
       const d = Math.hypot(dx, dz) || 1;
       dx /= d; dz /= d;
-      to.kx += dx * effect.distance * KNOCKBACK_DECAY;
-      to.kz += dz * effect.distance * KNOCKBACK_DECAY;
-      if (effect.distance > 3) to.vy = Math.max(to.vy, 3.5); // a hard push lifts the body off its feet
+      // a push that knocks the body down slides it along the floor while it lies there; any other hard knock lifts
+      // the body off its feet
+      const sliding = !!MOVES[effect.move]?.slide && (defender.downUntil ?? -Infinity) > world.time;
+      const rate = sliding ? SLIDE_DECAY : KNOCKBACK_DECAY;
+      to.kx += dx * effect.distance * rate;
+      to.kz += dz * effect.distance * rate;
+      if (sliding) {
+        to.slideUntil = defender.downUntil;
+        effects.push({ type: 'slide', target: defender.id, by: attacker.id, distance: effect.distance, seconds: defender.downUntil - world.time });
+      } else if (effect.distance > 3) to.vy = Math.max(to.vy, 3.5);
     }
   }
 }

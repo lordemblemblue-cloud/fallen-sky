@@ -115,8 +115,10 @@ export const MOVES = Object.freeze({
   sidearmWhip: move({ weapon: 'sidearm', startup: 0.2, active: 0.08, recovery: 0.3, damage: 6, range: 1.7, arc: 100, knockback: 0.6, stagger: 0.35 }),
 
   // ---- Telekinesis (Will): push, pull, grip; Veil Breach; resist
+  // Push (owner, 2026-11-22): a harder hit (6.5 m, was 4.5), and the body it knocks down slides along the floor
+  // instead of hopping (slide: sim/world.mjs SLIDE_DECAY)
   push: move({ kind: 'power', startup: 0.12, active: 0.1, recovery: 0.24, will: 16, cooldown: 1.4, damage: 4, range: 9, arc: 70,
-    knockback: 4.5, stagger: 0.6, blockable: false, damageKind: 'telekinesis', cancelInto: ['movement'], cancelFrom: 0.3 }),
+    knockback: 6.5, slide: true, stagger: 0.6, blockable: false, damageKind: 'telekinesis', cancelInto: ['movement'], cancelFrom: 0.3 }),
   pull: move({ kind: 'power', startup: 0.12, active: 0.1, recovery: 0.24, will: 16, cooldown: 1.4, damage: 2, range: 12, arc: 50,
     knockback: -4.2, stagger: 0.5, blockable: false, damageKind: 'telekinesis', cancelInto: ['movement', 'attack'], cancelFrom: 0.26 }),
   // Telekinesis (replaces "lightning"): lift the target and crush it while held, throw on release.
