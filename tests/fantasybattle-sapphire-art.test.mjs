@@ -302,9 +302,9 @@ test('original blacksmith previews enhancement and combination and rechecks conf
  assert.ok(templateUrl('17').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function BlacksmithShop('),page.indexOf('function SaveToast('));
- for(const marker of ['profile?.equipped','15+level*10','level<5','gold>=cost','ore>=1','disabled={!allowed}','onEnhance(id,level,cost)','onCombine(id,level,quote.cost)','combineQuote(profile)','Math.max(0,quote.owned-1)','Not available in this build','serviceAvailable'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['profile?.equipped','15+level*10','level<5','gold>=cost','ore>=1','disabled={!allowed}','onEnhance(id,level,cost)','onCombine(id,level,quote.cost)','combineQuote(profile)','Math.max(0,quote.owned-1)','ascendQuote(profile,wearer)','onAscend(wearer,ascend.setId,ascend.level,ascend.cost,ascend.ore)','Set bonus only','Not available in this build','serviceAvailable'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '17':"));
- for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.equipped!==weapon','enhancementLevel(p,weapon)!==level','enhanceWeapon(p)','combineWeapon(p)','next.level!==level','liveService(live.world,serviceId)'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ['requestConfirm','s.world?.nearbyService!==s.service.id','p.equipped!==weapon','enhancementLevel(p,weapon)!==level','enhanceWeapon(p)','combineWeapon(p)','ascendSet(p,wearer)','next.setId!==setId','next.level!==level','liveService(live.world,serviceId)'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original crafting uses the actual tonic recipe and guards its confirmation',()=>{
