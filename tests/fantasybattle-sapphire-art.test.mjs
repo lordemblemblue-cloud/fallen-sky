@@ -403,7 +403,7 @@ test('original notifications show only local session events and categorize actua
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('const NOTICE_CATEGORIES='),page.indexOf('function SaveToast('));
  for(const marker of ['notifications.filter','Math.ceil(matches.length/5)','No matching notifications','Local session events','new Date(n.time).toLocaleTimeString'])assert.ok(section.includes(marker),marker);
- for(const marker of ["category='system'",'[{message,category,time:Date.now()},...old].slice(0,40)',"notify(success,'activity')","gold','combat')","e.world.region),'exploration')","awarded.loot.length?'rewards':'exploration'","case '37':content=<GlobalNotifications"])assert.ok(page.includes(marker),marker);
+ for(const marker of ["category='system'",'[{message,category,time:Date.now()},...old].slice(0,40)',"notify(success,'activity')","r.recovery.reduce((sum,entry)=>sum+entry.amount,0)","e.world.region),'exploration')","awarded.loot.length?'rewards':'exploration'","case '37':content=<GlobalNotifications"])assert.ok(page.includes(marker),marker);
  for(const forbidden of ['transact(','autosave(','rewardVictory(','localStorage'])assert.ok(!section.includes(forbidden),forbidden);
 });
 
