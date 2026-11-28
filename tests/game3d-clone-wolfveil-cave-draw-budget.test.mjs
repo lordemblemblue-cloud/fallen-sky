@@ -267,19 +267,14 @@ test('a map export sees the whole network; the A/B switch restores the built cav
 
 // ------------------------------------------------------------------ wiring
 const source=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
-test('the cave system installs the draw budget, fails open and keeps exports whole',()=>{
+test('legacy village cave draw-budget wiring stays disabled during the clean-slate rebuild',()=>{
   const caves=source('src/components/game3d/wolfveil/WolfveilCaveSystem.js');
-  assert.match(caves,/installWolfveilCaveDrawBudget\(\{/);
-  assert.match(caves,/staticProps\.push\(m\)/);
-  assert.match(caves,/keep: \[floorMesh, shellMesh, pavementMesh, \.\.\.entranceOccluders, \.\.\.lightPool\]/);
-  assert.match(caves,/staticProps\.filter\(mesh => !flameMeshes\.has\(mesh\)\)/);
-  assert.match(caves,/catch \(error\) \{\s*console\.warn\('\[Wolfveil caves\] draw budget unavailable/);
-  // The interior is updated in the same call that teleports the player.
-  assert.match(caves,/worldPos\.z=travel\.z\+offsetZ;\s*syncDrawBudget\(worldPos\);/);
-  assert.match(caves,/mesh\.visible = !hideOccluders;\s*\}\s*syncDrawBudget\(playerWorldPos\);/);
-  assert.match(caves,/drawBudget\?\.dispose\(\);/);
+  assert.match(caves,/Legacy Fallen Sky cave\/dungeon geometry removed/);
+  assert.match(caves,/export function createWolfveilCaveSystem\(\)\s*\{\s*return null;\s*\}/);
+  assert.doesNotMatch(caves,/installWolfveilCaveDrawBudget/);
   const world=source('src/components/game3d/GameWorld3D.jsx');
-  assert.match(world,/caves\.withInteriorShown\(exportScene\)/);
+  assert.match(world,/createWolfveilCaveDestination/);
+  assert.match(world,/wolfveilVillage\?\.caveSystem/);
   for(const file of ['src/components/game3d/wolfveil/WolfveilCaveDrawBudget.mjs',
     'src/components/game3d/performance/Game3DStaticInstancing.mjs'])
     assert.doesNotMatch(source(file),/from ['"]three['"]/,file+' must stay testable without Three.js');
