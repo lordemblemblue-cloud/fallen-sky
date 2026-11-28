@@ -10,7 +10,7 @@ const room = (id, mode, players = 1, seats = 20, open = true) => ({
 });
 
 test('Online Play only displays real, validated public battle rooms grouped by mode', () => {
-  assert.deepEqual(ONLINE_SERVER_MODES, ['duel', 'ffa', 'tdm', 'ctf', 'escort', 'football', 'control']);
+  assert.deepEqual(ONLINE_SERVER_MODES, ['duel', 'ffa', 'tdm', 'ctf', 'escort', 'football', 'control', 'practice']);
   const servers = visibleDuelistServers([
     room('m10', 'ctf', 4),
     room('m3', 'duel', 1, 2),
