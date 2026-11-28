@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **FOCUS6-20261127 — final ten discoveries (draft):** [Where the road becomes quiet](FOCUS6_20261127_D41_D50_REFINEMENT.md). Ten dialogue and terrain deltas; FOCUS series 50/50 distinct discovery refinements, no new IDs. R66 required second vista and earned item retention preserved. Not built or tested. Next S01–S10 optional adventure quality review.
+
 > **FOCUS5-20261127 — D32–D40 discovery refinement (draft; D36 previously covered):** [The shape of what we carried](FOCUS5_20261127_D32_D40_REFINEMENT.md). Eight candidate refinements and terrain deltas, 40/50 FOCUS coverage; preserve existing entitlements and independent optional receipts. Not built or tested.
 
 > **FOCUS4-20261127 — D21–D30 discovery refinement (draft, D25 previously covered):** [What survived the crossing](FOCUS4_20261127_D21_D30_REFINEMENT.md). Nine dialogue and terrain deltas; FOCUS series 32/50. Preserve primary rewards and distinct S27/S28/S30/S33/S37/S40/S42/S44/S45 receipts. Not built or verified.
