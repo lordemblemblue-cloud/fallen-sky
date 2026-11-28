@@ -288,3 +288,18 @@ test('world merge preserves identity, rejects malformed metadata, and bounds leg
  assert.equal(A.updateWorld(merged,{...w,discoveries:['overflow']}),merged);
  assert.equal(A.isProfile({...p,equipped:{toString:null}}),false);
 });
+
+import {disposeResources,createCleanupScope} from '../src/components/fantasybattle/core/resourceCleanup.mjs';
+test('final GPU cleanup disposes shared references once and continues after individual failure',()=>{
+ let count=0;const shared={dispose(){count++;}},bad={dispose(){throw Error('driver');}},later={dispose(){count++;}};
+ assert.deepEqual(disposeResources([shared,null,shared,bad,later,{}]),{disposed:2,failed:1});assert.equal(count,2);
+});
+test('viewer listener scope removes all callbacks and is idempotent',()=>{
+ const scope=createCleanupScope(),target=new EventTarget();let count=0;
+ scope.listen(target,'move',()=>count++);scope.listen(target,'move',()=>count++);
+ target.dispatchEvent(new Event('move'));assert.equal(count,2);
+ scope.close();scope.close();scope.listen(target,'move',()=>count++);
+ target.dispatchEvent(new Event('move'));assert.equal(count,2);
+ const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
+ for(const marker of ['this.cleanupScope.close()','this.forge.cache.clear()','this.assets?.geoCache.clear()','this.scene.environment=null','app.destroy();throw error','stop(){clearInterval(timer);app.destroy();}'])assert.ok(world.includes(marker),marker);
+});
