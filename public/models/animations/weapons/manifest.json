@@ -79,6 +79,59 @@
           "full": 0.18,
           "hit": 0.2,
           "cancel": 0.22
+        },
+        "idleDaggers": {
+          "file": "idleDaggers.glb",
+          "duration": 2.0,
+          "hit": 0.0,
+          "cancel": 2.0,
+          "loop": true
+        },
+        "daggerLight1": {
+          "file": "daggerLight1.glb",
+          "duration": 0.3333,
+          "windUp": 0.04,
+          "hit": 0.12,
+          "sweep": [
+            0.04,
+            0.18
+          ],
+          "cancel": 0.22
+        },
+        "daggerLight2": {
+          "file": "daggerLight2.glb",
+          "duration": 0.3667,
+          "windUp": 0.06,
+          "hit": 0.15,
+          "sweep": [
+            0.06,
+            0.22
+          ],
+          "cancel": 0.26
+        },
+        "daggerStab": {
+          "file": "daggerStab.glb",
+          "duration": 0.4333,
+          "windUp": 0.08,
+          "hit": 0.18,
+          "sweep": [
+            0.1,
+            0.27
+          ],
+          "cancel": 0.32
+        },
+        "daggerCharge": {
+          "file": "daggerCharge.glb",
+          "duration": 0.9167,
+          "windUp": 0.1,
+          "chargeFrom": 0.1,
+          "charge": 0.4,
+          "hit": 0.47,
+          "sweep": [
+            0.41,
+            0.56
+          ],
+          "cancel": 0.66
         }
       }
     },
@@ -159,6 +212,59 @@
           "full": 0.18,
           "hit": 0.2,
           "cancel": 0.22
+        },
+        "idleDaggers": {
+          "file": "female/idleDaggers.glb",
+          "duration": 2.0,
+          "hit": 0.0,
+          "cancel": 2.0,
+          "loop": true
+        },
+        "daggerLight1": {
+          "file": "female/daggerLight1.glb",
+          "duration": 0.3333,
+          "windUp": 0.04,
+          "hit": 0.12,
+          "sweep": [
+            0.04,
+            0.18
+          ],
+          "cancel": 0.22
+        },
+        "daggerLight2": {
+          "file": "female/daggerLight2.glb",
+          "duration": 0.3667,
+          "windUp": 0.06,
+          "hit": 0.15,
+          "sweep": [
+            0.06,
+            0.22
+          ],
+          "cancel": 0.26
+        },
+        "daggerStab": {
+          "file": "female/daggerStab.glb",
+          "duration": 0.4333,
+          "windUp": 0.08,
+          "hit": 0.18,
+          "sweep": [
+            0.1,
+            0.27
+          ],
+          "cancel": 0.32
+        },
+        "daggerCharge": {
+          "file": "female/daggerCharge.glb",
+          "duration": 0.9167,
+          "windUp": 0.1,
+          "chargeFrom": 0.1,
+          "charge": 0.4,
+          "hit": 0.47,
+          "sweep": [
+            0.41,
+            0.56
+          ],
+          "cancel": 0.66
         }
       }
     }
