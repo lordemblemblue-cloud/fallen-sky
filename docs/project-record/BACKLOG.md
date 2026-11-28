@@ -55,7 +55,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FS-S01 | Story documentation for all 125 IDs (M01–M20, D01–D50, S01–S55) | Implemented (documentation only) | R61, R85, R86 | — |
 | FS-S02 | Chronology and causality decision (R111 P0) | Awaiting information | R111 §7 | MI-FS-S1 |
 | FS-S03 | P01 opening slice M01–M03, isolated low-poly blockout (R132 T00–T07) | In progress (assigned by the hub 2026-11-27 to session `local_cb70a7c5`) | R112 §4, R113, R130–R136; R136 §1 in the repo still reads "No owner approval recorded" | That session sends R136 D01–D08 to the owner as one request (MI-FS-S6); WP-FS-S1 |
-| FS-S04 | NPC-phase work, Phases 44–67 (fixtures, validators, M07–M18 intakes) | Awaiting approval | stacked branch chain, head PR #433; not in `main` | FS-S-D10; WP-FS-S5 native test run |
+| FS-S04 | NPC-phase work, Phases 44–67 (fixtures, validators, M07–M18 intakes) | Awaiting approval (verified 2026-11-27: 64/64, validators pass, nothing mounted, no new suite failure when merged with `main`; 19 lint `no-undef` errors in its tests and scripts) | stacked branch chain, head PR #433 `f58c30e6`; not in `main`; [handoffs/20261127-claude-npc-chain-test-run.md](handoffs/20261127-claude-npc-chain-test-run.md) | FS-S-D10 |
 | FS-S05 | Story-ID adapter rejecting unknown IDs (quest store accepts unknown IDs today) | Implementation-ready (isolated module) | R130 §5, R137 §1, Phase 43 risk 1 | WP-FS-S2 |
 | FS-S06 | Paired-discovery state model with the second vista (OWNER rule R66 §1) | Implementation-ready (disabled model) | R66, Phase 61 | WP-FS-S3 |
 | FS-S07 | "Main path completes with zero optional content" test | Implementation-ready | R85 §2, R76 §2 | WP-FS-S4 |
@@ -84,7 +84,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FB-09 | Skill upgrades | Awaiting information | not designed | MI-FB-03 |
 | FB-10 | Quest rewards, Last Escort quest | Awaiting information | claims are acknowledgement only | MI-FB-04 |
 | FB-11 | Final character, enemy, boss art and rigs; item icons; audio | Awaiting assets | shared archer rig, SVG layers | AS-01, AS-02 |
-| FB-12 | Engine-spec Studio and download panel (built, unrouted) | Awaiting approval | `StudioPanel.jsx`; HANDOVER | FB-D6 |
+| FB-12 | Engine-spec Studio and download panel on a test page `/fantasy-battle-studio`, with the Record WebM fix | Awaiting approval (owner "Yes, keep it"; merge pending) | branch `claude/fantasy-battle-studio-page-20261127` `7ab676cf` | Merge; reachable on the published site once merged (FB-D3) |
 | FB-13 | Release flag on before QA | Awaiting approval | `gamesHubCatalog.mjs:13` | FB-D3 |
 
 ## Duelist Adventure

@@ -10,7 +10,7 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 |---|---|---|---|
 | Fallen Sky | WP-FS-S1 P01 opening slice M01–M03, isolated low-poly blockout | In progress (assigned by the hub on 2026-11-27 to session `local_cb70a7c5`) | The owner's first priority is the story; P01 is the only slice with a full source-to-acceptance chain |
 | Fallen Sky | WP-FS-S2 story-ID adapter; WP-FS-S3 paired-discovery state model | Ready (isolated, disabled modules) | Story-side foundations that bind no unknown content |
-| Fallen Sky | WP-FS-S5 native test run of the NPC-phase branch chain | Ready (verification) | 62 files of story work wait outside `main` |
+| Fallen Sky | WP-FS-S5 native test run of the NPC-phase branch chain | Done 2026-11-27 (see its hand-back) | 62 files of story work wait outside `main` |
 | Fallen Sky | WP-FS-01 skill damage curve failures | Ready | A real behaviour failure on `main` |
 | Duelist | WP-DA-05 push rework | Ready | Owner request 2026-11-22, fully specified, not built |
 | Duelist | WP-DA-01 triage the 24 failing tests | Ready | Keeps corrected problems from coming back |
@@ -44,7 +44,8 @@ Ownership follows the terrain hand-off and R112 §2: the story agent supplies di
 ### WP-FS-S4 Zero-optional completion test — Ready
 - Requirement: the main path can be finished with no optional content (R85 §2, R76 §2, Phase 42 acceptance). A data-level test over the story registry; no gameplay change.
 
-### WP-FS-S5 Native test run of the NPC-phase branch chain — Ready (verification)
+### WP-FS-S5 Native test run of the NPC-phase branch chain — Done 2026-11-27
+- Result: [handoffs/20261127-claude-npc-chain-test-run.md](handoffs/20261127-claude-npc-chain-test-run.md). 64/64 tests, validators pass (171/171), nothing mounted live, clean merge with `main` `9034ba14` and no new failing test; 19 `no-undef` lint errors in the chain's tests and scripts.
 - Requirement: the owner decides whether Phases 44–67 enter `main` (FS-S-D10). Run the chain head's 9 test files and 3 validators with `node --test` in a full checkout, plus lint and the import graph (nothing mounted live), and report. On a copy they passed 64/64 and 171/171 [reader].
 - Completion: a hand-back record with raw results; no merge.
 

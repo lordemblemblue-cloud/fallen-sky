@@ -66,7 +66,7 @@ Final character, companion, enemy and boss art and rigs; item icons; map geometr
 | FB-D3 | Was `FANTASY_BATTLE_RELEASED = true` intended before browser QA? | [code `gamesHubCatalog.mjs:13`, commit `8046cf04`] |
 | FB-D4 | Original-image policy: keep Base44-hosted, wide-only plates with SVG fallback, or commit the originals and use them on every screen size; accept the plate 05 label removal | [PR #403] |
 | FB-D5 | Quest-claim rewards, loot tables, XP, gold and prices | [PR #423 body; doc `EQUIPMENT_EXPANSION.md`] |
-| FB-D6 | Restore the owner's engine-spec Studio and download panel (unrouted since Sapphire took the route) or leave it out | [note `fantasy-battle/HANDOVER.md`] |
+| FB-D6 | **Decided:** the owner answered "Yes, keep it" (relayed by the hub on 2026-11-27) to keeping the archer battle and its Studio on a test page. Built on `claude/fantasy-battle-studio-page-20261127` (`7ab676cf`, pushed, not merged): route `/fantasy-battle-studio` with the debug overlay, sliders and download panel, plus the fix for Record WebM restarting a battle. It opens when `FANTASY_BATTLE_RELEASED` is true or in development, so after a merge it is reachable by URL on the published site (see FB-D3). Pending: merge | [session `local_eeaafc19` message, 2026-11-27; branch checked] |
 | FB-D7 | PR #423 (loot economy) was merged at 18:49 although its body said CI and visual testing were pending and "do not publish": confirm it may be published as it is, and confirm its provisional rewards | [PR #423] |
 | FB-D8 | Implementer defaults from #310 (action names Quick Shot / Radiant Shot / Triple Volley / Guard, Focus 0–3, damage formula, the "Shade Archer" rival, look and sounds): keep or replace with the recovered design | [note `OWNER_INPUT_VS_DEFAULTS.md`] |
 
@@ -81,7 +81,7 @@ Final character, companion, enemy and boss art and rigs; item icons; map geometr
 
 - The two-ally prototype: superseded by the four-member roster [doc `SAPPHIRE_UI_INTEGRATION.md`].
 - The hub's invented "part 2" list (party, wolf enemies, progression): withdrawn 2026-11-27; part 2 is on hold until the owner's design is recovered [note `fantasy-battle/HANDOVER.md`].
-- PR #310's standalone page and Studio (`FantasyBattlePage.jsx`, `StudioPanel.jsx`): no longer routed; known bug left unfixed there (`FantasyBattleStage.recordClip()` restarts a battle in progress) [note `HANDOVER.md`]. Decision FB-D6.
+- PR #310's standalone page and Studio (`FantasyBattlePage.jsx`, `StudioPanel.jsx`): not routed on `main`; the owner chose to keep them on a test page (FB-D6), built with the `recordClip()` restart fix on `claude/fantasy-battle-studio-page-20261127` (`7ab676cf`), not merged.
 
 ## 10. Open PRs and branches
 
