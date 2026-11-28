@@ -16,7 +16,7 @@ import {
   WOLFVEIL_TOWN_QUEST_NPC_SPOTS,
 } from '../../wolfveil/WolfveilImportedTownLayout.mjs';
 import { WOLFVEIL_RIVER, wolfveilDistanceToRiver } from '../../wolfveil/WolfveilLayout.js';
-import { THREE_ROADS_Z_OFFSET } from '../coords.mjs';
+import { storyZOffset } from '../coords.mjs';
 
 export const CAST_SEARCH_RADIUS = 6;
 export const CAST_SEARCH_STEP = 0.75;
@@ -101,7 +101,7 @@ export function obstacleHit(obstacle, x, z, radius = CAST_FOOT_RADIUS) {
 
 /** In or too near the Silverrun (world metres in, the river is drawn in local metres). */
 export function inRiver(x, z, margin = CAST_RIVER_MARGIN) {
-  return wolfveilDistanceToRiver(x, z - THREE_ROADS_Z_OFFSET) < WOLFVEIL_RIVER.width / 2 + margin;
+  return wolfveilDistanceToRiver(x, z - storyZOffset()) < WOLFVEIL_RIVER.width / 2 + margin;
 }
 
 /** A blocked(x, z) test over a list of obstacles and the river. */

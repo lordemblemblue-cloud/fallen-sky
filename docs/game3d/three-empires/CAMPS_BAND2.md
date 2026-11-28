@@ -1,5 +1,7 @@
 # Band 2: the three army camps
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](README.md).
+
 Written 2026-11-22 by the lead. This is the brief for building the home of each empire: the Camp of the Western Road (Akitsu), the Landing (Tameri) and Castra Lupa (Remoria). Nothing here is built yet. The numbers live in two files, and this page says why they are what they are:
 
 - `src/components/game3d/threeroads/kits/empireKitPieces.mjs`: the pieces of the three kits.

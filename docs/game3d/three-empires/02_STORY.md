@@ -1,5 +1,7 @@
 # Fallen Sky: The War of Three Roads
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](README.md).
+
 Story for the open world. Step 2 of the three-empire plan. Draft for the owner, 2026-11-21.
 Nothing here is built yet. Every name can be changed; the names I would most like you to confirm are listed at the end.
 

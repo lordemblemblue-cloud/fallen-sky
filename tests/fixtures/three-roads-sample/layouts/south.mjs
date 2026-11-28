@@ -7,7 +7,7 @@
 // left as the area's compass, the Remorian wagon on the threshing floor's
 // near rim ahead, the corner of the barn behind the mill; the farmsteads,
 // the Three Fields and the barrow open up as the player walks past hedgerows.
-import { TINT, EMPIRE_ORDER, p, wagon, banner, lanternPost, row, chain, fencedRect, wobble, facing } from './layoutKit.mjs';
+import { TINT, EMPIRE_ORDER, p, wagon, banner, lanternPost, row, chain, fencedRect, wobble, facing } from '../../../../src/components/game3d/threeroads/places/layouts/layoutKit.mjs';
 
 const polar = (r, degrees) => [Math.cos(degrees * Math.PI / 180) * r, Math.sin(degrees * Math.PI / 180) * r];
 const rel = (centre, x, z) => [x - centre.x, z - centre.z];

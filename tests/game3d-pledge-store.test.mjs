@@ -400,7 +400,7 @@ test('the store has no import cycle with the quest data and no pledge content of
   const { readFileSync } = await import('node:fs');
   const read = (path) => readFileSync(new URL('../src/components/game3d/' + path, import.meta.url), 'utf8');
   for (const file of ['pledgeModel.mjs', 'pledgeProgress.mjs', 'pledgeState.mjs', 'pledgeOutcome.mjs',
-    'pledgeStandings.mjs', 'pledgeClaim.mjs', 'pledgeRegistry.mjs', 'pledgePlaces.mjs']) {
+    'pledgeStandings.mjs', 'pledgeClaim.mjs', 'pledgeRegistry.mjs']) {
     const source = read('pledges/' + file);
     assert.doesNotMatch(source, /\bfetch\(|XMLHttpRequest|base44|localStorage/, file);
     // Explicit extensions only, so Node can load every one of them, and no

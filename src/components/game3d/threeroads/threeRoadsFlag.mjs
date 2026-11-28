@@ -1,8 +1,10 @@
 import { questTestRuntimePreview } from './questTestRuntime.mjs';
 
-// The War of Three Roads: one switch for everything under threeroads/.
+// The story tools' switch. It was the War of Three Roads' (retired 2026-11-27): the tools still
+// read it as their own lock, but nothing in the game mounts them now, so it changes nothing
+// a player sees until a story mounts the tools again.
 //
-// Off by default while it is being built. Turn it on for one visit with
+// Off by default. Turn it on for one visit with
 // ?threeRoads=1, or keep it on in this browser with
 // localStorage['game3d.threeRoads']='1'. ?threeRoads=0 always turns it off.
 // Pure: it only reads what it is handed, so it can be tested in node.

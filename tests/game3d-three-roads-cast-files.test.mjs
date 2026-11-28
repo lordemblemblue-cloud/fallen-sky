@@ -1,6 +1,7 @@
 // The files of the Three Roads cast (public/game3d/threeroads/cast/<person_id>.glb)
 // and the tool that packs them. The rules checked here are the "People" rules of
 // docs/game3d/three-empires/BUILD_RULES.md.
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';

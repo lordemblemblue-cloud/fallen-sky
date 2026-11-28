@@ -1,5 +1,7 @@
 # Costs
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](README.md).
+
 Every Meshy generation and every ElevenLabs recording made for The War of Three Roads, one line each. Add a line when you spend; never remove one.
 
 | Date | Service | What | Credits | Session | Kept? |

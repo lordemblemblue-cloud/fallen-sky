@@ -2,6 +2,7 @@
 // the engine's own pure functions, a player who can walk, press and hold E, a
 // fake cast and fake enemies that answer the bus, and a log of everything the
 // interpreter did. Not a test file itself.
+import './fixtures/three-roads-sample/install.mjs';
 import { pledgePrerequisitesMet } from '../src/components/game3d/pledges/pledgeModel.mjs';
 import { isPledgeReadyToComplete } from '../src/components/game3d/pledges/pledgeProgress.mjs';
 import {

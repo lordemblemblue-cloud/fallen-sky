@@ -1,3 +1,4 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { planWalk, segmentClear } from '../src/components/game3d/threeroads/cast/castPath.mjs';

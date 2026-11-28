@@ -1,3 +1,4 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -112,9 +113,12 @@ test('every scripted line fits whole, over a head and as a subtitle', () => {
   }
 });
 
-test('every person of the cast table has a model with a known source, height and two colours', () => {
+test('every person of a cast gets a model with a known source, height and two colours; the table holds the eight own models', () => {
+  // The table lists only the people who have a model of their own. Everyone else wears the shared figure.
+  assert.deepEqual(Object.keys(CAST_MODELS).sort(), ['aelia_sabina', 'bram_lamplighter', 'elder_maren', 'master_hesper',
+    'mizuhara_jun', 'paneb_scribe', 'sable_vey', 'watch_warden_south']);
+  for (const id of Object.keys(CAST_MODELS)) assert.equal(CAST_MODELS[id].own, true, id);
   for (const person of THREE_ROADS_CAST.filter(p => !p.existing)) {
-    assert.ok(CAST_MODELS[person.id], person.id + ' is in the model table');
     const model = castModelFor(person);
     assert.ok(castSourceDef(model.source), person.id);
     if (model.own) assert.ok(CAST_MODEL_SOURCES[model.fallback], person.id + ' has a shared figure to fall back to');

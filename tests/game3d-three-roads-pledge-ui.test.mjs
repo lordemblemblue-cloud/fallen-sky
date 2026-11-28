@@ -1,5 +1,6 @@
 // What the player sees for a pledge, as view models: the dialogue box and the
 // tracker. And that a quest which is not a pledge is shown as it always was.
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

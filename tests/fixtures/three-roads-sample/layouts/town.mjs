@@ -3,7 +3,7 @@
 // Where a layout's centre differs from pledgePlaces.mjs, it is because the
 // pieces of one place sit in two spots (the gate and its yard) and the
 // layout's circle has to hold both; the places table keeps the plan's points.
-import { TINT, EMPIRE_ORDER, p, wagon, banner, lanternPost, row, wobble } from './layoutKit.mjs';
+import { TINT, EMPIRE_ORDER, p, wagon, banner, lanternPost, row, wobble } from '../../../../src/components/game3d/threeroads/places/layouts/layoutKit.mjs';
 
 const at = (place, x, z) => ({ x: x - place.x, z: z - place.z });
 const anchor = (place, x, z, facing = 0) => ({ ...at(place, x, z), facing });

@@ -1,6 +1,7 @@
 // The world is mounted again on every gate crossing (and when entering it). On
 // WebGPU a disposed geometry or material is not brought back the way WebGL does,
 // so nothing a later mount draws with may be something an earlier mount disposed.
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';

@@ -1,5 +1,7 @@
 # Fallen Sky: The War of Three Roads — quest plan
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](README.md).
+
 Step 3 of the three-empire plan. Draft for the owner, 2026-11-21. Read `02_STORY.md` first.
 Nothing here is built yet. Coordinates are the game's own map metres (x east, z north), taken from `research/WORLD_TODAY.md`.
 

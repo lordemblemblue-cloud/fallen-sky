@@ -1,5 +1,7 @@
 # The War of Three Roads, band 2: Each empire's camp and its first two chapters
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](../README.md).
+
 Every pledge of this band with every line that is spoken, in order. Made from `src/components/game3d/threeroads/script/band2.mjs` by `node scripts/print-three-roads-script.mjs`: change the data file, not this page.
 
 6 pledges, 83 spoken lines, 8,307 characters to record.

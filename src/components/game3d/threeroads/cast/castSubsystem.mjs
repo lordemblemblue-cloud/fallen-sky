@@ -27,6 +27,7 @@ import { clone as cloneSkinned } from 'three/examples/jsm/utils/SkeletonUtils.js
 import { THREE_ROADS_CAST, threeRoadsCastAtHome, threeRoadsPerson } from '../script/cast.mjs';
 import { threeRoadsPreviewEnabled } from '../threeRoadsFlag.mjs';
 import { localToWorld } from '../coords.mjs';
+import { storyFrame } from '../storyFrame.mjs';
 import { threeRoadsLine } from '../script/index.mjs';
 import { pickAXEEmbeddedIdleClip } from '../../npc/axeAnimatedQuestNpcGLB.mjs';
 import { playPledgeLine } from '../../pledges/voice/pledgeVoice.mjs';
@@ -55,7 +56,9 @@ import {
 // until they are among the nearest again.
 export const CAST_MAX_PEOPLE = 12;
 export const CAST_MAX_DRAWN = 8;
-export const CAST_AREAS = Object.freeze([...new Set(THREE_ROADS_CAST.flatMap(person => [
+// Every area some person of the registered cast has a home in. Worked out when asked: a story
+// may register its cast after this file has loaded.
+export const castAreas = () => Object.freeze([...new Set(THREE_ROADS_CAST.flatMap(person => [
   person.home, person.homeAfter?.home, ...(person.alsoAt || []),
 ]).filter(home => home?.area).map(home => home.area))]);
 
@@ -306,7 +309,7 @@ function disposeObjectTree(object) {
 const defaultPlayVoice = (lineId, options) => (lineId ? playPledgeLine(lineId, options) : null);
 
 export function createCastSubsystem(ctx, deps = {}) {
-  if (!ctx || ctx.region !== 'wolfveil' || !ctx.scene) return null;
+  if (!ctx || !storyFrame().regions.includes(ctx.region) || !ctx.scene) return null;
   const warn = deps.warn || ((...args) => globalThis.console?.warn(...args));
   const loadSource = deps.loadSource || defaultLoadSource;
   const playVoice = deps.playVoice || defaultPlayVoice;
@@ -1187,7 +1190,7 @@ export function createCastSubsystem(ctx, deps = {}) {
   }
 
   // ─── people at home, by the story so far ───
-  const areas = ctx.areaScenes === false ? CAST_AREAS : (ctx.worldArea ? [ctx.worldArea] : []);
+  const areas = ctx.areaScenes === false ? castAreas() : (ctx.worldArea ? [ctx.worldArea] : []);
   // People of an area that is still being built come home only with the builders' preview switch.
   const preview = ctx.preview ?? threeRoadsPreviewEnabled(globalThis.window);
   function reconcile(storyFlags) {

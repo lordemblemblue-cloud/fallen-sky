@@ -3,13 +3,23 @@
 //   node scripts/print-three-roads-script.mjs
 // Output: docs/game3d/three-empires/script/BAND<n>_SCRIPT.md, one per band.
 import { mkdirSync, writeFileSync } from 'node:fs';
+import process from 'node:process';
 import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { definePledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
-import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
 import { threeRoadsPerson, threeRoadsEmpireOfFaction, THREE_ROADS_EMPIRES }
   from '../src/components/game3d/threeroads/script/cast.mjs';
 import { THREE_ROADS_BANDS } from '../src/components/game3d/threeroads/script/index.mjs';
+
+// The story printed is whatever is registered with the story tools. None is registered in src
+// since the War of Three Roads was retired (2026-11-27). To print a story, name a module that
+// registers it:  node scripts/print-three-roads-script.mjs --content <module>
+// (the tests' sample story is tests/fixtures/three-roads-sample/install.mjs). If that module
+// exports pledgePlace(id), place names are printed too.
+const contentAt = process.argv.indexOf('--content');
+const content = contentAt > 0 && process.argv[contentAt + 1]
+  ? await import(pathToFileURL(resolve(process.argv[contentAt + 1])).href) : {};
+const pledgePlace = typeof content.pledgePlace === 'function' ? content.pledgePlace : () => null;
 
 const here = dirname(fileURLToPath(import.meta.url));
 const outDir = resolve(here, '../docs/game3d/three-empires/script');
