@@ -4,9 +4,10 @@ Written 2026-11-27 by the session that built the War of Three Roads (branch `cla
 
 ## Answered so far
 
-- **Request 1, answered by the owner on 2026-11-27: "Keep it switched off."** The War of Three Roads stays in the game exactly as it is, off unless `?threeRoads=1` is added to the address or the admin test menu is used. It is not retired and not reworked, and nothing more of it is built.
-- That settles requests 2, 3 and 5 as well: chapters 3 to 6 stay unplayable, the unwritten quests stay unwritten, and nothing is spent.
-- **Request 4 is still open**: whether the systems and assets under this story may be used for The Threads of Our Pain.
+- **Request 1, final answer from the owner on 2026-11-27: "Retire, keep tools."** The story is removed from the game; its reusable parts are kept for The Threads of Our Pain: the quest-step engine, staged scenes, the eight character models and the four low-poly building kits. (Minutes earlier the owner had answered "Keep it switched off" here and "Retire it, keep its tools" to the coordinating session; asked which stood, the owner confirmed retirement.)
+- That settles requests 2, 3 and 5: chapters 3 to 6 are discarded with the rest of the story, the unwritten quests stay unwritten, and nothing is spent.
+- **Request 4 is answered by the same decision**: the tools and assets are kept for the Threads to use.
+- What was removed and what was kept is listed in [README.md](README.md).
 - The same day the owner said the old map is not being used and the map is being recreated. Every spot in this story is tied to the old map.
 
 ## In short

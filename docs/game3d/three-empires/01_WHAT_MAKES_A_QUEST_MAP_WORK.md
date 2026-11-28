@@ -1,5 +1,7 @@
 # What makes a quest map work
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](README.md).
+
 Step 1 of the three-empire plan. Draft for the owner, 2026-11-21.
 
 This is what I took from the references you gave (the map site and the two walkthrough videos), in my own words, and how each point is used in our plan. The references were studied for structure and craft only. Nothing of that game's map, places, names, characters, quests, art or music is used in ours.

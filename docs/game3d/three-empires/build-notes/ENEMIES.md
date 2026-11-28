@@ -1,5 +1,7 @@
 # Enemies subsystem: build note
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](../README.md).
+
 Branch `claude/three-roads-enemies-20261121`. Code in `src/components/game3d/threeroads/enemies/`; tests in
 `tests/game3d-three-roads-enemies-kinds.test.mjs` and `tests/game3d-three-roads-enemies-runtime.test.mjs`.
 

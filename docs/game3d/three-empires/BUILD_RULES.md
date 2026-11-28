@@ -1,5 +1,7 @@
 # Build rules for The War of Three Roads
 
+> **The War of Three Roads story was retired on 2026-11-27; the tools this document describes were kept.** Where it names the story's data files, they now live under `tests/fixtures/three-roads-sample/` as the tests' sample story. See [README.md](README.md).
+
 For every session that builds part of this plan. Read with `README.md`, `03_QUEST_PLAN.md` and `research/WORLD_TODAY.md`. The owner said "Yes, build it" to the story on 2026-11-21.
 
 ## 1. Where things live

@@ -24,7 +24,8 @@
 // at most about 60 m across, so drawing it whole at one level costs little.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { THREE_ROADS_Z_OFFSET } from '../coords.mjs';
+import { storyZOffset } from '../coords.mjs';
+import { storyFrame } from '../storyFrame.mjs';
 import { createValleyKit, createEmpireKit } from './valleyKit.mjs';
 import { drapePaintedGround } from './paintedGround.mjs';
 import { THREE_ROADS_PLACES, placeLayout } from './layouts/index.mjs';
@@ -34,7 +35,6 @@ import {
 } from './placeMath.mjs';
 import { wolfveilHeight, wolfveilRiverHeightAtZ } from '../../wolfveil/WolfveilLayout.js';
 import { threeRoadsPreviewEnabled } from '../threeRoadsFlag.mjs';
-import { WOLFVEIL_AREA_IDS } from '../../wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 
 const LOD_SECONDS = 0.25;
 const GROUND_RETRY_SECONDS = 0.5;
@@ -46,8 +46,8 @@ export function createPlacesSubsystem(ctx, {
   preview = threeRoadsPreviewEnabled(globalThis.window),
   layouts = THREE_ROADS_PLACES,
 } = {}) {
-  if (ctx?.region !== 'wolfveil' || !ctx.wolfveilWorld?.group) return null;
-  const areas = ctx.areaScenes === false ? WOLFVEIL_AREA_IDS : [ctx.worldArea];
+  if (!storyFrame().regions.includes(ctx?.region) || !ctx.wolfveilWorld?.group) return null;
+  const areas = ctx.areaScenes === false ? storyFrame().areaIds : [ctx.worldArea];
   const places = layouts.filter(place => areas.includes(place.area) && (preview || !place.preview));
   if (!places.length) return null;
 
@@ -266,7 +266,7 @@ export function createPlacesSubsystem(ctx, {
   let clock = 0, groundTimer = 0, lodTimer = LOD_SECONDS;
   const announced = new Set();
   const worldGround = (x, z) => {
-    const y = ctx.sampleGroundY?.(x, z + THREE_ROADS_Z_OFFSET);
+    const y = ctx.sampleGroundY?.(x, z + storyZOffset());
     return Number.isFinite(y) ? y : null;
   };
   const groundOrHeight = (x, z) => worldGround(x, z) ?? wolfveilHeight(x, z);
@@ -409,7 +409,7 @@ export function createPlacesSubsystem(ctx, {
         tryGround(clock >= GROUND_GIVE_UP_SECONDS);
       }
       lodTimer += step;
-      const px = playerPosition?.x, pz = playerPosition?.z - THREE_ROADS_Z_OFFSET;
+      const px = playerPosition?.x, pz = playerPosition?.z - storyZOffset();
       if (lodTimer >= LOD_SECONDS && Number.isFinite(px) && Number.isFinite(pz)) {
         lodTimer = 0;
         sortLod(px, pz);
@@ -437,12 +437,12 @@ export function createPlacesSubsystem(ctx, {
     },
     resolveCollision(position, from, radius) {
       if (disposed || !position || !solids.length) return false;
-      probe.x = position.x; probe.z = position.z - THREE_ROADS_Z_OFFSET;
+      probe.x = position.x; probe.z = position.z - storyZOffset();
       if (!Number.isFinite(probe.x) || !Number.isFinite(probe.z)) return false;
       if (!resolveAgainstGrid(grid, probe, Number.isFinite(radius) ? radius : 0.6,
         Number.isFinite(position.y) ? position.y : -Infinity)) return false;
       position.x = probe.x;
-      position.z = probe.z + THREE_ROADS_Z_OFFSET;
+      position.z = probe.z + storyZOffset();
       return true;
     },
     // Test door: window.__gw3dThreeRoads.get('places').status()
@@ -491,7 +491,7 @@ export function createPlacesSubsystem(ctx, {
       const x = place.x + found.x, z = place.z + found.z;
       return {
         placeId, name, localX: x, localZ: z,
-        x, y: groundOrHeight(x, z), z: z + THREE_ROADS_Z_OFFSET, facing: found.facing ?? 0,
+        x, y: groundOrHeight(x, z), z: z + storyZOffset(), facing: found.facing ?? 0,
       };
     },
     dispose() {

@@ -27,8 +27,7 @@ import { threeRoadsEnabled } from '../threeRoadsFlag.mjs';
 import { localToWorld } from '../coords.mjs';
 import { buildPledgeCompletionClaim } from '../../pledges/pledgeClaim.mjs';
 import { playPledgeLine, stopPledgeLine } from '../../pledges/voice/pledgeVoice.mjs';
-import { wolfveilAreaAtWorld } from '../../wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
-import { WOLFVEIL_TOWN_QUEST_NPC_SPOTS } from '../../wolfveil/WolfveilImportedTownLayout.mjs';
+import { storyFrame } from '../storyFrame.mjs';
 import { installThreeRoadsPledges, removeThreeRoadsPledges } from './pledgeRegistration.mjs';
 import { empireOfFaction, pledgeHome, pledgeLine, threeRoadsPledges } from './pledgeScript.mjs';
 import { createPledgeInterpreter } from './pledgeInterpreter.mjs';
@@ -82,7 +81,7 @@ export function createPledgeWorldSubsystem(ctx = {}, {
   const pledges = threeRoadsPledges();
   // The points of the opening are Wolfveil's; in a cave or a dungeon the
   // pledges stay registered and tracked but nothing is watched.
-  const inValley = ctx.region === 'wolfveil';
+  const inValley = storyFrame().regions.includes(ctx.region);
   const offs = [];
   let disposed = false;
   let game = null;
@@ -143,7 +142,7 @@ export function createPledgeWorldSubsystem(ctx = {}, {
   // Where a person normally stands, for the trail when they are not in this scene.
   const homes = new Map();
   function homeOf(id) {
-    const spot = WOLFVEIL_TOWN_QUEST_NPC_SPOTS[id];
+    const spot = storyFrame().giverSpots[id];
     if (spot) return spot;
     const home = pledgeHome(id, lastState?.storyFlags || {}, ctx.worldArea || null);
     if (!home) return null;
@@ -192,7 +191,7 @@ export function createPledgeWorldSubsystem(ctx = {}, {
   // With only one area loaded, people and monsters are asked for only where
   // there is ground; the step's cues run again when the player gets there.
   const outsideScene = detail => !!ctx.areaScenes && !!ctx.worldArea &&
-    wolfveilAreaAtWorld(detail) !== ctx.worldArea;
+    storyFrame().areaAtWorld(detail) !== ctx.worldArea;
 
   const world = {
     bus(type, detail) {

@@ -43,7 +43,7 @@
 //     surface points of chapter 6 stop at the Wolf-Ear Vigil, where the trail
 //     leaves the ridge path: ground measured walkable on both versions.
 
-import { WOLFVEIL_EXPLORABLE_CAVES } from '../../wolfveil/WolfveilCaveLayout.mjs';
+import { WOLFVEIL_EXPLORABLE_CAVES } from '../../../src/components/game3d/wolfveil/WolfveilCaveLayout.mjs';
 
 const line = (speaker, text) => Object.freeze({ speaker, text });
 const point = (x, z) => Object.freeze({ x, z });

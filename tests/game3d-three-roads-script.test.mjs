@@ -1,7 +1,8 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { definePledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
-import { pledgePlace } from '../src/components/game3d/pledges/pledgePlaces.mjs';
+import { pledgePlace } from './fixtures/three-roads-sample/pledgePlaces.mjs';
 import { wolfveilAreaAtLocal } from '../src/components/game3d/wolfveil/streaming/WolfveilFiveAreaPlan.mjs';
 import { WOLFVEIL_HOSTILE_ZONES } from '../src/components/game3d/wolfveil/WolfveilEnemySpawns.mjs';
 import { WOLFVEIL_ZOMBIE_CAMPS } from '../src/components/game3d/wolfveil/WolfveilZombieCamps.mjs';
@@ -18,8 +19,8 @@ import {
   THREE_ROADS_BANDS, threeRoadsBuiltBands, threeRoadsPointArea, threeRoadsPointRegion, threeRoadsPointScene,
   threeRoadsLine, threeRoadsPoint,
 } from '../src/components/game3d/threeroads/script/index.mjs';
-import { BAND1_KEEPSAKES, BAND1_LINES, BAND1_STAGING } from '../src/components/game3d/threeroads/script/band1.mjs';
-import { BAND3_KINDS, BAND3_LINES, BAND3_STAGING, BAND3_TOKENS } from '../src/components/game3d/threeroads/script/band3.mjs';
+import { BAND1_KEEPSAKES, BAND1_LINES, BAND1_STAGING } from './fixtures/three-roads-sample/band1.mjs';
+import { BAND3_KINDS, BAND3_LINES, BAND3_STAGING, BAND3_TOKENS } from './fixtures/three-roads-sample/band3.mjs';
 
 // Every line id a staging block names, wherever it sits.
 function lineIdsIn(value, found = []) {

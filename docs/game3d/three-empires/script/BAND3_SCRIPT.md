@@ -1,5 +1,7 @@
 # The War of Three Roads, band 3: The first half of the main story: the grotto, the stones, the hollow and the cistern
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](../README.md).
+
 Every pledge of this band with every line that is spoken, in order. Made from `src/components/game3d/threeroads/script/band3.mjs` by `node scripts/print-three-roads-script.mjs`: change the data file, not this page.
 
 4 pledges, 79 spoken lines, 12,167 characters to record.

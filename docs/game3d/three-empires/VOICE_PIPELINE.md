@@ -1,5 +1,7 @@
 # Pledge voices: the ElevenLabs pipeline
 
+> **The War of Three Roads story was retired on 2026-11-27; the tools this document describes were kept.** Where it names the story's data files, they now live under `tests/fixtures/three-roads-sample/` as the tests' sample story. See [README.md](README.md).
+
 How the final lines of the pledges (quests) become voice files, what it costs, and who could
 speak each part. **Nothing has been recorded.** The story is not approved yet, and every recorded
 character spends the owner's ElevenLabs credits.

@@ -1,5 +1,7 @@
 # The pledge engine
 
+> **The War of Three Roads story was retired on 2026-11-27; the tools this document describes were kept.** Where it names the story's data files, they now live under `tests/fixtures/three-roads-sample/` as the tests' sample story. See [README.md](README.md).
+
 Band 0 of the build order in `03_QUEST_PLAN.md`. Branch `claude/pledge-engine-20261121`.
 
 A pledge is a quest with steps that are done in order. This document is the contract for the sessions that build world hooks, quest givers and screens next: the shape of a pledge, the exact event each kind of step waits for, how the world reports progress, and what a server would have to check.

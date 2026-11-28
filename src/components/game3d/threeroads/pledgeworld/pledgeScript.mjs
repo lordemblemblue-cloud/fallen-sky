@@ -1,6 +1,6 @@
 // The story data the pledge world reads, behind one door. Pure: no Three.js,
-// no DOM. The script itself (script/band1.mjs, script/cast.mjs) belongs to the
-// lead session and is only read here.
+// no DOM. The story is whatever is registered in script/index.mjs and script/cast.mjs;
+// it is only read here.
 import { definePledge } from '../../pledges/pledgeModel.mjs';
 import {
   THREE_ROADS_BANDS, threeRoadsBuiltBands, threeRoadsLine, threeRoadsPoint,
@@ -12,9 +12,19 @@ import { threeRoadsPreviewEnabled } from '../threeRoadsFlag.mjs';
 export const THREE_ROADS_PLEDGE_SOURCE = 'three-roads';
 
 // Each band's pledges, validated once. The same frozen objects are handed out
-// every time, so a remount never makes a second copy of a pledge.
+// every time, so a remount never makes a second copy of a pledge. The caches belong to one
+// set of bands: a story that registers its bands later (setStoryBands) starts them again.
+let cachedFor = null;
 const byBand = new Map();
+const definedBy = new Map();
+function fresh() {
+  if (cachedFor === THREE_ROADS_BANDS) return;
+  byBand.clear();
+  definedBy.clear();
+  cachedFor = THREE_ROADS_BANDS;
+}
 export function threeRoadsBandPledges(bandId) {
+  fresh();
   if (!byBand.has(bandId)) {
     const band = THREE_ROADS_BANDS.find(entry => entry.id === bandId);
     byBand.set(bandId, Object.freeze(band ? band.pledges.map(raw => definePledge(raw)) : []));
@@ -26,8 +36,8 @@ export function threeRoadsBandPledges(bandId) {
 // (script/index.mjs decides; band 1 today). Lines, points and staging are
 // read from every band that has been written.
 // With the builders' preview switch on, the bands still being built are offered too.
-const definedBy = new Map();
 export function threeRoadsPledges(preview = threeRoadsPreviewEnabled(globalThis.window)) {
+  fresh();
   const key = !!preview;
   if (!definedBy.has(key)) definedBy.set(key, Object.freeze(threeRoadsBuiltBands({ preview: key }).flatMap(band => threeRoadsBandPledges(band.id))));
   return definedBy.get(key);

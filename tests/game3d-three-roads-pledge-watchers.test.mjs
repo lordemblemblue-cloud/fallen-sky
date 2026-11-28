@@ -1,3 +1,4 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PLEDGE_STEP_KINDS, definePledge, pledgeObjectiveMatchesEvent } from '../src/components/game3d/pledges/pledgeModel.mjs';

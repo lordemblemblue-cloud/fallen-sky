@@ -1,7 +1,8 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { buildPledgeCompletionClaim } from '../src/components/game3d/pledges/pledgeClaim.mjs';
-import { BAND1_LINES, BAND1_STAGING } from '../src/components/game3d/threeroads/script/band1.mjs';
+import { BAND1_LINES, BAND1_STAGING } from './fixtures/three-roads-sample/band1.mjs';
 import {
   pledgeDialogueLines, threeRoadsPledge,
 } from '../src/components/game3d/threeroads/pledgeworld/pledgeScript.mjs';

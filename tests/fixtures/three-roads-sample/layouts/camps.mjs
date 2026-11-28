@@ -8,8 +8,8 @@
 //
 // All of them are `preview: true`: they are built only with
 // ?threeRoads=1&threeRoadsPreview=1 until the lead marks band 2 finished.
-import { CAMP_PLANS, BAND2_PLACE_PLANS } from '../../land/campPlans.mjs';
-import { TINT } from './layoutKit.mjs';
+import { CAMP_PLANS, BAND2_PLACE_PLANS } from '../campPlans.mjs';
+import { TINT } from '../../../../src/components/game3d/threeroads/places/layouts/layoutKit.mjs';
 
 // The cloths each camp flies.
 const CAMP_TINT = Object.freeze({

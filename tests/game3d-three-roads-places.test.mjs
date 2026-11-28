@@ -1,3 +1,4 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -304,7 +305,7 @@ test('every anchor is a spot a person can stand on (no solid piece there)', () =
 });
 
 test('the script\'s named points and every person\'s spots keep 1.5 m clear of solid pieces', async () => {
-  const { BAND1_POINTS } = await import('../src/components/game3d/threeroads/script/band1.mjs');
+  const { BAND1_POINTS } = await import('./fixtures/three-roads-sample/band1.mjs');
   const solids = THREE_ROADS_PLACES.flatMap(place => placeInstances(place).map(inst => solidFor(inst)).filter(Boolean));
   const grid = createSolidGrid(solids);
   const spots = Object.entries(BAND1_POINTS).map(([name, at]) => [name, at]);
@@ -321,7 +322,7 @@ test('the script\'s named points and every person\'s spots keep 1.5 m clear of s
 });
 
 test('the layouts stand on the script\'s points where the script names them', async () => {
-  const { BAND1_POINTS: P } = await import('../src/components/game3d/threeroads/script/band1.mjs');
+  const { BAND1_POINTS: P } = await import('./fixtures/three-roads-sample/band1.mjs');
   const same = (placeId, anchor, point) => {
     const at = placeAnchorLocal(placeId, anchor);
     assert.ok(Math.hypot(at.x - P[point].x, at.z - P[point].z) < 0.01, `${placeId}.${anchor} is not ${point}`);
@@ -377,8 +378,8 @@ test('the camps are built only with the preview switch; the town and fields are 
 });
 
 test('the camp layouts are the lead\'s plans, piece for piece', async () => {
-  const { CAMP_PLANS, BAND2_PLACE_PLANS } = await import('../src/components/game3d/threeroads/land/campPlans.mjs');
-  const { CAMP_GROUND_MOVES } = await import('../src/components/game3d/threeroads/places/layouts/camps.mjs');
+  const { CAMP_PLANS, BAND2_PLACE_PLANS } = await import('./fixtures/three-roads-sample/campPlans.mjs');
+  const { CAMP_GROUND_MOVES } = await import('./fixtures/three-roads-sample/layouts/camps.mjs');
   for (const plan of [...CAMP_PLANS, ...BAND2_PLACE_PLANS]) {
     const built = THREE_ROADS_PLACES.filter(place => place.camp === plan.id).flatMap(placeInstances);
     assert.equal(built.length, plan.items.length, plan.id);
@@ -429,7 +430,7 @@ function blockedOn(grid, from, to, radius) {
 }
 
 test('the roads stay open: the ridge path through the fort, the west trail through both pickets', async () => {
-  const { campPlan } = await import('../src/components/game3d/threeroads/land/campPlans.mjs');
+  const { campPlan } = await import('./fixtures/three-roads-sample/campPlans.mjs');
   const grid = campGrid();
   const fort = campPlan('castra_lupa');
   const fortRoad = s => ({ x: fort.centre.x + s * fort.along.x, z: fort.centre.z + s * fort.along.z });
@@ -506,7 +507,7 @@ test('a camp draws as a few merged meshes: its landmarks instanced, the rest one
 });
 
 test('band 2\'s small places: preview only, merged, on their story spots, clear of the trails', async () => {
-  const { BAND2_POINTS } = await import('../src/components/game3d/threeroads/script/band2.mjs');
+  const { BAND2_POINTS } = await import('./fixtures/three-roads-sample/band2.mjs');
   const { wolfveilFrontierTrailClearance } = await import('../src/components/game3d/wolfveil/WolfveilLandscapeDesign.mjs');
   for (const id of ['P14', 'P26', 'P36']) {
     const place = placeLayout(id);

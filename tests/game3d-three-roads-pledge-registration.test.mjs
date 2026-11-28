@@ -1,3 +1,4 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { isPledge } from '../src/components/game3d/pledges/pledgeModel.mjs';
@@ -6,7 +7,7 @@ import {
 } from '../src/components/game3d/pledges/pledgeRegistry.mjs';
 import { THREE_ROADS_STORAGE_KEY } from '../src/components/game3d/threeroads/threeRoadsFlag.mjs';
 import { createThreeRoadsWorld } from '../src/components/game3d/threeroads/ThreeRoadsWorld.mjs';
-import { BAND1_PLEDGES } from '../src/components/game3d/threeroads/script/band1.mjs';
+import { BAND1_PLEDGES } from './fixtures/three-roads-sample/band1.mjs';
 import {
   empireOfFaction, pledgeDialogueLines, pledgeLine, threeRoadsPledges,
 } from '../src/components/game3d/threeroads/pledgeworld/pledgeScript.mjs';

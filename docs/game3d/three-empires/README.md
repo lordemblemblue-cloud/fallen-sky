@@ -1,5 +1,44 @@
 # The War of Three Roads: plan for the open world
 
+> **Retired on 2026-11-27.** The owner chose to retire the War of Three Roads and keep its tools. The story was removed from the game. This folder is kept as history; the questions that led to the decision are in [OWNER_REQUESTS.md](OWNER_REQUESTS.md).
+
+## Retired: what was removed and what was kept
+
+**Removed from the game**
+
+- The three scripts (bands 1 to 3: 14 quests, 225 spoken lines) and their 110 named points.
+- The table of 49 places, the three camp plans, the three small places and the town and Gate Fields layouts.
+- Every person's home, the people table, the roles and the ledger's voice.
+- The hook in `GameWorld3D.jsx` that mounted all of this behind `?threeRoads=1`. Nothing in the game mounts the story tools now, so that address switch changes nothing a player sees.
+- The five admin test destinations another agent had added, all of which pointed at this story's places. The admin routing itself is unchanged and its list is empty.
+- The unused landform table for the old map.
+
+The removed data was not thrown away: it is the **sample story** the tools are tested on, in `tests/fixtures/three-roads-sample/`. Nothing in `src/` imports it, and it is not part of the built game.
+
+**Kept as tools** (under `src/components/game3d/`)
+
+| Tool | Where | A story fills it through |
+| --- | --- | --- |
+| Quests as ordered steps, with remembered choices and fail conditions | `pledges/` | `definePledge` |
+| Staged scenes: people brought in, moved, followed, lines in order, put back after a reload | `threeroads/pledgeworld/` | `setStoryBands` (`threeroads/script/index.mjs`) |
+| People: own model or shared figure, captions, greetings, walking | `threeroads/cast/` | `setStoryCast` (`threeroads/script/cast.mjs`) |
+| Monsters at a place, in waves that walk to a spot | `threeroads/enemies/` | a spawn request on the bus |
+| Places built from kit pieces as a few merged meshes | `threeroads/places/`, `threeroads/kits/` | `setStoryPlaces` (`threeroads/places/layouts/index.mjs`) |
+| The frame a story's world uses: region ids, the offset between layout and world, separately loaded areas, the spots of quest givers the game places | `threeroads/storyFrame.mjs` | `setStoryFrame` |
+| The script format's checks | `tests/game3d-three-roads-script.test.mjs`, run on the sample story | |
+| The script printer | `scripts/print-three-roads-script.mjs --content <module>` | |
+| The voice pipeline, dry run only | `pledges/voice/`, `scripts/pledge-voices.mjs` | |
+
+**Kept as assets:** eight people's models (`public/game3d/threeroads/cast/`), four kits (`public/game3d/threeroads/kits/`) and the Blender tools that make them (`tools/threeroads/`).
+
+**Ties to the old map that remain in the tools.** The three thin ones (the region name, the 70 m offset, the five-area split) are now data in the story frame, neutral by default. These are still written against the old Wolfveil valley and will need the same treatment before a new map uses them:
+
+- `threeroads/cast/castPlacement.mjs` keeps people off the old town's tree, the old quest givers' spots and the old river.
+- `threeroads/places/placesSubsystem.mjs` reads the old height function and river height, and expects a `wolfveilWorld` group to put scenery under.
+- `threeroads/places/paintedGround.mjs` uses the old paved-path surface builder.
+- `threeroads/enemies/enemyKinds.mjs` names three existing monster models by their old asset modules (models, not map).
+- `threeroads/script/cast.mjs` keeps the table of the three nations' names, colours and faction ids.
+
 Branch `claude/three-empire-war-20261121`. Documents only so far; nothing in the game has changed.
 
 The owner asked for the open world of Game 3D (Fallen Sky) to become a three-empire war: a long story with a reason behind every quest, 50 to 70 quests, adventure spots shaped into the land, monsters and voices, with quests that send rival players to the same places so they end up fighting each other, all running smoothly in the browser.

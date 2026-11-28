@@ -1,5 +1,7 @@
 # The War of Three Roads, band 1: The opening: the town and the Gate Fields
 
+> **Retired on 2026-11-27.** The War of Three Roads story was removed from the game by the owner's decision; its tools were kept. This document is history. See [README.md](../README.md).
+
 Every pledge of this band with every line that is spoken, in order. Made from `src/components/game3d/threeroads/script/band1.mjs` by `node scripts/print-three-roads-script.mjs`: change the data file, not this page.
 
 4 pledges, 63 spoken lines, 7,256 characters to record.

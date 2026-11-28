@@ -1,6 +1,7 @@
 // The pledge-world subsystem itself, driven through a fake window (events and
 // keys), the real Three Roads bus and a small quest store built from the
 // engine's pure functions.
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { clearRegisteredPledges } from '../src/components/game3d/pledges/pledgeRegistry.mjs';

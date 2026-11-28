@@ -1,3 +1,4 @@
+import './fixtures/three-roads-sample/install.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -149,16 +150,15 @@ test('collision is asked of every live subsystem and a failing one is switched o
   assert.equal(world.resolveCollision(null, null, 0.6), false);
 });
 
-test('GameWorld3D has exactly one hook: create behind the switch, update, dispose', () => {
+test('GameWorld3D no longer mounts the story tools: the War of Three Roads hook is gone', () => {
   const source = readFileSync(
     new globalThis.URL('../src/components/game3d/GameWorld3D.jsx', import.meta.url), 'utf8');
   const count = pattern => (source.match(pattern) || []).length;
-  assert.equal(count(/threeRoadsEnabled\(window\)\?createThreeRoadsWorld\(/g), 1);
-  assert.equal(count(/threeRoads\?\.update\(delta,model\.position\)/g), 1);
-  assert.equal(count(/threeRoads\?\.dispose\(\)/g), 1);
-  assert.equal(count(/threeRoads\?\.resolveCollision\(model\.position,/g), 1);
-  assert.equal(count(/threeRoads\b/g), 7, 'no other use of the Three Roads world in GameWorld3D');
-  // The switch, the world, and the admin test preview another agent added on 2026-11-23.
+  assert.equal(count(/createThreeRoadsWorld/g), 0);
+  assert.equal(count(/threeRoadsEnabled/g), 0);
+  assert.equal(count(/\bthreeRoads\b/g), 0, 'no use of a Three Roads world in GameWorld3D');
+  assert.equal(count(/__gw3dThreeRoads/g), 0);
+  // What is left is the admin test preview another agent added on 2026-11-23.
   const imported = [...source.matchAll(/from '\.\/threeroads\/([\w/]+)\.mjs'/g)].map(match => match[1]).sort();
-  assert.deepEqual(imported, ['ThreeRoadsWorld', 'questTestRuntime', 'threeRoadsFlag'], 'nothing else of the Three Roads is imported');
+  assert.deepEqual(imported, ['questTestRuntime']);
 });
