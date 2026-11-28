@@ -7,7 +7,8 @@ function WorldFrame() {
   useEffect(()=>{
     if(window.parent===window)return;
     let alive=true, api=null;
-    const send=(event)=>{if(alive)window.parent.postMessage({channel:'fantasy-world',...event},location.origin);};
+    const run=new URLSearchParams(location.search).get('run');
+    const send=(event)=>{if(alive)window.parent.postMessage({channel:'fantasy-world',...event,run},location.origin);};
     const receive=(e)=>{
       if(e.origin!==location.origin||e.source!==window.parent||e.data?.channel!=='fantasy-host'||!api)return;
       const {type,data}=e.data;

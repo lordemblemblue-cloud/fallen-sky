@@ -4,6 +4,7 @@
 // re-read as proof, so deleted-member announcements fail closed. Replayed
 // creation announcements are deduplicated.
 
+import { readBoundedGuestBody } from '../../shared/readBoundedGuestBody.mjs';
 import { createClientFromRequest } from 'npm:@base44/sdk@0.8.25';
 
 const respond = (body: unknown, status = 200) => Response.json(body, {
@@ -24,14 +25,21 @@ Deno.serve(async (req) => {
   if (req.method !== 'POST') return respond({ error: 'Method not allowed' }, 405);
   const secret = Deno.env.get('CLAN_MEMBERSHIP_EVENT_SECRET') || '';
   if (secret.length < 32) return respond({ error: 'Clan notification unavailable' }, 503);
-  const raw = await req.text();
-  if (raw.length > 16_000) return respond({ error: 'Request too large' }, 413);
   const stamp = req.headers.get('x-clan-event-time') || '';
   const signature = req.headers.get('x-clan-event-signature') || '';
   if (!/^[0-9]{13}$/.test(stamp) || !/^[0-9a-f]{64}$/.test(signature) ||
       Math.abs(Date.now() - Number(stamp)) > 120_000) {
     return respond({ error: 'Unauthorized' }, 401);
   }
+  let raw: string | null;
+  try {
+    raw = await readBoundedGuestBody(req, 16_000);
+  } catch {
+    return respond({ error: 'Invalid request' }, 400);
+  }
+  if (raw === null) return respond({ error: 'Request too large' }, 413);
+  // A slow request must not extend the signature's validity window.
+  if (Math.abs(Date.now() - Number(stamp)) > 120_000) return respond({ error: 'Unauthorized' }, 401);
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret),
     { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const expected = signedHex(new Uint8Array(await crypto.subtle.sign('HMAC', key,
