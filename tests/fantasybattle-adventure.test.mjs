@@ -374,3 +374,33 @@ test('combine consumes only a spare bow, shares enhancement cap and preserves sa
  assert.ok(A.isProfile(p));assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
  const insufficient={...before,gold:0};assert.throws(()=>A.combineWeapon(insufficient));
 });
+
+import {ascensionLevel,activeGearSet,scaledSet} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+test('ascension increases only completed set bonuses by 25 percent per rank, per wearer',()=>{
+ let p={...A.createProfile('Ascender'),xp:300,gold:1000};
+ p={...p,inventory:{...p.inventory,sapphireOre:50,pilgrimCuirass:2,pilgrimCloak:2}};
+ assert.equal(A.ascendQuote(p).ok,false);
+ p=A.equipGear(p,'hero','armor','pilgrimCuirass');
+ assert.throws(()=>A.ascendSet(p));
+ p=A.equipGear(p,'hero','mantle','pilgrimCloak');
+ const baseline=A.heroStats(p),baseInventory=p.inventory,baseEnhancements=p.enhancements;
+ for(let rank=1;rank<=4;rank++){
+  const q=A.ascendQuote(p);assert.ok(q.ok);assert.equal(q.level,rank-1);
+  const before=p;p=A.ascendSet(p);
+  assert.equal(p.gold,before.gold-q.cost);assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre-q.ore);
+  assert.equal(ascensionLevel(p,'hero','pilgrim'),rank);assert.equal(activeGearSet(p,'hero').def,2+rank*.5);
+  assert.equal(A.heroStats(p).def,baseline.def+rank*.5);assert.equal(A.heroStats(p).atk,baseline.atk);
+  assert.equal(A.heroStats(p).spd,baseline.spd);assert.ok(A.isProfile(p));
+ }
+ assert.equal(p.inventory.pilgrimCuirass,baseInventory.pilgrimCuirass);assert.deepEqual(p.enhancements,baseEnhancements);
+ assert.equal(A.ascendQuote(p).ok,false);assert.throws(()=>A.ascendSet(p));
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ const removed=A.equipGear(p,'hero','mantle',null);assert.equal(activeGearSet(removed,'hero'),null);assert.equal(ascensionLevel(removed,'hero','pilgrim'),4);
+ const restored=A.equipGear(removed,'hero','mantle','pilgrimCloak');assert.deepEqual(A.heroStats(restored),A.heroStats(p));
+ let ally=A.rewardVictory(p,{id:'wilds_grove_01'}).profile;ally=A.recruitCompanion(ally,'groveArcher');
+ ally=A.equipGear(ally,'groveArcher','armor','pilgrimCuirass');ally=A.equipGear(ally,'groveArcher','mantle','pilgrimCloak');
+ assert.equal(activeGearSet(ally,'groveArcher').def,2);assert.equal(A.ascendQuote(ally,'groveArcher').level,0);
+ ally=A.ascendSet(ally,'groveArcher');assert.equal(activeGearSet(ally,'groveArcher').def,2.5);assert.equal(activeGearSet(ally,'hero').def,4);
+ for(const ascensions of [{hero:{pilgrim:5}},{hero:{pilgrim:1.5}},{hero:{unknown:1}},{mistScout:{pilgrim:1}},{unknown:{pilgrim:1}},null])assert.equal(A.isProfile({...p,ascensions}),false);
+ assert.equal(scaledSet('moonveil',1).spd,1.25);
+});
