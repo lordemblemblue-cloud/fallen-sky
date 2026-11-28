@@ -1551,3 +1551,7 @@
 
 /* Six live conversation options share the original navigation area. */
 .fa-dialogue-escort .fa-dialogue-nav{grid-template-rows:repeat(6,minmax(0,1fr));gap:2%;overflow:auto;pointer-events:auto}
+
+/* Keep socket selectors inside the existing original item-information panel. */
+.fa-smith-socket-info label{display:flex;align-items:center;gap:.25em;margin-bottom:.22em}
+.fa-smith-socket-info select{min-width:0;flex:1;font:inherit;max-width:100%;color:#e6efff;background:#182b4c;border:1px solid #748aaa;border-radius:3px}
