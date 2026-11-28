@@ -1,0 +1,223 @@
+{
+  "version": 1,
+  "package": "archer",
+  "generatedBy": "AtomXEveAnimationStudio packages/archer/blender/archer_export.py",
+  "note": "Not loaded by the game. Same clip format as public/models/animations/weapons (weaponClipPack.mjs).",
+  "fps": 60.0,
+  "sequence": [
+    "archer_combat_idle",
+    "archer_nock",
+    "archer_raise",
+    "archer_draw",
+    "archer_full_draw_aim",
+    "archer_sustained_aim",
+    "archer_release",
+    "archer_follow_through",
+    "archer_lower",
+    "archer_return_idle",
+    "archer_combat_idle"
+  ],
+  "gameMappingSuggestion": {
+    "note": "Not applied. The game's own bow states are faster (bowDraw 0.45 s from low ready to full draw). Mapping these clips onto game states is the owner's call.",
+    "idleBow": "archer_combat_idle",
+    "bowHold": "archer_sustained_aim",
+    "bowDraw": "archer_raise + archer_draw (nock skipped or overlapped), compressed to the game's timing",
+    "bowRelease": "archer_release + archer_follow_through + archer_lower"
+  },
+  "bodies": {
+    "fused-male-v1": {
+      "dir": "",
+      "clips": {
+        "archer_combat_idle": {
+          "file": "archer_combat_idle.glb",
+          "duration": 2.4,
+          "loop": true,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 364292,
+          "sha256": "b1acc65b1fd88f0e054e81e2e975a9e4a0c6059332d7715246ba3630f6aede2e"
+        },
+        "archer_nock": {
+          "file": "archer_nock.glb",
+          "duration": 0.8,
+          "nock": 0.6333,
+          "cancel": 0.8,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 156112,
+          "sha256": "10957665e1d35602becabc4e8cc6380e5ad268bb2019a9e73516b2397059060e"
+        },
+        "archer_raise": {
+          "file": "archer_raise.glb",
+          "duration": 0.4,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 104152,
+          "sha256": "f0f4ded0361f766d44fb789baf5f5379ba8cb1132773df0dfed764b6ac242431"
+        },
+        "archer_draw": {
+          "file": "archer_draw.glb",
+          "duration": 0.5,
+          "full": 0.5,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 117140,
+          "sha256": "404c32dceda82734fb78fd63f7b6621d83db6b690eca7e5573149e82e2dde1a9"
+        },
+        "archer_full_draw_aim": {
+          "file": "archer_full_draw_aim.glb",
+          "duration": 0.3,
+          "full": 0.0,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 91152,
+          "sha256": "370a69d629eb87004343b330247f22c20937f1cf57e594154990f658e121120b"
+        },
+        "archer_sustained_aim": {
+          "file": "archer_sustained_aim.glb",
+          "duration": 2.0,
+          "full": 0.0,
+          "loop": true,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 312344,
+          "sha256": "cce06053b0031e9adac44fa0bb44ff9eede6c154ecced2c5cac13c1991403c0e"
+        },
+        "archer_release": {
+          "file": "archer_release.glb",
+          "duration": 0.2,
+          "hit": 0.0167,
+          "cancel": 0.1,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 78148,
+          "sha256": "8b9c670e01dc75cb952c5d07931bc42dcf2d9ff9608fd911fe28f4247b3591da"
+        },
+        "archer_follow_through": {
+          "file": "archer_follow_through.glb",
+          "duration": 0.45,
+          "cancel": 0.15,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 110648,
+          "sha256": "11cbd9ee95c1158485e0fc6ba538cb5ae6b478f598d0918ca73bec8d25966084"
+        },
+        "archer_lower": {
+          "file": "archer_lower.glb",
+          "duration": 0.55,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 123636,
+          "sha256": "6b35a2ef9399f0662cf63fcef92ab5a5afe71ef36b3a68f1bc069e8eab3f52ae"
+        },
+        "archer_return_idle": {
+          "file": "archer_return_idle.glb",
+          "duration": 0.4,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 104152,
+          "sha256": "9437bb35dcf30b8fe9d997ebeaca1b50a92003259e61fa7efcac4ca55a1648a4"
+        }
+      }
+    },
+    "fused-female-v1": {
+      "dir": "female/",
+      "clips": {
+        "archer_combat_idle": {
+          "file": "female/archer_combat_idle.glb",
+          "duration": 2.4,
+          "loop": true,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 626664,
+          "sha256": "fbd7b3c726461eebb5473996a04dc26abda89f9e679b929c42e80113a98352d2"
+        },
+        "archer_nock": {
+          "file": "female/archer_nock.glb",
+          "duration": 0.8,
+          "nock": 0.6333,
+          "cancel": 0.8,
+          "status": "needs-review",
+          "qaIssues": [
+            "bow inside the body by 2.5 cm at frame 11 (LeftUpLeg-LeftLeg)"
+          ],
+          "bytes": 268488,
+          "sha256": "c1761e1d75c12636cb603ea71091ac125605a6c3ec9e7c824be12b27580acf3b"
+        },
+        "archer_raise": {
+          "file": "female/archer_raise.glb",
+          "duration": 0.4,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 178968,
+          "sha256": "3832afc325fb5c765b6dc294eee31c38be0722c52e34dbe490f8234eb5bfbb8f"
+        },
+        "archer_draw": {
+          "file": "female/archer_draw.glb",
+          "duration": 0.5,
+          "full": 0.5,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 201356,
+          "sha256": "cf5df853d8f698fbe0e24eab47a419ee19125fee2aee59a896007f1f5beff440"
+        },
+        "archer_full_draw_aim": {
+          "file": "female/archer_full_draw_aim.glb",
+          "duration": 0.3,
+          "full": 0.0,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 156612,
+          "sha256": "1e1c4822756115dbf49b4998ef5c38071576362124405efed635c39d6e4b3216"
+        },
+        "archer_sustained_aim": {
+          "file": "female/archer_sustained_aim.glb",
+          "duration": 2.0,
+          "full": 0.0,
+          "loop": true,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 537272,
+          "sha256": "86d42fa686d54461550adbf2b18d793cffe8ac981f571d3088ec20d0f3c2d3bc"
+        },
+        "archer_release": {
+          "file": "female/archer_release.glb",
+          "duration": 0.2,
+          "hit": 0.0167,
+          "cancel": 0.1,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 134248,
+          "sha256": "28ebba7ecbbb2cb0fd72b78a272fc75e9889a4bc0d838ac49e086dbd534897cb"
+        },
+        "archer_follow_through": {
+          "file": "female/archer_follow_through.glb",
+          "duration": 0.45,
+          "cancel": 0.15,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 190156,
+          "sha256": "9d4dabff06a826cf94268ab9417b9c18622d0134b74a5b8fa54633e940471b8f"
+        },
+        "archer_lower": {
+          "file": "female/archer_lower.glb",
+          "duration": 0.55,
+          "status": "needs-review",
+          "qaIssues": [
+            "bow inside the body by 2.3 cm at frame 8 (Hips-Spine2)"
+          ],
+          "bytes": 212552,
+          "sha256": "e6ada21401788cfe5c8e3ffd1aa1af1791b15ef04592208dacfe15ab298c0802"
+        },
+        "archer_return_idle": {
+          "file": "female/archer_return_idle.glb",
+          "duration": 0.4,
+          "status": "approved-by-qa",
+          "qaIssues": [],
+          "bytes": 178968,
+          "sha256": "3c82d2698031a677a349a80dda08adeade42d8fe66dc788e71ad4b96c476a923"
+        }
+      }
+    }
+  }
+}
