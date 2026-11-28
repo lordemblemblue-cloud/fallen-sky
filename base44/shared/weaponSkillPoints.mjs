@@ -2,6 +2,8 @@
 // Attribute points and skill-use XP are different currencies and are never spent here.
 // Five consecutive paid stages per weapon; reaching a stage makes its registered
 // abilities and its paired passive available without a second unlock fee.
+import { AXE_LEVEL_CAP } from './axePowerBudget.ts';
+
 export const WEAPON_SKILL_POINTS_KEY = 'axe_weapon_skill_points_v1';
 export const WEAPON_SKILL_TIERS = Object.freeze([20, 30, 40, 50, 60]);
 export const WEAPON_SKILL_PATHS = Object.freeze([
@@ -9,7 +11,10 @@ export const WEAPON_SKILL_PATHS = Object.freeze([
   Object.freeze({ id: 'range', label: 'Bow', role: 'ranged', weapon: 'ranged' }),
   Object.freeze({ id: 'defense', label: 'Guardian', role: 'defensive', weapon: 'guardian' }),
 ]);
-export const WEAPON_SKILL_CAP = 100;
+// The last character level that earns weapon skill points: the hero level cap. The owner chose to
+// carry the points on past 100 to 155 (2026-11-19): all three paths are funded by level 113, and
+// level 155 has 994. docs/game3d/LEVEL_CAP_155_20261119.md
+export const WEAPON_SKILL_CAP = AXE_LEVEL_CAP;
 export const WEAPON_SKILL_PATH_COST = WEAPON_SKILL_TIERS.reduce((a, b) => a + b, 0);
 const PATH_IDS = WEAPON_SKILL_PATHS.map(p => p.id);
 const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
@@ -17,6 +22,7 @@ const levelOf = level => Number.isInteger(level) ? Math.max(1, Math.min(WEAPON_S
 
 // +1 guaranteed skill point per 20 character levels, on top of 3 guaranteed.
 // Level 100 yields 502 across all 99 earned levels: 2.51 of three 200-point paths.
+// Past 100 the same rule goes on (8, 9, then 10 a level): 606 at 113, 994 at 155.
 // This intentionally supersedes the earlier illustrative +0.2% proposal; that
 // percentage would not fund the owner's requested two-and-a-half weapon paths.
 export function weaponSkillPointsAtLevel(level) {
