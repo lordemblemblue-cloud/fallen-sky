@@ -59,6 +59,8 @@ test('online entry mounts the match only after selection, with confirmation carr
   assert.match(game, /props\.online && props\.mode !== 'story'/);
   assert.match(game, /if \(selected\) return <DuelistMatch \{\.\.\.props\} classId=\{selected\} entryClassConfirmed/);
   assert.match(game, /setSelected\(id\)/);
-  assert.match(game, /initialChosenRef\.current = entryClassConfirmed/);
-  assert.match(game, /setEntryClass\(\{ generation, confirmed: entryClassConfirmed \}\)/);
+  // a new match (no saved practice to resume, not the menu's demonstration) starts from the online pick
+  assert.match(game, /const confirmed = !!demonstration \|\| \(resume \? resume\.confirmed : entryClassConfirmed\);/);
+  assert.match(game, /initialChosenRef\.current = confirmed;/);
+  assert.match(game, /setEntryClass\(\{ generation, confirmed \}\)/);
 });
