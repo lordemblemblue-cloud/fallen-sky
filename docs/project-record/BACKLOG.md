@@ -43,7 +43,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FS-19 | Achievements | Awaiting information | none found | MI-FS-P3 |
 | FS-20 | Multiplayer: secure guest world join | Blocked | issue #298 | SE-02 |
 | FS-21 | PvP/PK rules, faction governance | Testing required | WORLD_PVP_PK…, FACTION_GOVERNANCE… | Server APIs; FS-D8 |
-| FS-22 | Reward authority (R137–R145 contracts and fixtures) | In progress | PR #420 and #425 merged (#425 at 18:49); fixtures only, no runtime | FS-D14; WP-FS-09 gap map |
+| FS-22 | Reward authority (R137–R153 contracts, fixtures and integration audit) | In progress; production integration blocked | R150 maps 20 cases; R151 Node 14 pass/1 failing TODO, six diagnostics; R152 schema discrepancy; [R153 discovery service recovery](../game3d/threads-of-our-pain/R153_DISCOVERY_SERVICE_RECOVERY_AND_DELIVERY_GATES.md): missing original handler/schema, four actual-source diagnostics incl. three bag/vault gaps | FS-D14 / MI-FS-P4 / DP-03: original contract or approved replacement, staging recovery and provider proof; no live implementation |
 | FS-23 | Luna mansion geometry (old map) | Superseded unless the recreated map needs it | issue #261; owner 2026-11-27 "not using the old map" | FS-D10 |
 | FS-24 | War of Three Roads (bands 1–2 built, flag off; band 3 written) | Implemented (kept switched off by the owner, 2026-11-27) | `docs/game3d/three-empires/OWNER_REQUESTS.md`; merged `0b6ca52d` | Nothing more is built; reuse of its systems for the Threads is FS-D16 |
 | FS-25 | Cave-mouths branch `claude/wolfveil-cave-mouths-20261123` | Awaiting approval | conflicts with the 2026-11-25 removals | Close or keep (FS-D11) |
@@ -117,7 +117,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | SH-01 | Games hub (left/right menu; three tiles) | Implemented | PR #311; 14/14 | Hero PNG → WebP needs owner OK |
 | SH-02 | WebGPU renderer and recovery utilities shared by the games | Implemented | `src/lib/webgpu*`; targeted suites pass; the four hub-verified fixes merged 2026-11-27 | Physical-GPU check (PF-01) |
 | SH-03 | Mobile touch controls (shared component) | Implemented | `MobileTouchControls`; writes layout to localStorage on mount [mem] | — |
-| SH-04 | Guest saves: Fallen Sky vault, Fantasy Battle local slots, Duelist progress file | Testing required | three separate stores | Keep separate (directive §8); no forced sharing |
+| SH-04 | Guest saves: Fallen Sky vault, Fantasy Battle local slots, Duelist progress file | Testing required; Fallen Sky staging blocked | [R154 guest recovery](../game3d/threads-of-our-pain/R154_GUEST_CLOUD_SAVE_RECOVERY_PACKAGE.md): five positive actual-handler diagnostics, one concurrent save gap; private guest schema unregistered | Keep three stores separate; DP-03 / MI-FS-P4 staging and revision correction approval |
 | SH-05 | Project record and hand-off protocol | In progress | this folder | Owner review |
 
 ## Animation production

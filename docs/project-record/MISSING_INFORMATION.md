@@ -157,6 +157,18 @@ These come from the story documents' own open questions (`docs/game3d/threads-of
 
 ---
 
+### MI-FS-P4 Reward transaction integration and provider evidence (open)
+- **R154 evidence update:** [R154 guest recovery](../game3d/threads-of-our-pain/R154_GUEST_CLOUD_SAVE_RECOVERY_PACKAGE.md). Guest cloud-save track independent of missing discovery/account ledger. Five positive handler diagnostics and one simulated concurrent same-revision overwrite gap. Need approved disposable staging, quota row cardinality, provider conditional-write proof, and revision correction before deployment.
+- **R153 evidence update:** [R153 discovery service recovery](../game3d/threads-of-our-pain/R153_DISCOVERY_SERVICE_RECOVERY_AND_DELIVERY_GATES.md). Available Git history and exact old-repository paths did not recover original handler/schema. Actual Node diagnostics reproduced full-bag overflow, vault duplication and restore vault omission. Need original deployment/archive or separately approved replacement contract; D0–D5 staging gates recorded. Do not register invented schema or deploy from shared rule module alone.
+- **R152 evidence update:** [R152 schema reconciliation](../game3d/threads-of-our-pain/R152_BASE44_SCHEMA_RECONCILIATION_PREFLIGHT.md). All 84 source definitions parse, 83 distinct names vs 78 registered; five source-only (four reward/vault definitions and companion preferences). Discovery absent from both sets; root cause and historic data status unknown. Targeted staging registration and rollback approval needed; no blanket sync.
+- **R151 evidence update:** [R151 Base44 intake](../game3d/threads-of-our-pain/R151_BASE44_PROVIDER_INTAKE_AND_CORRECTION_GATES.md). Actual Node runs completed (14 compatibility passes, 1 failing TODO, 6 diagnostic observations); app schema API omits five Game3D entities and confirms three named schemas not found. Deployed function listing truncated. Provider guarantees, schema reconciliation and disposable scope remain open.
+- **Project:** Fallen Sky. **Feature:** FS-22 / WP-FS-09 / FS-D14, Blacksmith and quest reward authority.
+- **Completed:** R139 contract; R140–R149 isolated fixtures; [R150 gap map](../game3d/threads-of-our-pain/R150_REWARD_AUTHORITY_RUNTIME_GAP_MAP.md) maps all 20 cases and reproduces three client-path gaps using actual source excerpts with injected I/O.
+- **Missing:** deployed SDK and conditional-update/upsert guarantees for Game3D entities; actual discovery function/schema; disposable staging scope and checkout runner; approval of legacy ambiguous-ID reconciliation, restore semantics, and client/server application strategy.
+- **Why required:** no proof of multi-record atomicity or safe legacy migration; local receipt replay can double-charge in the diagnostic harness. Preserve guest-only entry and existing upgrades.
+- **Questions:** Can the implementation lead verify deployed provider capabilities on disposable records, obtain the exact discovery source and run the R147/R150 Node suites? After evidence, does owner authorize a narrowly scoped implementation-ready package (no live migration until separately reviewed)?
+- **Files:** provider/deployment evidence and test outputs; no credentials in repo. **Affected:** Character Vault, itemUpgrade, material inventory, discovery claims, quest rewards, NG+ and backup restore. **Can continue:** exact checkout tests, non-mutating provider review, other ready packages.
+
 ## Group FS-W. Fallen Sky world and bosses
 
 ### MI-FS-W1 The world that replaces the platform
