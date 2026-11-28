@@ -1,0 +1,410 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M17",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "R35-R38_RECOVERED_SOURCE.md",
+    "R93_M16-M18_SOURCE_GROUNDED_SCENE_REFINEMENTS.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R120_M17_M18_OBSERVATORY_AND_TWELVE_CONSTRUCTION_PROMPTS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true,
+    "localSurveyDatesOnly": true
+  },
+  "stages": [
+    {
+      "id": "M17_GUIDE",
+      "reality": "PRESERVED",
+      "anchor": "M17_GUIDE",
+      "requires": [
+        "M16_COMPLETE"
+      ],
+      "evidence": "Actual guide and keeper introduction; inspect local survey drawings"
+    },
+    {
+      "id": "ARCH15",
+      "reality": "PRESERVED",
+      "anchor": "ARCH15",
+      "requires": [
+        "M17_GUIDE"
+      ],
+      "evidence": "Actual landmark observation via sighting ring or authored accessible equivalent"
+    },
+    {
+      "id": "PEAK15",
+      "reality": "PRESERVED",
+      "anchor": "PEAK15",
+      "requires": [
+        "M17_GUIDE"
+      ],
+      "evidence": "Actual landmark observation via sighting ring or authored accessible equivalent"
+    },
+    {
+      "id": "YARD15",
+      "reality": "PRESERVED",
+      "anchor": "YARD15",
+      "requires": [
+        "M17_GUIDE"
+      ],
+      "evidence": "Actual landmark observation via sighting ring or authored accessible equivalent"
+    },
+    {
+      "id": "REST15_READY",
+      "reality": "PRESERVED",
+      "anchor": "REST15",
+      "requires": [
+        "ARCH15",
+        "PEAK15",
+        "YARD15"
+      ],
+      "evidence": "All three unique preserved observations and safe rest"
+    },
+    {
+      "id": "MIGRATION18",
+      "reality": "ORIGINAL",
+      "anchor": "LOOKOUT18",
+      "requires": [
+        "REST15_READY"
+      ],
+      "evidence": "Authored transition independent of ring; actual destination preflight"
+    },
+    {
+      "id": "ARCH18",
+      "reality": "ORIGINAL",
+      "anchor": "ARCH18",
+      "requires": [
+        "MIGRATION18"
+      ],
+      "evidence": "Actual original counterpart observation and protected approach"
+    },
+    {
+      "id": "PEAK18",
+      "reality": "ORIGINAL",
+      "anchor": "PEAK18",
+      "requires": [
+        "MIGRATION18"
+      ],
+      "evidence": "Actual original counterpart observation and protected approach"
+    },
+    {
+      "id": "YARD18",
+      "reality": "ORIGINAL",
+      "anchor": "YARD_PERCH",
+      "requires": [
+        "MIGRATION18"
+      ],
+      "evidence": "Actual original counterpart observation and protected approach"
+    },
+    {
+      "id": "FRACTURE18_SEEN",
+      "reality": "ORIGINAL",
+      "anchor": "FRACTURE_VIEW",
+      "requires": [
+        "ARCH18",
+        "PEAK18",
+        "YARD18"
+      ],
+      "evidence": "Actual bounded anomaly and external invader observation; no identifiable younger actor"
+    },
+    {
+      "id": "WEST_STAIRS_SAFE",
+      "reality": "ORIGINAL",
+      "anchor": "WEST_STAIRS",
+      "requires": [
+        "FRACTURE18_SEEN"
+      ],
+      "evidence": "Actual obstruction clearance or guard assistance plus verified group passage to shelter"
+    },
+    {
+      "id": "RETURN15",
+      "reality": "PRESERVED",
+      "anchor": "REST15",
+      "requires": [
+        "WEST_STAIRS_SAFE"
+      ],
+      "evidence": "Authored safe return from original rest; retain local arrival"
+    },
+    {
+      "id": "PAIRS_VERIFIED",
+      "reality": "PRESERVED",
+      "anchor": "COMPARE_TABLE",
+      "requires": [
+        "RETURN15",
+        "ARCH15",
+        "PEAK15",
+        "YARD15",
+        "ARCH18",
+        "PEAK18",
+        "YARD18"
+      ],
+      "evidence": "All three correct distinct record pairs, with optional confirmed narrated assist"
+    },
+    {
+      "id": "GODDESS_REVEAL",
+      "reality": "PRESERVED",
+      "anchor": "GODDESS_PAD",
+      "requires": [
+        "PAIRS_VERIFIED"
+      ],
+      "evidence": "Actual authorized protector account of deliberate historical alignment and both lived realities"
+    },
+    {
+      "id": "RECORD_POLICY",
+      "reality": "PRESERVED",
+      "anchor": "KEEPER_RETURN",
+      "requires": [
+        "GODDESS_REVEAL"
+      ],
+      "evidence": "Choose limited warning or trusted custody, preserve consent and observations"
+    },
+    {
+      "id": "M17_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "SANCTUARY_EXIT",
+      "requires": [
+        "RECORD_POLICY"
+      ],
+      "evidence": "Receive safe sanctuary route and M18 eligibility only"
+    }
+  ],
+  "actors": [
+    {
+      "role": "guide",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "instrument keeper",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "travelers",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "Moon Goddess",
+      "reality": "AUTHORIZED_DIVINE",
+      "proposedNpcId": "FS_NPC_004",
+      "runtimeId": null
+    },
+    {
+      "role": "lookout",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "evacuation group",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_014",
+      "name": "Neris Tideborne",
+      "relationship": "Thematic association only; no mandatory physical appearance"
+    },
+    {
+      "id": "FS_NPC_018",
+      "name": "Veyron Starwatch",
+      "relationship": "Astronomer and S15/D12 thematic association; not confirmed instrument keeper identity"
+    },
+    {
+      "id": "FS_NPC_023",
+      "name": "Aster Windcrest",
+      "relationship": "Thematic association only; no mandatory physical appearance"
+    },
+    {
+      "id": "FS_NPC_027",
+      "name": "Riven Ashborne",
+      "relationship": "Thematic association only; no mandatory physical appearance"
+    },
+    {
+      "id": "FS_NPC_030",
+      "name": "Unnamed Goddess",
+      "relationship": "Developer-only antagonist association; no physical appearance assigned"
+    }
+  ],
+  "survey": {
+    "landmarks": [
+      {
+        "id": "ARCH",
+        "preserved": "intact arch",
+        "original": "collapsed arch"
+      },
+      {
+        "id": "PEAK",
+        "preserved": "peak notch",
+        "original": "same stable peak notch"
+      },
+      {
+        "id": "YARD",
+        "preserved": "recently damaged receiving yard",
+        "original": "ruined receiving yard"
+      }
+    ],
+    "sixUniqueObservations": true,
+    "eachRealityAnyOrder": true,
+    "accessibleStaticComparison": true,
+    "noNightGate": true,
+    "noColorGate": true,
+    "recordFields": [
+      "source",
+      "reality",
+      "anchor",
+      "evidenceType"
+    ],
+    "instrument": {
+      "observesOnly": true,
+      "createsFracture": false,
+      "causesMigration": false,
+      "changesCollision": false,
+      "summonsEnemies": false,
+      "freeCameraOnClose": true
+    }
+  },
+  "fracture": {
+    "afterThreeOriginalObservations": true,
+    "boundedNoncollidingProxy": true,
+    "fullDualWorlds": false,
+    "traversableBackdrop": false,
+    "identifiableYoungerActor": false,
+    "synchronizedConversation": false,
+    "externalInvadersOriginalOnly": true
+  },
+  "protection": {
+    "routes": [
+      "move_light_obstruction",
+      "request_guard_clearance"
+    ],
+    "actualGroupPassageRequired": true,
+    "guardedWaiting": true,
+    "retainArrivalOnRetry": true,
+    "killQuota": false,
+    "warVictory": false
+  },
+  "matching": {
+    "pairs": [
+      {
+        "preserved": "ARCH15",
+        "original": "ARCH18"
+      },
+      {
+        "preserved": "PEAK15",
+        "original": "PEAK18"
+      },
+      {
+        "preserved": "YARD15",
+        "original": "YARD18"
+      }
+    ],
+    "anyOrder": true,
+    "incorrectRetry": true,
+    "confirmedNarratedAssist": true,
+    "resetPreservesObservations": true,
+    "timer": false,
+    "physicalAlignment": false,
+    "optionalDiscoveryGate": false
+  },
+  "revelation": {
+    "speaker": "Moon Goddess",
+    "presentation": "UNRESOLVED_BRIEF_APPEARANCE_OR_PROJECTION",
+    "doesNotAbandonSealAssumed": true,
+    "deliberateHistoricalAlignment": true,
+    "hostileGoddessExploitsSuffering": true,
+    "humanAgencyPreserved": true,
+    "bothLivesReal": true,
+    "namesAdversary": false,
+    "originalInvasionCulprit": "UNCONFIRMED",
+    "assassinationCulprit": "UNCONFIRMED",
+    "intermediaries": "UNCONFIRMED",
+    "ultimateMotive": "UNRESOLVED",
+    "exactThreshold": "UNRESOLVED",
+    "lifeForceDetail": "M18",
+    "finalChoice": "M19",
+    "thirdWorldSelector": false
+  },
+  "recordPolicy": {
+    "choices": [
+      "limited_warning",
+      "trusted_custodians"
+    ],
+    "allLeadToM18": true,
+    "retainObservations": true,
+    "noWitnessNameExposure": true,
+    "noFactionBlame": true
+  },
+  "migration": {
+    "authoredOnly": true,
+    "protagonistOnly": true,
+    "preflightCollisionControllerRigs": true,
+    "rollbackOnFailure": true,
+    "oneActiveReality": true
+  },
+  "optionalIndependent": [
+    "S42",
+    "S40",
+    "S29",
+    "S26",
+    "S41",
+    "S43",
+    "S15",
+    "D12"
+  ],
+  "optionalContextRules": "Actual consent-scoped eligible records only; S15/D12 thematic association not core source requirement; no credit or grant",
+  "routes": {
+    "preserved": [
+      "ROAD15",
+      "GUIDE",
+      "COURTYARD",
+      "CHARTS/INSTRUMENT",
+      "REST15",
+      "TERRACE/COMPARE",
+      "GODDESS",
+      "KEEPER",
+      "SANCTUARY_EXIT"
+    ],
+    "original": [
+      "LOOKOUT18",
+      "ARCH/PEAK/YARD_PERCH",
+      "FRACTURE_VIEW",
+      "WEST_STAIRS",
+      "SHELTER18",
+      "REST18"
+    ],
+    "transforms": null
+  },
+  "completion": {
+    "next": "M18_READY",
+    "autoAccept": false,
+    "rewardGrant": false,
+    "ordinaryMainXpProposed": true,
+    "newPower": false,
+    "globalWarEnds": false
+  },
+  "prohibitions": [
+    "ring-driven migration",
+    "traversable fracture",
+    "forced optional discovery",
+    "confirmed invasion culprit",
+    "public witness identity leak",
+    "Celestial Sight",
+    "third-world selection",
+    "final ending choice",
+    "mandatory glide",
+    "runtime activation"
+  ]
+}

@@ -1,0 +1,199 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M09",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M09.md",
+    "M10.md",
+    "R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md",
+    "R106_M01-M10_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md",
+    "R116_M09_M10_SANCTUARY_INTERCEPTION_CONSTRUCTION_PROMPTS.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true,
+    "pressureEcho": "non-dated proposed R106 variant"
+  },
+  "stages": [
+    {
+      "id": "M09_APPROACH",
+      "reality": "PRESERVED",
+      "anchor": "M09_RECEIVING",
+      "evidence": "Actual route from M08 channel approach via stair or ramp; safe entry",
+      "requires": [
+        "M08_COMPLETE"
+      ]
+    },
+    {
+      "id": "OBSERVED_RITUAL",
+      "reality": "PRESERVED",
+      "anchor": "M09_OBSERVE",
+      "evidence": "Observe unnamed woman and seal from safe shelf; withdrawal permitted",
+      "requires": [
+        "M09_APPROACH"
+      ]
+    },
+    {
+      "id": "SEAL_CONTACT_CONFIRMED",
+      "reality": "PRESERVED",
+      "anchor": "M09_SEAL_CONTACT",
+      "evidence": "Voluntary confirmed contact and actual onset of disturbance; cancel before onset has no receipt",
+      "requires": [
+        "OBSERVED_RITUAL"
+      ]
+    },
+    {
+      "id": "OVERLAP_ACTIVE",
+      "reality": "PRESERVED",
+      "anchor": "M09_SKY15/18",
+      "evidence": "Localized overlap and two skies observed; visible ward prevents crossing",
+      "requires": [
+        "SEAL_CONTACT_CONFIRMED"
+      ]
+    },
+    {
+      "id": "OLDER_WITNESS",
+      "reality": "ORIGINAL",
+      "anchor": "M09_SAFE18",
+      "evidence": "Safe authored perspective transition; actual older actor witnesses threat and calls out",
+      "requires": [
+        "OVERLAP_ACTIVE"
+      ]
+    },
+    {
+      "id": "M09_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "M09_SAFE15",
+      "evidence": "Return at same authored pre-strike beat; save both placements, active perspective, threshold phase and retreat",
+      "requires": [
+        "OLDER_WITNESS"
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "role": "younger protagonist",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "older protagonist",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "Unknown Woman",
+      "reality": "AUTHORIZED_DIVINE",
+      "proposedNpcId": "FS_NPC_030",
+      "runtimeId": null,
+      "questGiver": false
+    },
+    {
+      "role": "shelter attendant",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_015",
+      "name": "Selene Ashveil",
+      "relationship": "Thematic shrine association; not Unknown Woman or mandatory ritual participant"
+    },
+    {
+      "id": "FS_NPC_014",
+      "name": "Neris Tideborne",
+      "relationship": "Thematic sanctuary association only; no physical appearance assigned"
+    }
+  ],
+  "routes": {
+    "preserved": [
+      "M08_CHANNEL_APPROACH",
+      "M09_POSTS",
+      "M09_STAIR or M09_RAMP",
+      "M09_RECEIVING",
+      "M09_OBSERVE",
+      "M09_SEAL",
+      "M09_SAFE15",
+      "M10_ARENA"
+    ],
+    "original": [
+      "M09_CHANNEL18",
+      "M09_ATTENDANT",
+      "M09_LINTEL or M09_SIDE",
+      "M09_SAFE18",
+      "M10_INTERCEPT_START"
+    ],
+    "retreat": "M09_RETREAT",
+    "preM10Crossing": false
+  },
+  "assets": {
+    "publicCrest": "M07_CREST",
+    "personalMark": "M07_MARK_MESH",
+    "distinctD26Crest": true,
+    "sharedLocalSanctuary": true,
+    "actualRigCount": 2,
+    "simultaneousFullWorlds": false,
+    "transforms": null,
+    "verified": false
+  },
+  "contact": {
+    "explicitConfirmation": true,
+    "cancelBeforeDisturbance": "NO_CONTACT_RECEIPT",
+    "releaseAfterDisturbance": "PRESERVE_ONCE",
+    "noLongHold": true,
+    "requiredActualOnset": true,
+    "preContactRetreat": true,
+    "postContactCheckpoint": true
+  },
+  "knowledge": {
+    "womanLabel": "Unknown Woman",
+    "womanRecognizesMark": true,
+    "womanRecognizesIdentity": "UNCONFIRMED",
+    "olderRecognizesWoman": true,
+    "olderRecognizesChildAsSelf": false,
+    "youngerIdentifiesOlderAsSelf": false,
+    "firstResemblanceBeat": "M10",
+    "culprit": "UNCONFIRMED"
+  },
+  "dialogueChoices": [
+    "ask_opening",
+    "ask_protector",
+    "withdraw_observe"
+  ],
+  "handoff": {
+    "next": "M10_READY",
+    "beat": "PRE_STRIKE",
+    "activePerspective": "PRESERVED",
+    "requiredState": [
+      "both actor placements",
+      "active perspective",
+      "threshold phase",
+      "safe egress",
+      "observed clues"
+    ],
+    "requiresSafeCollisionAndRigs": true,
+    "attackOccurred": false,
+    "physicalInterception": false,
+    "autoAccept": false
+  },
+  "optionalDependencies": [],
+  "prohibitions": [
+    "damage before M10",
+    "forced contact",
+    "forced camera",
+    "manual migration",
+    "paired focus",
+    "Celestial Sight",
+    "relic requirement",
+    "new power",
+    "cross-world items",
+    "confirmed antagonist identity",
+    "fake actor substitute",
+    "runtime activation"
+  ]
+}

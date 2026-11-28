@@ -1,0 +1,182 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M07",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "M07.md",
+    "R52_M07-M13_VOICE_PASS.md",
+    "R96_M07-M12_MIDCAMPAIGN_CONTINUITY_RECONCILIATION.md",
+    "R106_M01-M10_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md",
+    "R115_M06_M08_WORLD_THAT_REMEMBERS_CONSTRUCTION_PROMPTS.md",
+    "R99_D01-D10_S01-S10_OPPORTUNITY_WINDOW_AUDIT.md",
+    "D07.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true
+  },
+  "stages": [
+    {
+      "id": "M07_TRAIL",
+      "reality": "PRESERVED",
+      "anchor": "M07_TRAIL",
+      "evidence": "Reach trail using M06 directions; M06 complete",
+      "requires": [
+        "M06_COMPLETE"
+      ]
+    },
+    {
+      "id": "ANCIENT_MARK_INSPECTED",
+      "reality": "PRESERVED",
+      "anchor": "MARK15",
+      "evidence": "Voluntary inspection of ancient carving; include accidental scratch in accessible observation",
+      "requires": [
+        "M07_TRAIL"
+      ]
+    },
+    {
+      "id": "ORIGINAL_ROUTE",
+      "reality": "ORIGINAL",
+      "anchor": "ENTRY18",
+      "evidence": "Authored transfer only; safe destination, actual runner and walkable route",
+      "requires": [
+        "ANCIENT_MARK_INSPECTED"
+      ]
+    },
+    {
+      "id": "FRESH_MARK_AUTHORED",
+      "reality": "ORIGINAL",
+      "anchor": "MARK18",
+      "evidence": "Actual authored tracing and tool slip; matching outline and placement",
+      "requires": [
+        "ORIGINAL_ROUTE"
+      ]
+    },
+    {
+      "id": "ORIGINAL_EXIT",
+      "reality": "ORIGINAL",
+      "anchor": "EXIT18",
+      "evidence": "Runner and hero confirm safe exit",
+      "requires": [
+        "FRESH_MARK_AUTHORED"
+      ]
+    },
+    {
+      "id": "RETURN15",
+      "reality": "PRESERVED",
+      "anchor": "MARK15",
+      "evidence": "Safe authored return; no duplicate actor or item transfer",
+      "requires": [
+        "ORIGINAL_EXIT"
+      ]
+    },
+    {
+      "id": "TEST_ROUTE",
+      "reality": "PRESERVED",
+      "anchor": "EXIT_TEST",
+      "evidence": "Player predicts and physically reaches ledge/split rock with historian",
+      "requires": [
+        "RETURN15"
+      ]
+    },
+    {
+      "id": "HISTORIAN_DEBRIEF",
+      "reality": "PRESERVED",
+      "anchor": "DEBRIEF",
+      "evidence": "Record observed result, sketch and archive directions; disclosure optional",
+      "requires": [
+        "TEST_ROUTE"
+      ]
+    }
+  ],
+  "actors": [
+    {
+      "role": "historian",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "assistant",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "runner",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "shelter resident",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_013",
+      "name": "Doran Ironroot",
+      "relationship": "D07/S09 miner candidate; not M07 historian or mandatory gate"
+    },
+    {
+      "id": "FS_NPC_006",
+      "name": "Lyra the Seeker",
+      "relationship": "M06 directions and M08 archive association; not automatic M07 historian binding"
+    },
+    {
+      "id": "FS_NPC_003",
+      "name": "Eryndor",
+      "relationship": "thematic M07/M08 link only; no physical appearance assigned"
+    }
+  ],
+  "routeAlternatives": [
+    "LOW_PASS",
+    "DRY_SHELF"
+  ],
+  "disclosureAlternatives": [
+    "truthful",
+    "cautious",
+    "private"
+  ],
+  "assetContract": {
+    "sharedPersonalMark": "M07_MARK_MESH",
+    "ancient": "MARK15",
+    "fresh": "MARK18",
+    "outline": "two joined angled lines, shorter off-center stroke, thin diagonal tool-slip scratch",
+    "sharedPlacementRequired": true,
+    "ancientMaterial": "calcite crust",
+    "freshMaterial": "bare grooves and fresh chips",
+    "adjacentDistinctCrest": "M07_CREST",
+    "actualMeshVerified": false,
+    "transforms": null
+  },
+  "optionalIndependent": [
+    "S09",
+    "D07"
+  ],
+  "completion": {
+    "required": [
+      "actual fresh carving",
+      "actual route test",
+      "historian debrief",
+      "sketch and archive lead"
+    ],
+    "next": "M08_AVAILABLE",
+    "autoAccept": false,
+    "rewardGrant": false
+  },
+  "prohibitions": [
+    "manual reality switch",
+    "paired focus gate",
+    "relic requirement",
+    "forced combat",
+    "required glide",
+    "exact calendar claim",
+    "physical item transfer",
+    "forced camera",
+    "runtime activation"
+  ]
+}
