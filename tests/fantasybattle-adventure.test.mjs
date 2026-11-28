@@ -345,7 +345,8 @@ test('companion gifts require recruitment and ore, preserve other members and ca
   assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre-BOND_GIFT.cost);
   assert.equal(A.memberFor(p,m.id).bond,quote.bond+quote.gain);
   assert.deepEqual(A.memberStats(p,m.id),stats);
-  for(const other of A.ROSTER.filter(x=>x.id!==m.id))assert.deepEqual(A.memberFor(p,other.id),A.memberFor(before,other.id));
+  for(const other of A.ROSTER.filter(x=>x.id!==m.id))for(const key of ['recruited','active','hp','bond'])assert.equal(A.memberFor(p,other.id)[key],A.memberFor(before,other.id)[key]);
+  assert.equal(p.party.front,before.party.front);
   const lines=[0,25,75].map(bond=>bondConversation(m.id,{recruited:true,bond}));
   assert.equal(new Set(lines).size,3);
  }
@@ -356,4 +357,145 @@ test('companion gifts require recruitment and ore, preserve other members and ca
  const near=A.companionGiftQuote(p,'groveArcher');assert.equal(near.gain,2);
  const max=A.giveCompanionGift(p,'groveArcher');assert.equal(A.memberFor(max,'groveArcher').bond,100);assert.throws(()=>A.giveCompanionGift(max,'groveArcher'));
  assert.ok(A.isProfile(max));assert.equal(p.party.bond,98);
+});
+
+test('combine consumes only a spare bow, shares enhancement cap and preserves save compatibility',()=>{
+ let p={...A.createProfile('Combiner'),gold:1000};
+ assert.equal(A.combineQuote(p).ok,false);assert.throws(()=>A.combineWeapon(p));
+ p=A.buyItem(p,'sapphireBow',2);p=A.equipItem(p,'sapphireBow');
+ const before=p,q=A.combineQuote(p),stats=A.heroStats(p);assert.ok(q.ok);assert.equal(q.cost,5);
+ p=A.combineWeapon(p);
+ assert.equal(p.inventory.sapphireBow,1);assert.equal(p.equipped,'sapphireBow');assert.equal(p.gold,before.gold-5);
+ assert.equal(A.heroStats(p).atk,stats.atk+2);assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre);
+ assert.throws(()=>A.combineWeapon(p));assert.equal(before.inventory.sapphireBow,2);
+ p={...p,inventory:{...p.inventory,sapphireOre:4,sapphireBow:2}};
+ for(let i=0;i<4;i++)p=A.enhanceWeapon(p);
+ assert.equal(p.enhancements.sapphireBow,5);assert.equal(A.combineQuote(p).ok,false);assert.throws(()=>A.combineWeapon(p));
+ assert.ok(A.isProfile(p));assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ const insufficient={...before,gold:0};assert.throws(()=>A.combineWeapon(insufficient));
+});
+
+import {ascensionLevel,activeGearSet,scaledSet} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+test('ascension increases only completed set bonuses by 25 percent per rank, per wearer',()=>{
+ let p={...A.createProfile('Ascender'),xp:300,gold:1000};
+ p={...p,inventory:{...p.inventory,sapphireOre:50,pilgrimCuirass:2,pilgrimCloak:2}};
+ assert.equal(A.ascendQuote(p).ok,false);
+ p=A.equipGear(p,'hero','armor','pilgrimCuirass');
+ assert.throws(()=>A.ascendSet(p));
+ p=A.equipGear(p,'hero','mantle','pilgrimCloak');
+ const baseline=A.heroStats(p),baseInventory=p.inventory,baseEnhancements=p.enhancements;
+ for(let rank=1;rank<=4;rank++){
+  const q=A.ascendQuote(p);assert.ok(q.ok);assert.equal(q.level,rank-1);
+  const before=p;p=A.ascendSet(p);
+  assert.equal(p.gold,before.gold-q.cost);assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre-q.ore);
+  assert.equal(ascensionLevel(p,'hero','pilgrim'),rank);assert.equal(activeGearSet(p,'hero').def,2+rank*.5);
+  assert.equal(A.heroStats(p).def,baseline.def+rank*.5);assert.equal(A.heroStats(p).atk,baseline.atk);
+  assert.equal(A.heroStats(p).spd,baseline.spd);assert.ok(A.isProfile(p));
+ }
+ assert.equal(p.inventory.pilgrimCuirass,baseInventory.pilgrimCuirass);assert.deepEqual(p.enhancements,baseEnhancements);
+ assert.equal(A.ascendQuote(p).ok,false);assert.throws(()=>A.ascendSet(p));
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ const removed=A.equipGear(p,'hero','mantle',null);assert.equal(activeGearSet(removed,'hero'),null);assert.equal(ascensionLevel(removed,'hero','pilgrim'),4);
+ const restored=A.equipGear(removed,'hero','mantle','pilgrimCloak');assert.deepEqual(A.heroStats(restored),A.heroStats(p));
+ let ally=A.rewardVictory(p,{id:'wilds_grove_01'}).profile;ally=A.recruitCompanion(ally,'groveArcher');
+ ally=A.equipGear(ally,'groveArcher','armor','pilgrimCuirass');ally=A.equipGear(ally,'groveArcher','mantle','pilgrimCloak');
+ assert.equal(activeGearSet(ally,'groveArcher').def,2);assert.equal(A.ascendQuote(ally,'groveArcher').level,0);
+ ally=A.ascendSet(ally,'groveArcher');assert.equal(activeGearSet(ally,'groveArcher').def,2.5);assert.equal(activeGearSet(ally,'hero').def,4);
+ for(const ascensions of [{hero:{pilgrim:5}},{hero:{pilgrim:1.5}},{hero:{unknown:1}},{mistScout:{pilgrim:1}},{unknown:{pilgrim:1}},null])assert.equal(A.isProfile({...p,ascensions}),false);
+ assert.equal(scaledSet('moonveil',1).spd,1.25);
+});
+
+import {SOCKET_GEMS,socketFor,equippedSocketItems} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+test('socket gems apply only to equipped eligible types, upgrade and replace without stacking',()=>{
+ let p={...A.createProfile('Socket test'),xp:300,gold:1000};
+ p={...p,inventory:{...p.inventory,sapphireOre:40,sapphireBow:1,pilgrimCuirass:2,pilgrimCloak:1}};
+ assert.deepEqual(equippedSocketItems(p,'hero'),[]);
+ assert.equal(A.socketQuote(p,'hero','starterBow','ruby').ok,false);
+ assert.equal(A.socketQuote(p,'hero','sapphireBow',undefined).ok,false);
+ assert.throws(()=>A.socketEquipment(p,'hero','sapphireBow','ruby'));
+ p=A.equipItem(p,'sapphireBow');p=A.equipGear(p,'hero','armor','pilgrimCuirass');p=A.equipGear(p,'hero','mantle','pilgrimCloak');
+ const baseline=A.heroStats(p),base=p;
+ for(let rank=1;rank<=3;rank++){
+  const q=A.socketQuote(p,'hero','sapphireBow','ruby');assert.ok(q.ok);assert.equal(q.nextRank,rank);
+  const before=p;p=A.socketEquipment(p,'hero','sapphireBow','ruby');
+  assert.equal(p.gold,before.gold-q.cost);assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre-q.ore);
+  assert.equal(A.heroStats(p).atk,baseline.atk+rank);assert.equal(p.inventory.sapphireBow,1);assert.ok(A.isProfile(p));
+ }
+ assert.throws(()=>A.socketEquipment(p,'hero','sapphireBow','ruby'));
+ assert.equal(A.socketQuote(p,'hero','sapphireBow','emerald').replacing,true);
+ p=A.socketEquipment(p,'hero','sapphireBow','emerald');
+ assert.deepEqual(socketFor(p,'hero','sapphireBow'),{gem:'emerald',rank:1});
+ assert.equal(A.heroStats(p).atk,baseline.atk);assert.equal(A.heroStats(p).spd,baseline.spd+1);
+ const stowed=A.equipItem(p,'starterBow');assert.equal(A.heroStats(stowed).spd,baseline.spd);
+ assert.deepEqual(socketFor(stowed,'hero','sapphireBow'),{gem:'emerald',rank:1});
+ assert.deepEqual(A.heroStats(A.equipItem(stowed,'sapphireBow')),A.heroStats(p));
+ p=A.socketEquipment(p,'hero','pilgrimCuirass','sapphire');assert.equal(A.heroStats(p).def,baseline.def+1);
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ assert.deepEqual(A.parseBackup(A.exportBackup(base)),base);
+ assert.equal(A.socketQuote({...p,gold:0},'hero','pilgrimCuirass','sapphire').ok,false);
+ assert.equal(A.socketQuote({...p,inventory:{...p.inventory,sapphireOre:0}},'hero','pilgrimCuirass','sapphire').ok,false);
+ assert.equal(A.socketQuote(p,'hero','pilgrimCloak','__proto__').ok,false);
+ const ally=A.recruitCompanion(A.rewardVictory(p,{id:'wilds_grove_01'}).profile,'groveArcher');
+ let equipped=A.equipGear(ally,'groveArcher','armor','pilgrimCuirass');const allyStats=A.memberStats(equipped,'groveArcher'),heroStats=A.heroStats(equipped);
+ equipped=A.socketEquipment(equipped,'groveArcher','pilgrimCuirass','ruby');
+ assert.equal(A.memberStats(equipped,'groveArcher').atk,allyStats.atk+1);assert.deepEqual(A.heroStats(equipped),heroStats);
+ for(const sockets of [{hero:{starterBow:{gem:'ruby',rank:1}}},{hero:{sapphireBow:{gem:'ruby',rank:4}}},{hero:{sapphireBow:{gem:'bogus',rank:1}}},{mistScout:{pilgrimCuirass:{gem:'ruby',rank:1}}},null])assert.equal(A.isProfile({...p,sockets}),false);
+ assert.equal(Object.keys(SOCKET_GEMS).length,3);
+});
+
+import {enchantRank,enchantBonus} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+test('enchant scales only original equipment attributes, caps ranks and preserves other upgrade systems',()=>{
+ let p={...A.createProfile('Enchanter'),xp:300,gold:1000};
+ p={...p,inventory:{...p.inventory,sapphireOre:50,sapphireBow:1,pilgrimCuirass:2,pilgrimCloak:1}};
+ assert.equal(A.enchantQuote(p,'hero','starterBow').ok,false);
+ assert.throws(()=>A.enchantEquipment(p,'hero','sapphireBow'));
+ p=A.equipItem(p,'sapphireBow');p=A.equipGear(p,'hero','armor','pilgrimCuirass');p=A.equipGear(p,'hero','mantle','pilgrimCloak');
+ p=A.enhanceWeapon(p);p=A.socketEquipment(p,'hero','sapphireBow','ruby');p=A.ascendSet(p,'hero');
+ const before=p,baseline=A.heroStats(p);
+ for(let rank=1;rank<=3;rank++){
+  const q=A.enchantQuote(p,'hero','sapphireBow'),prior=p;
+  assert.ok(q.ok);assert.equal(q.nextRank,rank);
+  p=A.enchantEquipment(p,'hero','sapphireBow');
+  assert.equal(p.gold,prior.gold-q.cost);assert.equal(p.inventory.sapphireOre,prior.inventory.sapphireOre-q.ore);
+  assert.equal(enchantRank(p,'hero','sapphireBow'),rank);
+  assert.ok(Math.abs(A.heroStats(p).atk-baseline.atk-4*rank/10)<1e-9);
+  assert.equal(A.heroStats(p).def,baseline.def);assert.equal(A.heroStats(p).spd,baseline.spd);
+  assert.ok(A.isProfile(p));
+ }
+ assert.throws(()=>A.enchantEquipment(p,'hero','sapphireBow'));
+ assert.deepEqual(p.enhancements,before.enhancements);assert.deepEqual(p.sockets,before.sockets);assert.deepEqual(p.ascensions,before.ascensions);
+ p=A.enchantEquipment(p,'hero','pilgrimCuirass');
+ assert.ok(Math.abs(A.heroStats(p).def-baseline.def-.4)<1e-9);
+ assert.deepEqual(enchantBonus('pilgrimCuirass',1),{atk:.1,def:.4,spd:0});
+ const stowed=A.equipItem(p,'starterBow');assert.equal(enchantRank(stowed,'hero','sapphireBow'),3);
+ assert.deepEqual(A.heroStats(A.equipItem(stowed,'sapphireBow')),A.heroStats(p));
+ const removed=A.equipGear(p,'hero','armor',null);
+ assert.equal(enchantRank(removed,'hero','pilgrimCuirass'),1);
+ assert.deepEqual(A.heroStats(A.equipGear(removed,'hero','armor','pilgrimCuirass')),A.heroStats(p));
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);assert.deepEqual(A.parseBackup(A.exportBackup(before)),before);
+ assert.equal(A.enchantQuote({...p,gold:0},'hero','pilgrimCuirass').ok,false);
+ assert.equal(A.enchantQuote({...p,inventory:{...p.inventory,sapphireOre:0}},'hero','pilgrimCuirass').ok,false);
+ let ally=A.recruitCompanion(A.rewardVictory(p,{id:'wilds_grove_01'}).profile,'groveArcher');
+ ally=A.equipGear(ally,'groveArcher','armor','pilgrimCuirass');const hs=A.heroStats(ally),as=A.memberStats(ally,'groveArcher');
+ ally=A.enchantEquipment(ally,'groveArcher','pilgrimCuirass');assert.deepEqual(A.heroStats(ally),hs);assert.ok(Math.abs(A.memberStats(ally,'groveArcher').def-as.def-.4)<1e-9);
+ for(const enchants of [null,{hero:{starterBow:1}},{hero:{sapphireBow:4}},{hero:{sapphireBow:1.5}},{hero:{unknown:1}},{mistScout:{pilgrimCuirass:1}}])assert.equal(A.isProfile({...p,enchants}),false);
+});
+
+import {PASSIVES,learnedPassives,applyPassives} from '../src/components/fantasybattle/core/passiveSkills.mjs';
+test('automatic passives unlock from level without spending points or adding actions',()=>{
+ const p=A.createProfile('Passive test'),base=A.heroStats(p);
+ assert.deepEqual(learnedPassives(1),[]);assert.deepEqual(A.heroStats(p),base);
+ for(const [xp,atk,def,spd] of [[100,1,0,0],[200,1,1,0],[300,1,1,1],[400,1,1,1]]){
+  const next={...p,xp},stats=A.heroStats(next);
+  assert.deepEqual(stats,{...base,atk:base.atk+atk,def:base.def+def,spd:base.spd+spd});
+  assert.equal(A.pointsFor(next),xp/100);assert.ok(A.isProfile(next));
+  assert.deepEqual(A.parseBackup(A.exportBackup(next)),next);
+  assert.ok(A.availableActions(A.levelFor(xp)).every(id=>!Object.hasOwn(PASSIVES,id)));
+ }
+ const result=A.rewardVictory({...p,xp:99},{id:'passive-test',category:'Normal'});
+ assert.ok(result.unlocked.includes('steadyAim'));assert.ok(result.unlocked.includes('volley'));
+ assert.deepEqual(A.rewardVictory(result.profile,{id:'passive-test',category:'Normal'}).unlocked,[]);
+ assert.deepEqual(applyPassives(base,4),A.heroStats({...p,xp:300}));assert.deepEqual(base,A.heroStats(p));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['fa-skillbook-passive-nodes','PASSIVE_IDS.map','learnedPassives(level)','learnedSkills(level).includes(id)','result.unlocked.map(skillName)'])assert.ok(page.includes(marker),marker);
 });

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { FantasyBattleStage, UNITS } from './FantasyBattleStage.js';
-import { GEAR, GEAR_SLOTS, gearFor, gearCount, equippedVisuals, gearMetadata, gearEligible, activeGearSet, gearSlotLabel } from './core/equipmentCatalog.mjs';
+import { GEAR, GEAR_SLOTS, gearFor, gearCount, equippedVisuals, gearMetadata, gearEligible, activeGearSet, activeGearSetId, ascensionLevel, SOCKET_GEMS, equippedSocketItems, socketFor, gearSlotLabel } from './core/equipmentCatalog.mjs';
 import { companionAsset, visualFor } from './core/companionVisuals.mjs';
 import { ACTIONS, ACTION_ORDER, actionsForClass } from './core/battleRules.mjs';
 import {enemyPortrait} from './core/enemyVisuals.mjs';
 import { enemyFormation, tacticFor } from './core/enemyCatalog.mjs';
 import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalog.mjs';
-import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
+import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedSkills, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, combineQuote, combineWeapon, ascendQuote, ascendSet, socketQuote, socketEquipment, enchantQuote, enchantEquipment, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
 import './sapphireExplorationHud.css';
@@ -20,6 +20,7 @@ import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
 import {serviceFor,liveService} from './core/worldInteractions.mjs';
 import {createConfirmationGate} from './core/confirmationGate.mjs';
 import {bondConversation,BOND_GIFT} from './core/companionBonds.mjs';
+import {PASSIVES,PASSIVE_IDS,learnedPassives} from './core/passiveSkills.mjs';
 import { CAMPAIGN_QUESTS, campaignQuest, changeCampaignQuest, campaignPrompt, campaignServiceNote, campaignArc, LAST_ESCORT, escortConversation } from './core/campaignQuests.mjs';
 function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" alt="" className={'fa-painted-illustration '+variant} src={'/fantasybattle/sapphire/illustrations/'+name+'.webp'} decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>;}
 
@@ -39,7 +40,7 @@ function ArcherPortrait({profile,small=false,companion=false}){
 
 const EMPTY={slots:[],error:null};
 const fmt=(n)=>new Intl.NumberFormat('en-US').format(n);
-const skillName=id=>ACTIONS[id]?.name||id;
+const skillName=id=>ACTIONS[id]?.name||PASSIVES[id]?.name||id;
 const isWorldScreen=id=>id==='10'||id==='09';
 
 // Onboarding only edits existing settings and a draft character; creation and save writes stay in their existing guarded flows.
@@ -137,11 +138,13 @@ function Wardrobe({profile,encounter,original,back,chooseAppearance,layout}){
 function Skillbook({profile,level,original,layout,go,back}){
   const [selectedId,setSelectedId]=useState(ACTION_ORDER[0]);
   const learned=profile?availableActions(level):[];
-  const action=ACTIONS[selectedId];
-  const unlocked=learned.includes(selectedId);
+  const action=ACTIONS[selectedId],passive=PASSIVES[selectedId];
+  const passiveLearned=profile?learnedPassives(level):[];
+  const unlocked=learned.includes(selectedId)||passiveLearned.includes(selectedId);
   const status=id=>learned.includes(id)?'Learned':'Level '+learnedAt[id]+' required';
   const choices=ACTION_ORDER.map(id=><Btn key={id} className="fa-skillbook-node" primary={selectedId===id} aria-pressed={selectedId===id} aria-label={ACTIONS[id].name+' · '+status(id)} onClick={()=>setSelectedId(id)}><SkillArt id={id}/><span>{ACTIONS[id].name}</span><small>{status(id)}</small></Btn>);
-  const details=<><strong>{action.name}</strong><p>{action.summary}</p><p>{unlocked?'Learned':'Unlocks automatically at level '+learnedAt[selectedId]}</p><p>Hotkey: {action.hotkey} · Focus cost: {action.focusCost} · Gain: {action.focusGain}</p>{action.kind==='attack'?<p>Power {action.power} · Hits {action.hits} · Accuracy {Math.round(action.accuracy*100)}%</p>:<p>Damage reduction: {Math.round((1-action.guardFactor)*100)}% for this round.</p>}</>;
+  const passiveChoices=PASSIVE_IDS.map(id=><Btn key={id} primary={selectedId===id} aria-pressed={selectedId===id} onClick={()=>setSelectedId(id)}><strong>{PASSIVES[id].name}</strong><small>{passiveLearned.includes(id)?'Learned':'Level '+PASSIVES[id].level}</small></Btn>);
+  const details=passive?<><strong>{passive.name}</strong><p>{passive.summary}</p><p>{unlocked?'Always active':'Unlocks automatically at level '+passive.level}</p><p>No Focus cost or action required.</p></>:<><strong>{action.name}</strong><p>{action.summary}</p><p>{unlocked?'Learned':'Unlocks automatically at level '+learnedAt[selectedId]}</p><p>Hotkey: {action.hotkey} · Focus cost: {action.focusCost} · Gain: {action.focusGain}</p>{action.kind==='attack'?<p>Power {action.power} · Hits {action.hits} · Accuracy {Math.round(action.accuracy*100)}%</p>:<p>Damage reduction: {Math.round((1-action.guardFactor)*100)}% for this round.</p>}</>;
   if(original)return <div className="fa-original-skillbook">
     <h2 className="fa-skillbook-title">Skillbook</h2><span className="fa-skillbook-subtitle">Master your arts</span>
     <nav className="fa-skillbook-nav" aria-label="Character services"><Btn onClick={()=>go('05')}>Character</Btn><span aria-current="page">Skillbook</span><Btn onClick={()=>go('32')}>Attributes</Btn><Btn onClick={()=>go('06')}>Equipment</Btn><Btn onClick={back}>Back</Btn></nav>
@@ -149,20 +152,20 @@ function Skillbook({profile,level,original,layout,go,back}){
     <span className="fa-skillbook-filter">Archer abilities</span>
     <div className="fa-skillbook-active-label"><strong>Active skills</strong><small>Combat actions</small></div>
     <section className="fa-skillbook-nodes" aria-label="Archer combat skills">{choices}</section>
-    <div className="fa-skillbook-passive-label"><strong>Passive skills</strong><small>Not available</small></div>
+    <div className="fa-skillbook-passive-label"><strong>Passive skills</strong><small>Automatic effects</small></div><section className="fa-skillbook-passive-nodes" aria-label="Passive skills">{passiveChoices}</section>
     <div className="fa-skillbook-ultimate-label"><strong>Ultimate skills</strong><small>Not available</small></div>
-    <section className="fa-skillbook-progress"><h3>Progression</h3><p>{profile?learned.length+' / '+ACTION_ORDER.length+' learned':'No active character'}</p><p>Abilities unlock automatically as the character levels up.</p></section>
+    <section className="fa-skillbook-progress"><h3>Progression</h3><p>{profile?(learned.length+passiveLearned.length)+' / '+(ACTION_ORDER.length+PASSIVE_IDS.length)+' learned':'No active character'}</p><p>Abilities unlock automatically as the character levels up.</p></section>
     <section className="fa-skillbook-rules"><h3>Battle rules</h3><p>Choose an action, then resolve the round. Focus is earned and spent in battle.</p></section>
     <div className="fa-skillbook-footer">{profile?.name||'No active character'} · Archer</div>
-    <h3 className="fa-skillbook-selected-title">{action.name}</h3>
-    <div className="fa-skillbook-icon"><SkillArt id={selectedId}/></div>
-    <div className="fa-skillbook-status">{status(selectedId)}</div>
+    <h3 className="fa-skillbook-selected-title">{passive?.name||action?.name}</h3>
+    <div className="fa-skillbook-icon">{passive?<strong>Passive · +{passive.amount} {passive.stat.toUpperCase()}</strong>:<SkillArt id={selectedId}/>}</div>
+    <div className="fa-skillbook-status">{passive?(unlocked?"Learned":"Level "+passive.level+" required"):status(selectedId)}</div>
     <section className="fa-skillbook-description" aria-live="polite">{details}</section>
-    <div className="fa-skillbook-requirement">Required level: {learnedAt[selectedId]}</div>
+    <div className="fa-skillbook-requirement">Required level: {passive?.level??learnedAt[selectedId]}</div>
     <div className="fa-skillbook-materials"><strong>Upgrade materials</strong><p>Not required. No manual skill upgrades are implemented.</p></div>
     <Btn className="fa-skillbook-done" onClick={back}>Done</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('32')}>Attributes</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Archer abilities</h2>{choices}</Panel><Panel rect={layout[2]}><h2>Progression</h2>{details}<p>Skills unlock automatically when the required level is reached.</p></Panel></>;
+  return <><Panel rect={layout[0]}><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('32')}>Attributes</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Archer abilities</h2>{choices}<h3>Passive skills</h3>{passiveChoices}</Panel><Panel rect={layout[2]}><h2>Progression</h2>{details}<p>Skills unlock automatically when the required level is reached.</p></Panel></>;
 }
 
 // Allocation is a local draft until confirmation; leaving the page discards it.
@@ -188,7 +191,7 @@ function Attributes({profile,level,locked,original,layout,onConfirm,back,unlocke
   </div>;
   const comparison=[['Current HP',profile?.hp,preview?.hp],['Maximum HP',before.maxHp,after.maxHp],['Attack',before.atk,after.atk],['Defense',before.def,after.def],['Speed',before.spd,after.spd]];
   const stats=<>{comparison.map(([label,a,b])=><div key={label} className="fa-attr-stat"><span>{label}</span><span>{profile?a:'—'} → {profile?b:'—'}</span></div>)}</>;
-  const skills=unlockedIds.filter(id=>ACTION_ORDER.includes(id)&&availableActions(level).includes(id));
+  const skills=unlockedIds.filter(id=>learnedSkills(level).includes(id));
   const actions=<><Btn className="fa-attr-reset" disabled={locked||!draft.length} onClick={()=>setDraft([])}>Reset</Btn><Btn primary className="fa-attr-confirm" disabled={locked||!profile} onClick={confirm}>Confirm allocation</Btn><Btn className="fa-attr-cancel" onClick={back}>Back</Btn></>;
   if(original)return <div className="fa-original-attributes">
     <h2 className="fa-attr-title">Attributes</h2><div className="fa-attr-level">Level {profile?level:'—'}</div>
@@ -197,27 +200,27 @@ function Attributes({profile,level,locked,original,layout,onConfirm,back,unlocke
     {rows.map(row)}
     <div className="fa-attr-unused">No additional attribute available</div>
     <h3 className="fa-attr-stat-heading">Stat preview</h3><section className="fa-attr-comparison" aria-label="Current and projected statistics">{stats}</section>
-    <h3 className="fa-attr-skills-heading">New skills</h3><section className="fa-attr-skills" aria-label="Newly unlocked abilities">{skills.length?skills.map(id=><div key={id}><SkillArt id={id}/><span>{ACTIONS[id].name}</span></div>):<p>No new abilities from this level.</p>}</section>
+    <h3 className="fa-attr-skills-heading">New skills</h3><section className="fa-attr-skills" aria-label="Newly unlocked abilities">{skills.length?skills.map(id=><div key={id}>{PASSIVES[id]?<span>Passive</span>:<SkillArt id={id}/>}<span>{skillName(id)}</span></div>):<p>No new abilities from this level.</p>}</section>
     {actions}
   </div>;
-  return <><Panel rect={layout[0]}><h2>{profile?.name||'No character'}</h2><p>Level {level}</p><p>{remaining} available · {draft.length} pending</p></Panel><Panel rect={layout[1]}><h2>Stat preview</h2>{stats}{skills.map(id=><p key={id}>{ACTIONS[id].name} unlocked</p>)}</Panel><Panel rect={layout[2]}><h2>Allocate points</h2>{rows.map(row)}{actions}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>{profile?.name||'No character'}</h2><p>Level {level}</p><p>{remaining} available · {draft.length} pending</p></Panel><Panel rect={layout[1]}><h2>Stat preview</h2>{stats}{skills.map(id=><p key={id}>{skillName(id)} unlocked</p>)}</Panel><Panel rect={layout[2]}><h2>Allocate points</h2>{rows.map(row)}{actions}</Panel></>;
 }
 
 // Celebration art is not a skill icon or an award. Display only committed unlocks.
 function SkillUnlocked({profile,result,level,original,layout,onContinue,onSkillbook}){
   const learned=profile?availableActions(level):[];
-  const ids=Array.isArray(result?.unlocked)?[...new Set(result.unlocked)].filter(id=>ACTION_ORDER.includes(id)&&learned.includes(id)):[];
+  const ids=Array.isArray(result?.unlocked)?[...new Set(result.unlocked)].filter(id=>(ACTION_ORDER.includes(id)&&learned.includes(id))||learnedPassives(level).includes(id)):[];
   const [index,setIndex]=useState(0);
   const selected=ids[Math.min(index,Math.max(0,ids.length-1))];
-  const action=selected?ACTIONS[selected]:null;
-  const detail=action?<><div className="fa-unlock-action"><SkillArt id={selected}/><strong>{action.name}</strong></div><p>{action.summary}</p><p>Learned at level {learnedAt[selected]} · Hotkey {action.hotkey}</p><p>Focus cost {action.focusCost} · Gain {action.focusGain}</p></>:<p>No newly unlocked abilities in this result.</p>;
+  const action=selected?ACTIONS[selected]:null,passive=PASSIVES[selected];
+  const detail=passive?<><strong>{passive.name}</strong><p>{passive.summary}</p><p>Learned at level {passive.level} · Always active</p></>:action?<><div className="fa-unlock-action"><SkillArt id={selected}/><strong>{action.name}</strong></div><p>{action.summary}</p><p>Learned at level {learnedAt[selected]} · Hotkey {action.hotkey}</p><p>Focus cost {action.focusCost} · Gain {action.focusGain}</p></>:<p>No newly unlocked abilities in this result.</p>;
   const paging=ids.length>1?<div className="fa-unlock-paging"><Btn disabled={index<=0} onClick={()=>setIndex(i=>Math.max(0,i-1))}>Previous</Btn><span>{Math.min(index+1,ids.length)} / {ids.length}</span><Btn disabled={index>=ids.length-1} onClick={()=>setIndex(i=>Math.min(ids.length-1,i+1))}>Next</Btn></div>:null;
   const controls=<><Btn className="fa-unlock-book" disabled={!profile} onClick={onSkillbook}>View Skillbook</Btn><Btn primary className="fa-unlock-continue" onClick={onContinue}>Continue</Btn></>;
   if(original)return <div className="fa-original-unlock">
     <h2 className="fa-unlock-title">{ids.length?'Skill Unlocked':'Skill Progression'}</h2>
     <p className="fa-unlock-subtitle">{profile?profile.name+' · Level '+level:'No active character'}</p>
-    <h3 className="fa-unlock-name">{action?.name||'No new skill'}</h3>
-    <div className="fa-unlock-type">{action?('Archer · '+(action.kind==='guard'?'Defense':'Attack')):'Progression'}</div>
+    <h3 className="fa-unlock-name">{passive?.name||action?.name||'No new skill'}</h3>
+    <div className="fa-unlock-type">{passive?'Archer · Passive':action?('Archer · '+(action.kind==='guard'?'Defense':'Attack')):'Progression'}</div>
     <section className="fa-unlock-details" aria-live="polite">{detail}{paging}</section>
     {controls}
   </div>;
@@ -668,7 +671,7 @@ function BattleVictory({profile,encounter,result,hud,original,layout,onContinue,
   const allies=units.filter(u=>u.team==='player'),enemies=units.filter(u=>u.team==='enemy');
   const currentLevel=profile?levelFor(profile.xp):0,previousLevel=profile?levelFor(Math.max(0,profile.xp-xp)):0;
   const rows=allies.map(u=><div key={u.id} className="fa-victory-member"><div className="fa-victory-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-victory-member-data"><strong>{u.name}</strong><small>{u.id==='hero'?'Level '+previousLevel+(currentLevel>previousLevel?' → '+currentLevel+' · Level up':''):'Companion'} · {u.hp===0?'Down':'Survived'}</small><progress aria-label={u.name+' final health'} value={u.hp} max={u.maxHp}/><small>Final HP {u.hp}/{u.maxHp}{u.id==='hero'?' · +'+xp+' XP':''}</small></div></div>);
-  const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':xp===0?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(id=>ACTIONS[id]?.name||id).join(', ')}</p>}</>;
+  const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':xp===0?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(skillName).join(', ')}</p>}</>;
   const sanctuaryCleared=verified&&!encounter.practice&&encounter.id==='wilds_sanctuary_boss'&&profile.world.completedEncounters.includes('wilds_sanctuary_boss');
   const astralCleared=verified&&!encounter.practice&&encounter.id==='wilds_astral_elite'&&profile.world.completedEncounters.includes('wilds_astral_elite');
   const summary=<><p>Result: {verified?'Victory':'Unavailable'}</p>{astralCleared&&<p>The Vanguard has fallen. Review the journal to record the final chapter objectives.</p>}{sanctuaryCleared&&<p>The Gatekeeper has fallen silent. Review the journal to record the sanctuary objectives.</p>}<p>Rounds: {verified?hud.round:'—'}</p><p>Enemies defeated: {enemies.filter(u=>u.hp===0).length}/{enemies.length}</p><p>Allies standing: {allies.filter(u=>u.hp>0).length}/{allies.length}</p><p>Experience: +{xp}</p><p>Gold: +{gold}</p><small>Duration, damage totals and battle ranks are not tracked in this build.</small></>;
@@ -784,33 +787,118 @@ function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,
 }
 
 // Enhancement is a preview of the existing bow upgrade, never a new forging economy.
-function BlacksmithShop({profile,serviceAvailable,original,layout,onEnhance,back,go}){
+function BlacksmithShop({profile,serviceAvailable,original,layout,onEnhance,onCombine,onAscend,onSocket,onEnchant,back,go}){
+  const [operation,setOperation]=useState('Enhance'),[wearer,setWearer]=useState('hero'),[socketItem,setSocketItem]=useState(''),[gem,setGem]=useState('ruby');const combining=operation==='Combine',ascending=operation==='Ascend';const quote=combineQuote(profile),ascend=ascendQuote(profile,wearer);
   const id=profile?.equipped,item=id&&ITEMS[id],level=profile?.enhancements?.[id]??0;
   const gold=profile?.gold||0,ore=profile?.inventory?.sapphireOre||0,cost=15+level*10;
   const ready=Boolean(profile&&item?.kind==='weapon'&&serviceAvailable);
-  const allowed=ready&&level<5&&gold>=cost&&ore>=1;
+  const allowed=ready&&(combining?quote.ok:level<5&&gold>=cost&&ore>=1);
   const stats=heroStats(profile),next=level<5?level+1:level;
-  const reason=!ready?'Visit a service marker to enhance your equipped bow.':level>=5?'Maximum enhancement reached.':gold<cost?'Not enough gold.':ore<1?'Requires one Sapphire Ore.':'Ready to enhance one level.';
+  const reason=!ready?'Visit a service marker to strengthen your equipped bow.':combining?quote.reason||'Ready to combine one spare bow.':level>=5?'Maximum enhancement reached.':gold<cost?'Not enough gold.':ore<1?'Requires one Sapphire Ore.':'Ready to enhance one level.';
   const input=<><ItemArt id={id}/><strong>{item?.name||'No weapon'}</strong><small>+{level}</small></>;
-  const catalyst=<><ItemArt id="sapphireOre"/><strong>Sapphire Ore</strong><small>{ore} owned · 1 required</small></>;
+  const catalyst=combining?<><ItemArt id={id}/><strong>Spare {item?.name||"bow"}</strong><small>{Math.max(0,quote.owned-1)} spare · 1 required</small></>:<><ItemArt id="sapphireOre"/><strong>Sapphire Ore</strong><small>{ore} owned · 1 required</small></>;
   const result=<><ItemArt id={id}/><strong>{item?.name||'No weapon'}</strong><small>+{next} {level>=5?'(Max)':'preview'}</small></>;
   const details=<><strong>{item?.name||'No equipped weapon'}</strong><p>Enhancement +{level} / 5</p><p>Character attack: {stats.atk} → {stats.atk+(level<5&&item?2:0)}</p><p>Defense: {stats.def} · Speed: {stats.spd}</p></>;
-  const requirements=<><p>Gold: {gold} / {level<5?cost:'—'}</p><p>Sapphire Ore: {ore} / {level<5?1:'—'}</p><p>{level<5?'One enhancement per confirmation.':'No further enhancement available.'}</p></>;
-  const trade=<Btn primary className="fa-smith-confirm" disabled={!allowed} onClick={()=>onEnhance(id,level,cost)}>Enhance</Btn>;
+  const requirements=<><p>Gold: {gold} / {level<5?(combining?quote.cost:cost):'—'}</p>{combining?<p>Spare bows: {Math.max(0,quote.owned-1)} / 1</p>:<p>Sapphire Ore: {ore} / {level<5?1:'—'}</p>}<p>{level<5?'One enhancement per confirmation.':'No further enhancement available.'}</p></>;
+  const trade=<Btn primary className="fa-smith-confirm" disabled={!allowed} onClick={()=>combining?onCombine(id,level,quote.cost):onEnhance(id,level,cost)}>{operation}</Btn>;
+  const operations=<>{["Enhance","Combine","Ascend","Socket","Enchant"].map(label=><Btn key={label} primary={operation===label} aria-pressed={operation===label} onClick={()=>setOperation(label)}>{label}</Btn>)}</>;
+  if(operation==='Enchant'){
+    const members=[{id:'hero',name:profile?.name||'Leader'},...ROSTER.filter(m=>memberFor(profile,m.id).recruited)];
+    const items=equippedSocketItems(profile,wearer),key=items.includes(socketItem)?socketItem:items[0];
+    const q=enchantQuote(profile,wearer,key),canEnchant=Boolean(serviceAvailable&&q.ok);
+    const describe=b=>'ATK +'+Number(b.atk.toFixed(2))+' · DEF +'+Number(b.def.toFixed(2))+' · SPD +'+Number(b.spd.toFixed(2));
+    const info=<><label>Wearer <select value={wearer} onChange={e=>{setWearer(e.target.value);setSocketItem('');}}>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Equipment <select value={key||''} onChange={e=>setSocketItem(e.target.value)}>{!items.length&&<option value="">No eligible item</option>}{items.map(k=><option key={k} value={k}>{ITEMS[k].name}</option>)}</select></label></>;
+    const source=<><ItemArt id={key}/><strong>{ITEMS[key]?.name||'Equip an item'}</strong><small>Enchant +{q.rank}</small></>;
+    const material=<><ItemArt id="sapphireOre"/><strong>Sapphire Ore</strong><small>{ore} owned · {q.ore} required</small></>;
+    const output=<><ItemArt id={key}/><strong>{ITEMS[key]?.name||'No equipment'}</strong><small>Enchant +{q.nextRank} preview</small></>;
+    const req=<><p>Gold: {gold} / {q.cost}</p><p>Ore: {ore} / {q.ore}</p></>;
+    const status=!serviceAvailable?'Visit a service marker to enchant.':q.reason||'Ready to enchant.';
+    const action=<Btn primary className="fa-smith-confirm" disabled={!canEnchant} onClick={()=>onEnchant(wearer,key,q)}>Enchant</Btn>;
+    if(original)return <div className="fa-original-smith">
+      <h2 className="fa-smith-title">Equipment Enchanting</h2><p className="fa-smith-subtitle">Strengthen original item attributes</p>
+      <nav className="fa-smith-operations" aria-label="Blacksmith operations">{operations}<Btn onClick={()=>go('22')} disabled={!serviceAvailable}>Crafting</Btn></nav>
+      <div className="fa-smith-input">{source}</div><div className="fa-smith-catalyst">{material}</div><div className="fa-smith-result">{output}</div>
+      <div className="fa-smith-effect">{describe(q.current)}</div><div className="fa-smith-effect-other">Next: {describe(q.next)}</div><div className="fa-smith-quantity">Rank {q.nextRank}/3</div>
+      <nav className="fa-smith-tabs" aria-label="Enchant details">{[['Item Info','fa-smith-item-info'],['Materials','fa-smith-materials'],['Upgrade','fa-smith-upgrade']].map(([label,target])=><Btn key={target} onClick={()=>document.getElementById(target)?.focus()}>{label}</Btn>)}</nav>
+      <div className="fa-smith-side-icon"><ItemArt id={key}/></div><section id="fa-smith-item-info" tabIndex={-1} className="fa-smith-item-info fa-smith-socket-info">{info}</section>
+      <div className="fa-smith-stats"><p>Current: +{q.rank*10}%</p><p>Next: +{q.nextRank*10}%</p></div>
+      <section id="fa-smith-upgrade" tabIndex={-1} className="fa-smith-upgrade"><strong>Original item stats only</strong><p>+10% per rank; no random failure.</p></section>
+      <div className="fa-smith-status" role="status">{status}</div><div className="fa-smith-status-note">Set, socket and enhancement bonuses remain separate.</div>
+      <section id="fa-smith-materials" tabIndex={-1} className="fa-smith-materials">{req}</section><div className="fa-smith-cost">{q.rank>=3?'Max':q.cost+' gold'}</div>
+      <Btn className="fa-smith-back" onClick={back}>Back</Btn>{action}<Btn className="fa-smith-craft" disabled={!serviceAvailable} onClick={()=>go('22')}>Crafting</Btn>
+    </div>;
+    return <><Panel rect={layout[0]}><h2>Equipment Enchanting</h2>{operations}{info}{req}<p>{status}</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{source}{material}{output}<p>{describe(q.current)} → {describe(q.next)}</p></Panel><Panel rect={layout[2]}>{action}</Panel></>;
+  }
+  if(operation==='Socket'){
+    const members=[{id:'hero',name:profile?.name||'Leader'},...ROSTER.filter(m=>memberFor(profile,m.id).recruited)];
+    const items=equippedSocketItems(profile,wearer),key=items.includes(socketItem)?socketItem:items[0];
+    const q=socketQuote(profile,wearer,key,gem),current=socketFor(profile,wearer,key),canSocket=Boolean(serviceAvailable&&q.ok);
+    const describe=s=>s?SOCKET_GEMS[s.gem].label+' +'+s.rank:'Empty socket';
+    const info=<><label>Wearer <select value={wearer} onChange={e=>{setWearer(e.target.value);setSocketItem('');}}>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Equipment <select value={key||''} onChange={e=>setSocketItem(e.target.value)}>{!items.length&&<option value="">No eligible item</option>}{items.map(k=><option key={k} value={k}>{ITEMS[k].name}</option>)}</select></label><label>Gem <select value={gem} onChange={e=>setGem(e.target.value)}>{Object.entries(SOCKET_GEMS).map(([k,g])=><option key={k} value={k}>{g.name}</option>)}</select></label></>;
+    const source=<><ItemArt id={key}/><strong>{ITEMS[key]?.name||'Equip an item'}</strong><small>{describe(current)}</small></>;
+    const material=<><ItemArt id="sapphireOre"/><strong>{SOCKET_GEMS[gem].name}</strong><small>Formed from {q.ore} Sapphire Ore</small></>;
+    const output=<><ItemArt id={key}/><strong>{SOCKET_GEMS[gem].name}</strong><small>Rank {q.nextRank} preview</small></>;
+    const req=<><p>Gold: {gold} / {q.cost}</p><p>Ore: {ore} / {q.ore}</p></>;
+    const status=!serviceAvailable?'Visit a service marker to socket.':q.reason||'Ready to socket.';
+    const warning=q.replacing?'Replacing destroys the current gem and its ranks.':'One socket per wearer and equipment type.';
+    const action=<Btn primary className="fa-smith-confirm" disabled={!canSocket} onClick={()=>onSocket(wearer,key,gem,q)}>{q.replacing?'Replace gem':current?'Upgrade gem':'Socket gem'}</Btn>;
+    if(original)return <div className="fa-original-smith">
+      <h2 className="fa-smith-title">Equipment Socketing</h2><p className="fa-smith-subtitle">Customize one attribute per equipment type</p>
+      <nav className="fa-smith-operations" aria-label="Blacksmith operations">{operations}<Btn onClick={()=>go('22')} disabled={!serviceAvailable}>Crafting</Btn></nav>
+      <div className="fa-smith-input">{source}</div><div className="fa-smith-catalyst">{material}</div><div className="fa-smith-result">{output}</div>
+      <div className="fa-smith-effect">{describe(current)}</div><div className="fa-smith-effect-other">Next: {SOCKET_GEMS[gem].label} +{q.nextRank}</div><div className="fa-smith-quantity">Rank {q.nextRank}/3</div>
+      <nav className="fa-smith-tabs" aria-label="Socket details">{[['Item Info','fa-smith-item-info'],['Materials','fa-smith-materials'],['Upgrade','fa-smith-upgrade']].map(([label,target])=><Btn key={target} onClick={()=>document.getElementById(target)?.focus()}>{label}</Btn>)}</nav>
+      <div className="fa-smith-side-icon"><ItemArt id={key}/></div><section id="fa-smith-item-info" tabIndex={-1} className="fa-smith-item-info fa-smith-socket-info">{info}</section>
+      <div className="fa-smith-stats"><p>Current: {describe(current)}</p><p>Next: {SOCKET_GEMS[gem].label} +{q.nextRank}</p></div>
+      <section id="fa-smith-upgrade" tabIndex={-1} className="fa-smith-upgrade"><strong>Gem effect</strong><p>{warning}</p></section>
+      <div className="fa-smith-status" role="status">{status}</div><div className="fa-smith-status-note">Bonus applies only while equipped.</div>
+      <section id="fa-smith-materials" tabIndex={-1} className="fa-smith-materials">{req}</section><div className="fa-smith-cost">{q.cost} gold</div>
+      <Btn className="fa-smith-back" onClick={back}>Back</Btn>{action}<Btn className="fa-smith-craft" disabled={!serviceAvailable} onClick={()=>go('22')}>Crafting</Btn>
+    </div>;
+    return <><Panel rect={layout[0]}><h2>Equipment Socketing</h2>{operations}{info}{req}<p>{status}</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{source}{material}{output}<p>{warning}</p></Panel><Panel rect={layout[2]}>{action}</Panel></>;
+  }
+  if(ascending){
+    const members=[{id:'hero',name:profile?.name||'Leader'},...ROSTER.filter(m=>memberFor(profile,m.id).recruited)];
+    const armor=gearFor(profile,wearer).armor,mantle=gearFor(profile,wearer).mantle;
+    const canAscend=Boolean(serviceAvailable&&ascend.ok);
+    const describe=b=>b?'ATK '+b.atk+' · DEF '+b.def+' · SPD '+b.spd:'No active set';
+    const select=<label>Wearer <select value={wearer} onChange={e=>setWearer(e.target.value)}>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>;
+    const setInput=<><ItemArt id={armor}/><strong>{ITEMS[armor]?.name||'Armor needed'}</strong><small>{ITEMS[mantle]?.name||'Matching mantle needed'}</small></>;
+    const material=<><ItemArt id="sapphireOre"/><strong>Sapphire Ore</strong><small>{ore} owned · {ascend.ore} required</small></>;
+    const preview=<><ItemArt id={armor}/><strong>{ascend.next?.name||'Complete set needed'}</strong><small>+{Math.min(4,ascend.level+1)} preview</small></>;
+    const info=<>{select}<p>{ascend.current?.name||'Equip matching armor and mantle'}</p><p>Ascension +{ascend.level} / 4</p></>;
+    const req=<><p>Gold: {gold} / {ascend.cost}</p><p>Ore: {ore} / {ascend.ore}</p></>;
+    const status=!serviceAvailable?'Visit a service marker to ascend.':ascend.reason||'Ready to ascend.';
+    const action=<Btn primary className="fa-smith-confirm" disabled={!canAscend} onClick={()=>onAscend(wearer,ascend.setId,ascend.level,ascend.cost,ascend.ore)}>Ascend</Btn>;
+    if(original)return <div className="fa-original-smith">
+      <h2 className="fa-smith-title">Set Ascension</h2><p className="fa-smith-subtitle">Strengthen equipment set bonuses only</p>
+      <nav className="fa-smith-operations" aria-label="Blacksmith operations">{operations}<Btn onClick={()=>go('22')} disabled={!serviceAvailable}>Crafting</Btn></nav>
+      <div className="fa-smith-input">{setInput}</div><div className="fa-smith-catalyst">{material}</div><div className="fa-smith-result">{preview}</div>
+      <div className="fa-smith-effect">{describe(ascend.current)}</div><div className="fa-smith-effect-other">Next: {describe(ascend.next)}</div><div className="fa-smith-quantity">One rank</div>
+      <nav className="fa-smith-tabs" aria-label="Ascension details">{[['Item Info','fa-smith-item-info'],['Materials','fa-smith-materials'],['Upgrade','fa-smith-upgrade']].map(([label,target])=><Btn key={target} onClick={()=>document.getElementById(target)?.focus()}>{label}</Btn>)}</nav>
+      <div className="fa-smith-side-icon"><ItemArt id={armor}/></div><section id="fa-smith-item-info" tabIndex={-1} className="fa-smith-item-info">{info}</section>
+      <div className="fa-smith-stats"><p>Current: {100+25*ascend.level}%</p><p>Next: {100+25*Math.min(4,ascend.level+1)}%</p></div>
+      <section id="fa-smith-upgrade" tabIndex={-1} className="fa-smith-upgrade"><strong>Set bonus only</strong><p>+25% of original per rank</p></section>
+      <div className="fa-smith-status" role="status">{status}</div><div className="fa-smith-status-note">Rank persists for this wearer and set.</div>
+      <section id="fa-smith-materials" tabIndex={-1} className="fa-smith-materials">{req}</section><div className="fa-smith-cost">{ascend.level>=4?'Max':ascend.cost+' gold'}</div>
+      <Btn className="fa-smith-back" onClick={back}>Back</Btn>{action}<Btn className="fa-smith-craft" disabled={!serviceAvailable} onClick={()=>go('22')}>Crafting</Btn>
+    </div>;
+    return <><Panel rect={layout[0]}><h2>Set Ascension</h2>{operations}{info}{req}<p>{status}</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{setInput}{material}{preview}<p>{describe(ascend.current)} → {describe(ascend.next)}</p></Panel><Panel rect={layout[2]}>{action}</Panel></>;
+  }
   if(original)return <div className="fa-original-smith">
-    <h2 className="fa-smith-title">Weapon Enhancement</h2><p className="fa-smith-subtitle">Strengthen your equipped bow</p>
-    <nav className="fa-smith-operations" aria-label="Blacksmith operations"><Btn primary aria-current="page" onClick={()=>document.getElementById('fa-smith-item-info')?.focus()}>Enhance</Btn>{['Combine','Ascend','Socket','Enchant'].map(label=><Btn key={label} disabled title="Not available in this build">{label}</Btn>)}<Btn onClick={()=>go('22')} disabled={!ready}>Crafting</Btn></nav>
+    <h2 className="fa-smith-title">Weapon {operation==="Combine"?"Combination":"Enhancement"}</h2><p className="fa-smith-subtitle">{combining?"Consume a spare bow to enhance":"Strengthen your equipped bow"}</p>
+    <nav className="fa-smith-operations" aria-label="Blacksmith operations">{operations}<Btn onClick={()=>go('22')} disabled={!ready}>Crafting</Btn></nav>
     <div className="fa-smith-input">{input}</div><div className="fa-smith-catalyst">{catalyst}</div><div className="fa-smith-result">{result}</div>
     <div className="fa-smith-effect">Attack {stats.atk} → {stats.atk+(level<5&&item?2:0)}</div><div className="fa-smith-effect-other">Defense unchanged · Speed unchanged</div><div className="fa-smith-quantity">Quantity: 1</div>
     <nav className="fa-smith-tabs" aria-label="Enhancement details">{[['Item Info','fa-smith-item-info'],['Materials','fa-smith-materials'],['Upgrade','fa-smith-upgrade']].map(([label,target])=><Btn key={target} onClick={()=>document.getElementById(target)?.focus()}>{label}</Btn>)}</nav>
     <div className="fa-smith-side-icon"><ItemArt id={id}/></div><section id="fa-smith-item-info" tabIndex={-1} className="fa-smith-item-info">{details}</section>
     <div className="fa-smith-stats"><p>Current ATK: {stats.atk}</p><p>Next ATK: {stats.atk+(level<5&&item?2:0)}</p></div>
     <section id="fa-smith-upgrade" tabIndex={-1} className="fa-smith-upgrade"><strong>Enhancement effect</strong><p>{level<5?'+2 attack per enhancement':'Maximum +5 reached'}</p></section>
-    <div className="fa-smith-status" role="status">{reason}</div><div className="fa-smith-status-note">No random failure in the current enhancement rules.</div>
-    <section id="fa-smith-materials" tabIndex={-1} className="fa-smith-materials">{requirements}</section><div className="fa-smith-cost">{level<5?cost+' gold':'Max'}</div>
+    <div className="fa-smith-status" role="status">{reason}</div><div className="fa-smith-status-note">{combining?"Consumes only a spare copy. Shares the +5 cap.":"No random failure in the current enhancement rules."}</div>
+    <section id="fa-smith-materials" tabIndex={-1} className="fa-smith-materials">{requirements}</section><div className="fa-smith-cost">{level<5?(combining?quote.cost:cost)+' gold':'Max'}</div>
     <Btn className="fa-smith-back" onClick={back}>Back</Btn>{trade}<Btn className="fa-smith-craft" disabled={!ready} onClick={()=>go('22')}>Crafting</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Blacksmith</h2>{requirements}<p>{reason}</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{input}{catalyst}{result}{details}</Panel><Panel rect={layout[2]}>{trade}<Btn disabled={!ready} onClick={()=>go('22')}>Crafting</Btn></Panel></>;
+  return <><Panel rect={layout[0]}><h2>Blacksmith</h2>{operations}{requirements}<p>{reason}</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{input}{catalyst}{result}{details}</Panel><Panel rect={layout[2]}>{trade}<Btn disabled={!ready} onClick={()=>go('22')}>Crafting</Btn></Panel></>;
 }
 
 // Only the existing Recovery Tonic recipe is available; the painting is decorative.
@@ -921,7 +1009,7 @@ function EquipmentComparison({profile,encounter,initialItem,initialWearer,origin
   <div className="fa-compare-current-icon">{currentId&&<ItemArt id={currentId}/>}</div><div className="fa-compare-current-name"><strong>{ITEMS[currentId]?.name||'Empty slot'}</strong>{slot==='weapon'&&currentId&&<small>Enhancement +{profile?.enhancements?.[currentId]||0}</small>}</div>
   <div className="fa-compare-candidate-icon">{id&&<ItemArt id={id}/>}</div><div className="fa-compare-candidate-name"><strong>{item?.name||'Select gear'}</strong>{slot==='weapon'&&id&&<small>Enhancement +{profile?.enhancements?.[id]||0}</small>}</div>
   <section className="fa-compare-current-stats" aria-label="Current character statistics">{stats(before)}</section><section className="fa-compare-candidate-stats" aria-label="Projected character statistics">{stats(after)}</section>
-  <div className="fa-compare-current-detail"><p>Wearer: {members.find(m=>m.id===wearer)?.name||'—'}</p><p>Slot: {slot}</p><p>Current equipment remains equipped until confirmed.</p>{activeGearSet(profile,wearer)&&<p>Active set: {activeGearSet(profile,wearer).name}</p>}</div>
+  <div className="fa-compare-current-detail"><p>Wearer: {members.find(m=>m.id===wearer)?.name||'—'}</p><p>Slot: {slot}</p><p>Current equipment remains equipped until confirmed.</p>{activeGearSet(profile,wearer)&&<p>Active set: {activeGearSet(profile,wearer).name} +{ascensionLevel(profile,wearer,activeGearSetId(profile,wearer))}</p>}</div>
   <div className="fa-compare-candidate-detail"><p>Owned: {inv[id]||0}</p>{(gearMetadata(id)||weaponMetadata(id))&&<p>{gearMetadata(id)||weaponMetadata(id)}</p>}{item?.kind==='gear'&&<p>Equipped copies: {profile?gearCount(profile,id):0}</p>}<p>{reason}</p></div>
   <h3 className="fa-compare-delta-title">Stat changes</h3><section className="fa-compare-deltas" aria-label="Stat differences">{deltas}</section>
   {equip}<Btn className="fa-compare-back" onClick={back}>Back</Btn><Btn className="fa-compare-inventory" onClick={()=>go('06')}>Equipment</Btn><Btn className="fa-compare-items" onClick={()=>go('21')}>Items</Btn>
@@ -1429,8 +1517,8 @@ export default function SapphireAdventure(){
         <StatRows stats={{Attack:stats.atk,Defense:stats.def,Speed:stats.spd,'Unspent points':pointsFor(profile)}}/></>}
       </section>
       <section className="fa-character-lower fa-character-appearance"><h3>Appearance</h3><p>{profile?appearanceFor(profile).name:'No character'}</p><Btn disabled={!profile||Boolean(encounter)} onClick={()=>go('27')}>Wardrobe</Btn></section>
-      <section className="fa-character-lower fa-character-gear"><h3>Equipment</h3>{profile&&<><p>Bow: {ITEMS[profile.equipped]?.name||'None'}</p>{GEAR_SLOTS.map(s=><p key={s}>{gearSlotLabel(s)}: {GEAR[gearFor(profile,'hero')[s]]?.name||'None'}</p>)}{activeGearSet(profile,'hero')&&<p>Active set: {activeGearSet(profile,'hero').name}</p>}</>}</section>
-      <section className="fa-character-lower fa-character-skills"><h3>Learned skills</h3>{profile&&availableActions(level).map(k=><p key={k}>{skillName(k)}</p>)}</section>
+      <section className="fa-character-lower fa-character-gear"><h3>Equipment</h3>{profile&&<><p>Bow: {ITEMS[profile.equipped]?.name||'None'}</p>{GEAR_SLOTS.map(s=><p key={s}>{gearSlotLabel(s)}: {GEAR[gearFor(profile,'hero')[s]]?.name||'None'}</p>)}{activeGearSet(profile,'hero')&&<p>Active set: {activeGearSet(profile,'hero').name} +{ascensionLevel(profile,'hero',activeGearSetId(profile,'hero'))}</p>}</>}</section>
+      <section className="fa-character-lower fa-character-skills"><h3>Learned skills</h3>{profile&&learnedSkills(level).map(k=><p key={k}>{skillName(k)}</p>)}</section>
       <Btn className="fa-character-back" onClick={back}>Back</Btn><Btn className="fa-character-done" primary onClick={back}>Done</Btn>
     </div>:<>{pane(0,nav(['06','12','32','27']))}{pane(1,<><h2>{profile?.name||'No character'}</h2><ArcherPortrait profile={profile}/><p>Archer · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
     case '06':{
@@ -1498,7 +1586,7 @@ export default function SapphireAdventure(){
     </div>:<>{pane(0,<><h2>Save</h2><p>Save your current exploration position.</p></>)}{pane(1,<>{SLOT_IDS.map(s=>{const r=slots.slots.find(x=>x.id===s);return <Btn key={s} onClick={()=>setSelected(s)} primary={selected===s}>Slot {s} · {r?.status==='valid'?r.profile.name:r?'Damaged':'Empty'}</Btn>;})}</>)}{pane(2,<>{statPanel}<Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}{encounter&&<p>Manual saves are disabled during combat.</p>}</>)}</>;break;
     case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back} onEscortAction={action=>transact(p=>{const live=current.current;if(live.service?.id!==LAST_ESCORT.returnService||live.world?.nearbyService!==LAST_ESCORT.returnService||!liveService(live.world,LAST_ESCORT.returnService))throw Error('Visit the Grove rest point.');return changeCampaignQuest(p,LAST_ESCORT.id,action,{serviceId:LAST_ESCORT.returnService});},action==='accept'?'The Last Escort accepted':'The Last Escort completed')}/>;break;
     case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id,quantity)=>{const p=current.current.profile,q=tradeQuote(p,mode,id,quantity);if(!q.ok)return;const profileId=p.id,serviceId=current.current.service?.id;let used=false;requestConfirm((mode==='buy'?'Buy ':'Sell ')+quantity+' × '+ITEMS[id].name+' for '+q.total+' gold?',()=>{if(used)return;used=true;transact(live=>{const s=current.current;if(live.id!==profileId||!serviceId||s.service?.id!==serviceId||s.world?.nearbyService!==serviceId||s.encounter||!liveService(s.world,serviceId))throw Error('Return to the original service marker to trade.');return mode==='buy'?buyItem(live,id,quantity):sellItem(live,id,quantity);},mode==='buy'?'Items purchased':'Items sold');});}}/>;break;
-    case '17':content=<BlacksmithShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} go={go} onEnhance={(weapon,level,cost)=>{if(!Object.hasOwn(ITEMS,weapon)||ITEMS[weapon].kind!=='weapon')return;requestConfirm('Enhance '+ITEMS[weapon].name+' to +'+(level+1)+' for '+cost+' gold and 1 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter||!liveService(s.world,s.service.id))throw Error('Visit a service marker to enhance.');if(p.equipped!==weapon||enhancementLevel(p,weapon)!==level||cost!==15+level*10)throw Error('Equipment changed. Review the new enhancement preview.');return enhanceWeapon(p);},'Weapon enhanced'));}}/>;break;
+    case '17':content=<BlacksmithShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} go={go} onEnchant={(wearer,key,expected)=>{const q=enchantQuote(current.current.profile,wearer,key),serviceId=current.current.service?.id;const matches=next=>next.ok&&next.key===expected.key&&next.wearer===expected.wearer&&next.rank===expected.rank&&next.cost===expected.cost&&next.ore===expected.ore;if(!matches(q)||!liveService(current.current.world,serviceId))return;requestConfirm('Enchant '+ITEMS[key].name+' to +'+q.nextRank+' for '+q.cost+' gold and '+q.ore+' Sapphire Ore?',()=>transact(p=>{const live=current.current;if(live.service?.id!==serviceId||!liveService(live.world,serviceId)||!matches(enchantQuote(p,wearer,key)))throw Error('Enchant preview changed. Review it again.');return enchantEquipment(p,wearer,key);},'Equipment enchanted'));}} onSocket={(wearer,key,gem,expected)=>{const q=socketQuote(current.current.profile,wearer,key,gem),serviceId=current.current.service?.id;const matches=next=>next.ok&&next.rank===expected.rank&&next.cost===expected.cost&&next.ore===expected.ore&&next.existing?.gem===expected.existing?.gem&&next.existing?.rank===expected.existing?.rank;if(!matches(q)||!liveService(current.current.world,serviceId))return;requestConfirm((q.replacing?'Destroy the installed gem and replace with ':'Install or upgrade ')+SOCKET_GEMS[gem].name+' rank '+q.nextRank+' for '+q.cost+' gold and '+q.ore+' Sapphire Ore?',()=>transact(p=>{const live=current.current;if(live.service?.id!==serviceId||!liveService(live.world,serviceId)||!matches(socketQuote(p,wearer,key,gem)))throw Error('Socket preview changed. Review it again.');return socketEquipment(p,wearer,key,gem);},'Equipment socket updated'));}} onAscend={(wearer,setId,rank,cost,ore)=>{const q=ascendQuote(current.current.profile,wearer),serviceId=current.current.service?.id;if(!q.ok||q.setId!==setId||q.level!==rank||q.cost!==cost||q.ore!==ore||!liveService(current.current.world,serviceId))return;requestConfirm('Ascend '+q.current.name+' to +'+(rank+1)+' for '+cost+' gold and '+ore+' Sapphire Ore?',()=>transact(p=>{const live=current.current,next=ascendQuote(p,wearer);if(live.service?.id!==serviceId||!liveService(live.world,serviceId)||!next.ok||next.setId!==setId||next.level!==rank||next.cost!==cost||next.ore!==ore)throw Error('Ascension preview changed. Review it again.');return ascendSet(p,wearer);},'Set ascended'));}} onCombine={(weapon,level,cost)=>{const q=combineQuote(current.current.profile),serviceId=current.current.service?.id;if(!q.ok||q.id!==weapon||q.level!==level||q.cost!==cost||!serviceId||!liveService(current.current.world,serviceId))return;requestConfirm('Combine one spare '+ITEMS[weapon].name+' and '+cost+' gold to reach +'+(level+1)+'?',()=>transact(p=>{const live=current.current,next=combineQuote(p);if(live.service?.id!==serviceId||!liveService(live.world,serviceId)||!next.ok||next.id!==weapon||next.level!==level||next.cost!==cost)throw Error('Combination preview changed. Review it again.');return combineWeapon(p);},'Weapon combined'));}} onEnhance={(weapon,level,cost)=>{if(!Object.hasOwn(ITEMS,weapon)||ITEMS[weapon].kind!=='weapon')return;requestConfirm('Enhance '+ITEMS[weapon].name+' to +'+(level+1)+' for '+cost+' gold and 1 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter||!liveService(s.world,s.service.id))throw Error('Visit a service marker to enhance.');if(p.equipped!==weapon||enhancementLevel(p,weapon)!==level||cost!==15+level*10)throw Error('Equipment changed. Review the new enhancement preview.');return enhanceWeapon(p);},'Weapon enhanced'));}}/>;break;
     case '21':content=<ItemInventory key={profile?.id||'guest'} profile={profile} encounter={encounter} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} initialItem={itemId} onSelect={setItemId} go={go} back={back}/>;break;
     case '22':content=<CraftingShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onCraft={(id,quantity)=>{const p=current.current.profile,q=craftQuote(p,id,quantity);if(!q.ok)return;const profileId=p.id,serviceId=current.current.service?.id;let used=false;requestConfirm('Craft '+quantity+' × '+ITEMS[id].name+' using '+q.ore+' Sapphire Ore and '+q.gold+' gold?',()=>{if(used)return;used=true;transact(live=>{const s=current.current;if(live.id!==profileId||!serviceId||s.service?.id!==serviceId||s.world?.nearbyService!==serviceId||s.encounter||!liveService(s.world,serviceId))throw Error('Return to the original service marker to craft.');return craftItem(live,id,quantity);},'Items crafted');});}}/>;break;
     case '23':content=<DungeonEntrance profile={profile} world={world} candidate={candidate} encounter={encounter} running={running} original={original} layout={screen.layout} back={back} onDetails={()=>{const s=current.current;if(s.profile&&s.running&&s.candidate?.id===candidate?.id&&candidate&&!s.encounter)go('36');}}/>;break;

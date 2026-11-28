@@ -2,9 +2,10 @@ import {WORLD_MAX_X} from './worldExpansion.mjs';
 import {validCampaign,cleanCampaign} from './campaignQuests.mjs';
 import {treasureFor} from './treasureCatalog.mjs';
 import {BOND_GIFT} from './companionBonds.mjs';
+import {learnedPassives,applyPassives} from './passiveSkills.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
-import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats} from './equipmentCatalog.mjs';
+import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats,activeGearSetId,ascensionLevel,scaledSet,validAscensions,cleanAscensions,MAX_ASCENSION,SOCKET_GEMS,MAX_SOCKET_RANK,equippedSocketItems,socketFor,validSockets,cleanSockets,MAX_ENCHANT_RANK,enchantRank,enchantBonus,validEnchants,cleanEnchants} from './equipmentCatalog.mjs';
 export const SAVE_KEY='fantasyBattle.sapphire.saves.v1';
 export const SETTINGS_KEY='fantasyBattle.sapphire.settings.v1';
 export const ITEMS=Object.freeze({
@@ -92,6 +93,7 @@ const copy=o=>JSON.parse(JSON.stringify(o));
 export const levelFor=xp=>1+Math.floor(xp/100);
 export const learnedAt=Object.freeze({quickShot:1,guard:1,volley:2,chargedShot:3});
 export const availableActions=level=>Object.keys(learnedAt).filter(k=>level>=learnedAt[k]);
+export const learnedSkills=level=>[...availableActions(level),...learnedPassives(level)];
 export const pointsFor=p=>Math.max(0,levelFor(p.xp)-1-STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0));
 export function createProfile(name){
   const clean=String(name??'').trim().slice(0,40);
@@ -99,7 +101,7 @@ export function createProfile(name){
   return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);}catch{return false;}
+  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited)&&validAscensions(p,id=>memberFor(p,id).recruited)&&validSockets(p,id=>memberFor(p,id).recruited)&&validEnchants(p,id=>memberFor(p,id).recruited);}catch{return false;}
 }
 // Legacy records have no revision. A complete serialized record also catches same-time edits.
 export const slotStamp=record=>record===undefined?null:JSON.stringify(record);
@@ -202,10 +204,10 @@ export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
   const {inventory,loot}=grantLoot(p,[{id:'sapphireOre',count:ore},...(gearId?[{id:gearId,count:1}]:[])]);
   const completedEncounters=[...p.world.completedEncounters,encounter.id];
   const quest=p.quests.grove==='active'&&completedEncounters.includes('wilds_grove_01')?'complete':p.quests.grove;
-  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
+  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,leveled:newLevel>oldLevel,unlocked:learnedSkills(newLevel).filter(x=>!learnedSkills(oldLevel).includes(x))};
 }
 export function allocate(p,key){if(!STAT_KEYS.includes(key)||pointsFor(p)<1)return p;return {...p,hp:p.hp+(key==='vitality'?10:0),attributes:{...p.attributes,[key]:p.attributes[key]+1}};}
-export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+enhancementLevel(p,p?.equipped)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero');}
+export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return applyPassives(addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+enhancementLevel(p,p?.equipped)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero'),p?levelFor(p.xp):0);}
 export function acceptGroveQuest(p){return p.quests.grove!=='available'?p:{...p,quests:{...p.quests,grove:p.world.completedEncounters.includes('wilds_grove_01')?'complete':'active'}};}
 export function claimGroveQuest(p){return p.quests.grove!=='complete'?p:{...p,quests:{...p.quests,grove:'claimed'}};}
 
@@ -246,6 +248,55 @@ export function enhanceWeapon(p) {
   const id=p.equipped,lv=enhancementLevel(p,id),cost=15+lv*10;
   if(!weaponEligible(p,id)||!p.inventory[id]||lv>=5||p.gold<cost||p.inventory.sapphireOre<1)throw Error('Enhancement requires gold, ore and a weapon below +5.');
   return {...p,gold:p.gold-cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-1},enhancements:{...p.enhancements,[id]:lv+1}};
+}
+// Combine is an alternative to ore enhancement, consuming a spare copy of the equipped bow.
+export function combineQuote(p){
+ const id=p?.equipped,level=enhancementLevel(p,id),cost=5+level*5,owned=p?.inventory?.[id]??0;
+ const reason=!p||!weaponEligible(p,id)||!owned?'Equip an eligible bow first.':id==='starterBow'?'Starter bow cannot be combined.':level>=5?'Maximum enhancement reached.':owned<2?'Requires one spare copy of the equipped bow.':p.gold<cost?'Insufficient gold.':null;
+ return {ok:!reason,reason,id,level,cost,owned};
+}
+export function combineWeapon(p){
+ if(!isProfile(p))throw Error('Invalid profile.');
+ const q=combineQuote(p);if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.cost,inventory:{...p.inventory,[q.id]:q.owned-1},enhancements:{...p.enhancements,[q.id]:q.level+1}};
+}
+// Ascension is a permanent wearer/set unlock; it applies only while that complete set is equipped.
+export function ascendQuote(p,wearer='hero'){
+ const setId=activeGearSetId(p,wearer),level=ascensionLevel(p,wearer,setId),cost=30+level*20,ore=2+level;
+ const eligible=wearer==='hero'||ROSTER.some(m=>m.id===wearer&&memberFor(p,wearer).recruited);
+ const reason=!p||!eligible?'Select a recruited party member.':!setId?'Equip a matching armor and mantle set.':level>=MAX_ASCENSION?'Maximum ascension reached.':p.gold<cost?'Insufficient gold.':(p.inventory.sapphireOre??0)<ore?'Insufficient Sapphire Ore.':null;
+ return {ok:!reason,reason,wearer,setId,level,cost,ore,current:scaledSet(setId,level),next:scaledSet(setId,Math.min(MAX_ASCENSION,level+1))};
+}
+export function ascendSet(p,wearer='hero'){
+ if(!isProfile(p))throw Error('Invalid profile.');
+ const q=ascendQuote(p,wearer);if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore},ascensions:{...p.ascensions,[wearer]:{...p.ascensions?.[wearer],[q.setId]:q.level+1}}};
+}
+// Gems are formed in place from ore. One permanent socket record per wearer and item type.
+export function socketQuote(p,wearer,key,gem){
+ const existing=socketFor(p,wearer,key),same=Boolean(existing&&existing.gem===gem),rank=same?existing.rank:0;
+ const cost=20+rank*20,ore=2+rank;
+ const eligible=wearer==='hero'||ROSTER.some(m=>m.id===wearer&&memberFor(p,wearer).recruited);
+ const reason=!p||!eligible?'Select a recruited party member.':!equippedSocketItems(p,wearer).includes(key)?'Equip an eligible item first.':!Object.hasOwn(SOCKET_GEMS,gem)?'Choose a valid gem.':rank>=MAX_SOCKET_RANK?'Maximum gem rank reached.':p.gold<cost?'Insufficient gold.':(p.inventory.sapphireOre??0)<ore?'Insufficient Sapphire Ore.':null;
+ return {ok:!reason,reason,wearer,key,gem,existing,rank,nextRank:Math.min(MAX_SOCKET_RANK,rank+1),cost,ore,replacing:Boolean(existing&&!same)};
+}
+export function socketEquipment(p,wearer,key,gem){
+ if(!isProfile(p))throw Error('Invalid profile.');
+ const q=socketQuote(p,wearer,key,gem);if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore},sockets:{...p.sockets,[wearer]:{...p.sockets?.[wearer],[key]:{gem,rank:q.nextRank}}}};
+}
+// Deterministic enchantments scale original equipment stats only, independent of sockets and sets.
+export function enchantQuote(p,wearer,key){
+ const rank=enchantRank(p,wearer,key),cost=40+rank*25,ore=3+rank;
+ const eligible=wearer==='hero'||ROSTER.some(m=>m.id===wearer&&memberFor(p,wearer).recruited);
+ const reason=!p||!eligible?'Select a recruited party member.':!equippedSocketItems(p,wearer).includes(key)?'Equip an eligible item first.':rank>=MAX_ENCHANT_RANK?'Maximum enchantment reached.':p.gold<cost?'Insufficient gold.':(p.inventory.sapphireOre??0)<ore?'Insufficient Sapphire Ore.':null;
+ const nextRank=Math.min(MAX_ENCHANT_RANK,rank+1);
+ return {ok:!reason,reason,wearer,key,rank,nextRank,cost,ore,current:enchantBonus(key,rank),next:enchantBonus(key,nextRank)};
+}
+export function enchantEquipment(p,wearer,key){
+ if(!isProfile(p))throw Error('Invalid profile.');
+ const q=enchantQuote(p,wearer,key);if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore},enchants:{...p.enchants,[wearer]:{...p.enchants?.[wearer],[key]:q.nextRank}}};
 }
 // Each recipe creates an existing catalog item; no new inventory keys or save migration.
 const recipe=(id,category,ore,gold,level)=>Object.freeze({id,category,ore,gold,level});
@@ -303,6 +354,9 @@ export function parseBackup(raw){
     inventory:Object.fromEntries(Object.keys(ITEMS).filter(k=>Object.hasOwn(p.inventory,k)).map(k=>[k,p.inventory[k]])),equipped:p.equipped,
     ...(p.gear===undefined?{}:{gear:Object.fromEntries(Object.keys(p.gear).map(id=>[id,{...gearFor(p,id)}]))}),
     enhancements:cleanEnhancements(p),
+    ...(p.ascensions===undefined?{}:{ascensions:cleanAscensions(p)}),
+    ...(p.sockets===undefined?{}:{sockets:cleanSockets(p)}),
+    ...(p.enchants===undefined?{}:{enchants:cleanEnchants(p)}),
     rewardedDiscoveries:[...p.rewardedDiscoveries],attributes:Object.fromEntries(STAT_KEYS.map(k=>[k,p.attributes[k]])),
     world:{position:[...w.position],discoveries:[...w.discoveries],completedEncounters:[...w.completedEncounters],visitedRegions:[...w.visitedRegions]},
     quests:{grove:p.quests.grove,...cleanCampaign(p)},createdAt:p.createdAt};

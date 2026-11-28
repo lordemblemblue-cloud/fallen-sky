@@ -1,3 +1,4 @@
+import {WEAPONS,weaponEligible} from './weaponCatalog.mjs';
 // Shared local inventory, four slots per recruited party member.
 export const GEAR_SLOTS=Object.freeze(['armor','mantle','ring','necklace']);
 const item=(name,slot,buy,sell,atk,def,spd,color,trim,style,rarity='Common',requiredLevel=1,setId=null)=>Object.freeze({name,kind:'gear',slot,buy,sell,atk,def,spd,color,trim,style,rarity,requiredLevel,setId});
@@ -26,12 +27,62 @@ export const GEAR_SETS=Object.freeze({pilgrim:Object.freeze({name:'Pilgrim Watch
 // Requirements use the shared party leader's progression; all legacy gear remains level 1.
 export const gearLevel=p=>1+Math.floor((Number.isFinite(p?.xp)?Math.max(0,p.xp):0)/100);
 export function gearEligible(p,key){return Object.hasOwn(GEAR,key)&&gearLevel(p)>=GEAR[key].requiredLevel;}
-export function activeGearSet(p,id){const slots=gearFor(p,id);const a=GEAR[slots.armor],m=GEAR[slots.mantle];return a?.setId&&a.setId===m?.setId&&Object.hasOwn(GEAR_SETS,a.setId)&&gearEligible(p,slots.armor)&&gearEligible(p,slots.mantle)?GEAR_SETS[a.setId]:null;}
+export const MAX_ASCENSION=4;
+export const ascensionLevel=(p,wearer,setId)=>WEARERS.includes(wearer)&&Object.hasOwn(GEAR_SETS,setId)&&Number.isInteger(p?.ascensions?.[wearer]?.[setId])?Math.max(0,Math.min(MAX_ASCENSION,p.ascensions[wearer][setId])):0;
+export function activeGearSetId(p,id){const slots=gearFor(p,id);const a=GEAR[slots.armor],m=GEAR[slots.mantle];return a?.setId&&a.setId===m?.setId&&Object.hasOwn(GEAR_SETS,a.setId)&&gearEligible(p,slots.armor)&&gearEligible(p,slots.mantle)?a.setId:null;}
+export function scaledSet(setId,rank=0){
+ if(!Object.hasOwn(GEAR_SETS,setId))return null;
+ const base=GEAR_SETS[setId],factor=1+Math.max(0,Math.min(MAX_ASCENSION,rank))*.25;
+ return {name:base.name,atk:base.atk*factor,def:base.def*factor,spd:base.spd*factor};
+}
+export function activeGearSet(p,id){const setId=activeGearSetId(p,id);return setId?scaledSet(setId,ascensionLevel(p,id,setId)):null;}
+export function validAscensions(p,recruited){
+ if(p.ascensions===undefined)return true;
+ if(!p.ascensions||typeof p.ascensions!=='object'||Array.isArray(p.ascensions))return false;
+ return Object.entries(p.ascensions).every(([wearer,sets])=>WEARERS.includes(wearer)&&(wearer==='hero'||recruited(wearer))&&sets&&typeof sets==='object'&&!Array.isArray(sets)&&Object.entries(sets).every(([id,n])=>Object.hasOwn(GEAR_SETS,id)&&Number.isInteger(n)&&n>=0&&n<=MAX_ASCENSION));
+}
+export function cleanAscensions(p){return Object.fromEntries(WEARERS.filter(w=>Object.hasOwn(p.ascensions||{},w)).map(w=>[w,Object.fromEntries(Object.keys(GEAR_SETS).filter(id=>Object.hasOwn(p.ascensions[w],id)).map(id=>[id,ascensionLevel(p,w,id)]))]));}
 export const gearMetadata=key=>Object.hasOwn(GEAR,key)?GEAR[key].rarity+' · Level '+GEAR[key].requiredLevel+(GEAR[key].setId?' · '+GEAR_SETS[GEAR[key].setId].name:''):null;
 export const WEARERS=Object.freeze(['hero','groveArcher','pilgrimWarden','mistScout']);
 export const gearFor=(p,id)=>WEARERS.includes(id)?p?.gear?.[id]||{}:{};
 export const gearCount=(p,key)=>WEARERS.reduce((n,id)=>n+GEAR_SLOTS.filter(slot=>gearFor(p,id)[slot]===key).length,0);
-export function addGearStats(stats,p,id){const out={...stats};for(const slot of GEAR_SLOTS){const key=gearFor(p,id)[slot];if(gearEligible(p,key)&&GEAR[key].slot===slot)for(const k of ['atk','def','spd'])out[k]+=GEAR[key][k];}const set=activeGearSet(p,id);if(set)for(const k of ['atk','def','spd'])out[k]+=set[k];return out;}
+export const SOCKET_GEMS=Object.freeze({ruby:Object.freeze({name:'Crimson Ruby',stat:'atk',label:'Attack'}),sapphire:Object.freeze({name:'Azure Sapphire',stat:'def',label:'Defense'}),emerald:Object.freeze({name:'Verdant Emerald',stat:'spd',label:'Speed'})});
+export const MAX_SOCKET_RANK=3;
+export function socketEligible(p,wearer,key){
+ return WEARERS.includes(wearer)&&(Object.hasOwn(GEAR,key)?gearEligible(p,key):wearer==='hero'&&key!=='starterBow'&&Object.hasOwn(WEAPONS,key)&&weaponEligible(p,key));
+}
+export function equippedSocketItems(p,wearer){
+ if(!WEARERS.includes(wearer))return [];
+ const slots=gearFor(p,wearer);
+ return [...(wearer==='hero'?[p?.equipped]:[]),...GEAR_SLOTS.map(slot=>slots[slot])].filter(key=>socketEligible(p,wearer,key));
+}
+const validSocket=s=>Boolean(s&&typeof s==='object'&&!Array.isArray(s)&&Object.keys(s).length===2&&Object.hasOwn(SOCKET_GEMS,s.gem)&&Number.isInteger(s.rank)&&s.rank>=1&&s.rank<=MAX_SOCKET_RANK);
+export function socketFor(p,wearer,key){
+ const socket=p?.sockets?.[wearer]?.[key];
+ return socketEligible(p,wearer,key)&&validSocket(socket)?socket:null;
+}
+export function validSockets(p,recruited){
+ if(p.sockets===undefined)return true;
+ if(!p.sockets||typeof p.sockets!=='object'||Array.isArray(p.sockets))return false;
+ return Object.entries(p.sockets).every(([wearer,items])=>WEARERS.includes(wearer)&&(wearer==='hero'||recruited(wearer))&&items&&typeof items==='object'&&!Array.isArray(items)&&Object.entries(items).every(([key,socket])=>socketEligible(p,wearer,key)&&validSocket(socket)));
+}
+export function cleanSockets(p){
+ return Object.fromEntries(Object.entries(p.sockets).map(([wearer,items])=>[wearer,Object.fromEntries(Object.entries(items).map(([key,socket])=>[key,{gem:socket.gem,rank:socket.rank}]))]));
+}
+export const MAX_ENCHANT_RANK=3;
+export const enchantRank=(p,wearer,key)=>socketEligible(p,wearer,key)&&Number.isInteger(p?.enchants?.[wearer]?.[key])?Math.max(0,Math.min(MAX_ENCHANT_RANK,p.enchants[wearer][key])):0;
+export function enchantBonus(key,rank){
+ const item=Object.hasOwn(GEAR,key)?GEAR[key]:Object.hasOwn(WEAPONS,key)?WEAPONS[key]:null;
+ const n=Number.isInteger(rank)?Math.max(0,Math.min(MAX_ENCHANT_RANK,rank)):0;
+ return Object.fromEntries(['atk','def','spd'].map(stat=>[stat,(item?.[stat]||0)*n/10]));
+}
+export function validEnchants(p,recruited){
+ if(p.enchants===undefined)return true;
+ if(!p.enchants||typeof p.enchants!=='object'||Array.isArray(p.enchants))return false;
+ return Object.entries(p.enchants).every(([wearer,items])=>WEARERS.includes(wearer)&&(wearer==='hero'||recruited(wearer))&&items&&typeof items==='object'&&!Array.isArray(items)&&Object.entries(items).every(([key,rank])=>socketEligible(p,wearer,key)&&Number.isInteger(rank)&&rank>=1&&rank<=MAX_ENCHANT_RANK));
+}
+export function cleanEnchants(p){return Object.fromEntries(Object.entries(p.enchants).map(([wearer,items])=>[wearer,{...items}]));}
+export function addGearStats(stats,p,id){const out={...stats};for(const slot of GEAR_SLOTS){const key=gearFor(p,id)[slot];if(gearEligible(p,key)&&GEAR[key].slot===slot)for(const k of ['atk','def','spd'])out[k]+=GEAR[key][k];}const set=activeGearSet(p,id);if(set)for(const k of ['atk','def','spd'])out[k]+=set[k];for(const key of equippedSocketItems(p,id)){const socket=socketFor(p,id,key);if(socket)out[SOCKET_GEMS[socket.gem].stat]+=socket.rank;const rank=enchantRank(p,id,key);if(rank){const bonus=enchantBonus(key,rank);for(const stat of ['atk','def','spd'])out[stat]+=bonus[stat];}}return out;}
 // Accessories contribute stats but must not be passed to the armor/mantle mesh renderer.
 export const equippedVisuals=(p,id)=>['armor','mantle'].map(slot=>gearFor(p,id)[slot]).filter(key=>Object.hasOwn(GEAR,key));
 export const gearSlotLabel=slot=>({armor:'Armor',mantle:'Mantle',ring:'Ring',necklace:'Necklace'})[slot]||'Equipment';
