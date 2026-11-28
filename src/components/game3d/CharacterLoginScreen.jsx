@@ -63,11 +63,15 @@ const CHRONICLE_TABS = Object.freeze([
   {id:'forge',label:'Forge'},
 ]);
 const format = formatCharacterOverviewValue;
+function celestialFraction(value, maximum) {
+  return Number.isFinite(value) && Number.isFinite(maximum) && maximum > 0
+    ? Math.max(0, Math.min(1, value / maximum)) : null;
+}
 function InformationSection({ title, rows = [], children }) {
   return <section className="axe-login-info-section">
     <h3>{title}</h3>
     {rows.length > 0 && <dl className="axe-login-character-details">
-      {rows.map(([name, value]) => <div key={name}><dt>{name}</dt><dd>{value ?? '—'}</dd></div>)}
+      {rows.map(([name, value, meter]) => <div key={name} className={meter !== undefined ? 'axe-celestial-meter-row' : undefined}><dt>{name}</dt>{meter !== undefined && <span className="axe-celestial-meter" aria-hidden="true"><i style={{width:`${(meter ?? 0)*100}%`}}/></span>}<dd>{value ?? '—'}</dd></div>)}
     </dl>}
     {children}
   </section>;
@@ -413,9 +417,9 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
                 aria-labelledby={`axe-chronicle-tab-${infoTab}`} key={selected.id+'-'+infoTab}>
                 {infoTab==='overview' && <>
                   <InformationSection title="Vitals" rows={[
-                    ['HP',`${format(overview?.hp ?? selected.hp ?? selected.currentHp)} / ${format(selected.maxHp)}`],
-                    ['Chi',`${format(selected.chi ?? selected.currentChi)} / ${format(selected.maxChi)}`],
-                    ['Will',format(selected.will ?? selected.currentWill)],
+                    ['HP',`${format(overview?.hp ?? selected.hp ?? selected.currentHp)} / ${format(selected.maxHp)}`,celestialFraction(overview?.hp ?? selected.hp ?? selected.currentHp,selected.maxHp)],
+                    ['Chi',`${format(selected.chi ?? selected.currentChi)} / ${format(selected.maxChi)}`,celestialFraction(selected.chi ?? selected.currentChi,selected.maxChi)],
+                    ['Will',format(selected.will ?? selected.currentWill),celestialFraction(selected.will ?? selected.currentWill,selected.maxWill)],
                     ['Available points',format(overview?.unspentPoints)],
                   ]}/>
                   <InformationSection title="Primary Attributes" rows={[
