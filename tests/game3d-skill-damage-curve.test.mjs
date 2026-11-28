@@ -358,6 +358,14 @@ function hold(kind) {
     assert.ok(added.ok, JSON.stringify(added));
     owned[kind] = added.item.instanceId;
   }
+  // Owning a weapon is not equipping it. Explicitly fill or replace a real loadout slot.
+  const item = api.inv.getAXEEquipmentItem(owned[kind]);
+  if (!item.equipped) {
+    const equipped = api.inv.getEquippedAXEItemsByCategory('weapon');
+    const replace = equipped.length >= 3 ? api.inv.getActiveEquippedAXEWeapon()?.instanceId : null;
+    const placed = api.inv.equipAXEInventoryItem(owned[kind], { level: 100, replaceWeaponInstanceId: replace, activate: false });
+    assert.ok(placed.ok, `equip ${kind}: ${JSON.stringify(placed)}`);
+  }
   const switched = api.inv.switchAXEInventoryWeapon(owned[kind], { level: 100 });
   assert.ok(switched.ok, `${kind}: ${JSON.stringify(switched)}`);
 }
