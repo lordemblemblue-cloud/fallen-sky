@@ -79,18 +79,20 @@ test('reference menus render one visible frame instead of stacked template and C
 });
 
 test('Story screen is reconstructed with one DOM frame and scenery-only artwork', () => {
+  // one campaign surface (operations, briefing with the clean scene, deploy and crew), styled by duelistSapphire.css
   const story = source('src/components/duelist/menu/DuelistStoryMenu.jsx');
-  const layout = source('src/components/duelist/menu/DuelistStoryMenu.css');
+  const layout = source('src/components/duelist/menu/duelistSapphire.css');
   assert.match(hub, /<DuelistStoryMenu lobby=\{lobby\}/);
-  assert.match(story, /className="dsm-story"/);
-  assert.match(story, /className="dsm-frame"/);
-  assert.match(story, /className="dsm-tabs"/);
-  assert.match(story, /className="dsm-timeline"/);
-  assert.match(story, /className="dsm-detail"/);
-  assert.match(story, /className="dsm-actions"/);
+  assert.match(story, /import '\.\/duelistSapphire\.css'/);
+  assert.match(story, /<section className="ds-campaign" id="duelist-story-panel"/);
+  assert.match(story, /className="ds-missions ds-rail"/);
+  assert.match(story, /className="ds-brief ds-rail"/);
+  assert.match(story, /className="ds-objectives"/);
+  assert.match(story, /className="ds-deploy"/);
   assert.match(story, /SCENE_IMAGE = .*duelist_story_scene_clean\.jpg/);
+  assert.match(story, /<img src=\{SCENE_IMAGE\} alt=""/);
   assert.doesNotMatch(layout, /duelist_story_template\.png|aa2d24798_/);
-  assert.match(layout, /grid-template-columns:minmax\(185px,18%\)/);
+  assert.match(layout, /\.ds-campaign-grid \{display:grid;grid-template-columns:minmax\(145px, \.8fr\)/);
   assert.match(layout, /@media\(max-width:900px\)/);
   assert.match(story, /STORY_MISSIONS\[missionIndex\]/);
   assert.match(story, /mode: 'story', mission: mission\.id/);
