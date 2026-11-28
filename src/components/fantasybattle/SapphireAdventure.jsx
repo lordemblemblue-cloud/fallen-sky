@@ -21,6 +21,7 @@ import { GAME_MENU_GROUPS, isGameMenu, menuName, menuDestination, canResumeGame,
 import CharacterCreationViewer from './CharacterCreationViewer.jsx';
 import {glassUiKind,usesRightGlass} from './core/glassUiPolicy.mjs';
 import {loadingMilestones} from './core/loadingMilestones.mjs';
+import {WORLD_STARTUP_PROTOCOL,startupPhaseLabel,firstRenderer} from './core/worldStartup.mjs';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
 import {isCurrentEncounter,currentSaveStamp,resolveDisplayedSave} from './core/battleLifecycle.mjs';
 import {encryptBackup,importTransfer,MAX_ENCRYPTED_BYTES} from './core/encryptedBackup.mjs';
@@ -1267,6 +1268,9 @@ export default function SapphireAdventure(){
   const [profile,setProfile]=useState(null),[slot,setSlot]=useState(null),[world,setWorld]=useState(null),[running,setRunning]=useState(false);
   const [loadStage,setLoadStage]=useState(1),[slowLoad,setSlowLoad]=useState(false),[loadFailure,setLoadFailure]=useState(false),[loadNotice,setLoadNotice]=useState('');
   const [worldRun,setWorldRun]=useState({id:0,webgl:false});
+  const [startupPhase,setStartupPhase]=useState('frame');
+  const startupPhaseRef=useRef('frame'),preferCompatibility=useRef(false);
+  const updateStartupPhase=phase=>{startupPhaseRef.current=phase;setStartupPhase(phase);};
   const worldRunRef=useRef(worldRun);
   const [birthday,setBirthday]=useState('');
   const [name,setName]=useState(''),[selected,setSelected]=useState(null),[encounter,setEncounter]=useState(null),[arenaReady,setArenaReady]=useState(false);
@@ -1285,7 +1289,7 @@ export default function SapphireAdventure(){
   const go=target=>{if(UI_SCREENS[target])setStack(old=>old[old.length-1]===target?old:[...old,target]);};
   const back=()=>setStack(old=>old.length>1?old.slice(0,-1):old);
   const root=target=>setStack([target]);
-  const post=(type,data)=>frame.current?.contentWindow?.postMessage({channel:'fantasy-host',type,data},location.origin);
+  const post=(type,data)=>frame.current?.contentWindow?.postMessage({channel:'fantasy-host',run:String(worldRunRef.current.id),type,data},location.origin);
   const notify=(message,category='system')=>{setNotifications(old=>[{message,category,time:Date.now()},...old].slice(0,40));setNotice(message);};
   const fail=message=>{confirmGate.current.cancel();setPending(null);clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);clearTimeout(battleTimer.current);if(current.current.id==='35')setLoadFailure(true);failedLoad.current=true;setError(message);go('47');};
   const transact=(operation,success)=>{const p=current.current.profile;if(!p||current.current.encounter){notify('This action is available only outside battle.');return false;}try{const next=operation(p);replaceProfile(next);autosave(next);notify(success,'activity');return true;}catch(e){notify(e.message);return false;}};
@@ -1295,7 +1299,7 @@ export default function SapphireAdventure(){
   useEffect(()=>{if(id==='10'&&running)frame.current?.focus();else if(!isWorldScreen(id)&&id!=='35')focusRef.current?.focus();},[id,running]);
   useEffect(()=>{if(id!=='35')return;setSlowLoad(false);focusRef.current?.focus();const timer=setTimeout(()=>setSlowLoad(true),8000);return()=>clearTimeout(timer);},[id]);
   useEffect(()=>{post('pause',id!=='10');if(stageRef.current)stageRef.current.paused=id!=='09';},[id]);
-  useEffect(()=>{if(running){post('quality',settings.quality);}if(stageRef.current)stageRef.current.setMuted(settings.muted);},[running,settings]);
+  useEffect(()=>{if(running&&startReady.current){post('quality',settings.quality);}if(stageRef.current)stageRef.current.setMuted(settings.muted);},[running,settings]);
   const applySettings=patch=>{const next={...current.current.settings,...patch};setSettings(next);try{localStorage.setItem(SETTINGS_KEY,JSON.stringify(next));}catch(e){fail('Settings could not be saved: '+e.message);}};
   const save=(target,overwrite=false,p=current.current.profile,expectedStamp)=>{
     if(!p||!target)return false;
@@ -1307,20 +1311,28 @@ export default function SapphireAdventure(){
   const downloadBackup=async(p,encrypted=false)=>{if(backupLock.current)return;backupLock.current=true;setBackupBusy(true);setBackupError('');const pass=backupPass;setBackupPass('');try{const raw=encrypted?await encryptBackup(p,pass):exportBackup(p);const blob=new Blob([raw],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=encrypted?'fantasy-battle-encrypted-save.json':'fantasy-battle-save.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);notify(encrypted?'Encrypted backup exported':'Unencrypted backup exported');}catch(e){setBackupError(e.message);notify(e.message);}finally{backupLock.current=false;setBackupBusy(false);}};
   const importBackup=async file=>{if(!file||current.current.running||backupLock.current)return;backupLock.current=true;setBackupBusy(true);setBackupError('');const pass=backupPass,target=importSlot;setBackupPass('');try{if(file.size>MAX_ENCRYPTED_BYTES)throw Error('Save backup is too large.');const p=await importTransfer(await file.text(),pass);if(current.current.running||current.current.id!=='03')return;const before=readSlots(localStorage);if(before.error)throw Error(before.error);const previous=before.slots.find(s=>s.id===target);const occupied=Boolean(previous);requestConfirm('Import '+p.name+' into slot '+target+(occupied?' and replace the existing save?':'?'),()=>{try{if(current.current.running)throw Error('Return to title before importing.');writeSlot(localStorage,target,p,{overwrite:occupied,expectedStamp:previous?.stamp??null});reloadSlots();notify('Save imported into slot '+target);}catch(e){setBackupError(e.message);notify(e.message);}});}catch(e){setBackupError(e.message);}finally{backupLock.current=false;setBackupBusy(false);}};
   const restoreCheckpoint=()=>{if(current.current.running)return;const target=importSlot,record=slots.slots.find(s=>s.id===target);if(!record?.recovery)return;let used=false;requestConfirm('Restore the previous checkpoint for '+record.recovery.profile.name+' in slot '+target+'? Current slot progress will be replaced.',()=>{if(used)return;used=true;try{if(current.current.running)throw Error('Return to title before restoring.');recoverSlot(localStorage,target,record.stamp);reloadSlots();notify('Previous checkpoint restored');}catch(e){setBackupError(e.message);notify(e.message);}});};
+  // Probe only the active frame while loading. A lost initial ready message
+  // cannot leave the player waiting indefinitely.
+  useEffect(()=>{
+    if(id!=='35'||!running||encounter)return;
+    const probe=()=>{if(!startReady.current&&!failedLoad.current)post('probe');};
+    probe();const timer=setInterval(probe,1000);return()=>clearInterval(timer);
+  },[id,running,encounter,worldRun.id]); // eslint-disable-line react-hooks/exhaustive-deps
   // One bounded compatibility attempt, never mark a stage complete on a timer.
   const armWorldDeadline=(run,restoring=false)=>{
     clearTimeout(timeoutRef.current);
     timeoutRef.current=setTimeout(()=>{
       if(worldRunRef.current.id!==run.id||startReady.current||failedLoad.current)return;
-      recoverWorld(restoring?'The saved position could not be restored. Your save is unchanged.':'The 3D world did not become ready. Check your graphics device and retry.');
-    },restoring?15000:run.webgl?30000:15000);
+      recoverWorld('Loading timed out: '+startupPhaseLabel(startupPhaseRef.current)+' Your save is unchanged.');
+    },restoring?45000:run.webgl?45000:18000);
   };
   const recoverWorld=message=>{
     const run=worldRunRef.current;
     if(startReady.current||failedLoad.current)return;
     if(run.webgl){setRunning(false);fail(message);return;}
+    preferCompatibility.current=true;
     const next={id:run.id+1,webgl:true};
-    worldRunRef.current=next;restorePending.current=false;setLoadStage(1);setSlowLoad(true);
+    worldRunRef.current=next;restorePending.current=false;setLoadStage(1);setSlowLoad(true);updateStartupPhase('frame');
     setWorldRun(next);armWorldDeadline(next);
   };
   const begin=(p,saveSlot=null,stamp=saveSlot?currentSaveStamp(slots.slots,saveSlot,p):null)=>{
@@ -1331,7 +1343,8 @@ export default function SapphireAdventure(){
     replaceProfile(p);setSlot(saveSlot);current.current.slot=saveSlot;setWorld(null);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);
     setService(null);setCandidate(null);setLoot([]);setRunning(false);setLoadFailure(false);setSlowLoad(false);setLoadStage(1);root('35');
     // A unique frame run also prevents late acknowledgements from an abandoned renderer.
-    const next={id:worldRunRef.current.id+1,webgl:new URLSearchParams(location.search).get('renderer')==='webgl'};
+    updateStartupPhase('frame');
+    const next={id:worldRunRef.current.id+1,webgl:firstRenderer(location.search,preferCompatibility.current)};
     worldRunRef.current=next;setWorldRun(next);
     startTimer.current=setTimeout(()=>{setRunning(true);armWorldDeadline(next);},0);
   };
@@ -1385,13 +1398,15 @@ export default function SapphireAdventure(){
   const eventHandler=useRef(null);
   eventHandler.current=e=>{
     const s=current.current,p=s.profile;
-    if(e.type==='ready'&&p&&!failedLoad.current){
-      if(startReady.current||restorePending.current)return;
-      restorePending.current=true;setLoadStage(2);armWorldDeadline(worldRunRef.current,true);post('quality',s.settings.quality);post('appearance',appearanceFor(p).tint);post('restore',p.world);return;
+    if(e.type==='startup'&&s.id==='35'&&!s.encounter&&!failedLoad.current&&!startReady.current){updateStartupPhase(e.phase);return;}
+    if(e.type==='ready'&&s.id==='35'&&p&&!s.encounter&&!failedLoad.current){
+      if(startReady.current)return;
+      if(restorePending.current){post('restore',p.world);return;}
+      restorePending.current=true;setLoadStage(2);updateStartupPhase('restore');armWorldDeadline(worldRunRef.current,true);post('quality','performance');post('appearance',appearanceFor(p).tint);post('restore',p.world);return;
     }
     if(e.type==='restored'&&p&&!s.encounter&&!failedLoad.current&&(startReady.current||restorePending.current)){
       const updated=updateWorld(p,e.world);replaceProfile(updated);setWorld(e.world);
-      if(!startReady.current){startReady.current=true;restorePending.current=false;clearTimeout(timeoutRef.current);setLoadStage(3);post('pause',false);root('10');autosave(updated);}return;
+      if(!startReady.current){startReady.current=true;restorePending.current=false;clearTimeout(timeoutRef.current);setLoadStage(3);post('pause',false);root('10');if(!worldRunRef.current.webgl)post('quality',s.settings.quality);if(saveBaseline.current?.stamp===null)autosave(updated);}return;
     }
     if(e.type==='world'&&p&&startReady.current&&!s.encounter&&!failedLoad.current){
       const updated=updateWorld(p,e.world);if(!e.unchanged)setWorld(e.world);if(updated!==p)replaceProfile(updated);
@@ -1406,11 +1421,16 @@ export default function SapphireAdventure(){
     if(e.type==='discovery'&&p&&!s.encounter){const treasure=treasureFor(e.id);if(!treasure||!e.world?.discoveries?.includes(e.id)){post('pause',s.id!=='10');return;}const updated=updateWorld(p,e.world);const awarded=collectLoot(updated,e.id);replaceProfile(awarded.profile);setWorld(e.world);setDiscovery({kind:'landmark',id:e.id,label:treasure.label});setLoot(awarded.loot);notify(treasure.label,awarded.loot.length?'rewards':'exploration');autosave(awarded.profile);go(awarded.loot.length?'31':'42');return;}
     if(e.type==='service'&&p&&s.id==='10'&&!s.encounter){const registered=serviceFor(e.service?.id);if(!registered||!liveService(e.world,registered.id)){post('pause',false);return;}setService(registered);setWorld(e.world);replaceProfile(updateWorld(p,e.world));go('13');return;}
     if(e.type==='battleReady'&&s.id==='35'&&isCurrentEncounter(s.encounter,e.token)&&!failedLoad.current){setArenaReady(true);if(s.id==='35')setLoadStage(old=>Math.max(2,old));return;}
+    if(e.type==='versionMismatch'&&!failedLoad.current){setRunning(false);fail('The preview loaded different game versions. Refresh the preview after synchronization completes. Your save is unchanged.');return;}
     if(e.type==='error'&&!failedLoad.current){if(s.id==='35'&&!s.encounter&&!startReady.current)recoverWorld(e.message||'World renderer failed.');else fail(e.message||'World error');}
     if(e.type==='key')onKey(e.code);
   };
   useEffect(()=>{
-    const receive=e=>{if(e.origin===location.origin&&e.source===frame.current?.contentWindow&&e.data?.channel==='fantasy-world'&&e.data.run===String(worldRunRef.current.id))eventHandler.current(e.data);};
+    const receive=e=>{
+      if(e.origin!==location.origin||e.source!==frame.current?.contentWindow||e.data?.channel!=='fantasy-world'||!(e.data.run===String(worldRunRef.current.id)))return;
+      if(e.data.protocol!==WORLD_STARTUP_PROTOCOL&&current.current.id==='35'&&!startReady.current&&!failedLoad.current){eventHandler.current({type:'versionMismatch'});return;}
+      eventHandler.current(e.data);
+    };
     const key=e=>{if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||(e.code!=='Escape'&&(/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'')||e.target?.isContentEditable)))return;const s=current.current.id;if(e.code==='Escape'||HOTKEY_SCREENS[e.code]){e.preventDefault();eventHandler.current({type:'key',code:e.code});}else if(s==='09'&&stageRef.current?.handleKey(e.key))e.preventDefault();};
     window.addEventListener('message',receive);window.addEventListener('keydown',key);return()=>{window.removeEventListener('message',receive);window.removeEventListener('keydown',key);};
   },[]);
@@ -1577,8 +1597,9 @@ export default function SapphireAdventure(){
         <progress className="fa-glass-progress" aria-label="Loading stages completed" value={loading.completed} max={loading.total}/>
         <ol className="fa-glass-loading-steps">{loading.steps.map((label,index)=><li key={label} aria-current={index===loading.completed?'step':undefined} data-state={index<loading.completed?'done':index===loading.completed?'active':'pending'}><span aria-hidden="true">{index<loading.completed?'✓':index===loading.completed?'◈':'◇'}</span>{label}</li>)}</ol>
         <p className="fa-glass-loading-hint">{encounter?'Battle opens when the fighters and combat renderer are ready.':'Your adventure opens when its renderer and saved state are ready.'}</p>
+        {!encounter&&<p className="fa-glass-loading-hint" role="status">{startupPhaseLabel(startupPhase)} · {worldRun.webgl?'Compatibility (WebGL2)':'Automatic graphics'}</p>}
         {slowLoad&&<p className="fa-glass-slow" role="status">{worldRun.webgl&&!encounter?'Using the compatibility renderer. Your saved game is unchanged.':'Still preparing. Larger scenes or slower graphics devices may take longer. You can cancel safely.'}</p>}
-        <div className="fa-scene-loading-actions">{slowLoad&&!encounter&&!worldRun.webgl&&<Btn onClick={()=>recoverWorld('The 3D world did not become ready.')}>Try compatibility mode</Btn>}<Btn onClick={leaveTitle}>Cancel</Btn></div>
+        <div className="fa-scene-loading-actions">{!encounter&&!worldRun.webgl&&<Btn onClick={()=>recoverWorld('The 3D world did not become ready.')}>Try compatibility mode</Btn>}<Btn onClick={leaveTitle}>Cancel</Btn></div>
       </section>
     </div>;break;}
 

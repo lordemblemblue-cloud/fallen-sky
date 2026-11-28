@@ -6,6 +6,7 @@ import {createWorldTelemetry,WORLD_TELEMETRY_INTERVAL} from '../core/worldTeleme
 import {disposeResources,createCleanupScope} from '../core/resourceCleanup.mjs';
 import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
 import {makeExplorationAvatar} from './explorationAvatar.js';
+import {renderFirstWorldFrame} from '../core/worldStartup.mjs';
 
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -878,7 +879,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         this.clouds.forEach((c, i) => { c.visible = i < Math.round(this.qualityConfig.mistCount * this.mistScale); });
       }
 
-      async init() {
+      async init({deferWorld=false}={}) {
         const w = this.viewport.clientWidth || window.innerWidth, h = this.viewport.clientHeight || window.innerHeight;
         const forceWebGL = new URLSearchParams(location.search).get('renderer') === 'webgl';
         if (!forceWebGL && typeof navigator !== 'undefined' && 'gpu' in navigator) {
@@ -932,9 +933,8 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         this.setupLightsAndSky();
         this.bindUI();
         this.applyQuality('performance');
-        this.loadMode('wilds');
         this.cleanupScope.listen(window,'resize', () => this.onResize());
-        this.animate();
+        if(!deferWorld){this.loadMode('wilds');this.animate();}
       }
 
       setupLightsAndSky() {
@@ -1900,10 +1900,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           this.controls.target.lerp(this.camLerp.target, Math.min(1, dt * 5));
           if (this.camera.position.distanceTo(this.camLerp.pos) < 0.08) this.camLerp = null;
         }
-        this.updateExploration(dt, t);
-        this.updateAnimations(t, dt);
-        this.controls.update();
-        try { const result = this.renderer.render(this.scene, this.camera); if (result && typeof result.catch === 'function') result.catch(err => this.handleRenderFailure(err)); } catch (err) { this.handleRenderFailure(err); return; }
+        try { this.updateExploration(dt, t); this.updateAnimations(t, dt); this.controls.update(); const result = this.renderer.render(this.scene, this.camera); if (result && typeof result.catch === 'function') result.catch(err => this.handleRenderFailure(err)); } catch (err) { this.handleRenderFailure(err); return; }
 
         this.emaFrameMs = this.emaFrameMs * 0.94 + (rawDt * 1000) * 0.06;
         this.fpsFrames++; this.fpsTimer += rawDt;
@@ -1973,22 +1970,30 @@ export async function mountSapphireWorld(root, onEvent) {
   const registeredMarkers = new Map();
   const collect = app.collectDiscovery.bind(app);
   app.collectDiscovery = d => { if(!collect(d))return false; app.resetInput(); app.inputLocked=true; send('discovery',{id:d.id,label:d.label,world:snapshot()}); return true; };
-  try{await app.init();
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  if(app.renderFailed)throw Error('World renderer did not start.');}catch(error){app.destroy();throw error;}
+  // Initialize the renderer/materials once; do not build a default world only to
+  // immediately destroy it when the saved position arrives.
+  app.inputLocked=true;send('startup',{phase:'renderer'});
+  try{await app.init({deferWorld:true});if(app.renderFailed)throw Error('World renderer did not start.');}catch(error){app.destroy();throw error;}
+  let firstWorld=true,restoring=false;
   const telemetry=createWorldTelemetry();
   const timer=setInterval(()=>{if(app.mode!=='wilds'||app.inputLocked||app.renderFailed)return;const sample=telemetry.sample(snapshot(),performance.now());if(sample)send('world',sample);},WORLD_TELEMETRY_INTERVAL);
-  send('ready',{world:snapshot()});
   return {
     snapshot,
     pause(value){app.resetInput();app.inputLocked=Boolean(value);if(!value)telemetry.reset();},
     battle(data){if(typeof data?.token!=='string'||!data.token)return;app.activeBattleToken=data.token;app.resetInput();app.inputLocked=true;const arenaId=arenaForEncounter(typeof data.id==='string'?data.id:null);app.loadMode('sanctuary',arenaId);app.controls.enabled=false;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(app.activeBattleToken!==data.token)return;if(!app.renderFailed)send('battleReady',{arenaId,token:data.token});else send('error',{message:'Battleground renderer failed.'});}));},
-    restore(data){app.activeBattleToken=null;if(!data || !Array.isArray(data.position))return;
-      const [x,,z]=data.position;if(!Number.isFinite(x)||!Number.isFinite(z))return;
+    async restore(data){
+      if(restoring||app.destroyed)return;
+      if(!data||!Array.isArray(data.position)||data.position.length!==3||!data.position.every(Number.isFinite))throw Error('Invalid saved world position. Your save was not changed.');
+      restoring=true;app.activeBattleToken=null;
+      try{const [x,,z]=data.position;
       app.foundDiscoveries=new Set(data.discoveries||[]);app.completedEncounters=new Set(data.completedEncounters||[]);
       const px=Math.max(1.5,Math.min(WORLD_MAX_X,x)), pz=Math.max(-6.8,Math.min(3.4,z)), py=app.terrainVisualHeight(px,pz);
       app.savedExploreState={position:new THREE.Vector3(px,py,pz),velocityY:0,grounded:true,cameraPos:new THREE.Vector3(px+2,py+4.8,pz+16.5),cameraTarget:new THREE.Vector3(px+2.5,py+1.8,pz),encounterId:null};
-      app.loadMode('wilds');app.inputLocked=true;send('restored',{world:snapshot()});},
+      app.inputLocked=true;if(firstWorld)send('startup',{phase:'restore'});app.loadMode('wilds');
+      if(firstWorld){send('startup',{phase:'render'});await renderFirstWorldFrame(app);if(app.destroyed)return;firstWorld=false;app.clock.start();app.animate();}
+      if(app.renderFailed)throw Error('World renderer failed during restoration.');
+      send('restored',{world:snapshot()});
+      }finally{restoring=false;}},
     finish(id,won){if(won)app.completedEncounters.add(id);app.retriggerCooldowns.set(id,performance.now()+3500);app.activeEncounter=null;app.resetInput();app.inputLocked=false;},
     appearance(tint){if(![0xffffff,0x98c8ff,0xffc9dc,0xc8b5ff].includes(tint))return;app.appearanceTint=tint;app.player?.userData.setAppearance?.(tint);},
     quality(q){if(['performance','balanced','high','cinematic'].includes(q))app.applyQuality(q);},

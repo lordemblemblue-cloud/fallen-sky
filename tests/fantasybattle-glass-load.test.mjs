@@ -63,7 +63,7 @@ test('cancel, local backup, mobile and reduced motion remain supported',()=>{
 });
 
 test('slow status explains waiting without changing progress',()=>{assert.match(src,/setTimeout\(\(\)=>setSlowLoad\(true\),8000\)/);assert.match(loading,/slowLoad&&/);assert.doesNotMatch(loading,/setTimeout/);});
-test('loading failure preserves glass recovery and blocks late messages',()=>{assert.match(src,/case '47':content=<div className=\{loadFailure\?"fa-loading-scene"/);assert.match(src,/loadFailure\?'Unable to load':'Unable to continue'/);assert.match(src,/id==='35'\)setLoadFailure\(true\)/);assert.match(src,/e.type==='error'&&!failedLoad.current/);assert.match(src,/startReady.current\|\|restorePending.current/);assert.match(src,/clearTimeout\(startTimer.current\);clearTimeout\(timeoutRef.current\)/);});
+test('loading failure preserves glass recovery and blocks late messages',()=>{assert.match(src,/case '47':content=<div className=\{loadFailure\?"fa-loading-scene"/);assert.match(src,/loadFailure\?'Unable to load':'Unable to continue'/);assert.match(src,/id==='35'\)setLoadFailure\(true\)/);assert.match(src,/e.type==='error'&&!failedLoad.current/);assert.match(src,/if\(restorePending.current\)\{post/);assert.match(src,/clearTimeout\(startTimer.current\);clearTimeout\(timeoutRef.current\)/);});
 
 test('loading uses panoramic scene, not the save menu box',()=>{
  assert.match(loading,/fa-loading-scene/);
@@ -73,19 +73,19 @@ test('loading uses panoramic scene, not the save menu box',()=>{
  assert.match(css,/\.fa-loading-content\{[^}]*width:min\(100%,1120px\)/);
 });
 test('world startup has one compatibility attempt and stale frame messages are ignored',()=>{
- assert.match(src,/run.webgl\?30000:15000/);
+ assert.match(src,/run.webgl\?45000:18000/);
  assert.match(src,/if\(run.webgl\)\{setRunning\(false\);fail\(message\);return;\}/);
  assert.match(src,/worldRunRef.current=next;restorePending.current=false;setLoadStage\(1\)/);
  assert.match(src,/e.data.run===String\(worldRunRef.current.id\)/);
  assert.match(src,/key=\{worldRun.id\}/);
  const route=readFileSync(new URL('../src/routes/fantasy-battle-world.jsx',import.meta.url),'utf8');
- assert.match(route,/\.\.\.event,run/);
+ assert.match(route,/\.\.\.event,run,protocol/);
 });
 
 test('panoramic controls show real slot count, recent save and optional manual fallback',()=>{
  assert.match(menu,/validSlots.length\} of \{SLOT_IDS.length/);
  assert.match(menu,/recent\?\.id===s\?' · Most recent'/);
- assert.match(loading,/slowLoad&&!encounter&&!worldRun.webgl&&<Btn/);
+ assert.match(loading,/!encounter&&!worldRun.webgl&&<Btn/);
  assert.match(loading,/Try compatibility mode/);
  assert.match(loading,/onClick=\{leaveTitle\}/);
  const scenes=readFileSync(new URL('../src/components/fantasybattle/sapphireSceneMenus.css',import.meta.url),'utf8');
@@ -98,6 +98,54 @@ test('loading a displayed save rechecks the revision and gives restoration its o
  assert.match(src,/loadDisplayedSave\(recent\)/);
  assert.match(menu,/loadNotice&&/);
  assert.match(src,/armWorldDeadline\(worldRunRef.current,true\)/);
- assert.match(src,/restoring\?15000:run.webgl\?30000:15000/);
+ assert.match(src,/restoring\?45000:run.webgl\?45000:18000/);
  assert.match(loading,/aria-current=\{index===loading.completed\?'step':undefined\}/);
+});
+
+
+import {renderFirstWorldFrame} from '../src/components/fantasybattle/core/worldStartup.mjs';
+test('renderer readiness waits for a real first frame and propagates rejection',async()=>{
+ let calls=0;const scene={},camera={};
+ const app={scene,camera,renderInfo:{isWebGPU:true},renderer:{render(){throw Error('wrong path')},async renderAsync(s,c){assert.equal(s,scene);assert.equal(c,camera);calls++;}}};
+ await renderFirstWorldFrame(app);assert.equal(calls,1);
+ app.renderer.renderAsync=async()=>{throw Error('GPU frame failed')};
+ await assert.rejects(renderFirstWorldFrame(app),/GPU frame failed/);
+ app.renderInfo.isWebGPU=false;app.renderer.render=()=>{calls++;};
+ await renderFirstWorldFrame(app);assert.equal(calls,2);
+ app.renderer.render=()=>{app.destroyed=true;};await assert.rejects(renderFirstWorldFrame(app),/cancelled/);
+});
+test('loading builds the saved world once, acknowledges rendering, and avoids overwriting existing saves at startup',()=>{
+ const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
+ const route=readFileSync(new URL('../src/routes/fantasy-battle-world.jsx',import.meta.url),'utf8');
+ assert.match(world,/app.init\(\{deferWorld:true\}\)/);
+ assert.match(world,/if\(!deferWorld\)\{this.loadMode\('wilds'\);this.animate\(\);\}/);
+ assert.match(world,/if\(firstWorld\)\{send\(\x27startup\x27,\{phase:\x27render\x27\}\);await renderFirstWorldFrame\(app\)/);
+ assert.match(world,/async restore\(data\)/);
+ assert.match(route,/await api.restore\(data\)/);
+ assert.match(route,/e.data.run!==run/);
+ assert.match(src,/run:String\(worldRunRef.current.id\),type,data/);
+ assert.match(src,/if\(saveBaseline.current\?\.stamp===null\)autosave\(updated\)/);
+ assert.match(src,/post\('quality','performance'\);post\('appearance'/);
+});
+
+
+import {createStartupReplay,firstRenderer,startupPhaseLabel} from '../src/components/fantasybattle/core/worldStartup.mjs';
+test('startup probes replay readiness or the completed restore, never start a duplicate restore',()=>{
+ const events=[],s=createStartupReplay(event=>events.push(event));
+ s.probe();assert.deepEqual(events.pop(),{type:'startup',phase:'module'});
+ s.ready();events.pop();s.probe();assert.equal(events.pop().type,'ready');
+ assert.equal(s.beginRestore(),true);assert.equal(s.beginRestore(),false);
+ s.phase('render');events.pop();s.probe();assert.deepEqual(events.pop(),{type:'startup',phase:'render'});
+ const result={type:'restored',world:{position:[6,0,0]}};
+ s.restored(result);events.pop();s.probe();assert.equal(events.pop(),result);
+ assert.equal(s.beginRestore(),false);s.finish();s.probe();assert.equal(events.length,0);
+ assert.equal(s.beginRestore(),true);
+});
+test('automatic renderer remains default, successful compatibility choice persists for session',()=>{
+ assert.equal(firstRenderer('',false),false);assert.equal(firstRenderer('',true),true);
+ assert.equal(firstRenderer('?renderer=webgl',false),true);assert.equal(firstRenderer('?renderer=webgpu',true),false);
+ assert.match(startupPhaseLabel('renderer'),/graphics renderer/);assert.match(startupPhaseLabel('bad'),/world viewer/);
+ assert.match(src,/setInterval\(probe,1000\)/);
+ assert.match(src,/e.data.protocol!==WORLD_STARTUP_PROTOCOL/);
+ assert.match(src,/versionMismatch/);
 });
