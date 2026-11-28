@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
 const css=readFileSync(new URL('../src/components/fantasybattle/sapphireExplorationHud.css',import.meta.url),'utf8');
+const portrait=readFileSync(new URL('../src/components/fantasybattle/celestialPortrait.js',import.meta.url),'utf8');
 const hud=source.slice(source.indexOf('function OriginalExplorationHud'),source.indexOf('// Victory is a read-only presentation'));
 const combat=source.slice(source.indexOf('function OriginalCombatHud'),source.indexOf('// Crop the approved original HUD'));
 test('screen 10 uses the same cleaned HUD regardless of artwork load',()=>{
@@ -14,7 +15,7 @@ test('original HUD art is cropped into the four retained panels',()=>{
  assert.match(source,/status:\[1\.3,74,22\.6,12\]/);
  assert.match(source,/quest:\[1\.3,10\.3,24,17\.9\]/);
  assert.match(source,/map:\[82\.7,1\.3,16\.8,27\.4\]/);
- assert.match(source,/actions:\[86\.3,69,12\.9,16\.7\]/);
+ assert.match(source,/recovery:\[90\.8,69\.5,4\.3,6\.3\]/);
  assert.match(hud,/original\.url/);
  assert.match(source,/wide\|\|id==='10'/);
 });
@@ -29,9 +30,12 @@ test('no exploration party placeholders or bottom navigation',()=>{
  assert.doesNotMatch(hud,/Empty slot|activeRoster\(|fa-explore-party|fa-explore-nav|fa-explore-region|No nearby interaction/);
  assert.match(combat,/Party health and Focus/);
 });
-test('minimap, menu, journal, jump, skills and recovery controls preserved',()=>{
- for(const label of ['Open live world map','Open menu','Open quest journal','Zoom in on minimap','Zoom out on minimap','Jump','Skillbook','Recovery tonic'])assert.ok(hud.includes(label),label);
- assert.match(hud,/post\('jump'\)/);
+test('minimap, menu, journal and relocated recovery controls preserved; desktop lower right empty',()=>{
+ for(const label of ['Open live world map','Open menu','Open quest journal','Zoom in on minimap','Zoom out on minimap','Recovery tonic'])assert.ok(hud.includes(label),label);
+ assert.match(hud,/post\('jump'\)/); // touch cluster only
+ assert.doesNotMatch(hud,/fa-clean-actions|fa-clean-skills|fa-clean-jump/);
+ assert.match(css,/\.fa-clean-recovery\{position:absolute;right:18%;top:9%/);
+ assert.match(css,/gap:clamp\(16px,2\.8vh,25px\)/);
  assert.match(hud,/onClick=\{\(\)=>go\('46'\)\}/);
 });
 test('touch controls preserve release and interaction without persistent banner',()=>{
@@ -44,4 +48,13 @@ test('touch controls preserve release and interaction without persistent banner'
 test('plain functional fallback is available without original media',()=>{
  assert.match(css,/\.fa-clean-explore:not\(\.has-plate\)/);
  assert.match(source,/original\?' has-plate':''/);
+});
+
+test('hero portraits use exact uploaded GLB, with one shared capture and no old face fallback',()=>{
+ assert.match(hud,/ArcherPortrait profile=\{profile\} small newHero/);
+ assert.match(combat,/ArcherPortrait profile=\{profile\} small newHero/);
+ assert.match(portrait,/loadAsync\(CELESTIAL_ASSETS\.character\.url\)/);
+ assert.match(portrait,/if\(!portraitRequest\)portraitRequest=capture\(\)/);
+ assert.match(portrait,/destroySceneRenderer\(renderer\)/);
+ assert.match(source,/fa-celestial-portrait-placeholder/);
 });

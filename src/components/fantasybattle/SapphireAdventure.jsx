@@ -25,7 +25,22 @@ function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" a
 
 
 // Reuse the actual existing archer portrait; tint locally instead of shipping four copies.
-function ArcherPortrait({profile,small=false,companion=false}){
+function CelestialHeroPortrait({profile,small=false}){
+  const [src,setSrc]=useState(null);
+  const [failed,setFailed]=useState(false);
+  useEffect(()=>{
+    let active=true;
+    import('./celestialPortrait.js').then(m=>m.celestialPortrait()).then(url=>{if(active){setSrc(url);setFailed(!url);}}).catch(()=>{if(active)setFailed(true);});
+    return()=>{active=false;};
+  },[]);
+  const name=profile?.name||'Artemis';
+  return src?<img className={'fa-archer-portrait'+(small?' small':'')} src={src} alt={name+' portrait'} decoding="async"/>:<span className="fa-celestial-portrait-placeholder" role="img" aria-label={failed?name+' portrait unavailable':name+' portrait loading'}>{name.slice(0,1).toUpperCase()}</span>;
+}
+function ArcherPortrait({profile,small=false,companion=false,newHero=false}){
+  if(newHero&&!companion)return <CelestialHeroPortrait profile={profile} small={small}/>;
+  return <LegacyArcherPortrait profile={profile} small={small} companion={companion}/>;
+}
+function LegacyArcherPortrait({profile,small=false,companion=false}){
   const canvas=useRef(null),member=companion===true?COMPANION:companion,tint=member?member.tint:appearanceFor(profile).tint;
   useEffect(()=>{
     if(visualFor(member?.id))return;
@@ -644,7 +659,7 @@ function OriginalCombatHud({hud,profile,encounter,onAction,onPause,onSkills}){
     <section className="fa-combat-order" aria-label="Turn order">{hud?.order.map(o=><div className={o.active?'current':''} key={o.id} title={o.name+(o.action?' · '+o.action:'')}><span>{o.name}</span>{o.action&&<small>{o.action}</small>}</div>)}</section>
     <h3 className="fa-combat-enemies-title">Enemies</h3>
     <section className="fa-combat-enemies" aria-label="Enemy health and intent">{enemies.map(u=><div key={u.id} className={'fa-original-enemy'+(u.hp===0?' down':'')}><div><strong>{u.name}</strong><span>{u.hp}/{u.maxHp}</span></div><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/>{hud.intents?.filter(i=>i.unitId===u.id).map(i=><small key={i.unitId} title={i.summary}>{i.phaseName?i.phaseName+' · ':''}{i.name}{i.targetId?' · Frontline':''}</small>)}</div>)}</section>
-    <section className="fa-combat-party" aria-label="Party health and Focus">{allies.map(u=><div key={u.id} className={'fa-original-ally'+(hud.choosingUnit===u.id?' choosing':'')+(u.hp===0?' down':'')}><div className="fa-combat-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-combat-ally-data"><strong>{u.name}{u.hp===0?' · Down':hud.pendingChoices?.[u.id]?' · Ready':''}</strong><div><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small></div><div><progress className="fa-combat-focus" aria-label={u.name+' Focus'} value={u.focus} max={u.maxFocus}/><small>Focus {u.focus}/{u.maxFocus}</small></div></div></div>)}</section>
+    <section className="fa-combat-party" aria-label="Party health and Focus">{allies.map(u=><div key={u.id} className={'fa-original-ally'+(hud.choosingUnit===u.id?' choosing':'')+(u.hp===0?' down':'')}><div className="fa-combat-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small newHero/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-combat-ally-data"><strong>{u.name}{u.hp===0?' · Down':hud.pendingChoices?.[u.id]?' · Ready':''}</strong><div><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small></div><div><progress className="fa-combat-focus" aria-label={u.name+' Focus'} value={u.focus} max={u.maxFocus}/><small>Focus {u.focus}/{u.maxFocus}</small></div></div></div>)}</section>
     <div className="fa-combat-actor" aria-live="polite">{choosing?actor?.name||'Choose action':hud?'Resolving round':'Preparing battle'}</div>
     <section className="fa-original-action-list" aria-label="Available combat actions">{hud?.legal.map(a=><Btn key={a.id} disabled={!choosing||!a.enabled} className={'fa-original-action '+a.action.kind} title={a.reason||a.action.summary} aria-label={a.action.name+' — '+(a.reason||a.action.summary)} onClick={()=>onAction(a.id)}><SkillArt id={a.id}/><span><kbd>{a.action.hotkey}</kbd> {a.action.name}</span><small>{a.reason||a.action.summary}</small></Btn>)}</section>
     <div className="fa-combat-focus-circle" aria-label="Current actor Focus"><strong>{actor?actor.focus:'—'}</strong><small>{actor?'Focus / '+actor.maxFocus:'Focus'}</small></div>
@@ -659,7 +674,7 @@ const EXPLORATION_ART_CROPS=Object.freeze({
   status:[1.3,74,22.6,12],
   quest:[1.3,10.3,24,17.9],
   map:[82.7,1.3,16.8,27.4],
-  actions:[86.3,69,12.9,16.7],
+  recovery:[90.8,69.5,4.3,6.3],
 });
 function ExplorationArtSlice({part}){
   const [x,y,w,h]=EXPLORATION_ART_CROPS[part];
@@ -681,7 +696,7 @@ function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onF
   return <div className={'fa-clean-explore'+(original?' has-plate':'')} style={original?{'--fa-hud-art':'url("'+original.url+'")'}:undefined}>
     <div className="fa-clean-left">
       <section className="fa-clean-status" aria-label="Character health and experience"><ExplorationArtSlice part="status"/>
-        <div className="fa-clean-portrait">{profile&&<ArcherPortrait profile={profile} small/>}</div>
+        <div className="fa-clean-portrait">{profile&&<ArcherPortrait profile={profile} small newHero/>}</div>
         <div className="fa-clean-status-data">
           <strong title={profile?.name}>{profile?.name||'No character'} · Lv {profile?levelFor(xp):'—'}</strong>
           <div className="fa-clean-stat-row"><span>HP</span><progress className="fa-clean-hp" aria-label="Character health" max={maxHp} value={profile?.hp||0}/><small>{profile?.hp||0}/{maxHp}</small></div>
@@ -696,10 +711,8 @@ function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onF
       <Btn className="fa-clean-map-menu" onClick={onPause} aria-label="Open menu">☰</Btn><Btn className="fa-clean-map-journal" onClick={()=>go('08')} aria-label="Open quest journal">↗</Btn>
       <div className="fa-clean-zoom"><Btn aria-label="Zoom in on minimap" disabled={zoom>=2} onClick={()=>{setZoom(x=>Math.min(2,x+.25));onFocus();}}>+</Btn><Btn aria-label="Zoom out on minimap" disabled={zoom<=1} onClick={()=>{setZoom(x=>Math.max(1,x-.25));onFocus();}}>−</Btn></div>
     </section>
-    <section className="fa-clean-actions" aria-label="Exploration actions"><ExplorationArtSlice part="actions"/>
-      <Btn className="fa-clean-jump" aria-label="Jump" onClick={()=>{post('jump');onFocus();}}>Jump</Btn><Btn className="fa-clean-skills" aria-label="Skillbook" onClick={()=>go('12')}>Skills</Btn><Btn className="fa-clean-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn>
-    </section>
-    <section className="fa-clean-touch-move" aria-label="Touch movement controls">{moveButtons}</section>
+    <div className="fa-clean-recovery"><ExplorationArtSlice part="recovery"/><Btn className="fa-clean-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn></div>
+    <section className="fa-clean-touch-move" aria-label="Touch movement controls">{moveButtons}<Btn aria-label="Jump" className="fa-clean-touch-jump" onClick={()=>post('jump')}>Jump</Btn></section>
     {world?.nearby&&<Btn className="fa-clean-touch-interact" aria-label={'Interact with '+world.nearby} onClick={()=>post('interact')}>E</Btn>}
     {notifications?.length>0&&<button type="button" className="fa-clean-notice" onClick={()=>go('37')} aria-label="View latest gameplay events">{notifications[0].message}</button>}
   </div>;
