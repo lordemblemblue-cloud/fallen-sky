@@ -1,0 +1,2 @@
+# Phase 73 — WP-FS-S2 ownership
+Draft isolated module and tests only. Pinned main 9081292c685a60328bdcc22444486d778af9fc5f. Files reserved: src/components/game3d/narrative/storyQuestGate.mjs, tests/fallenSkyStoryQuestGate.test.mjs, this handoff. Reuse openingQuestAdapter.mjs unchanged. No live store, terrain, save or reward changes. Existing production integration awaits owner approval. Test evidence to be recorded in this branch.
