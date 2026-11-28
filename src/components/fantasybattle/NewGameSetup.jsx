@@ -13,7 +13,7 @@ function HeroPreview({portrait}){
  return <div className="fa-new-hero">
    <div className="fa-new-hero-halo" aria-hidden="true"/>
    {preview?<img className="fa-new-hero-model" src={preview} alt="Full character preview of the playable archer"/>:
-    <div className="fa-new-hero-fallback">{portrait}<small role="status">{status==='loading'?'Loading character preview…':'Character preview unavailable · portrait shown'}</small></div>}
+    <div className="fa-new-hero-fallback">{status==='fallback'&&portrait}<small role="status">{status==='loading'?'Loading character preview…':'Character preview unavailable · portrait shown'}</small></div>}
    <div className="fa-new-hero-caption"><span>Starting class</span><strong>Archer</strong><small>Ranged combat · Bow</small></div>
  </div>;
 }
