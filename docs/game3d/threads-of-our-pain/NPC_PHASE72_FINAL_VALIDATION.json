@@ -1,0 +1,1135 @@
+{
+  "status": "DRAFT_CONSOLIDATION_STATIC_ONLY",
+  "mainPin": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+  "lateStackPin": "1a1f2cd12fa3532d39fee2fc2ca5b25d66ba38bb",
+  "pins": [
+    {
+      "name": "NPC_PHASE42_REGISTRY.json",
+      "ref": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+      "sha": "3e9772a2bb9938fcaa890eb7c81bc1aa769de516"
+    },
+    {
+      "name": "NPC_PHASE62_MIDDLE_VALIDATION.json",
+      "ref": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+      "sha": "2b22c683af2fd701f40953a07a7cf8daa1711b0d"
+    },
+    {
+      "name": "NPC_PHASE63_M14_INTAKE.json",
+      "ref": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+      "sha": "2d586b8869815fb9ad61c39e0a9ae42f4efa9040"
+    },
+    {
+      "name": "NPC_PHASE64_M15_INTAKE.json",
+      "ref": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+      "sha": "4c49a38a6539d282f0cfc2b8eef017b64da0c282"
+    },
+    {
+      "name": "NPC_PHASE65_M16_INTAKE.json",
+      "ref": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+      "sha": "53e215c36a24c573e88591a423a82b7b3d8d95c1"
+    },
+    {
+      "name": "NPC_PHASE66_M17_INTAKE.json",
+      "ref": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+      "sha": "c7dc072feae4b0a70c29aedc8b72efb037a02b78"
+    },
+    {
+      "name": "NPC_PHASE67_M18_INTAKE.json",
+      "ref": "96e886bc3bebbfe29721c400b9317d528ad2011b",
+      "sha": "3725a8e141637e75e8afda164a754a765fc6283b"
+    },
+    {
+      "name": "NPC_PHASE68_M19_INTAKE.json",
+      "ref": "1a1f2cd12fa3532d39fee2fc2ca5b25d66ba38bb",
+      "sha": "b9d562e7901e5ad688e02542e979637be221e8df"
+    },
+    {
+      "name": "NPC_PHASE69_M20_INTAKE.json",
+      "ref": "1a1f2cd12fa3532d39fee2fc2ca5b25d66ba38bb",
+      "sha": "8e798d0ae7793270c7ca256a16b75bee81c8b6df"
+    },
+    {
+      "name": "NPC_PHASE70_NGPLUS_CONTRACT.json",
+      "ref": "1a1f2cd12fa3532d39fee2fc2ca5b25d66ba38bb",
+      "sha": "e00e13182ec21c14e96c91da7ac1574958b7c12c"
+    },
+    {
+      "name": "NPC_PHASE71_OPTIONAL_INTEGRATION.json",
+      "ref": "1a1f2cd12fa3532d39fee2fc2ca5b25d66ba38bb",
+      "sha": "b91ea059eb3a8c9dce70f41e4455a5cc4cc16075"
+    },
+    {
+      "name": "NPC_PHASE71_OPTIONAL_VALIDATION.json",
+      "ref": "1a1f2cd12fa3532d39fee2fc2ca5b25d66ba38bb",
+      "sha": "825635f3bcedbceb6ec2dd76c2afc3e7f26b1673"
+    }
+  ],
+  "counts": {
+    "main": 20,
+    "npcs": 30,
+    "side": 55,
+    "discovery": 50,
+    "middleMilestones": 57,
+    "latePreEpilogueMilestones": 93,
+    "lateBranchA": 103,
+    "lateBranchB": 100,
+    "newChecks": 261
+  },
+  "checks": [
+    {
+      "name": "20 stable main IDs",
+      "ok": true
+    },
+    {
+      "name": "30 distinct principal candidates",
+      "ok": true
+    },
+    {
+      "name": "55 coordinated side IDs",
+      "ok": true
+    },
+    {
+      "name": "105 canonical optional IDs",
+      "ok": true
+    },
+    {
+      "name": "middle report all passing",
+      "ok": true
+    },
+    {
+      "name": "optional report all passing",
+      "ok": true
+    },
+    {
+      "name": "M14 source only",
+      "ok": true
+    },
+    {
+      "name": "M14 predecessor",
+      "ok": true
+    },
+    {
+      "name": "M14 terminal",
+      "ok": true
+    },
+    {
+      "name": "M14 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M14 optional no gate",
+      "ok": true
+    },
+    {
+      "name": "M14 all actors unbound",
+      "ok": true
+    },
+    {
+      "name": "M15 source only",
+      "ok": true
+    },
+    {
+      "name": "M15 predecessor",
+      "ok": true
+    },
+    {
+      "name": "M15 terminal",
+      "ok": true
+    },
+    {
+      "name": "M15 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M15 optional no gate",
+      "ok": true
+    },
+    {
+      "name": "M15 all actors unbound",
+      "ok": true
+    },
+    {
+      "name": "M16 source only",
+      "ok": true
+    },
+    {
+      "name": "M16 predecessor",
+      "ok": true
+    },
+    {
+      "name": "M16 terminal",
+      "ok": true
+    },
+    {
+      "name": "M16 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M16 optional no gate",
+      "ok": true
+    },
+    {
+      "name": "M16 all actors unbound",
+      "ok": true
+    },
+    {
+      "name": "M17 source only",
+      "ok": true
+    },
+    {
+      "name": "M17 predecessor",
+      "ok": true
+    },
+    {
+      "name": "M17 terminal",
+      "ok": true
+    },
+    {
+      "name": "M17 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M17 optional no gate",
+      "ok": true
+    },
+    {
+      "name": "M17 all actors unbound",
+      "ok": true
+    },
+    {
+      "name": "M18 source only",
+      "ok": true
+    },
+    {
+      "name": "M18 predecessor",
+      "ok": true
+    },
+    {
+      "name": "M18 terminal",
+      "ok": true
+    },
+    {
+      "name": "M18 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M18 optional no gate",
+      "ok": true
+    },
+    {
+      "name": "M18 all actors unbound",
+      "ok": true
+    },
+    {
+      "name": "M19 source only",
+      "ok": true
+    },
+    {
+      "name": "M19 predecessor",
+      "ok": true
+    },
+    {
+      "name": "M19 terminal",
+      "ok": true
+    },
+    {
+      "name": "M19 next eligibility",
+      "ok": true
+    },
+    {
+      "name": "M19 optional no gate",
+      "ok": true
+    },
+    {
+      "name": "M19 all actors unbound",
+      "ok": true
+    },
+    {
+      "name": "93 late pre-epilogue milestones",
+      "ok": true
+    },
+    {
+      "name": "all edges resolve",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION full path",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION no middle predecessor",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:M14_APPROACH",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:M14_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:CORE_REPORTS",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:WITNESS_RECORD",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:CAMP_AKITSU",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:CAMP_TAMERI",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:CAMP_REMORIA",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:M14_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:ORIGINAL_ROAD_SECURED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:ORIGINAL_ROAD_DONE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:COUNCIL_READY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:COUNCIL_REPORT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M14:M14_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:M15_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:INCIDENT_OBSERVED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:INCIDENT_DECIDED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:EVAC_READY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:CIVILIAN_A_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:CIVILIAN_B_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:CIVILIAN_C_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:SHELTER15",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:MIGRATION_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:ORIGINAL_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:FENCE_SECURED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:FINAL_PASSAGE_SECURED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:SHELTER18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:RETURN15",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:REPORT_SENT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M15:M15_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:M16_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:WITNESS_OBSERVED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:FAMILY_CONTACT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:SHELTER_SURVEY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:SAFE_CONSULTATION_READY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:MIGRATION_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:ROOF18_CONFIRMED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:REFUGE18_CONFIRMED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:RETURN15",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:REVIEW_READY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:LOCAL_PROTECTION_RESOLVED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M16:M16_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:M17_GUIDE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:ARCH15",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:PEAK15",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:YARD15",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:REST15_READY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:MIGRATION18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:ARCH18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:PEAK18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:YARD18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:FRACTURE18_SEEN",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:WEST_STAIRS_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:RETURN15",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:PAIRS_VERIFIED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:GODDESS_REVEAL",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:RECORD_POLICY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M17:M17_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:SANCTUARY_ENTERED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:KEEPER_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:EVAC_ACCOUNT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:SEAL_ACCOUNT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:MARK_ACCOUNT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:OPTIONS_EXPLAINED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:REST15_READY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:AUTHORED_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:SHELTER_REVISIT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:REBUILD_VIEW",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:CARE_VIEW",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:CONSENT_VIEW",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:ROUTE_SURVEY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:SHELTER_REPORT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:RETURN15_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:DELIBERATION",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M18:M18_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:APPROACH",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:P_CIVILIANS_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:REST15_READY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:INITIAL_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:INITIAL_JUNCTION_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:INITIAL_ASSEMBLY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:INITIAL_REPORT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:RETURN_FOR_PHASE_I",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:PHASE_I_FIRST_TETHER",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:PHASE_II_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:PHASE_II_INSPECT",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:PHASE_II_PASSAGE_SAFE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:RETURN_FOR_PHASE_III",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:PHASE_III_FINAL_TETHER",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:CONVERGENCE_STOPPED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:SAFE_REVIEW",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:BRANCH_COMMITTED",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:SAFE_DESTINATION",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M19:M19_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:M20_ENTER",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_AWAKEN",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_GRASS",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_SKY",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_RIDGE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_REALIZATION",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_HISTORICAL_RECORD",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_REFLECTION",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:A_REST",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION missing M20:M20_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION duplicate",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION full path",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION no middle predecessor",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:M14_APPROACH",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:M14_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:CORE_REPORTS",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:WITNESS_RECORD",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:CAMP_AKITSU",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:CAMP_TAMERI",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:CAMP_REMORIA",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:M14_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:ORIGINAL_ROAD_SECURED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:ORIGINAL_ROAD_DONE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:COUNCIL_READY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:COUNCIL_REPORT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M14:M14_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:M15_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:INCIDENT_OBSERVED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:INCIDENT_DECIDED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:EVAC_READY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:CIVILIAN_A_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:CIVILIAN_B_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:CIVILIAN_C_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:SHELTER15",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:MIGRATION_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:ORIGINAL_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:FENCE_SECURED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:FINAL_PASSAGE_SECURED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:SHELTER18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:RETURN15",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:REPORT_SENT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M15:M15_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:M16_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:WITNESS_OBSERVED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:FAMILY_CONTACT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:SHELTER_SURVEY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:SAFE_CONSULTATION_READY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:MIGRATION_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:ROOF18_CONFIRMED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:REFUGE18_CONFIRMED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:RETURN15",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:REVIEW_READY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:LOCAL_PROTECTION_RESOLVED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M16:M16_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:M17_GUIDE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:ARCH15",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:PEAK15",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:YARD15",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:REST15_READY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:MIGRATION18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:ARCH18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:PEAK18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:YARD18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:FRACTURE18_SEEN",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:WEST_STAIRS_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:RETURN15",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:PAIRS_VERIFIED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:GODDESS_REVEAL",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:RECORD_POLICY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M17:M17_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:SANCTUARY_ENTERED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:KEEPER_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:EVAC_ACCOUNT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:SEAL_ACCOUNT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:MARK_ACCOUNT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:OPTIONS_EXPLAINED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:REST15_READY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:AUTHORED_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:SHELTER_REVISIT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:REBUILD_VIEW",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:CARE_VIEW",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:CONSENT_VIEW",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:ROUTE_SURVEY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:SHELTER_REPORT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:RETURN15_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:DELIBERATION",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M18:M18_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:APPROACH",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:P_CIVILIANS_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:REST15_READY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:INITIAL_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:INITIAL_JUNCTION_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:INITIAL_ASSEMBLY",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:INITIAL_REPORT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:RETURN_FOR_PHASE_I",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:PHASE_I_FIRST_TETHER",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:PHASE_II_MIGRATE18",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:PHASE_II_INSPECT",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:PHASE_II_PASSAGE_SAFE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:RETURN_FOR_PHASE_III",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:PHASE_III_FINAL_TETHER",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:CONVERGENCE_STOPPED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:SAFE_REVIEW",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:BRANCH_COMMITTED",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:SAFE_DESTINATION",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M19:M19_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M20:M20_ENTER",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M20:B_AWAKEN",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M20:B_ROUTE_BRIEF",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M20:B_ASSIST",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M20:B_REST",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M20:B_CODA",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION missing M20:M20_COMPLETE",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION duplicate",
+      "ok": true
+    },
+    {
+      "name": "wrong branch A/B rejected",
+      "ok": true
+    },
+    {
+      "name": "M19 commitment disabled",
+      "ok": true
+    },
+    {
+      "name": "M20 immutable receipt",
+      "ok": true
+    },
+    {
+      "name": "NG+ optional",
+      "ok": true
+    },
+    {
+      "name": "NG+ retention",
+      "ok": true
+    },
+    {
+      "name": "all optional disabled",
+      "ok": true
+    },
+    {
+      "name": "positive closure",
+      "ok": true
+    },
+    {
+      "name": "second vista",
+      "ok": true
+    }
+  ],
+  "priorReportEvidence": {
+    "middle": 171,
+    "optional": 234
+  },
+  "limitations": [
+    "M01–M06 not rerun; separate opening fixture and previous test records",
+    "Middle and optional reports read, not rerun",
+    "No end-to-end runtime, actual scene, save, build, lint, CI, or live test",
+    "Later stack not in pinned main",
+    "Production chronology and consequence policies unresolved"
+  ]
+}
