@@ -15,6 +15,8 @@ import './sapphireGlassSystem.css';
 import './sapphireCharacterWorkspaces.css';
 import './sapphireSceneMenus.css';
 import './sapphireCharacterCreation.css';
+import './sapphireGameMenus.css';
+import { GAME_MENU_GROUPS, isGameMenu, menuName, menuDestination, canResumeGame } from './core/gameMenuNavigation.mjs';
 import CharacterCreationViewer from './CharacterCreationViewer.jsx';
 import {glassUiKind,usesRightGlass} from './core/glassUiPolicy.mjs';
 import {loadingMilestones} from './core/loadingMilestones.mjs';
@@ -1014,7 +1016,7 @@ function ItemInventory({profile,encounter,serviceAvailable,original,layout,initi
   const choose=key=>{setSelected(key);onSelect(key);};
   const changeFilter=key=>{setFilter(key);reset();};
   const filters=categories.map(([key,label])=><Btn key={key} aria-pressed={filter===key} primary={filter===key} onClick={()=>changeFilter(key)}>{label}</Btn>);
-  const cards=visible.map(([key,i])=><Btn key={key} className="fa-item-inv-card" primary={key===id} aria-pressed={key===id} title={i.name+' ×'+inv[key]} aria-label={i.name+' ×'+inv[key]} onClick={()=>choose(key)}><ItemArt id={key}/><small>×{inv[key]}</small></Btn>);
+  const cards=visible.map(([key,i])=><Btn key={key} className="fa-item-inv-card" primary={key===id} aria-pressed={key===id} title={i.name+' ×'+inv[key]} aria-label={i.name+' ×'+inv[key]} onClick={()=>choose(key)}><ItemArt id={key}/><span className="fa-menu-item-name">{i.name}</span><small>×{inv[key]}</small></Btn>);
   const paging=<><Btn disabled={index===0} aria-label="Previous items" onClick={()=>setPage(index-1)}>‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} aria-label="Next items" onClick={()=>setPage(index+1)}>›</Btn></>;
   const category=<select aria-label="Item category" value={filter} onChange={e=>changeFilter(e.target.value)}>{categories.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select>;
   const sorting=<select aria-label="Sort items" value={sort} onChange={e=>{setSort(e.target.value);reset();}}><option value="name">Name</option><option value="count">Quantity</option></select>;
@@ -1037,7 +1039,7 @@ function ItemInventory({profile,encounter,serviceAvailable,original,layout,initi
     <div className="fa-item-inv-status" role="status">{reason}</div><div className="fa-item-inv-total">{owned.length} item types · {profile?.gold||0} gold</div>
     {action}<Btn className="fa-item-inv-back" onClick={back}>Back</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Inventory</h2>{category}{sorting}{search}{filters}<Btn onClick={()=>go('06')}>Equipment</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching owned items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{details}<p>{reason}</p>{action}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>Filter items</h2><label>Search{search}</label><label>Category{category}</label><label>Sort{sorting}</label><p>{owned.length} item types · {profile?.gold||0} gold</p><Btn onClick={()=>go('06')}>Equipment</Btn><Btn disabled={!serviceAvailable} onClick={()=>go('16')}>Merchant</Btn></Panel><Panel rect={layout[1]}><h2>Owned items · {matches.length}</h2><div className="fa-menu-item-list">{cards}{!visible.length&&<p>No matching owned items</p>}</div><div className="fa-menu-paging">{paging}</div></Panel><Panel rect={layout[2]}><h2 aria-live="polite">{item?.name||'Select an item'}</h2>{id&&<div className="fa-menu-selected-art"><ItemArt id={id}/></div>}{details}<p role="status">{reason}</p>{action}</Panel></>;
 }
 
 // Bestiary lists actual world encounter records. Original wolf artwork is decorative, not an enemy record.
@@ -1333,7 +1335,7 @@ export default function SapphireAdventure(){
     startTimer.current=setTimeout(()=>{setRunning(true);armWorldDeadline(next);},0);
   };
   const loadDisplayedSave=displayed=>{
-    if(current.current.running||!['01','02'].includes(current.current.id))return;
+    if(!['01','02'].includes(current.current.id)||(current.current.running&&!current.current.stack.includes('15')))return;
     const fresh=reloadSlots(),{record,message}=resolveDisplayedSave(fresh,displayed);
     if(!record){setSelected(null);setLoadNotice(message);if(current.current.id==='01')root('02');return;}
     setLoadNotice('');begin(record.profile,record.id,record.stamp);
@@ -1346,11 +1348,13 @@ export default function SapphireAdventure(){
   const executeConfirm=ticket=>{const action=confirmGate.current.consume(ticket,current.current);if(!action)return;setPending(null);back();action();};
   const chooseAppearance=key=>{if(transact(p=>selectAppearance(p,key),'Appearance applied'))post('appearance',appearanceFor(current.current.profile).tint);};
   const openPause=()=>{if(isWorldScreen(current.current.id))go('04');};
+  const openGameService=(target,hotkey=false)=>{const live=current.current;if(!live.running||(!isGameMenu(target)&&target!=='03'))return;setStack(old=>menuDestination(old,target,hotkey));};
+  const resumeGame=()=>{const live=current.current;if(live.running&&isGameMenu(live.id)&&canResumeGame(live.stack))root(live.stack[0]);};
   const onKey=code=>{
     const s=current.current.id;
     if(code==='Escape'){if(s==='47')return;if(s==='40'){dismissConfirm();return;}if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
     const target=HOTKEY_SCREENS[code];
-    if(target&&current.current.running&&(isWorldScreen(s)||s==='04'||s===target)){if(s===target)back();else go(target);}
+    if(target&&current.current.running&&(isWorldScreen(s)||isGameMenu(s))){if(s===target)back();else openGameService(target,true);}
   };
   const startBattle=(e)=>{
     if(current.current.encounter)return;
@@ -1406,7 +1410,7 @@ export default function SapphireAdventure(){
   };
   useEffect(()=>{
     const receive=e=>{if(e.origin===location.origin&&e.source===frame.current?.contentWindow&&e.data?.channel==='fantasy-world'&&e.data.run===String(worldRunRef.current.id))eventHandler.current(e.data);};
-    const key=e=>{if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||''))return;const s=current.current.id;if(e.code==='Escape'||HOTKEY_SCREENS[e.code]){e.preventDefault();eventHandler.current({type:'key',code:e.code});}else if(s==='09'&&stageRef.current?.handleKey(e.key))e.preventDefault();};
+    const key=e=>{if(e.repeat||e.ctrlKey||e.metaKey||e.altKey||(e.code!=='Escape'&&(/INPUT|TEXTAREA|SELECT/.test(e.target?.tagName||'')||e.target?.isContentEditable)))return;const s=current.current.id;if(e.code==='Escape'||HOTKEY_SCREENS[e.code]){e.preventDefault();eventHandler.current({type:'key',code:e.code});}else if(s==='09'&&stageRef.current?.handleKey(e.key))e.preventDefault();};
     window.addEventListener('message',receive);window.addEventListener('keydown',key);return()=>{window.removeEventListener('message',receive);window.removeEventListener('keydown',key);};
   },[]);
   const selectedCompanion=ROSTER.find(m=>m.id===companionId)||COMPANION, member=memberFor(profile,selectedCompanion.id);
@@ -1426,6 +1430,7 @@ export default function SapphireAdventure(){
   const buttons=(...children)=><div className="fa-buttons">{children}</div>;
   const pane=(i,content,cls)=> <Panel key={i} rect={screen.layout[i]} className={cls}>{content}</Panel>;
   const customLoad=id==='02'||id==='35'||(id==='47'&&loadFailure);
+  const gameMenu=isGameMenu(id);
   const glassKind=glassUiKind(id),rightGlass=usesRightGlass(id)||glassKind==='scene'; // both use clean scene art, no baked UI plate
   const original=useStagedOriginal(rightGlass||glassKind==='toast'?null:id);
   const manualSave=()=>{const target=selected,profileId=current.current.profile?.id,previous=slots.slots.find(x=>x.id===target),occupied=Boolean(previous);let used=false;const perform=()=>{if(used)return;used=true;const live=current.current;if(!profileId||live.profile?.id!==profileId||live.encounter){notify('Character or combat state changed. Select a save again.');return;}save(target,occupied,live.profile,previous?.stamp??null);};if(occupied)requestConfirm('Overwrite slot '+target+'? Existing progress in this slot will be replaced.',perform);else perform();};
@@ -1465,22 +1470,18 @@ export default function SapphireAdventure(){
       </section>
     </div>;break;
     case '03':content=<SettingsPage settings={settings} world={world} running={running} applySettings={applySettings} back={back} onTutorial={index=>{setLesson(index);go('34');}} backupField={backupField} importSlot={importSlot} setImportSlot={setImportSlot} backupBusy={backupBusy} importBackup={importBackup} recoveryControl={recoveryControl} backupError={backupError} onNotice={setNotice} titleRef={focusRef}/>;break;
-    case '04':content=original?<div className="fa-original-pause">
-      <nav className="fa-pause-nav" aria-label="Pause navigation">
-        <Btn className="fa-painted-button" onClick={back}><span className="fa-art-sr">Resume</span></Btn>
-        {['05','06','07','08','18','03'].map(target=><Btn key={target} className="fa-painted-button" onClick={()=>go(target)}><span className="fa-art-sr">{UI_SCREENS[target].name}</span></Btn>)}
-        <Btn className="fa-painted-button" onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}><span className="fa-art-sr">Return to Title</span></Btn>
-      </nav>
-      <div className="fa-pause-region-map"><RegionMap world={world} profile={profile} small/></div>
-      <div className="fa-pause-region-name"><strong>{world?.region||'Sapphire Wilds'}</strong><p>Current exploration</p></div>
-      <div className="fa-pause-portrait">{profile&&<ArcherPortrait profile={profile}/>}</div>
-      <div className="fa-pause-profile"><strong>{profile?.name||'No character'}</strong><span>Level {level}</span>{profile&&<progress aria-label="Level progress" value={profile.xp%100} max={100}/>}</div>
-      <div className="fa-pause-details">{profile&&<><p>Position X {profile.world.position[0].toFixed(1)} · Z {profile.world.position[2].toFixed(1)}</p><p>Regions visited: {profile.world.visitedRegions.length}</p><p>Encounters completed: {profile.world.completedEncounters.length}</p></>}</div>
-      <div className="fa-pause-party" aria-label="Active party">{profile&&<><div><ArcherPortrait profile={profile}/></div>{activeRoster(profile).slice(0,3).map(m=><div key={m.id}><ArcherPortrait companion={m}/></div>)}</>}</div>
-      <div className="fa-pause-status"><StatRows stats={{HP:profile?profile.hp+' / '+stats.maxHp:'—',Attack:stats.atk,Defense:stats.def,Speed:stats.spd}}/></div>
-      <div className="fa-pause-resources"><p>Gold: {fmt(profile?.gold??0)}</p><p>XP: {fmt(profile?.xp??0)}</p><p>Points: {profile?pointsFor(profile):0}</p></div>
-      <label className="fa-pause-more"><span>More services</span><select aria-label="More services" value="" onChange={e=>{if(e.target.value)go(e.target.value);}}><option value="">Choose…</option>{PAUSE_LINKS.filter(t=>!['05','06','07','08','18','03'].includes(t)).map(t=><option key={t} value={t}>{UI_SCREENS[t].name}</option>)}</select></label>
-    </div>:<>{pane(0,<><Btn primary onClick={back}>Resume</Btn>{nav(PAUSE_LINKS)}<Btn onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to Title</Btn></>)}{pane(1,<><h2>{profile?.name}</h2><p>{world?.region||'Sapphire Wilds'} · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
+    case '04':content=<div className="fa-pause-scene">
+      <section className="fa-pause-services" aria-label="Game services">
+        {GAME_MENU_GROUPS.map(group=><div className="fa-pause-group" key={group.label}><h2>{group.label}</h2><div className="fa-pause-service-grid">{group.ids.map(target=><Btn key={target} className="fa-pause-service" onClick={()=>openGameService(target)}><span>{menuName(target)}</span></Btn>)}</div></div>)}
+      </section>
+      <section className="fa-pause-summary" aria-label="Current adventure">
+        <div className="fa-pause-live-hero">{profile&&<ArcherPortrait profile={profile} newHero/>}</div>
+        <h2>{profile?.name||'Your adventure'}</h2><p>Level {level} · {world?.region||'Sapphire Wilds'}</p>
+        {profile&&<><label>Health <progress aria-label="Health" value={profile.hp} max={stats.maxHp}/><span>{profile.hp} / {stats.maxHp}</span></label><label>Experience <progress aria-label="Level progress" value={profile.xp%100} max={100}/><span>{profile.xp%100} / 100</span></label><p>{fmt(profile.gold)} gold · {pointsFor(profile)} unspent points</p></>}
+        <RegionMap world={world} profile={profile} small/>
+        <Btn onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to title</Btn>
+      </section>
+    </div>;break;
     case '05':content=original?<div className="fa-original-character">
       <h2 className="fa-character-title">Character</h2>
       <nav className="fa-character-nav" aria-label="Character services">
@@ -1498,7 +1499,7 @@ export default function SapphireAdventure(){
       <section className="fa-character-lower fa-character-gear"><h3>Equipment</h3>{profile&&<><p>Bow: {ITEMS[profile.equipped]?.name||'None'}</p>{GEAR_SLOTS.map(s=><p key={s}>{gearSlotLabel(s)}: {GEAR[gearFor(profile,'hero')[s]]?.name||'None'}</p>)}{activeGearSet(profile,'hero')&&<p>Active set: {activeGearSet(profile,'hero').name}</p>}</>}</section>
       <section className="fa-character-lower fa-character-skills"><h3>Learned skills</h3>{profile&&availableActions(level).map(k=><p key={k}>{skillName(k)}</p>)}</section>
       <Btn className="fa-character-back" onClick={back}>Back</Btn><Btn className="fa-character-done" primary onClick={back}>Done</Btn>
-    </div>:<>{pane(0,nav(['06','12','32','27']))}{pane(1,<><h2>{profile?.name||'No character'}</h2>{profile&&<ArcherPortrait profile={profile} newHero/>}<p>Archer · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
+    </div>:<>{pane(0,<><h2>Character services</h2>{nav(['06','12','32','27','11'])}</>)}{pane(1,<><div className="fa-menu-hero">{profile&&<ArcherPortrait profile={profile} newHero/>}</div><h2>{profile?.name||'No character'}</h2><p>Archer · Level {level}</p>{profile?.birthday&&<p>Birthday: {profile.birthday}</p>}{profile&&<><label>Experience <progress aria-label="Experience toward next level" value={profile.xp%100} max={100}/></label><label>Health <progress aria-label="Current character health" value={profile.hp} max={stats.maxHp}/></label></>}</>)}{pane(2,<><h2>Statistics</h2>{statPanel}<h3>Equipment</h3>{profile&&<><p>Bow: {ITEMS[profile.equipped]?.name||'None'}</p>{GEAR_SLOTS.map(s=><p key={s}>{gearSlotLabel(s)}: {GEAR[gearFor(profile,'hero')[s]]?.name||'None'}</p>)}{activeGearSet(profile,'hero')&&<p>Active set: {activeGearSet(profile,'hero').name}</p>}<h3>Learned skills</h3>{availableActions(level).map(k=><p key={k}>{skillName(k)}</p>)}</>}</>)}</>;break;
     case '06':{
       const ownedEquipment=Object.entries(ITEMS).filter(([k,item])=>inv[k]>0&&(item.kind==='gear'||(wearer==='hero'&&item.kind==='weapon')));
       const visibleEquipment=ownedEquipment.filter(([,item])=>equipmentFilter==='all'||item.kind===equipmentFilter);
@@ -1533,7 +1534,7 @@ export default function SapphireAdventure(){
         <section className="fa-eq-compare" aria-label="Equipment statistic comparison" aria-live="polite"><strong>Current → After equipping</strong>{comparisonHead}{comparisonRows}</section>
         <Btn primary className="fa-eq-equip" disabled={!canEquip} onClick={equipSelected}>Equip</Btn>
         <Btn className="fa-eq-remove" disabled={!canRemove} onClick={removeSelected}>Remove</Btn><Btn className="fa-eq-back" onClick={back}>Back</Btn>
-      </div>:<>{pane(0,<>{nav(['21','17','39'])}<h2>Wearer</h2>{gearMembers.map(m=><Btn key={m.id} primary={m.id===wearer} aria-pressed={m.id===wearer} onClick={()=>{setGearWearer(m.id);setEquipmentFilter('all');}}>{m.name}</Btn>)}</>)}{pane(1,<><h2>{gearMembers.find(m=>m.id===wearer)?.name}</h2>{slotsForWearer.map(slot=><Btn key={slot.label} className="fa-workspace-equipped" disabled={!slot.key} onClick={()=>chooseSlot(slot.key)}><strong>{slot.label}</strong>{slot.key&&<ItemArt id={slot.key}/>}<span>{ITEMS[slot.key]?.name||'Empty'}</span></Btn>)}<p>Gold: {profile?.gold||0}</p></>)}{pane(2,<><h2>Owned equipment · {visibleEquipment.length}</h2>{filterControls}{listItems((item,k)=>visibleEquipment.some(([key])=>key===k))}{!visibleEquipment.length&&<p>No owned equipment in this category.</p>}</>)}{pane(3,<><h2>{selectedOwned?selectedItem.name:'Select equipment'}</h2><p role="status">{selectionNote}</p>{selectedOwned&&<p>{gearMetadata(itemId)||weaponMetadata(itemId)}</p>}<section className="fa-workspace-compare" aria-label="Equipment statistic comparison" aria-live="polite">{comparisonHead}{comparisonRows}</section><Btn primary disabled={!canEquip} onClick={equipSelected}>Equip</Btn><Btn disabled={!canRemove} onClick={removeSelected}>Remove</Btn><Btn disabled={!selectedOwned} onClick={()=>go('39')}>Detailed comparison</Btn><Btn onClick={back}>Back</Btn></>)}</>;break;}
+      </div>:<>{pane(0,<><h2>Wearer</h2>{gearMembers.map(m=><Btn key={m.id} primary={m.id===wearer} aria-pressed={m.id===wearer} onClick={()=>{setGearWearer(m.id);setEquipmentFilter('all');}}>{m.name}</Btn>)}<h3>Services</h3><Btn onClick={()=>go('21')}>Inventory</Btn><Btn disabled={!serviceAvailable} onClick={()=>go('17')}>Blacksmith</Btn></>)}{pane(1,<><h2>{gearMembers.find(m=>m.id===wearer)?.name}</h2>{slotsForWearer.map(slot=><Btn key={slot.label} className="fa-workspace-equipped" disabled={!slot.key} onClick={()=>chooseSlot(slot.key)}><strong>{slot.label}</strong>{slot.key&&<ItemArt id={slot.key}/>}<span>{ITEMS[slot.key]?.name||'Empty'}</span></Btn>)}<p>Gold: {profile?.gold||0}</p></>)}{pane(2,<><h2>Owned equipment · {visibleEquipment.length}</h2>{filterControls}{listItems((item,k)=>visibleEquipment.some(([key])=>key===k))}{!visibleEquipment.length&&<p>No owned equipment in this category.</p>}</>)}{pane(3,<><h2>{selectedOwned?selectedItem.name:'Select equipment'}</h2><p role="status">{selectionNote}</p>{selectedOwned&&<p>{gearMetadata(itemId)||weaponMetadata(itemId)}</p>}<section className="fa-workspace-compare" aria-label="Equipment statistic comparison" aria-live="polite">{comparisonHead}{comparisonRows}</section><Btn primary disabled={!canEquip} onClick={equipSelected}>Equip</Btn><Btn disabled={!canRemove} onClick={removeSelected}>Remove</Btn><Btn disabled={!selectedOwned} onClick={()=>go('39')}>Detailed comparison</Btn><Btn onClick={back}>Back</Btn></>)}</>;break;}
     case '07':content=<WorldMap world={world} profile={profile} encounter={encounter} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{setDestination(region);go('25');}}/>;break;
     case '08':content=<QuestJournal key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} go={go} back={back} onCampaignAction={(questId,action)=>transact(p=>changeCampaignQuest(p,questId,action),action==='accept'?'Quest accepted':'Quest completed')} onClaim={()=>{if(transact(p=>{if(p.quests.grove!=='complete')throw Error('Quest is not ready to complete.');return claimGroveQuest(p);},'Quest completed'))go('44');}}/>;break;
     case '09':content=original?<OriginalCombatHud hud={hud} profile={profile} encounter={encounter} onAction={id=>{const s=current.current;if(s.id==='09'&&s.encounter)stageRef.current?.chooseAction(id);}} onPause={openPause} onSkills={()=>go('12')}/>:<>{pane(0,<><h2>{hud?'Round '+hud.round:'Preparing combat…'}</h2><div className="fa-turns">{hud?.order.map(o=><span className={o.active?'active':''} key={o.id}>{o.name}{o.action?' · '+o.action:''}</span>)}</div></>)}{pane(1,<>{hud?.units.filter(u=>u.team==='player').map(u=><div className={'fa-party-hud-row'+(hud.choosingUnit===u.id?' choosing':'')} key={u.id}>{u.id==='hero'?<ArcherPortrait profile={profile} small newHero/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}<strong>{u.name}</strong><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp} · Focus {u.focus}/{u.maxFocus}{u.hp===0?' · Down':hud.pendingChoices?.[u.id]?' · Ready':''}</small></div>)}<small aria-live="polite">{hud?.log.at(-1)}</small></>)}{pane(2,<><small>{hud?.phase==='choose'?'Choose: '+(hud.units.find(u=>u.id===hud.choosingUnit)?.name||''):'Resolving round'}</small><div className="fa-combat-actions">{hud?.legal.map(a=><Btn key={a.id} className={'fa-action '+a.action.kind} disabled={!a.enabled} title={a.reason||a.action.summary} aria-label={a.action.name+' — '+(a.reason||a.action.summary)} onClick={()=>stageRef.current?.chooseAction(a.id)}><SkillArt id={a.id}/><span className="fa-action-label"><kbd>{a.action.hotkey}</kbd> {a.action.name}</span><small>{a.reason||a.action.summary}</small></Btn>)}</div></>)}{pane(3,<>{hud?.units.filter(u=>u.team==='enemy').map(u=><div key={u.id} className={'fa-enemy-hud'+(u.hp===0?' down':'')}><strong>{u.name}</strong><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small>{hud.intents?.filter(i=>i.unitId===u.id).map(i=><div key={i.unitId} className={'fa-enemy-intent '+i.kind}><SkillArt id={i.actionId}/><div>{i.phaseName&&<small className="fa-boss-phase">{i.phaseName}</small>}<strong>{i.name}</strong><small>{i.summary}{i.targetId?' · Targets current frontline':''}</small></div></div>)}</div>)}</>)}<div className="fa-hud-top"><Btn onClick={openPause}>Pause · Esc</Btn><Btn onClick={()=>go('12')}>Skills · K</Btn></div></>;break;
@@ -1542,14 +1543,14 @@ export default function SapphireAdventure(){
     case '12':content=<Skillbook key={profile?.id||'guest'} profile={profile} level={level} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '14':content=<BattleVictory profile={profile} encounter={encounter} result={result} hud={hud} original={original} layout={screen.layout} onContinue={victoryContinue} onItems={()=>go('38')} onDetails={()=>go('37')}/>;break;
     case '15':content=<BattleDefeat profile={profile} encounter={encounter} result={result} hud={hud} validSlots={validSlots} original={original} layout={screen.layout} onRetry={()=>{const s=current.current;if(s.id==='15'&&s.encounter&&s.profile)retryBattle();}} onExplore={()=>{const s=current.current;if(s.id==='15'&&s.encounter&&s.profile)resumeWorld(s.profile);}} onLoad={()=>{reloadSlots();go('02');}} onTitle={()=>requestConfirm('Return to the title?',leaveTitle)}/>;break;
-    case '18':content=<div className="fa-glass-load-layout"><section className="fa-glass-load-panel fa-glass-save-panel" aria-labelledby="fa-glass-save-heading">
+    case '18':content=<div className="fa-loading-scene fa-menu-scene"><section className="fa-loading-content fa-scene-load fa-scene-save" aria-labelledby="fa-glass-save-heading">
       <header className="fa-glass-load-heading"><span className="fa-glass-kicker">Sapphire Sumi · Local adventures</span><h1 id="fa-glass-save-heading" tabIndex={-1} ref={focusRef}>Save Game</h1><p>Choose a slot for your current adventure.</p></header>
       <section className="fa-glass-save-detail" aria-label="Current character">{profile?<><div className="fa-glass-save-portrait"><ArcherPortrait profile={profile} newHero/></div><div className="fa-glass-save-info"><h2>{profile.name}</h2><p>Level {level} · {fmt(profile.xp)} XP · {fmt(profile.gold)} gold</p><p>HP {profile.hp}/{stats.maxHp}</p><p>{world?.region||'Current exploration'}</p><small>X {profile.world.position[0].toFixed(1)} · Z {profile.world.position[2].toFixed(1)} · {profile.world.visitedRegions.length} regions visited · {profile.world.completedEncounters.length} encounters completed</small></div></>:<p>No active character.</p>}</section>
       <div className="fa-glass-load-slots" aria-label="Save slots">{SLOT_IDS.map(s=>{const record=slots.slots.find(x=>x.id===s),valid=record?.status==='valid';return <Btn key={s} className="fa-glass-slot" primary={selected===s} aria-pressed={selected===s} onClick={()=>setSelected(s)}><span className="fa-glass-slot-icon">{valid?<ArcherPortrait profile={record.profile} small newHero/>:<span aria-hidden="true">◇</span>}</span><span className="fa-glass-slot-info"><strong>Slot {s} · {valid?record.profile.name:record?'Damaged':'Empty'}</strong><small>{valid?'Level '+levelFor(record.profile.xp)+' · '+new Date(record.savedAt).toLocaleString('en-US'):record?'Save unavailable':'No adventure saved'}</small></span></Btn>;})}</div>
       {encounter&&<p className="fa-glass-loading-hint">Manual saves and exports are disabled during combat.</p>}{slots.error&&<p role="alert">{slots.error}</p>}
       {selected&&slots.slots.some(x=>x.id===selected)&&<p className="fa-glass-loading-hint">An occupied slot requires confirmation before overwriting.</p>}
-      <div className="fa-glass-load-actions"><Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn onClick={back}>Back</Btn></div>
-      <details className="fa-glass-backup"><summary>Adventure details and navigation</summary><div>{profile&&<><RegionMap world={world} profile={profile} small/><p>Party: {profile.name}{activeRoster(profile).map(m=>", "+m.name).join("")}</p></>}<nav className="fa-glass-dialogue-nav" aria-label="Save game navigation"><Btn onClick={()=>{if(running)root(encounter?'09':'10');else back();}}>Resume</Btn>{['05','06','07','08'].map(target=><Btn key={target} disabled={!profile} onClick={()=>go(target)}>{UI_SCREENS[target].name}</Btn>)}<Btn onClick={()=>go('03')}>Settings</Btn><Btn onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to Title</Btn></nav></div></details>
+      <div className="fa-glass-load-actions"><Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn onClick={back}>Back</Btn>{running&&canResumeGame(stack)&&<Btn onClick={resumeGame}>Resume game</Btn>}</div>
+      <details className="fa-glass-backup"><summary>Adventure details and navigation</summary><div>{profile&&<><RegionMap world={world} profile={profile} small/><p>Party: {profile.name}{activeRoster(profile).map(m=>", "+m.name).join("")}</p></>}<nav className="fa-glass-dialogue-nav" aria-label="Save game navigation"><Btn onClick={()=>{if(running&&canResumeGame(stack))resumeGame();else back();}}>Resume</Btn>{['05','06','07','08'].map(target=><Btn key={target} disabled={!profile} onClick={()=>go(target)}>{UI_SCREENS[target].name}</Btn>)}<Btn onClick={()=>go('03')}>Settings</Btn><Btn onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to Title</Btn></nav></div></details>
       <details className="fa-glass-backup"><summary>Portable save backup</summary><div><p>Export your current profile without overwriting a slot.</p>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</div></details>
     </section></div>;break;
     case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} titleRef={focusRef} go={go} back={back} onEscortAction={action=>transact(p=>{const live=current.current;if(live.service?.id!==LAST_ESCORT.returnService||live.world?.nearbyService!==LAST_ESCORT.returnService||!liveService(live.world,LAST_ESCORT.returnService))throw Error('Visit the Grove rest point.');return changeCampaignQuest(p,LAST_ESCORT.id,action,{serviceId:LAST_ESCORT.returnService});},action==='accept'?'The Last Escort accepted':'The Last Escort completed')}/>;break;
@@ -1596,7 +1597,7 @@ export default function SapphireAdventure(){
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
   const template=id==='10'?null:rightGlass||glassKind==='toast'?null:original?.url||templateUrl(id);
-  const artwork=original?{mode:'original-full',asset:null}:artFor(id==='47'&&loadFailure?'35':id,running);
+  const artwork=gameMenu&&running?{mode:'overlay',asset:null}:original?{mode:'original-full',asset:null}:artFor(id==='47'&&loadFailure?'35':id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
     {running?<iframe className="fa-world" ref={frame} key={worldRun.id} src={'/fantasy-battle-world?run='+worldRun.id+(worldRun.webgl?'&renderer=webgl':'')} title="Sapphire Wilds 3D world" tabIndex={id==='10'?0:-1} style={{pointerEvents:id==='10'?'auto':'none'}}/>:<div className="fa-title-art"/>}
@@ -1605,7 +1606,10 @@ export default function SapphireAdventure(){
     <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-glass-kind={glassKind} data-glass-load={customLoad?'true':undefined} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
       {!rightGlass&&glassKind!=='toast'&&id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
       {!rightGlass&&glassKind!=='toast'&&!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
-      {content}
+      {gameMenu&&id!=='18'?<div className="fa-game-menu-scene"><header className="fa-game-menu-header">
+        <div><span className="fa-glass-kicker">Sapphire Sumi · {id==='04'?'Adventure paused':'Game services'}</span><h1 tabIndex={-1} ref={focusRef}>{menuName(id)}</h1></div>
+        <nav aria-label="Menu navigation">{id!=='04'&&<Btn onClick={back}>Back</Btn>}{id!=='04'&&running&&canResumeGame(stack)&&<Btn onClick={()=>openGameService('04')}>Game menu</Btn>}{running&&canResumeGame(stack)&&<Btn primary onClick={resumeGame}>Resume game</Btn>}</nav>
+      </header><div className={'fa-game-menu-body'+(id==='04'?' pause':'')}>{content}</div></div>:content}
     </div>
     {saveStatus?<SaveToast status={saveStatus}/>:notice&&<aside className="fa-notice" role="status">{notice}</aside>}
   </main>;

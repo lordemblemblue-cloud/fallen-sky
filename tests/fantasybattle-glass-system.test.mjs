@@ -9,12 +9,12 @@ const screen=(id,next)=>src.slice(src.indexOf("    case '"+id+"':content="),src.
 test('every registered UI has one intentional presentation family',()=>{
  assert.equal(Object.keys(GLASS_UI_POLICY).length,48);
  assert.deepEqual(Object.keys(GLASS_UI_POLICY).sort(),Object.keys(UI_SCREENS).sort());
- for(const [kind,count] of Object.entries({title:1,right:4,scene:6,workspace:24,pause:1,hud:2,event:9,toast:1}))assert.equal(Object.values(GLASS_UI_POLICY).filter(v=>v===kind).length,count);
+ for(const [kind,count] of Object.entries({title:1,right:3,scene:27,workspace:5,hud:2,event:9,toast:1}))assert.equal(Object.values(GLASS_UI_POLICY).filter(v=>v===kind).length,count);
  assert.equal(glassUiKind('invalid'),null);assert.equal(glassUiKind('__proto__'),null);
 });
 test('only intended single-panel menus replace original art at runtime',()=>{
- assert.deepEqual(Object.keys(GLASS_UI_POLICY).filter(usesRightGlass).sort(),['13','18','40','47']);
- assert.deepEqual(Object.keys(GLASS_UI_POLICY).filter(id=>glassUiKind(id)==='scene').sort(),['02','03','19','20','35','48']);
+ assert.deepEqual(Object.keys(GLASS_UI_POLICY).filter(usesRightGlass).sort(),['13','40','47']);
+ assert.deepEqual(Object.keys(GLASS_UI_POLICY).filter(id=>glassUiKind(id)==='scene').sort(),['02','03','04','05','06','07','08','11','12','18','19','20','21','24','25','26','27','28','29','30','32','34','35','37','39','46','48']);
  assert.equal(glassUiKind('09'),'hud');assert.equal(glassUiKind('10'),'hud');
  assert.match(src,/useStagedOriginal\(rightGlass\|\|glassKind==='toast'\?null:id\)/);
  assert.match(src,/data-glass-kind=\{glassKind\}/);
@@ -82,4 +82,41 @@ test('approved Settings cannot select the obsolete boxed or original-art branch'
  assert.match(settings,/fa-loading-content fa-scene-settings/);
  assert.doesNotMatch(settings,/fa-settings-original-shell|fa-settings-art|original\?/);
  assert.match(src,/case '03':content=<SettingsPage settings=/);
+});
+
+import { GAME_MENU_GROUPS, isGameMenu, menuDestination, canResumeGame, menuName } from '../src/components/fantasybattle/core/gameMenuNavigation.mjs';
+import { PAUSE_LINKS } from '../src/components/fantasybattle/uiCatalog.mjs';
+test('all pause services are visible exactly once and use scene presentation',()=>{
+ const ids=GAME_MENU_GROUPS.flatMap(g=>g.ids);
+ assert.deepEqual([...ids].sort(),[...PAUSE_LINKS].sort());
+ assert.equal(new Set(ids).size,ids.length);
+ for(const id of ['04',...ids,'26','32','39','46']){
+  assert.equal(glassUiKind(id),'scene');
+  assert.ok(menuName(id));
+  if(id!=='03')assert.equal(isGameMenu(id),true);
+ }
+ assert.equal(isGameMenu('09'),false);assert.equal(isGameMenu('10'),false);assert.equal(isGameMenu('40'),false);
+});
+test('navigation never stacks redundant service pages or resumes a victory/defeat',()=>{
+ assert.deepEqual(menuDestination(['10','04','21','39'],'06'),['10','04','06']);
+ assert.deepEqual(menuDestination(['09','04','12'],'04'),['09','04']);
+ assert.deepEqual(menuDestination(['10'],'21',true),['10','21']);
+ assert.deepEqual(menuDestination(['10','21'],'12',true),['10','12']);
+ assert.deepEqual(menuDestination(['10','04','21'],'12',true),['10','04','12']);
+ assert.deepEqual(menuDestination(['10','04'],'03'),['10','04','03']);
+ assert.deepEqual(menuDestination(['14','32'],'04'),['14','32']);
+ assert.deepEqual(menuDestination(['15','02'],'21'),['15','02']);
+ assert.equal(canResumeGame(['14','32']),false);
+ assert.equal(canResumeGame(['09','04','12']),true);
+});
+test('scene workspace layout is normal flow, keeps item names and real action gates',()=>{
+ const menus=readFileSync(new URL('../src/components/fantasybattle/sapphireGameMenus.css',import.meta.url),'utf8');
+ assert.match(src,/gameMenu&&id!=='18'\?<div className="fa-game-menu-scene"/);
+ assert.match(src,/gameMenu&&running\?\{mode:'overlay',asset:null\}/);
+ assert.match(src,/fa-menu-item-name">\{i.name\}/);
+ assert.match(src,/const enabled=Boolean\(profile&&!encounter&&item/);
+ assert.match(src,/canResumeGame\(live.stack\)\)root\(live.stack\[0\]\)/);
+ assert.match(menus,/\.fa-game-menu-body \.fa-panel\{position:relative!important;inset:auto!important/);
+ assert.match(menus,/@media\(max-width:760px\)/);
+ assert.match(menus,/background:none;box-shadow:none/);
 });
