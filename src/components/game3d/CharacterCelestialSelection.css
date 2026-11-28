@@ -150,26 +150,3 @@
 @media(prefers-reduced-motion:reduce) {
   .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-scene::after {animation:none;transform:none}
 }
-
-/* Explicit selection layout wins over the legacy panorama and crossline rules.
- * No baked boxes; only the clean backdrop and live data above it. */
-.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-scene {
-  background-image:linear-gradient(180deg,rgba(4,11,24,.07),transparent 40%,rgba(3,9,22,.35)),url("https://media.base44.com/images/public/6af625cd654fa5b8954442ce/6441dedadbf552e1a9782302a29003db_a_cinematic_ultra_detailed_fantasy_sci_fi_landsca.png");
-}
-.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-selected-identity {
-  border:0;background:none;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
-}
-.axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-selected-identity::before {content:none;display:none}
-@media(min-width:801px), (orientation:landscape) and (min-width:700px) {
-  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-celestial-identity {
-    left:4%;top:7%;width:25%;max-height:25%;
-  }
-  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-xross-roster {
-    top:35%;bottom:10%;left:4%;right:auto;width:25%;
-    --cross-step:clamp(32px,5.8vh,60px);
-  }
-  .axe-login.axe-login--arcane.axe-login--live-entry[data-entry-step="select"][data-selection-theme="celestial-v2"] .axe-login-stats-panel.axe-login-info-rail {
-    background:linear-gradient(270deg,rgba(3,10,23,.55),rgba(3,10,23,.19) 80%,transparent);
-    top:17%;bottom:12%;left:auto;right:3%;width:29%;height:auto;
-  }
-}

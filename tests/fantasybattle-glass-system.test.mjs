@@ -162,13 +162,8 @@ test('child pages keep their parent menu highlighted and all primary destination
  for(const [child,parent] of Object.entries({'26':'11','32':'05','39':'06','46':'21','16':'21','17':'06','22':'21','23':'07','33':'05'}))assert.equal(activeMenuService(child),parent);
 });
 
-test('sumi-e menu skin reuses title artwork and mist without changing the docked layout',()=>{
- const theme=readFileSync(new URL('../src/components/fantasybattle/sapphireInkTheme.css',import.meta.url),'utf8');
- assert.match(src,/import '\.\/sapphireInkTheme\.css'/);
- assert.match(theme,/title-original\.webp/);
- assert.match(theme,/title-ink-mist\.svg/);
- assert.match(theme,/\.fa-docked-game-menu \.fa-service-workspace\{[^}]*color:var\(--fa-sumi-text\)/);
- assert.match(theme,/prefers-reduced-motion:reduce/);
- assert.doesNotMatch(theme,/grid-template-columns|backdrop-filter|filter:blur/);
- assert.match(theme,/data-delta="gain"\]\{color:#21633c/);
+test('restored docked glass menu does not activate the newer ink overlay',()=>{
+ assert.doesNotMatch(src,/import '\.\/sapphireInkTheme\.css'/);
+ const menus=readFileSync(new URL('../src/components/fantasybattle/sapphireGameMenus.css',import.meta.url),'utf8');
+ assert.match(menus,/\.fa-docked-game-menu \.fa-service-workspace\{[^}]*background:radial-gradient/);
 });

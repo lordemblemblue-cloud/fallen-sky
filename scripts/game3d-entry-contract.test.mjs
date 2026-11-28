@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = path => readFileSync(new URL('../' + path, import.meta.url),'utf8');
 
-test('Game 3D host provides legacy navigation context inside TanStack client boundary',()=>{
+test('Game 3D host keeps legacy navigation context inside TanStack client boundary',()=>{
   const host=source('src/components/game3d/Game3DHost.jsx');
   const game=source('src/pages/GameView.jsx');
-  assert.match(game,/useNavigate.*from ['"]react-router-dom['"]/);
+  assert.match(game,/useNavigate.*from ['"]@tanstack\/react-router['"]/);
   assert.match(host,/import\s*\{\s*MemoryRouter\s*\}\s*from\s*['"]react-router-dom['"]/);
   assert.match(host,/<MemoryRouter>[\s\S]*<GameView\s*\/>[\s\S]*<\/MemoryRouter>/);
 });
@@ -28,9 +28,9 @@ test('selected avatar loading and world entry use matching canonical models',()=
   const entry=source('src/pages/GameView.jsx');
   assert.match(game,/FUSED_FEMALE_CHARACTER_MODEL_URL/);
   assert.match(game,/FUSED_MALE_CHARACTER_MODEL_URL/);
-  // The fused bodies use the original independent Three.js renderer,
-  // not the generic post-migration preview that dropped the character stage.
-  assert.match(viewer,/new THREE\.WebGLRenderer/);
+  // The fused bodies use their dedicated pooled scene renderer, which
+  // preserves the full character stage through the WebGPU migration.
+  for(const marker of ['createCreatorRendererPool',"createSceneRenderer('fallen-sky'",'destroySceneRenderer'])assert.ok(viewer.includes(marker),marker);
   assert.match(viewer,/new GLTFLoader\(\)\.load\(url/);
   assert.match(viewer,/prepareFusedCreatorGeometry/);
   assert.match(viewer,/featherFusedNeckTone/);

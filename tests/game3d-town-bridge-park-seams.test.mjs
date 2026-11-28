@@ -24,7 +24,7 @@ function box(name,top,bottom,x=6,z=6) {
 const scene=(...meshes)=>{const root=new THREE.Group();for(const m of meshes)root.add(m);root.updateMatrixWorld(true);return root;};
 
 test('a synthetic shallow secondary face cannot survive the narrow top-skin filter',()=>{
-  assert.ok(WOLFVEIL_TOWN_TILE_CLEANUP.topBandMeters<0.029*12.44);
+  assert.ok(WOLFVEIL_TOWN_TILE_CLEANUP.topBandMeters<0.029);
   const m=box('Tile_12',0.691,0.662);
   m.scale.setScalar(12.44);m.updateMatrixWorld(true);
   const r=removeWolfveilTownRaisedTileBodies(m);
@@ -49,8 +49,8 @@ test('raised bridge-adjacent flat paving is seated; bridge rails and canal bed a
   const report=flattenWolfveilTownFloorLevels(root);
   assert.equal(report.raisedSurfaceVertices,4);
   for(let i=4;i<8;i++)assert.ok(Math.abs(landing.geometry.attributes.position.getY(i)-(F-0.0012))<1e-6);
-  assert.equal(redBridge.geometry.attributes.position.getY(4),1.16);
-  assert.equal(canalBed.geometry.attributes.position.getY(4),0.68);
+  assert.ok(Math.abs(redBridge.geometry.attributes.position.getY(4)-1.16)<1e-6);
+  assert.ok(Math.abs(canalBed.geometry.attributes.position.getY(4)-0.68)<1e-6);
 });
 test('only real water-covered tiles remain recessed inside the broad canal rectangle',()=>{
   const water=box('water',0.708,0.705,0,0);
