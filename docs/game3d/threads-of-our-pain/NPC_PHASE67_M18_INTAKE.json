@@ -1,0 +1,416 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M18",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "R35-R38_RECOVERED_SOURCE.md",
+    "R93_M16-M18_SOURCE_GROUNDED_SCENE_REFINEMENTS.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R120_M17_M18_OBSERVATORY_AND_TWELVE_CONSTRUCTION_PROMPTS.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md",
+    "R64A_OWNER_ENDING_RECONCILIATION.md",
+    "R65_M19-M20_REVISED_FINALE.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "presentationSequenceOnly": true,
+    "m05ExperiencedDeathPreserved": true
+  },
+  "stages": [
+    {
+      "id": "SANCTUARY_ENTERED",
+      "reality": "PRESERVED",
+      "anchor": "M18_GATE",
+      "requires": [
+        "M17_COMPLETE"
+      ],
+      "evidence": "Enter public sanctuary without religious or faction condition"
+    },
+    {
+      "id": "KEEPER_BRIEF",
+      "reality": "PRESERVED",
+      "anchor": "KEEPER",
+      "requires": [
+        "SANCTUARY_ENTERED"
+      ],
+      "evidence": "Actual keeper introduction and access to essential accounts"
+    },
+    {
+      "id": "EVAC_ACCOUNT",
+      "reality": "PRESERVED",
+      "anchor": "ACCOUNT_EVAC",
+      "requires": [
+        "KEEPER_BRIEF"
+      ],
+      "evidence": "Actual account observation and source-scoped testimony"
+    },
+    {
+      "id": "SEAL_ACCOUNT",
+      "reality": "PRESERVED",
+      "anchor": "ACCOUNT_SEAL",
+      "requires": [
+        "KEEPER_BRIEF"
+      ],
+      "evidence": "Actual account observation and source-scoped testimony"
+    },
+    {
+      "id": "MARK_ACCOUNT",
+      "reality": "PRESERVED",
+      "anchor": "ACCOUNT_MARK",
+      "requires": [
+        "KEEPER_BRIEF"
+      ],
+      "evidence": "Actual account observation and source-scoped testimony"
+    },
+    {
+      "id": "OPTIONS_EXPLAINED",
+      "reality": "PRESERVED",
+      "anchor": "SEAL_GALLERY",
+      "requires": [
+        "EVAC_ACCOUNT",
+        "SEAL_ACCOUNT",
+        "MARK_ACCOUNT"
+      ],
+      "evidence": "Limited life-force explanation and preliminary counsel consistent with R64A/R65; no final choice"
+    },
+    {
+      "id": "REST15_READY",
+      "reality": "PRESERVED",
+      "anchor": "REST15",
+      "requires": [
+        "OPTIONS_EXPLAINED"
+      ],
+      "evidence": "Safe voluntary rest checkpoint"
+    },
+    {
+      "id": "AUTHORED_MIGRATE18",
+      "reality": "ORIGINAL",
+      "anchor": "SHELTER_ENTRY18",
+      "requires": [
+        "REST15_READY"
+      ],
+      "evidence": "Protagonist-only safe authored transition"
+    },
+    {
+      "id": "SHELTER_REVISIT",
+      "reality": "ORIGINAL",
+      "anchor": "COMMON_ROOM",
+      "requires": [
+        "AUTHORED_MIGRATE18"
+      ],
+      "evidence": "Actual existing M11 refuge, retained repairs and local state"
+    },
+    {
+      "id": "REBUILD_VIEW",
+      "reality": "ORIGINAL",
+      "anchor": "WITNESS_REBUILD",
+      "requires": [
+        "SHELTER_REVISIT"
+      ],
+      "evidence": "Actual independent consent-respecting survivor perspective"
+    },
+    {
+      "id": "CARE_VIEW",
+      "reality": "ORIGINAL",
+      "anchor": "WITNESS_CARE",
+      "requires": [
+        "SHELTER_REVISIT"
+      ],
+      "evidence": "Actual independent consent-respecting survivor perspective"
+    },
+    {
+      "id": "CONSENT_VIEW",
+      "reality": "ORIGINAL",
+      "anchor": "WITNESS_CONSENT",
+      "requires": [
+        "SHELTER_REVISIT"
+      ],
+      "evidence": "Actual independent consent-respecting survivor perspective"
+    },
+    {
+      "id": "ROUTE_SURVEY",
+      "reality": "ORIGINAL",
+      "anchor": "BLOCK_VIEW/ALT_VIEW",
+      "requires": [
+        "REBUILD_VIEW",
+        "CARE_VIEW",
+        "CONSENT_VIEW"
+      ],
+      "evidence": "Inspect blocked and alternate routes or actual staffed map report with reported provenance"
+    },
+    {
+      "id": "SHELTER_REPORT",
+      "reality": "ORIGINAL",
+      "anchor": "REPORT18",
+      "requires": [
+        "ROUTE_SURVEY"
+      ],
+      "evidence": "Actual preparedness report; assembly readiness unknown; no early civilian movement"
+    },
+    {
+      "id": "RETURN15_SAFE",
+      "reality": "PRESERVED",
+      "anchor": "RETURN_GALLERY",
+      "requires": [
+        "SHELTER_REPORT"
+      ],
+      "evidence": "Safe authored return; retain original survivors and local gear"
+    },
+    {
+      "id": "DELIBERATION",
+      "reality": "PRESERVED",
+      "anchor": "RETURN_GALLERY",
+      "requires": [
+        "RETURN15_SAFE"
+      ],
+      "evidence": "Actual counsel about unfinished lives and unresolved preparation, no ending commitment"
+    },
+    {
+      "id": "M18_COMPLETE",
+      "reality": "PRESERVED",
+      "anchor": "EXIT",
+      "requires": [
+        "DELIBERATION"
+      ],
+      "evidence": "Preparedness lead only; M19 eligibility without world lock"
+    }
+  ],
+  "actors": [
+    {
+      "role": "attendant",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "keeper",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "travelers",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "workers",
+      "reality": "PRESERVED",
+      "runtimeId": null
+    },
+    {
+      "role": "Moon Goddess",
+      "reality": "AUTHORIZED_DIVINE",
+      "proposedNpcId": "FS_NPC_004",
+      "runtimeId": null
+    },
+    {
+      "role": "resident rebuild perspective",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "caregiver protection perspective",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "survivor consent perspective",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "scout",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    },
+    {
+      "role": "guard",
+      "reality": "ORIGINAL",
+      "runtimeId": null
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_019",
+      "name": "Amara Dawnveil",
+      "relationship": "Preserved healer/S48 coordinator candidate; not confirmed original caregiver"
+    },
+    {
+      "id": "FS_NPC_029",
+      "name": "Elaris Dawnseeker",
+      "relationship": "Mortal pilgrim and S47/S49 thematic association; not confirmed keeper or deity"
+    },
+    {
+      "id": "FS_NPC_030",
+      "name": "Unnamed Goddess",
+      "relationship": "Developer-only antagonist association; no physical appearance assigned"
+    }
+  ],
+  "sanctuary": {
+    "publicAccess": true,
+    "worshipRequired": false,
+    "offeringRequired": false,
+    "factionRequired": false,
+    "motifs": [
+      "MOTIF_01",
+      "MOTIF_02",
+      "MOTIF_03",
+      "MOTIF_04",
+      "MOTIF_05",
+      "MOTIF_06",
+      "MOTIF_07",
+      "MOTIF_08",
+      "MOTIF_09",
+      "MOTIF_10",
+      "MOTIF_11",
+      "MOTIF_12"
+    ],
+    "motifsArchitecturalOnly": true,
+    "newNamedDeities": false,
+    "unanimousVote": false,
+    "optionalAlcoves": true,
+    "essentialAccounts": [
+      "EVAC_ACCOUNT",
+      "SEAL_ACCOUNT",
+      "MARK_ACCOUNT"
+    ],
+    "anyOrder": true,
+    "sealEffectIllustrative": true,
+    "individualStrandMapping": false
+  },
+  "counsel": {
+    "bothLivesGenuine": true,
+    "incompleteCrossingConnection": true,
+    "temporaryProtection": true,
+    "exactMechanism": "UNRESOLVED",
+    "exactCost": "UNRESOLVED",
+    "noInvasionAttribution": true,
+    "endingSourcePrecedence": [
+      "R64A",
+      "R65"
+    ],
+    "obsoleteSeparationRebirthNotApproved": true,
+    "preliminaryOnly": true,
+    "finalChoiceField": false,
+    "defaultSacrifice": false,
+    "guaranteedSurvival": false,
+    "worldLock": false
+  },
+  "refuge": {
+    "actualM11Required": true,
+    "retainM11": [
+      "VENT_RESTORED",
+      "MEDICINE_DELIVERED",
+      "CORRIDOR_SECURE"
+    ],
+    "retainActualTrust": true,
+    "relocate": false,
+    "duplicateShelter": false,
+    "actorSurvivalNotInferred": true
+  },
+  "testimony": {
+    "requiredPerspectives": [
+      "REBUILD_VIEW",
+      "CARE_VIEW",
+      "CONSENT_VIEW"
+    ],
+    "anyOrder": true,
+    "independentOpinions": true,
+    "consentRequiredForPrivateDisclosure": true,
+    "mayDeclineSpeculation": true,
+    "notEndingVotes": true,
+    "compatibleRoleAssignmentPending": true,
+    "noInventedDaughter": true,
+    "optionalHelpNoReward": true
+  },
+  "survey": {
+    "facts": [
+      "current_shelter",
+      "route_record",
+      "assembly_readiness"
+    ],
+    "routeAlternatives": [
+      "PHYSICALLY_INSPECTED",
+      "STAFF_MAP_REPORTED"
+    ],
+    "reportedNotInspected": true,
+    "blockedAndAlternateViewsRequired": true,
+    "assemblyReadiness": "UNCONFIRMED",
+    "civiliansMoved": false,
+    "earlyM19ArrivalCredit": false,
+    "reportRequired": true
+  },
+  "migration": {
+    "authoredOnly": true,
+    "protagonistOnly": true,
+    "preflightCollisionControllerRigs": true,
+    "rollbackOnFailure": true,
+    "oneActiveReality": true,
+    "physicalDocumentTransfer": false
+  },
+  "evidenceFields": [
+    "reality",
+    "sourceType",
+    "speakerOrAnchor",
+    "questRevision",
+    "disclosureScope"
+  ],
+  "optionalIndependent": [
+    "S47",
+    "S48",
+    "S49",
+    "S45",
+    "S54",
+    "D32",
+    "D33",
+    "D34"
+  ],
+  "optionalContextRules": "Thematic and source-specific optional references only, actual eligible receipts, no automatic completion or grant",
+  "routes": {
+    "preserved": [
+      "RIDGE_PATH",
+      "PUBLIC_GATE",
+      "COURTYARD",
+      "KEEPER",
+      "optional ALCOVES or GALLERY",
+      "SAFE_REST",
+      "RETURN_GALLERY",
+      "EXIT"
+    ],
+    "original": [
+      "SHELTER_ENTRY",
+      "COMMON_ROOM",
+      "THREE_WITNESS_ANCHORS",
+      "GUARD_POST",
+      "SURVEY_BRANCH_VIEW",
+      "REPORT",
+      "SAFE_REST"
+    ],
+    "transforms": null
+  },
+  "completion": {
+    "next": "M19_READY",
+    "autoAccept": false,
+    "rewardGrant": false,
+    "ordinaryMainXpProposed": true,
+    "newPower": false,
+    "preparednessOnly": true,
+    "irreversibleConfirmation": false,
+    "optionalExplorationRetained": true
+  },
+  "prohibitions": [
+    "mandatory prayer",
+    "mandatory twelve deity encounters",
+    "new pantheon names",
+    "final choice",
+    "obsolete separation outcome",
+    "universal survival promise",
+    "early evacuation",
+    "physical cross-world transfer",
+    "Celestial Sight",
+    "third-world selector",
+    "runtime activation"
+  ]
+}
