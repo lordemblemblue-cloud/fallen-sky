@@ -17,6 +17,14 @@
  *    (~37 us an object on this PC); the node graphs this game attaches only read shared per-render uniforms,
  *    materialReference() values and textures, which three already refreshes once per render (the first object of
  *    each shader in a render is always refreshed) or when the material changes.
+ *
+ * 4. Nodes.delete (installNodesDeleteFix, for a renderer's `_nodes`: three does not export the class): a render object
+ *    whose node state was never built is forgotten without the usedTimes bookkeeping. A RenderObject listens for its
+ *    material's 'dispose' from the moment it is created, but its nodeBuilderState is built only later (its first
+ *    draw or compile, never if that build failed). r171 decrements nodeBuilderState.usedTimes unchecked, so a
+ *    material disposed in between (an object created by a compile pass and released before its first draw: a zombie
+ *    spawned and released within one background compile) threw "Cannot read properties of undefined (reading
+ *    'usedTimes')" out of the game loop, every frame (reported by the low-poly session, 369 errors in one run).
  */
 import { MorphNode, InstanceNode, NodeMaterialObserver } from 'three/webgpu';
 import {
@@ -182,4 +190,28 @@ export function installWebGPUThreeFixes() {
   if (MorphNode?.prototype?.setup) MorphNode.prototype.setup = morphSetupSkippingZeroInfluence;
   patchInstanceNode();
   patchObserver();
+}
+
+// --- 4. disposing a render object whose node state was never built --------------------------------------------
+// r171 Nodes.delete, with the missing check; dataMapDelete is its super.delete (DataMap.prototype.delete).
+function nodesDeleteUnbuilt(object, dataMapDelete) {
+  if (object.isRenderObject) {
+    const nodeBuilderState = this.get(object).nodeBuilderState;
+    if (nodeBuilderState !== undefined) {
+      nodeBuilderState.usedTimes--;
+      if (nodeBuilderState.usedTimes === 0) this.nodeBuilderCache.delete(this.getForRenderCacheKey(object));
+    }
+  }
+  return dataMapDelete.call(this, object);
+}
+
+/** Apply fix 4 to the class of `nodes` (a renderer's `_nodes`, once it has initialised); once per class. */
+export function installNodesDeleteFix(nodes) {
+  const proto = nodes ? Object.getPrototypeOf(nodes) : null;
+  if (!proto || proto.__sceneDeleteFixed === true || typeof proto.delete !== 'function') return false;
+  const dataMapDelete = Object.getPrototypeOf(proto)?.delete;
+  if (typeof dataMapDelete !== 'function') return false;
+  proto.delete = function deleteKnowingUnbuilt(object) { return nodesDeleteUnbuilt.call(this, object, dataMapDelete); };
+  proto.__sceneDeleteFixed = true;
+  return true;
 }

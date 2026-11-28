@@ -21,7 +21,7 @@ import { texture, vec4, normalFlat, faceDirection } from 'three/tsl';
 import { WebGLRenderer } from 'three';
 import { chooseSceneRendererFor, rememberRendererFailure } from './rendererBackendChoice.mjs';
 import { resolveNodeTwin } from './webgpuMaterialTwins.js';
-import { installWebGPUThreeFixes } from './webgpuThreeFixes.js';
+import { installWebGPUThreeFixes, installNodesDeleteFix } from './webgpuThreeFixes.js';
 import { pointSpriteFor, pointSpriteForTwin } from './webgpuPointSprites.js';
 import { applyNodeSetups } from './webgpuNodeKit.js';
 import { applyClassicOutput, applyClassicShaderOutput, classicOutputKey, materialReadsNormals } from './webgpuClassicOutput.js';
@@ -739,6 +739,7 @@ function installCompat(renderer) {
     // a built shader depends on screen / render target and the tone mapping + colour space it was built for, and on
     // the geometry of a mesh with shape keys (morphNodeKey)
     const nodes = renderer._nodes;
+    installNodesDeleteFix(nodes); // a render object disposed before its node state was built (webgpuThreeFixes.js 4)
     if (nodes?.getForRenderCacheKey) {
       const key = nodes.getForRenderCacheKey.bind(nodes);
       nodes.getForRenderCacheKey = (renderObject) => key(renderObject) + classicOutputKey(renderer) + morphNodeKey(renderObject);
