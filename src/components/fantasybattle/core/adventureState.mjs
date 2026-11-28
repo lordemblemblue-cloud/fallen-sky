@@ -2,6 +2,7 @@ import {WORLD_MAX_X} from './worldExpansion.mjs';
 import {validCampaign,cleanCampaign} from './campaignQuests.mjs';
 import {treasureFor} from './treasureCatalog.mjs';
 import {BOND_GIFT} from './companionBonds.mjs';
+import {learnedPassives,applyPassives} from './passiveSkills.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats,activeGearSetId,ascensionLevel,scaledSet,validAscensions,cleanAscensions,MAX_ASCENSION,SOCKET_GEMS,MAX_SOCKET_RANK,equippedSocketItems,socketFor,validSockets,cleanSockets,MAX_ENCHANT_RANK,enchantRank,enchantBonus,validEnchants,cleanEnchants} from './equipmentCatalog.mjs';
@@ -92,6 +93,7 @@ const copy=o=>JSON.parse(JSON.stringify(o));
 export const levelFor=xp=>1+Math.floor(xp/100);
 export const learnedAt=Object.freeze({quickShot:1,guard:1,volley:2,chargedShot:3});
 export const availableActions=level=>Object.keys(learnedAt).filter(k=>level>=learnedAt[k]);
+export const learnedSkills=level=>[...availableActions(level),...learnedPassives(level)];
 export const pointsFor=p=>Math.max(0,levelFor(p.xp)-1-STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0));
 export function createProfile(name){
   const clean=String(name??'').trim().slice(0,40);
@@ -202,10 +204,10 @@ export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
   const {inventory,loot}=grantLoot(p,[{id:'sapphireOre',count:ore},...(gearId?[{id:gearId,count:1}]:[])]);
   const completedEncounters=[...p.world.completedEncounters,encounter.id];
   const quest=p.quests.grove==='active'&&completedEncounters.includes('wilds_grove_01')?'complete':p.quests.grove;
-  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
+  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,leveled:newLevel>oldLevel,unlocked:learnedSkills(newLevel).filter(x=>!learnedSkills(oldLevel).includes(x))};
 }
 export function allocate(p,key){if(!STAT_KEYS.includes(key)||pointsFor(p)<1)return p;return {...p,hp:p.hp+(key==='vitality'?10:0),attributes:{...p.attributes,[key]:p.attributes[key]+1}};}
-export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+enhancementLevel(p,p?.equipped)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero');}
+export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return applyPassives(addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+enhancementLevel(p,p?.equipped)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero'),p?levelFor(p.xp):0);}
 export function acceptGroveQuest(p){return p.quests.grove!=='available'?p:{...p,quests:{...p.quests,grove:p.world.completedEncounters.includes('wilds_grove_01')?'complete':'active'}};}
 export function claimGroveQuest(p){return p.quests.grove!=='complete'?p:{...p,quests:{...p.quests,grove:'claimed'}};}
 
