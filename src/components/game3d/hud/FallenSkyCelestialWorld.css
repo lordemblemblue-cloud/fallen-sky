@@ -1,0 +1,228 @@
+/* Fallen Sky in-world only. The approved celestial concept is a visual guide,
+ * not a static screenshot. Preserve live HUD templates, hit targets, layouts,
+ * controls and real data. No full-screen animated effect during combat. */
+.game3d-view[data-celestial-world="true"] {
+  --fs-celestial-gold:#f0d59d;
+  --fs-celestial-ivory:#fff2dc;
+  --fs-celestial-muted:#d0dae6;
+  --fs-celestial-rule:rgba(225,191,126,.42);
+  --fs-celestial-shade:linear-gradient(100deg,rgba(5,13,28,.89),rgba(10,24,43,.68) 72%,rgba(9,20,35,.26));
+}
+/* Floating quest typography; gradient shade rather than a rectangular frame. */
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker {
+  border:0; border-radius:0;
+  background:var(--fs-celestial-shade);
+  box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none;
+  text-shadow:0 1px 3px #020610;
+}
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker::after {content:none}
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker-open {
+  font:600 14px/1.35 Georgia,serif;letter-spacing:.065em;
+  color:var(--fs-celestial-gold);border-bottom:1px solid var(--fs-celestial-rule);
+  background:transparent;
+}
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker-entry {
+  background:transparent; border-color:rgba(225,191,126,.18);
+}
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker-entry[data-tracked="true"] {
+  background:linear-gradient(90deg,rgba(229,190,112,.12),transparent);
+  border-left-color:var(--fs-celestial-gold);
+}
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker-title,
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker-title span:last-child {color:var(--fs-celestial-ivory)}
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker-objective {color:var(--fs-celestial-muted)}
+.game3d-view[data-celestial-world="true"] .jade-quest-tracker-meter span {
+  background:linear-gradient(90deg,#a97740,#ffe4a9);box-shadow:0 0 5px #eec77d66;
+}
+/* Existing gold combat frame and circular minimap are deliberately retained. */
+.game3d-view[data-celestial-world="true"] .jade-status-header {
+  color:var(--fs-celestial-ivory);text-shadow:0 1px 4px #000;
+}
+.game3d-view[data-celestial-world="true"] .jade-services-navigation :is(.jade-services-button,.jade-service-option) {
+  background:linear-gradient(0deg,rgba(7,19,35,.76),rgba(7,19,35,.18));
+  border:0;border-bottom:1px solid var(--fs-celestial-rule);border-radius:0;
+  box-shadow:none;color:var(--fs-celestial-ivory);
+  backdrop-filter:none;-webkit-backdrop-filter:none;text-shadow:0 1px 3px #000;
+}
+.game3d-view[data-celestial-world="true"] .jade-services-navigation :is(.jade-services-button,.jade-service-option):is(:hover,:focus-visible,[aria-pressed="true"]) {
+  background:linear-gradient(0deg,rgba(221,183,110,.25),rgba(7,19,35,.48));
+  border-bottom-color:#ffe1a4;color:#ffe1a4;
+}
+/* One edge-fading atmosphere layer for each open menu; the living world remains
+ * visible beneath it. Animate only a small decorative layer, never the canvas. */
+.game3d-view[data-celestial-world="true"] .axe3d-pause__overlay[data-context="world"] {
+  background:rgba(3,9,19,.32);backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__overlay[data-context="world"] :is(.axe3d-pause__launcher,.axe3d-pause__panel) {
+  background:radial-gradient(ellipse at 90% 12%,rgba(80,116,161,.26),transparent 58%),linear-gradient(270deg,rgba(5,13,27,.96),rgba(9,23,40,.87) 80%,rgba(9,23,40,.68));
+  border:0;border-radius:0;box-shadow:none;isolation:isolate;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__overlay[data-context="world"] :is(.axe3d-pause__launcher,.axe3d-pause__panel)::before {
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(ellipse at 25% 25%,rgba(104,153,204,.15),transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(112,96,174,.14),transparent 48%);
+  animation:fs-celestial-drift 18s ease-in-out infinite alternate;
+}
+@keyframes fs-celestial-drift {from{opacity:.25;transform:translateX(-2%)}to{opacity:.8;transform:translateX(2%)}}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__overlay[data-context="world"] :is(.axe3d-pause__launcher-header,.axe3d-pause__header,.axe3d-pause__launcher-footer,.axe3d-pause__footer) {
+  background:transparent;box-shadow:none;border-color:var(--fs-celestial-rule);
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__overlay[data-context="world"] :is(.axe3d-pause__launcher-tile,.axe3d-pause__launcher-page-grid button,.axe3d-pause__launcher-action,.axe3d-pause__launcher-settings,.axe3d-pause__surface,.axe3d-pause__keybind-row) {
+  background:transparent;border:0;border-bottom:1px solid var(--fs-celestial-rule);border-radius:0;box-shadow:none;
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__overlay[data-context="world"] :is(.axe3d-pause__launcher-tile,.axe3d-pause__launcher-page-grid button,.axe3d-pause__launcher-action,.axe3d-pause__launcher-settings,.axe3d-pause__keybind-row):is(:hover,:focus-visible,.is-selected) {
+  background:linear-gradient(0deg,rgba(220,180,100,.19),transparent);border-bottom-color:#ffe0a1;color:#ffe0a1;
+}
+/* Keep the service workspace layout and interaction intact; remove extra
+ * chrome only on information-bearing sections, not item slots or 3D stages. */
+.game3d-view[data-celestial-world="true"] .axe-service-workspace {
+  --axe-reading-glass:linear-gradient(100deg,rgba(6,16,31,.86),rgba(13,30,51,.65));
+  --axe-reading-glass-strong:linear-gradient(100deg,rgba(6,16,31,.94),rgba(13,30,51,.84));
+  --axe-reading-edge:var(--fs-celestial-rule);
+  --axe-reading-blur:none;--axe-reading-shadow:none;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-service-heading,.axe-service-operation-help,.axe-service-operation-select,.axe-service-notice) {
+  background:var(--fs-celestial-shade);border:0;border-bottom:1px solid var(--fs-celestial-rule);
+  border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace .axe-service-progression {
+  border-color:transparent;border-radius:0;box-shadow:none;
+  background:linear-gradient(100deg,rgba(7,17,33,.79),rgba(10,24,43,.66));
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-service-kicker,.axe-service-heading h1) {color:var(--fs-celestial-gold)}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-service-operations,.axe-service-mobile-panes) button {
+  background:rgba(7,19,35,.65);border:0;border-bottom:1px solid var(--fs-celestial-rule);
+  border-radius:0;box-shadow:none;color:var(--fs-celestial-ivory);
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-service-operations,.axe-service-mobile-panes) button[aria-pressed="true"] {
+  background:linear-gradient(0deg,rgba(221,183,110,.25),rgba(7,19,35,.65));
+  border-bottom-color:#ffe1a4;color:#ffe1a4;
+}
+/* The full map is rendered in a body portal and only mounted in Game 3D. */
+.axe-world-map-backdrop .axe-world-map-dialog {
+  border:0;border-radius:0;box-shadow:none;
+  background:linear-gradient(115deg,rgba(6,15,30,.96),rgba(15,34,55,.88));
+}
+.axe-world-map-backdrop :is(.axe-world-map-heading,.axe-world-map-filters,.axe-world-map-details,.axe-world-map-foot) {
+  background:transparent;box-shadow:none;border-color:rgba(225,191,126,.32);
+}
+.axe-world-map-backdrop {backdrop-filter:none;-webkit-backdrop-filter:none}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__overlay[data-motion="off"] :is(.axe3d-pause__launcher,.axe3d-pause__panel)::before {animation:none}
+@media(max-width:720px),(prefers-reduced-motion:reduce) {
+  .game3d-view[data-celestial-world="true"] .axe3d-pause__overlay :is(.axe3d-pause__launcher,.axe3d-pause__panel)::before {animation:none}
+  .game3d-view[data-celestial-world="true"] .jade-quest-tracker-open {font-size:11px}
+}
+@media(prefers-reduced-transparency:reduce) {
+  .game3d-view[data-celestial-world="true"] {--fs-celestial-shade:#101e30}
+  .game3d-view[data-celestial-world="true"] .axe-service-workspace {--axe-reading-glass:#101e30;--axe-reading-glass-strong:#0c1829}
+  .game3d-view[data-celestial-world="true"] :is(.axe3d-pause__launcher,.axe3d-pause__panel,.axe-service-workspace .axe-service-progression) {background:#101e30}
+  .axe-world-map-backdrop .axe-world-map-dialog {background:#101e30}
+}
+
+/* Second pass: individual service screens. Leave actual slots, selected skills,
+ * confirmation dialogs, item rarity edges, and all 3D hosts untouched. */
+.game3d-view[data-celestial-world="true"] .axe-service-workspace {
+  --fs-reading-pane:linear-gradient(115deg,rgba(5,15,30,.86),rgba(13,29,48,.60) 78%,rgba(13,29,48,.35));
+  --fs-reading-inset:linear-gradient(100deg,rgba(9,23,40,.66),rgba(9,23,40,.16));
+  --axe-app-glass:var(--fs-reading-pane);
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(
+  .axe-app-card,.axe-app-rail,.axe-glass-loadout-details,
+  .axe-ct-details,.axe-ct-main,.axe-sk-inspector,.axe-comp-tree-map,
+  .axe-quest-sidebar,.axe-quest-journal,.axe-quest-detail,
+  .axe-comp-owned-roster,.axe-comp-unified-card,.axe-comp-mounts-pane,
+  .axe-comp-imbue-right,.axe-comp-style-detail,.axe-mastery-inspector,
+  .axe-spiritual-sidebar,.axe-spiritual-details,
+  .axe-blacksmith-operation-panel,.axe-blacksmith-progression-panel,
+  .axe-blacksmith-details,.axe-service-inventory,.axe-service-actions
+) {
+  background:var(--fs-reading-pane);
+  border-color:transparent; border-radius:0; box-shadow:none;
+  backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(
+  .axe-app-card,.axe-spiritual-sidebar,.axe-spiritual-details
+)::before,
+.game3d-view[data-celestial-world="true"] .axe-service-workspace .axe-app-card::after {
+  content:none;
+}
+/* A single luminous rule anchors the header instead of four framed edges. */
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(
+  .axe-app-card-heading,.axe-ct-main-heading,.axe-ct-details-top,
+  .axe-spiritual-details-head,.axe-blacksmith-operation-heading
+) {
+  color:var(--fs-celestial-gold);
+  border-bottom:1px solid transparent;
+  border-image:linear-gradient(90deg,rgba(242,210,147,.7),rgba(242,210,147,.15) 80%,transparent) 1;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(
+  .axe-app-card-heading h3,.axe-ct-main-heading h2,.axe-ct-details-top h2,
+  .axe-spiritual-details-head h2,.axe-quest-topbar h1
+) {color:var(--fs-celestial-ivory);text-shadow:0 1px 4px #030a16}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-app-tabs,.axe-quest-topbar) {
+  background:var(--fs-reading-inset);border:0;
+  border-bottom:1px solid var(--fs-celestial-rule);
+  border-radius:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace .axe-quest-topbar::after {border-color:transparent}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace .axe-quest-book {
+  background:var(--fs-reading-inset);border-color:transparent;border-radius:0;
+  box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace .axe-quest-book::after {border-color:transparent;box-shadow:none}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-app-tabs,.axe-quest-journal-tabs) button {
+  border:0;border-radius:0;border-bottom:1px solid var(--fs-celestial-rule);
+  color:var(--fs-celestial-ivory);background:transparent;box-shadow:none;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-app-tabs,.axe-quest-journal-tabs) button[aria-pressed="true"] {
+  color:#ffe2a3;border-bottom-color:#ffe2a3;
+  background:linear-gradient(0deg,rgba(233,190,110,.19),transparent);
+  box-shadow:none;text-shadow:0 1px 3px #000;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace .axe-app-tabs button[aria-pressed="true"] svg {color:#ffe2a3}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace .axe-app-rail button[aria-pressed="true"] {
+  border-color:#ffe2a3;box-shadow:0 0 12px #f5cc7955,inset 0 0 8px #ffdb8b22;
+}
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(
+  .axe-quest-objectives,.axe-quest-rewards,.axe-blacksmith-projected-block,
+  .axe-blacksmith-materials-block,.axe-spiritual-resource-blank
+) {
+  background:var(--fs-reading-inset);border-color:transparent;
+  border-top:1px solid var(--fs-celestial-rule);border-radius:0;
+  box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none;
+}
+/* Keep focused controls visible on the fading surfaces, without affecting
+ * existing layout, hover targets or native form controls. */
+.game3d-view[data-celestial-world="true"] .axe-service-workspace :is(.axe-app-tabs,.axe-quest-journal-tabs,.axe-app-rail) button:focus-visible {
+  outline:2px solid #ffe2a3;outline-offset:-2px;
+}
+@media(prefers-reduced-transparency:reduce) {
+  .game3d-view[data-celestial-world="true"] .axe-service-workspace {
+    --fs-reading-pane:#101e30;--fs-reading-inset:#142238;
+  }
+}
+
+
+/* Compact world launcher footer: Ranked, Character Logout, Settings.
+ * Map remains available via its minimap and configured keyboard shortcut. */
+.game3d-view[data-celestial-world="true"] .axe3d-pause__launcher-footer {
+  grid-template-columns:minmax(58px,.62fr) minmax(116px,1.5fr) minmax(54px,.55fr);
+  gap:8px;padding:8px 14px max(10px,env(safe-area-inset-bottom));
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__launcher-footer button {
+  min-height:44px;padding:5px 4px;font-size:11px;gap:5px;
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__launcher-rank {
+  justify-self:stretch;font-size:10px;
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__launcher-logout {
+  color:#f5dfb4;white-space:normal;text-align:center;
+}
+.game3d-view[data-celestial-world="true"] .axe3d-pause__launcher-footer svg {flex:none}
+@media(max-width:350px) {
+  .game3d-view[data-celestial-world="true"] .axe3d-pause__launcher-footer {
+    grid-template-columns:minmax(48px,.6fr) minmax(105px,1.5fr) minmax(48px,.6fr);
+    gap:4px;padding-inline:8px;
+  }
+}
