@@ -303,3 +303,31 @@ test('viewer listener scope removes all callbacks and is idempotent',()=>{
  const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
  for(const marker of ['this.cleanupScope.close()','this.forge.cache.clear()','this.assets?.geoCache.clear()','this.scene.environment=null','app.destroy();throw error','stop(){clearInterval(timer);app.destroy();}'])assert.ok(world.includes(marker),marker);
 });
+
+import {createConfirmationGate} from '../src/components/fantasybattle/core/confirmationGate.mjs';
+test('confirmation actions are single use and bound to the original screen and character',()=>{
+ const g=createConfirmationGate(),base={id:'16',running:true,profile:{id:'first'},encounter:null},live={...base,id:'40',stack:['10','16','40']};
+ let calls=0;const action=()=>calls++;
+ let t=g.open('Buy',action,base);assert.equal(g.consume(t,live),action);action();
+ assert.equal(g.consume(t,live),null);assert.equal(calls,1);
+ for(const change of [{profile:{id:'other'}},{encounter:{token:'new'}},{running:false},{stack:['10','22','40']},{id:'16'}]){
+  t=g.open('Buy',action,base);assert.equal(g.consume(t,{...live,...change}),null);assert.equal(g.consume(t,live),null);
+ }
+ const old=g.open('Old',action,base),newer=g.open('New',action,base);
+ assert.equal(g.consume(old,live),null);assert.equal(g.consume(newer,live),action);
+ t=g.open('Cancel',action,base);g.cancel();assert.equal(g.consume(t,live),null);
+ assert.equal(g.open('Nested',action,live),null);
+ const title={id:'03',running:false,profile:null,encounter:null};
+ t=g.open('Import',action,title);assert.equal(g.consume(t,{...title,id:'40',stack:['01','03','40']}),action);
+ const defeat={id:'15',running:true,profile:{id:'first'},encounter:{token:'defeat'}};
+ t=g.open('Exit',action,defeat);assert.equal(g.consume(t,{...defeat,id:'40',stack:['15','40']}),action);
+});
+test('every catalog screen has an explicit runtime switch case and confirmation is gated',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const cases=[...page.matchAll(/case '(\d{2})':/g)].map(m=>m[1]);
+ assert.equal(new Set(cases).size,48);
+ for(const id of Object.keys(UI_SCREENS))assert.ok(cases.includes(id),id);
+ assert.ok(page.includes('confirmGate.current.consume(ticket,current.current)'));
+ assert.ok(page.includes('onClick={()=>executeConfirm(pending)}'));
+ assert.ok(page.includes('onClick={dismissConfirm}'));
+});
