@@ -21,3 +21,7 @@ export function encounterReward(encounter){
  if(!encounter?.id||encounter.practice)return NONE;
  return Object.hasOwn(ENCOUNTER_REWARDS,encounter.id)?ENCOUNTER_REWARDS[encounter.id]:encounter.category==='Boss'?BOSS:encounter.category==='Elite'?ELITE:NORMAL;
 }
+
+// Limited first-victory field supplies, no new item types or repeat farming.
+const RECOVERY_SUPPLY=Object.freeze({wilds_pilgrimage_02:2,wilds_waterfall_01:2,wilds_heights_02:2,wilds_sanctuary_guard:3,wilds_sanctuary_boss:2,wilds_astral_01:2});
+export function encounterRecoverySupply(encounter){return !encounter?.practice&&Object.hasOwn(RECOVERY_SUPPLY,encounter?.id)?RECOVERY_SUPPLY[encounter.id]:0;}
