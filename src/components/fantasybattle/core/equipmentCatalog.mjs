@@ -69,7 +69,20 @@ export function validSockets(p,recruited){
 export function cleanSockets(p){
  return Object.fromEntries(Object.entries(p.sockets).map(([wearer,items])=>[wearer,Object.fromEntries(Object.entries(items).map(([key,socket])=>[key,{gem:socket.gem,rank:socket.rank}]))]));
 }
-export function addGearStats(stats,p,id){const out={...stats};for(const slot of GEAR_SLOTS){const key=gearFor(p,id)[slot];if(gearEligible(p,key)&&GEAR[key].slot===slot)for(const k of ['atk','def','spd'])out[k]+=GEAR[key][k];}const set=activeGearSet(p,id);if(set)for(const k of ['atk','def','spd'])out[k]+=set[k];for(const key of equippedSocketItems(p,id)){const socket=socketFor(p,id,key);if(socket)out[SOCKET_GEMS[socket.gem].stat]+=socket.rank;}return out;}
+export const MAX_ENCHANT_RANK=3;
+export const enchantRank=(p,wearer,key)=>socketEligible(p,wearer,key)&&Number.isInteger(p?.enchants?.[wearer]?.[key])?Math.max(0,Math.min(MAX_ENCHANT_RANK,p.enchants[wearer][key])):0;
+export function enchantBonus(key,rank){
+ const item=Object.hasOwn(GEAR,key)?GEAR[key]:Object.hasOwn(WEAPONS,key)?WEAPONS[key]:null;
+ const n=Number.isInteger(rank)?Math.max(0,Math.min(MAX_ENCHANT_RANK,rank)):0;
+ return Object.fromEntries(['atk','def','spd'].map(stat=>[stat,(item?.[stat]||0)*n/10]));
+}
+export function validEnchants(p,recruited){
+ if(p.enchants===undefined)return true;
+ if(!p.enchants||typeof p.enchants!=='object'||Array.isArray(p.enchants))return false;
+ return Object.entries(p.enchants).every(([wearer,items])=>WEARERS.includes(wearer)&&(wearer==='hero'||recruited(wearer))&&items&&typeof items==='object'&&!Array.isArray(items)&&Object.entries(items).every(([key,rank])=>socketEligible(p,wearer,key)&&Number.isInteger(rank)&&rank>=1&&rank<=MAX_ENCHANT_RANK));
+}
+export function cleanEnchants(p){return Object.fromEntries(Object.entries(p.enchants).map(([wearer,items])=>[wearer,{...items}]));}
+export function addGearStats(stats,p,id){const out={...stats};for(const slot of GEAR_SLOTS){const key=gearFor(p,id)[slot];if(gearEligible(p,key)&&GEAR[key].slot===slot)for(const k of ['atk','def','spd'])out[k]+=GEAR[key][k];}const set=activeGearSet(p,id);if(set)for(const k of ['atk','def','spd'])out[k]+=set[k];for(const key of equippedSocketItems(p,id)){const socket=socketFor(p,id,key);if(socket)out[SOCKET_GEMS[socket.gem].stat]+=socket.rank;const rank=enchantRank(p,id,key);if(rank){const bonus=enchantBonus(key,rank);for(const stat of ['atk','def','spd'])out[stat]+=bonus[stat];}}return out;}
 // Accessories contribute stats but must not be passed to the armor/mantle mesh renderer.
 export const equippedVisuals=(p,id)=>['armor','mantle'].map(slot=>gearFor(p,id)[slot]).filter(key=>Object.hasOwn(GEAR,key));
 export const gearSlotLabel=slot=>({armor:'Armor',mantle:'Mantle',ring:'Ring',necklace:'Necklace'})[slot]||'Equipment';
