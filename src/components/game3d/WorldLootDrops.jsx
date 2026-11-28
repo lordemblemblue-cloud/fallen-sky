@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { motion, AnimatePresence } from 'framer-motion';
+import { acquireEffectLight } from './vfx/effectLightPool.mjs';
 import { LOOT_RARITIES, addLootToInventory } from './lootStore';
 import { addAXEEquipmentItem } from './axe/equipment/AXEEquipmentInventoryStore';
 
@@ -8,6 +9,11 @@ const PICKUP_RANGE = 2.8;   // world units
 const BOB_SPEED    = 1.8;   // rad/s
 const SPIN_SPEED   = 1.2;   // rad/s
 const BOB_AMP      = 0.18;  // meters
+
+// A removed drop's sphere, core and ring were never disposed; free their buffers and materials with it.
+function disposeDropMesh(mesh) {
+  mesh.traverse((node) => { node.geometry?.dispose(); node.material?.dispose(); });
+}
 
 /**
  * WorldLootDrops
@@ -22,8 +28,10 @@ const BOB_AMP      = 0.18;  // meters
  *   playerRef — ref to the player model (THREE.Object3D)
  */
 export default function WorldLootDrops({ scene, camera, drops, onPickup, playerRef }) {
-  // Map of dropId → { mesh, light, data, born }
+  // Map of dropId → { mesh, hex, data, born }
   const meshesRef = useRef({});
+  // { handle, hex }: the one glow light, borrowed from the world's effect light pool, on the drop nearest the player
+  const glowRef = useRef(null);
   const clockRef = useRef({ t: 0 });
   const [nearbyDrop, setNearbyDrop] = useState(null);  // { dropId, name, rarity, icon }
   const [screenPos, setScreenPos] = useState({ x: 0, y: 0 });
@@ -51,7 +59,7 @@ export default function WorldLootDrops({ scene, camera, drops, onPickup, playerR
       if (!activeIds.has(id)) {
         const entry = meshesRef.current[id];
         scene.remove(entry.mesh);
-        if (entry.light) scene.remove(entry.light);
+        disposeDropMesh(entry.mesh);
         delete meshesRef.current[id];
       }
     });
@@ -90,13 +98,11 @@ export default function WorldLootDrops({ scene, camera, drops, onPickup, playerR
       ring.position.y = -(0.8 - 0.02);
       sphere.add(ring);
 
-      // Point light for glow aura
-      const light = new THREE.PointLight(rarity.hex, 1.4, 3.5);
-      light.position.copy(sphere.position);
+      // The glow aura is one pooled light on the drop nearest the player (see the animation loop): a light per drop
+      // changed the scene's light count with every drop and pickup, and three.js recompiled every lit material.
       scene.add(sphere);
-      scene.add(light);
 
-      meshesRef.current[drop.dropId] = { mesh: sphere, light, data: drop, born: Date.now() };
+      meshesRef.current[drop.dropId] = { mesh: sphere, hex: rarity.hex, data: drop, born: Date.now() };
     });
   }, [drops, scene]);
 
@@ -112,6 +118,8 @@ export default function WorldLootDrops({ scene, camera, drops, onPickup, playerR
 
       let closest = null;
       let closestDist = PICKUP_RANGE;
+      let glowEntry = null;
+      let glowDist = Infinity;
 
       const player = playerRef?.current;
       const w = window.innerWidth;
@@ -119,7 +127,7 @@ export default function WorldLootDrops({ scene, camera, drops, onPickup, playerR
       const tmpVec = new THREE.Vector3();
 
       Object.values(meshesRef.current).forEach((entry) => {
-        const { mesh, light, data } = entry;
+        const { mesh, data } = entry;
         // Bob up and down
         const baseY = (data.y || 0) + 0.8;
         mesh.position.y = baseY + Math.sin(t * BOB_SPEED + entry.born * 0.001) * BOB_AMP;
@@ -127,23 +135,36 @@ export default function WorldLootDrops({ scene, camera, drops, onPickup, playerR
         // Ring pulse
         const ring = mesh.children[1];
         if (ring) ring.material.opacity = 0.3 + Math.abs(Math.sin(t * 2)) * 0.35;
-        // Light flicker
-        if (light) {
-          light.position.copy(mesh.position);
-          light.intensity = 1.2 + Math.sin(t * 3 + entry.born) * 0.3;
-        }
 
         // Proximity to player
         if (player) {
           const dx = player.position.x - mesh.position.x;
           const dz = player.position.z - mesh.position.z;
           const dist = Math.sqrt(dx * dx + dz * dz);
+          if (dist < glowDist) { glowDist = dist; glowEntry = entry; }
           if (dist < closestDist) {
             closestDist = dist;
             closest = entry;
           }
         }
       });
+
+      // The glow light follows the drop nearest the player, in that drop's rarity color, flickering as before.
+      if (glowEntry) {
+        if (!glowRef.current) {
+          const handle = acquireEffectLight(scene, { color: glowEntry.hex, distance: 3.5 });
+          if (handle) glowRef.current = { handle, hex: glowEntry.hex };
+        }
+        const glow = glowRef.current;
+        if (glow) {
+          const recolor = glow.hex !== glowEntry.hex ? glowEntry.hex : null;
+          glow.hex = glowEntry.hex;
+          glow.handle.set(1.2 + Math.sin(t * 3 + glowEntry.born) * 0.3, glowEntry.mesh.position, recolor);
+        }
+      } else if (glowRef.current) {
+        glowRef.current.handle.release();
+        glowRef.current = null;
+      }
 
       // Update nearest drop + screen projection for pickup prompt
       if (closest) {
@@ -168,12 +189,16 @@ export default function WorldLootDrops({ scene, camera, drops, onPickup, playerR
     };
 
     frameRef.current = requestAnimationFrame(animate);
-    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
+    return () => {
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      glowRef.current?.handle.release();
+      glowRef.current = null;
+    };
   }, [scene, camera, playerRef]);
 
   const pickupDrop = useCallback((entry) => {
     if (!scene) return;
-    const { mesh, light, data } = entry;
+    const { mesh, data } = entry;
     // A failed inventory/storage write must NOT remove this world drop.
     // Equipment drops become canonical AXE equipment instances. Everything
     // else continues into the character-scoped loot/material inventory.
@@ -192,7 +217,7 @@ export default function WorldLootDrops({ scene, camera, drops, onPickup, playerR
       stored = saved;
     }
     scene.remove(mesh);
-    if (light) scene.remove(light);
+    disposeDropMesh(mesh);
     delete meshesRef.current[data.dropId];
     setNearbyDrop(null);
     // Notify parent to remove from drops list
