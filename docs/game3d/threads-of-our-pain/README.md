@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **SIDE1-20261127 — S01–S10 optional adventure refinement (draft):** [The road remembers its travelers](SIDE1_20261127_S01_S10_REFINEMENT.md). Ten scene/branching refinements and terrain deltas; 10/55 optional editorial coverage. Preserve independent quest receipts and actual observation. Not built or tested.
+
 > **FOCUS6-20261127 — final ten discoveries (draft):** [Where the road becomes quiet](FOCUS6_20261127_D41_D50_REFINEMENT.md). Ten dialogue and terrain deltas; FOCUS series 50/50 distinct discovery refinements, no new IDs. R66 required second vista and earned item retention preserved. Not built or tested. Next S01–S10 optional adventure quality review.
 
 > **FOCUS5-20261127 — D32–D40 discovery refinement (draft; D36 previously covered):** [The shape of what we carried](FOCUS5_20261127_D32_D40_REFINEMENT.md). Eight candidate refinements and terrain deltas, 40/50 FOCUS coverage; preserve existing entitlements and independent optional receipts. Not built or tested.
