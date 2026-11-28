@@ -37,6 +37,52 @@ function ArcherPortrait({profile,small=false,companion=false}){
   return <canvas ref={canvas} width={179} height={285} className={'fa-archer-portrait'+(small?' small':'')} role="img" aria-label={(member?member.name:appearanceFor(profile).name)+' portrait'}/>;
 }
 
+const SETTINGS_SECTIONS = [
+  ['graphics','Graphics','◇'], ['audio','Audio','♫'], ['gameplay','Gameplay','⚔'],
+  ['controls','Controls','⌘'], ['accessibility','Accessibility','✧'], ['interface','Interface','▤'],
+];
+
+// The category is navigation state, not a gameplay preference. Both art modes share
+// the same controls and existing validated local save/backup handlers.
+function SettingsPage({original,settings,world,running,applySettings,back,onTutorial,backupField,importSlot,setImportSlot,backupBusy,importBackup,recoveryControl,backupError,onNotice}){
+  const [category,setCategory]=useState('graphics');
+  const [fullscreen,setFullscreen]=useState(false);
+  const [canFullscreen,setCanFullscreen]=useState(false);
+  const panelRef=useRef(null);
+  useEffect(()=>{
+    const sync=()=>{setFullscreen(Boolean(document.fullscreenElement));setCanFullscreen(Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen && document.exitFullscreen));};
+    sync();document.addEventListener('fullscreenchange',sync);
+    return ()=>document.removeEventListener('fullscreenchange',sync);
+  },[]);
+  useEffect(()=>{if(panelRef.current)panelRef.current.scrollTop=0;},[category]);
+  const toggleFullscreen=async()=>{
+    try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.fullscreenEnabled)await document.documentElement.requestFullscreen();else onNotice('Fullscreen is not available in this window.');}
+    catch(e){onNotice('Fullscreen could not be changed: '+e.message);}
+  };
+  const row=(label,description,control)=><div className="fa-settings-row"><div><strong>{label}</strong>{description&&<small>{description}</small>}</div>{control}</div>;
+  const switchInput=(id,label,value,patch)=><input id={id} type="checkbox" role="switch" aria-label={label} checked={value} onChange={e=>applySettings({[patch]:e.target.checked})}/>;
+  let content;
+  switch(category){
+    case 'graphics':content=<>{row('Graphics quality','Performance is the recommended starting point.',<select id="fa-quality" aria-label="Graphics quality" value={settings.quality} onChange={e=>applySettings({quality:e.target.value})}>{['performance','balanced','high','cinematic'].map(q=><option key={q} value={q}>{q[0].toUpperCase()+q.slice(1)}</option>)}</select>)}{row('Renderer','Detected automatically when the world loads.',<span className="fa-settings-value">{world?.renderer||'Not detected yet'}</span>)}{row('Display resolution','Uses the current window size.',<span className="fa-settings-value">Automatic</span>)}<p className="fa-settings-hint">For fullscreen, open Interface.</p></>;break;
+    case 'audio':content=<>{row('Mute battle audio','Turns battle sound effects on or off.',switchInput('fa-mute','Mute battle audio',settings.muted,'muted'))}<p className="fa-settings-hint">Individual volume controls are not currently available.</p></>;break;
+    case 'gameplay':content=<>{row('Gameplay tutorial','Review the battle and gameplay rules.',<Btn onClick={()=>onTutorial(1)}>Open tutorial</Btn>)}{running?<p className="fa-settings-hint">Return to the title screen to import a backup or recover an earlier checkpoint.</p>:<div className="fa-settings-backup"><h3>Portable Save Backup</h3><p>Import a plain or encrypted JSON backup locally. Keep the encryption passphrase separately; it cannot be recovered.</p>{backupField}<label>Destination slot<select value={importSlot} onChange={e=>setImportSlot(e.target.value)}>{SLOT_IDS.map(s=><option key={s} value={s}>Slot {s}</option>)}</select></label><label>Choose save backup<input disabled={backupBusy} type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)importBackup(file);}}/></label>{recoveryControl}{backupError&&<p role="alert">{backupError}</p>}</div>}</>;break;
+    case 'controls':content=<>{row('Input method','Keyboard or on-screen touch controls.',<span className="fa-settings-value">Automatic</span>)}{row('Control reference','Review movement and interaction in the existing tutorial.',<Btn onClick={()=>onTutorial(0)}>Open tutorial</Btn>)}<p className="fa-settings-hint">Controller remapping is not currently available.</p></>;break;
+    case 'accessibility':content=<>{row('Reduce UI and clothing motion','Disables UI animation and reduces secondary clothing movement.',switchInput('fa-motion','Reduce UI and clothing motion',settings.reducedMotion,'reducedMotion'))}</>;break;
+    case 'interface':content=<>{row('Display mode','Switch the game between fullscreen and windowed mode.',<Btn id="fa-fullscreen" disabled={!canFullscreen} onClick={toggleFullscreen}>{fullscreen?'Exit fullscreen':'Enter fullscreen'}</Btn>)}{row('Current display',null,<span className="fa-settings-value">{fullscreen?'Fullscreen':'Windowed'}</span>)}{!canFullscreen&&<p className="fa-settings-hint">Fullscreen is unavailable in this window.</p>}</>;break;
+    default:break;
+  }
+  return <div className={'fa-settings-page'+(original?' fa-settings-art':' fa-settings-fallback')}>
+    <nav className="fa-settings-categories" aria-label="Settings categories">{SETTINGS_SECTIONS.map(([key,label,icon])=><Btn key={key} className="fa-settings-category" aria-pressed={category===key} aria-controls="fa-settings-detail" onClick={()=>setCategory(key)}><span aria-hidden="true">{icon}</span><span>{label}</span></Btn>)}</nav>
+    <section id="fa-settings-detail" ref={panelRef} className="fa-settings-detail" aria-labelledby="fa-settings-heading" tabIndex={0}>
+      <h2 id="fa-settings-heading">{SETTINGS_SECTIONS.find(([key])=>key===category)[1]}</h2>
+      <div className="fa-settings-ornament" aria-hidden="true">✧</div>
+      {content}
+      <p className="fa-settings-hint">Preferences are saved immediately on this browser.</p>
+    </section>
+    <div className="fa-settings-actions"><Btn onClick={back}>‹ Back</Btn><Btn primary onClick={back}>Done</Btn></div>
+  </div>;
+}
+
 const EMPTY={slots:[],error:null};
 const fmt=(n)=>new Intl.NumberFormat('en-US').format(n);
 const skillName=id=>ACTIONS[id]?.name||id;
@@ -1377,28 +1423,7 @@ export default function SapphireAdventure(){
       <Btn className="fa-painted-button fa-load-export" disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export</Btn>
       <Btn className="fa-painted-button fa-load-back" onClick={back}>Back</Btn>
     </div>:<>{pane(0,<>{validSlots.map(s=><Btn primary={selected===s.id} key={s.id} onClick={()=>setSelected(s.id)}>Slot {s.id} · {s.profile.name}</Btn>)}{!validSlots.length&&<p>No loadable saves on this browser.</p>}{slots.slots.filter(s=>s.status==='corrupt').map(s=><p key={s.id}>Slot {s.id} is damaged.</p>)}<Btn onClick={back}>Back</Btn></>)}{pane(1,<><h2>{selectedSave?.profile.name||'Select a save'}</h2>{selectedSave&&<p>Level {levelFor(selectedSave.profile.xp)} · X {selectedSave.profile.world.position[0].toFixed(1)} · {new Date(selectedSave.savedAt).toLocaleString('en-US')}</p>}</>)}{pane(2,<><Btn primary disabled={!selectedSave} onClick={()=>begin(selectedSave.profile,selectedSave.id,selectedSave.stamp)}>Load Game</Btn><Btn disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!selectedSave||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(selectedSave.profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</>)}</>;break;
-    case '03':content=original?<div className="fa-original-settings">
-      <nav className="fa-art-side-nav fa-settings-nav" aria-label="Settings navigation">
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-quality')?.focus()}><span className="fa-art-sr">Graphics</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-mute')?.focus()}><span className="fa-art-sr">Audio</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>{setLesson(1);go('34');}}><span className="fa-art-sr">Gameplay tutorial</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>{setLesson(0);go('34');}}><span className="fa-art-sr">Controls tutorial</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-motion')?.focus()}><span className="fa-art-sr">Accessibility</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-fullscreen')?.focus()}><span className="fa-art-sr">Interface</span></Btn>
-      </nav>
-      <section className="fa-settings-graphics" aria-label="Graphics settings">
-        <label className="fa-setting-line">Graphics quality<select id="fa-quality" value={settings.quality} onChange={e=>applySettings({quality:e.target.value})}>{['performance','balanced','high','cinematic'].map(q=><option key={q}>{q}</option>)}</select></label>
-        <div className="fa-setting-line"><span>Renderer</span><small>{world?.renderer||'Detected when world loads'}</small></div>
-        <Btn id="fa-fullscreen" onClick={()=>{if(document.fullscreenElement)document.exitFullscreen().catch(e=>setNotice(e.message));else document.documentElement.requestFullscreen?.().catch(e=>setNotice(e.message));}}>Toggle fullscreen</Btn>
-      </section>
-      <section className="fa-settings-audio" aria-label="Audio settings"><label className="fa-setting-line"><span>Mute battle audio</span><input id="fa-mute" type="checkbox" checked={settings.muted} onChange={e=>applySettings({muted:e.target.checked})}/></label><small>Changes are saved immediately on this browser.</small></section>
-      <section className="fa-settings-gameplay" aria-label="Gameplay and backup settings">
-        <label className="fa-setting-line"><span>Reduce UI and clothing motion</span><input id="fa-motion" type="checkbox" checked={settings.reducedMotion} onChange={e=>applySettings({reducedMotion:e.target.checked})}/></label>
-        {!running&&<><strong>Portable Save Backup</strong><p>Import plain or encrypted JSON locally. Keep your encryption passphrase separately; it cannot be recovered.</p>{backupField}<label>Destination slot<select value={importSlot} onChange={e=>setImportSlot(e.target.value)}>{SLOT_IDS.map(s=><option key={s} value={s}>Slot {s}</option>)}</select></label><label>Choose save backup<input disabled={backupBusy} type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)importBackup(file);}}/></label>{recoveryControl}{backupError&&<p role="alert">{backupError}</p>}</>}
-      </section>
-      <Btn className="fa-painted-button fa-settings-back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
-      <Btn className="fa-painted-button fa-settings-done" primary onClick={back}><span className="fa-art-sr">Apply changes and close settings</span></Btn>
-    </div>:<>{pane(0,<><h2>Settings</h2><Btn onClick={back}>Back</Btn></>)}{pane(1,<><label>Graphics quality<select value={settings.quality} onChange={e=>applySettings({quality:e.target.value})}>{['performance','balanced','high','cinematic'].map(q=><option key={q}>{q}</option>)}</select></label><label><input type="checkbox" checked={settings.muted} onChange={e=>applySettings({muted:e.target.checked})}/> Mute battle audio</label><label><input type="checkbox" checked={settings.reducedMotion} onChange={e=>applySettings({reducedMotion:e.target.checked})}/> Reduce UI and clothing motion</label><p>Renderer: {world?.renderer||'Detected when world loads'}</p><Btn onClick={()=>{if(document.fullscreenElement)document.exitFullscreen().catch(e=>setNotice(e.message));else document.documentElement.requestFullscreen?.().catch(e=>setNotice(e.message));}}>Toggle fullscreen</Btn>{!running&&<><h2>Portable Save Backup</h2><p>Import a plain or encrypted JSON backup. For encrypted files, enter the original passphrase before choosing the file. Files and passphrases are never sent to a server. Keep the passphrase separately; it cannot be recovered.</p>{backupField}<label>Destination slot<select value={importSlot} onChange={e=>setImportSlot(e.target.value)}>{SLOT_IDS.map(s=><option key={s} value={s}>Slot {s}</option>)}</select></label><label>Choose save backup<input disabled={backupBusy} type="file" accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)importBackup(f);}}/></label>{recoveryControl}{backupError&&<p role="alert">{backupError}</p>}</>}<Btn primary onClick={back}>Done</Btn></>)}</>;break;
+    case '03':content=<SettingsPage original={original} settings={settings} world={world} running={running} applySettings={applySettings} back={back} onTutorial={index=>{setLesson(index);go('34');}} backupField={backupField} importSlot={importSlot} setImportSlot={setImportSlot} backupBusy={backupBusy} importBackup={importBackup} recoveryControl={recoveryControl} backupError={backupError} onNotice={setNotice}/>;break;
     case '04':content=original?<div className="fa-original-pause">
       <nav className="fa-pause-nav" aria-label="Pause navigation">
         <Btn className="fa-painted-button" onClick={back}><span className="fa-art-sr">Resume</span></Btn>
