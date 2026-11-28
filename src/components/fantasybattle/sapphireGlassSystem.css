@@ -13,7 +13,7 @@
 .fa-ui[data-glass-kind="toast"]{pointer-events:none;background:transparent}
 /* Settings becomes a single scrollable right-hand surface; the six categories
    and all existing settings handlers stay mounted in the same component. */
-.fa-ui[data-glass-kind="right"] .fa-settings-fallback{position:absolute;inset:clamp(12px,4vh,45px) clamp(12px,4vw,68px) clamp(12px,4vh,45px) auto;width:min(100% - 24px,580px,50vw);height:auto;display:flex;flex-direction:column;gap:12px;padding:clamp(16px,2vw,28px);overflow:auto;overscroll-behavior:contain;background:var(--fa-glass-fill);color:var(--fa-glass-text);border:1px solid var(--fa-glass-edge);border-radius:var(--fa-glass-radius);box-shadow:0 20px 55px #03081780,inset 0 1px 0 #f5e6c34f;pointer-events:auto;scrollbar-width:thin;font-size:clamp(12px,1.1vw,16px)}
+.fa-ui[data-glass-kind="right"] .fa-settings-fallback{position:absolute;inset:clamp(12px,4vh,45px) clamp(12px,4vw,68px) clamp(12px,4vh,45px) auto;width:min(calc(100% - 24px),580px,50vw);height:auto;display:flex;flex-direction:column;gap:12px;padding:clamp(16px,2vw,28px);overflow:auto;overscroll-behavior:contain;background:var(--fa-glass-fill);color:var(--fa-glass-text);border:1px solid var(--fa-glass-edge);border-radius:var(--fa-glass-radius);box-shadow:0 20px 55px #03081780,inset 0 1px 0 #f5e6c34f;pointer-events:auto;scrollbar-width:thin;font-size:clamp(12px,1.1vw,16px)}
 .fa-glass-settings-heading{flex:none}
 .fa-ui[data-glass-kind="right"] .fa-settings-fallback :is(.fa-settings-categories,.fa-settings-detail,.fa-settings-actions){position:static;inset:auto;width:100%;height:auto;flex:none;min-width:0}
 .fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-categories{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(44px,auto));gap:6px}
@@ -41,3 +41,44 @@
 @media(max-height:540px){.fa-ui[data-glass-kind="right"] .fa-settings-fallback{gap:8px;padding:12px;top:10px;bottom:10px}.fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-categories{grid-template-rows:repeat(2,minmax(36px,auto))}}
 @media(max-width:380px){.fa-glass-dialogue-nav,.fa-glass-dialogue-options{grid-template-columns:1fr}.fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-categories{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}}
 @media(prefers-reduced-motion:reduce){.fa-ui[data-glass-kind] .fa-button{transition:none}}
+
+/* Second pass: keep live text inside its own surface. Use the same compact
+   breakpoint as useStagedOriginal; never resize a loaded painted plate. */
+.fa-ui[data-glass-kind="right"] .fa-glass-load-panel>*{flex-shrink:0;min-width:0}
+.fa-glass-load-panel,.fa-settings-fallback{scroll-padding-block:12px;scrollbar-gutter:stable}
+.fa-ui[data-glass-kind="right"] .fa-glass-load-panel :is(.fa-button,h1,h2,p,small,summary){overflow-wrap:anywhere}
+.fa-ui[data-glass-kind="right"] .fa-glass-load-panel .fa-button{min-width:0;white-space:normal}
+.fa-ui[data-glass-kind="right"] .fa-glass-slot-info strong{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
+.fa-ui[data-glass-kind="right"] .fa-glass-slot-icon .fa-archer-portrait.small{margin:0;float:none}
+.fa-ui[data-glass-kind="right"] .fa-glass-save-detail{min-width:0}
+.fa-ui[data-glass-kind="right"] .fa-glass-save-detail .fa-glass-save-info{flex:1}
+.fa-ui[data-glass-kind="right"] .fa-settings-category{border-radius:10px;min-height:44px}
+.fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-row>div{overflow-wrap:anywhere}
+.fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-row :is(select,input,.fa-button){max-width:100%;min-width:0}
+.fa-ui[data-glass-kind="right"] .fa-glass-backup>div>*{min-width:0;max-width:100%}
+.fa-ui:not([data-glass-kind="hud"]) .fa-panel>*{flex-shrink:0;min-width:0}
+.fa-ui:not([data-glass-kind="hud"]) .fa-panel :is(.fa-button,.fa-item-label,.fa-item-row,h2,h3,p,small){white-space:normal;overflow-wrap:anywhere}
+.fa-ui:not([data-glass-kind="hud"]) .fa-panel .fa-item-count{flex-shrink:0}
+.fa-ui:not([data-glass-kind="hud"]) .fa-panel .fa-archer-portrait:not(.small){width:100%;max-height:clamp(120px,36vh,340px);object-fit:contain}
+.fa-ui:not([data-glass-kind="hud"]) .fa-panel :is(input,select,textarea){max-width:100%;min-width:0}
+.fa-ui[data-staged-original="true"] :is(.fa-eq-detail,.fa-eq-compare,.fa-item-inv-details,.fa-journal-description,.fa-journal-objective,.fa-compare-current-stats,.fa-compare-candidate-stats,.fa-compare-deltas,.fa-skillbook-description,.fa-merchant-detail,.fa-codex-details){overflow:auto;overscroll-behavior:contain;scroll-padding-block:5px}
+@media(max-aspect-ratio:4/3),(max-width:849px),(max-height:499px){
+ /* Fallback-only flow: the original plate is not active at these sizes.
+    Preserve DOM/control order, allow complete scrolling and avoid duplicate
+    decorative frames. Combat, exploration and right glass remain untouched. */
+ .fa-ui.page:is([data-glass-kind="workspace"],[data-glass-kind="event"],[data-glass-kind="pause"],[data-glass-kind="title"]):not([data-staged-original="true"]){display:flex;flex-direction:column;align-items:stretch;gap:10px;overflow:auto;overscroll-behavior:contain;padding:12px max(12px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));scrollbar-gutter:stable}
+ .fa-ui.page:is([data-glass-kind="workspace"],[data-glass-kind="event"],[data-glass-kind="pause"],[data-glass-kind="title"]):not([data-staged-original="true"])>.fa-template{display:none}
+ .fa-ui.page:is([data-glass-kind="workspace"],[data-glass-kind="event"],[data-glass-kind="pause"],[data-glass-kind="title"]):not([data-staged-original="true"])>.fa-header{position:relative;inset:auto;flex:none;min-width:0;padding:4px 4px 10px;margin:0}
+ .fa-ui.page:is([data-glass-kind="workspace"],[data-glass-kind="event"],[data-glass-kind="pause"],[data-glass-kind="title"]):not([data-staged-original="true"])>.fa-panel{position:relative!important;inset:auto!important;width:100%!important;height:auto!important;margin:0!important;min-height:0;flex:none;overflow:visible;padding:14px;font-size:14px;gap:9px}
+ .fa-ui.page:is([data-glass-kind="workspace"],[data-glass-kind="event"],[data-glass-kind="pause"],[data-glass-kind="title"]):not([data-staged-original="true"])>.fa-panel:empty{display:none}
+ .fa-ui.page:is([data-glass-kind="workspace"],[data-glass-kind="event"],[data-glass-kind="pause"],[data-glass-kind="title"]):not([data-staged-original="true"]) .fa-panel .fa-button{min-height:40px}
+}
+@media(pointer:coarse){
+ .fa-ui[data-glass-kind="right"] .fa-glass-load-panel .fa-button,.fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-button{min-height:44px}
+ .fa-ui.page:not([data-staged-original="true"]):is([data-glass-kind="workspace"],[data-glass-kind="event"],[data-glass-kind="pause"],[data-glass-kind="title"]) .fa-panel .fa-button{min-height:44px}
+}
+@media(max-width:420px){
+ .fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-row{grid-template-columns:minmax(0,1fr);gap:7px}
+ .fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-value{text-align:left;max-width:none}
+ .fa-ui[data-glass-kind="right"] .fa-settings-fallback .fa-settings-row .fa-button{max-width:none;justify-self:start}
+}
