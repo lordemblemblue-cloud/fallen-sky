@@ -111,7 +111,7 @@ test('original bonds interface reads actual recruited companion progression with
  assert.ok(templateUrl('30').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function CompanionBonds('),page.indexOf('function SaveToast('));
- for(const marker of ['fa-original-bonds','memberFor(profile','state.bond','bond>=75','bond>=25','max={100}','Practice and repeat victories do not count','No bond-based statistic bonuses','no rewards are claimable','<Btn disabled>Gifts','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['fa-original-bonds','memberFor(profile','state.bond','bond>=75','bond>=25','max={100}','Practice and repeat victories do not count','No bond-based statistic bonuses','no rewards are claimable','companionGiftQuote(profile,selected?.id)','bondConversation(selected?.id,state)','disabled={!canGift}','onGift(selected.id,quote.bond)','<Panel rect={layout[0]}'])assert.ok(section.includes(marker),marker);
  assert.match(page,/case '30':content=<CompanionBonds/);
  assert.ok(!section.includes('transact('));
 });
@@ -722,4 +722,22 @@ test('Last Escort requires the real reliquary discovery and return service, with
 test('Last Escort original interface exposes return, reward and live service guard',()=>{
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  for(const marker of ['Return to Grove','Return reward:','escortConversation(profile)','Ask about the evacuation order','Ask about the missing escort','Report ledger · Complete quest','live.world?.nearbyService!==LAST_ESCORT.returnService',"discovery.id==='disc_pilgrimage'"])assert.ok(page.includes(marker),marker);
+});
+
+
+test('settings page shares category navigation and actual handlers across original and fallback artwork',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const css=readFileSync(new URL('../src/components/fantasybattle/sapphireAdventure.css',import.meta.url),'utf8');
+ const section=page.slice(page.indexOf('const SETTINGS_SECTIONS'),page.indexOf('const EMPTY='));
+ for(const category of ['graphics','audio','gameplay','controls','accessibility','interface']){
+  assert.ok(section.includes("['"+category+"',"),category);
+  assert.ok(section.includes("case '"+category+"':"),category);
+ }
+ for(const marker of ["useState('graphics')",'switch(category)','aria-pressed={category===key}','setCategory(key)','aria-controls="fa-settings-detail"','applySettings({quality:e.target.value})',"settings.muted,'muted'","settings.reducedMotion,'reducedMotion'",'onTutorial(0)','onTutorial(1)','importBackup(file)','recoveryControl','fullscreenchange','document.exitFullscreen()','document.documentElement.requestFullscreen()','fa-settings-art','fa-settings-fallback'])assert.ok(section.includes(marker),marker);
+ const route=page.slice(page.indexOf("    case '03':"),page.indexOf("    case '04':"));
+ assert.ok(route.includes('<SettingsPage original={original}'));
+ assert.ok(route.includes('applySettings={applySettings}'));
+ assert.ok(route.includes('importBackup={importBackup}'));
+ assert.doesNotMatch(route,/getElementById/);
+ for(const marker of ['.fa-settings-detail','.fa-settings-category[aria-pressed="true"]','scrollbar-color:#c5b38988 transparent','.fa-settings-fallback .fa-settings-detail'])assert.ok(css.includes(marker),marker);
 });

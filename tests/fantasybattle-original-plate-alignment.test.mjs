@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {URL} from 'node:url';
 import {UI_SCREENS} from '../src/components/fantasybattle/uiCatalog.mjs';
 import {STAGED_ORIGINAL_ART,ORIGINAL_SAVE_PLAQUE} from '../src/components/fantasybattle/sapphireArt.mjs';
 

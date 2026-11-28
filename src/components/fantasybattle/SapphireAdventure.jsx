@@ -6,9 +6,10 @@ import { ACTIONS, ACTION_ORDER, actionsForClass } from './core/battleRules.mjs';
 import {enemyPortrait} from './core/enemyVisuals.mjs';
 import { enemyFormation, tacticFor } from './core/enemyCatalog.mjs';
 import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalog.mjs';
-import { ITEMS, COMPANION, ROSTER, memberFor, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
+import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
+import './sapphireExplorationHud.css';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
 import {isCurrentEncounter,currentSaveStamp} from './core/battleLifecycle.mjs';
 import {encryptBackup,importTransfer,MAX_ENCRYPTED_BYTES} from './core/encryptedBackup.mjs';
@@ -17,12 +18,29 @@ import { weaponEligible, weaponMetadata, enhancementLevel } from './core/weaponC
 import { GROVE_STORY, groveStoryState } from './core/groveStory.mjs';
 import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
 import {serviceFor,liveService} from './core/worldInteractions.mjs';
+import {createConfirmationGate} from './core/confirmationGate.mjs';
+import {bondConversation,BOND_GIFT} from './core/companionBonds.mjs';
 import { CAMPAIGN_QUESTS, campaignQuest, changeCampaignQuest, campaignPrompt, campaignServiceNote, campaignArc, LAST_ESCORT, escortConversation } from './core/campaignQuests.mjs';
 function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" alt="" className={'fa-painted-illustration '+variant} src={'/fantasybattle/sapphire/illustrations/'+name+'.webp'} decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>;}
 
 
 // Reuse the actual existing archer portrait; tint locally instead of shipping four copies.
-function ArcherPortrait({profile,small=false,companion=false}){
+function CelestialHeroPortrait({profile,small=false}){
+  const [src,setSrc]=useState(null);
+  const [failed,setFailed]=useState(false);
+  useEffect(()=>{
+    let active=true;
+    import('./celestialPortrait.js').then(m=>m.celestialPortrait()).then(url=>{if(active){setSrc(url);setFailed(!url);}}).catch(()=>{if(active)setFailed(true);});
+    return()=>{active=false;};
+  },[]);
+  const name=profile?.name||'Artemis';
+  return src?<img className={'fa-archer-portrait'+(small?' small':'')} src={src} alt={name+' portrait'} decoding="async"/>:<span className="fa-celestial-portrait-placeholder" role="img" aria-label={failed?name+' portrait unavailable':name+' portrait loading'}>{name.slice(0,1).toUpperCase()}</span>;
+}
+function ArcherPortrait({profile,small=false,companion=false,newHero=false}){
+  if(newHero&&!companion)return <CelestialHeroPortrait profile={profile} small={small}/>;
+  return <LegacyArcherPortrait profile={profile} small={small} companion={companion}/>;
+}
+function LegacyArcherPortrait({profile,small=false,companion=false}){
   const canvas=useRef(null),member=companion===true?COMPANION:companion,tint=member?member.tint:appearanceFor(profile).tint;
   useEffect(()=>{
     if(visualFor(member?.id))return;
@@ -32,6 +50,52 @@ function ArcherPortrait({profile,small=false,companion=false}){
   },[tint,member?.id]);
   if(visualFor(member?.id))return <img className={'fa-archer-portrait'+(small?' small':'')} src={companionAsset(member.id,'portrait')} alt={member.name+' portrait'} decoding="async"/>;
   return <canvas ref={canvas} width={179} height={285} className={'fa-archer-portrait'+(small?' small':'')} role="img" aria-label={(member?member.name:appearanceFor(profile).name)+' portrait'}/>;
+}
+
+const SETTINGS_SECTIONS = [
+  ['graphics','Graphics','◇'], ['audio','Audio','♫'], ['gameplay','Gameplay','⚔'],
+  ['controls','Controls','⌘'], ['accessibility','Accessibility','✧'], ['interface','Interface','▤'],
+];
+
+// The category is navigation state, not a gameplay preference. Both art modes share
+// the same controls and existing validated local save/backup handlers.
+function SettingsPage({original,settings,world,running,applySettings,back,onTutorial,backupField,importSlot,setImportSlot,backupBusy,importBackup,recoveryControl,backupError,onNotice}){
+  const [category,setCategory]=useState('graphics');
+  const [fullscreen,setFullscreen]=useState(false);
+  const [canFullscreen,setCanFullscreen]=useState(false);
+  const panelRef=useRef(null);
+  useEffect(()=>{
+    const sync=()=>{setFullscreen(Boolean(document.fullscreenElement));setCanFullscreen(Boolean(document.fullscreenEnabled && document.documentElement.requestFullscreen && document.exitFullscreen));};
+    sync();document.addEventListener('fullscreenchange',sync);
+    return ()=>document.removeEventListener('fullscreenchange',sync);
+  },[]);
+  useEffect(()=>{if(panelRef.current)panelRef.current.scrollTop=0;},[category]);
+  const toggleFullscreen=async()=>{
+    try{if(document.fullscreenElement)await document.exitFullscreen();else if(document.fullscreenEnabled)await document.documentElement.requestFullscreen();else onNotice('Fullscreen is not available in this window.');}
+    catch(e){onNotice('Fullscreen could not be changed: '+e.message);}
+  };
+  const row=(label,description,control)=><div className="fa-settings-row"><div><strong>{label}</strong>{description&&<small>{description}</small>}</div>{control}</div>;
+  const switchInput=(id,label,value,patch)=><input id={id} type="checkbox" role="switch" aria-label={label} checked={value} onChange={e=>applySettings({[patch]:e.target.checked})}/>;
+  let content;
+  switch(category){
+    case 'graphics':content=<>{row('Graphics quality','Performance is the recommended starting point.',<select id="fa-quality" aria-label="Graphics quality" value={settings.quality} onChange={e=>applySettings({quality:e.target.value})}>{['performance','balanced','high','cinematic'].map(q=><option key={q} value={q}>{q[0].toUpperCase()+q.slice(1)}</option>)}</select>)}{row('Renderer','Detected automatically when the world loads.',<span className="fa-settings-value">{world?.renderer||'Not detected yet'}</span>)}{row('Display resolution','Uses the current window size.',<span className="fa-settings-value">Automatic</span>)}<p className="fa-settings-hint">For fullscreen, open Interface.</p></>;break;
+    case 'audio':content=<>{row('Mute battle audio','Turns battle sound effects on or off.',switchInput('fa-mute','Mute battle audio',settings.muted,'muted'))}<p className="fa-settings-hint">Individual volume controls are not currently available.</p></>;break;
+    case 'gameplay':content=<>{row('Gameplay tutorial','Review the battle and gameplay rules.',<Btn onClick={()=>onTutorial(1)}>Open tutorial</Btn>)}{running?<p className="fa-settings-hint">Return to the title screen to import a backup or recover an earlier checkpoint.</p>:<div className="fa-settings-backup"><h3>Portable Save Backup</h3><p>Import a plain or encrypted JSON backup locally. Keep the encryption passphrase separately; it cannot be recovered.</p>{backupField}<label>Destination slot<select value={importSlot} onChange={e=>setImportSlot(e.target.value)}>{SLOT_IDS.map(s=><option key={s} value={s}>Slot {s}</option>)}</select></label><label>Choose save backup<input disabled={backupBusy} type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)importBackup(file);}}/></label>{recoveryControl}{backupError&&<p role="alert">{backupError}</p>}</div>}</>;break;
+    case 'controls':content=<>{row('Input method','Keyboard or on-screen touch controls.',<span className="fa-settings-value">Automatic</span>)}{row('Control reference','Review movement and interaction in the existing tutorial.',<Btn onClick={()=>onTutorial(0)}>Open tutorial</Btn>)}<p className="fa-settings-hint">Controller remapping is not currently available.</p></>;break;
+    case 'accessibility':content=<>{row('Reduce UI and clothing motion','Disables UI animation and reduces secondary clothing movement.',switchInput('fa-motion','Reduce UI and clothing motion',settings.reducedMotion,'reducedMotion'))}</>;break;
+    case 'interface':content=<>{row('Display mode','Switch the game between fullscreen and windowed mode.',<Btn id="fa-fullscreen" disabled={!canFullscreen} onClick={toggleFullscreen}>{fullscreen?'Exit fullscreen':'Enter fullscreen'}</Btn>)}{row('Current display',null,<span className="fa-settings-value">{fullscreen?'Fullscreen':'Windowed'}</span>)}{!canFullscreen&&<p className="fa-settings-hint">Fullscreen is unavailable in this window.</p>}</>;break;
+    default:break;
+  }
+  return <div className={'fa-settings-page'+(original?' fa-settings-art':' fa-settings-fallback')}>
+    <nav className="fa-settings-categories" aria-label="Settings categories">{SETTINGS_SECTIONS.map(([key,label,icon])=><Btn key={key} className="fa-settings-category" aria-pressed={category===key} aria-controls="fa-settings-detail" onClick={()=>setCategory(key)}><span aria-hidden="true">{icon}</span><span>{label}</span></Btn>)}</nav>
+    <section id="fa-settings-detail" ref={panelRef} className="fa-settings-detail" aria-labelledby="fa-settings-heading" tabIndex={0}>
+      <h2 id="fa-settings-heading">{SETTINGS_SECTIONS.find(([key])=>key===category)[1]}</h2>
+      <div className="fa-settings-ornament" aria-hidden="true">✧</div>
+      {content}
+      <p className="fa-settings-hint">Preferences are saved immediately on this browser.</p>
+    </section>
+    <div className="fa-settings-actions"><Btn onClick={back}>‹ Back</Btn><Btn primary onClick={back}>Done</Btn></div>
+  </div>;
 }
 
 const EMPTY={slots:[],error:null};
@@ -88,7 +152,7 @@ function useStagedOriginal(id){
     sync();query.addEventListener('change',sync);
     return()=>query.removeEventListener('change',sync);
   },[]);
-  const url=entry&&(!entry.wideOnly||wide)?entry.url:null;
+  const url=entry&&(!entry.wideOnly||wide||id==='10')?entry.url:null;
   const [loaded,setLoaded]=useState(null);
   useEffect(()=>{
     if(!url)return;
@@ -292,8 +356,8 @@ function Recruitment({profile,encounter,selected,member,onSelect,onRecruit,origi
 }
 
 // Bond points are earned by the existing companionProgress victory transaction.
-function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back}){
-  const [filter,setFilter]=useState('all');
+function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back,encounter,onGift}){
+  const [filter,setFilter]=useState('all'),[tab,setTab]=useState('Overview');
   const visible=ROSTER.filter(m=>filter==='all'||(filter==='active'?memberFor(profile,m.id).active:memberFor(profile,m.id).recruited));
   const selected=visible.find(m=>m.id===selectedId)||visible[0];
   const state=selected?memberFor(profile,selected.id):null;
@@ -307,10 +371,16 @@ function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back}){
   const choices=visible.map(m=><Btn key={m.id} primary={selected?.id===m.id} aria-pressed={selected?.id===m.id} onClick={()=>onSelect(m.id)}><ArcherPortrait companion={m} small/><strong>{m.name}</strong><small>{status(m)}</small></Btn>);
   const portrait=selected?<ArcherPortrait companion={selected}/>:<p>No companions match this filter.</p>;
   const progress=<progress aria-label="Earned companion bond" max={100} value={bond}/>;
-  const explanation=<p>Gain 5 bond per first-time victory while the recruited companion is active. Practice and repeat victories do not count.</p>;
+  const explanation=<p>Gain 5 bond per first-time victory while the recruited companion is active. Practice and repeat victories do not count. Gifts also raise bond.</p>;
   const milestones=[[0,'New companion'],[25,'Familiar'],[75,'Trusted'],[100,'Maximum bond']];
   const milestoneRows=milestones.map(([threshold,label])=><div key={threshold} className="fa-bond-milestone"><span>{label} · {threshold}</span><small>{recruited&&bond>=threshold?'Reached':'Not reached'}</small></div>);
-  const unavailable=<><p>No bond-based statistic bonuses or abilities are implemented.</p><small>Stories, gifts and dialogue are not available in this build.</small></>;
+  const quote=companionGiftQuote(profile,selected?.id),conversation=bondConversation(selected?.id,state);
+  const canGift=quote.ok&&!encounter;
+  const tabs=['Overview','Stories','Gifts','Dialogue'].map(t=><Btn key={t} primary={tab===t} aria-pressed={tab===t} onClick={()=>setTab(t)}>{t}</Btn>);
+  const gift=<Btn className="fa-bond-gift" disabled={!canGift} onClick={()=>onGift(selected.id,quote.bond)}>Gift {BOND_GIFT.cost} Ore</Btn>;
+  const talk=<Btn className="fa-bond-talk" disabled={!recruited} onClick={()=>setTab('Dialogue')}>Talk</Btn>;
+  const details=tab==='Gifts'?<><p>{BOND_GIFT.cost} Sapphire Ore → +{quote.gain??BOND_GIFT.gain} bond.</p><small>{encounter?'Available outside combat.':quote.reason||'Ready to give.'} Owned: {profile?.inventory.sapphireOre??0}</small></>:tab==='Stories'?<><p>{conversation||'Recruit this companion to read their story.'}</p><small>New conversations at bond 25 and 75.</small></>:tab==='Dialogue'?<p>{conversation||'Recruit this companion to talk.'}</p>:explanation;
+  const unavailable=<><p>No bond-based statistic bonuses or abilities are implemented.</p><small>Conversations and milestones are narrative only.</small></>;
   if(original)return <div className="fa-original-bonds">
     <h2 className="fa-bond-title">Relationships &amp; Bonds</h2><span className="fa-bond-subtitle">Companion progression</span>
     {filterControl}<section className="fa-bond-list" aria-label="Companions">{choices}{!visible.length&&<p>No matching companions</p>}</section>
@@ -318,16 +388,16 @@ function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back}){
     <div className="fa-bond-portrait">{portrait}</div><div className="fa-bond-name">{selected?.name||'No companion'}</div><div className="fa-bond-role">{selected?.role||'—'}</div>
     <div className="fa-bond-level">{recruited?bond:'—'}</div><h3 className="fa-bond-tier">{tier}</h3><div className="fa-bond-points">{recruited?bond+' / 100':'—'}</div>
     <div className="fa-bond-progress">{progress}</div><div className="fa-bond-next">{nextText}</div>
-    <nav className="fa-bond-tabs" aria-label="Relationship categories"><span aria-current="page">Overview</span><Btn disabled>Stories</Btn><Btn disabled>Gifts</Btn><Btn disabled>Dialogue</Btn></nav>
-    <h3 className="fa-bond-status-heading">Relationship status</h3><div className="fa-bond-status">{tier}</div><section className="fa-bond-explanation">{explanation}</section>
+    <nav className="fa-bond-tabs" aria-label="Relationship categories">{tabs}</nav>
+    <h3 className="fa-bond-status-heading">Relationship status</h3><div className="fa-bond-status">{tier}</div><section className="fa-bond-explanation" aria-live="polite">{details}</section>
     <section className="fa-bond-earned"><strong>Earned bond</strong><p>{recruited?Math.floor(bond/5)+' bond increments':'Not recruited'}</p><small>Maximum 100</small></section>
     <h3 className="fa-bond-effect-title">Bond effects</h3><section className="fa-bond-effects">{unavailable}</section>
     <section className="fa-bond-advancement"><strong>Next milestone</strong><p>{nextText}</p></section>
     <h3 className="fa-bond-rewards-title">Bond milestones</h3><section className="fa-bond-milestones" aria-label="Bond milestones">{milestoneRows}<p>Milestones are descriptive; no rewards are claimable.</p></section>
-    <Btn className="fa-bond-gift" disabled>Gifts unavailable</Btn><Btn className="fa-bond-talk" disabled>Dialogue unavailable</Btn>
+    {gift}{talk}
     <div className="fa-bond-navigation"><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></div>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Companions</h2>{filterControl}{choices}{!visible.length&&<p>No matching companions</p>}</Panel><Panel rect={layout[1]}>{portrait}<h2>{selected?.name||'No companion'}</h2><p>{tier}</p></Panel><Panel rect={layout[2]}><h2>Bond</h2>{progress}<p>{recruited?bond+'/100':'Not recruited'} · {tier}</p><p>{nextText}</p>{explanation}{milestoneRows}{unavailable}</Panel><Panel rect={layout[3]}><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></Panel></>;
+  return <><Panel rect={layout[0]}><h2>Companions</h2>{filterControl}{choices}{!visible.length&&<p>No matching companions</p>}</Panel><Panel rect={layout[1]}>{portrait}<h2>{selected?.name||'No companion'}</h2><p>{tier}</p></Panel><Panel rect={layout[2]}><h2>Bond</h2>{progress}<p>{recruited?bond+'/100':'Not recruited'} · {tier}</p><p>{nextText}</p>{tabs}{details}{milestoneRows}{unavailable}{gift}{talk}</Panel><Panel rect={layout[3]}><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></Panel></>;
 }
 
 // The concept painting is decorative; the streamed region data is authoritative.
@@ -589,7 +659,7 @@ function OriginalCombatHud({hud,profile,encounter,onAction,onPause,onSkills}){
     <section className="fa-combat-order" aria-label="Turn order">{hud?.order.map(o=><div className={o.active?'current':''} key={o.id} title={o.name+(o.action?' · '+o.action:'')}><span>{o.name}</span>{o.action&&<small>{o.action}</small>}</div>)}</section>
     <h3 className="fa-combat-enemies-title">Enemies</h3>
     <section className="fa-combat-enemies" aria-label="Enemy health and intent">{enemies.map(u=><div key={u.id} className={'fa-original-enemy'+(u.hp===0?' down':'')}><div><strong>{u.name}</strong><span>{u.hp}/{u.maxHp}</span></div><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/>{hud.intents?.filter(i=>i.unitId===u.id).map(i=><small key={i.unitId} title={i.summary}>{i.phaseName?i.phaseName+' · ':''}{i.name}{i.targetId?' · Frontline':''}</small>)}</div>)}</section>
-    <section className="fa-combat-party" aria-label="Party health and Focus">{allies.map(u=><div key={u.id} className={'fa-original-ally'+(hud.choosingUnit===u.id?' choosing':'')+(u.hp===0?' down':'')}><div className="fa-combat-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-combat-ally-data"><strong>{u.name}{u.hp===0?' · Down':hud.pendingChoices?.[u.id]?' · Ready':''}</strong><div><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small></div><div><progress className="fa-combat-focus" aria-label={u.name+' Focus'} value={u.focus} max={u.maxFocus}/><small>Focus {u.focus}/{u.maxFocus}</small></div></div></div>)}</section>
+    <section className="fa-combat-party" aria-label="Party health and Focus">{allies.map(u=><div key={u.id} className={'fa-original-ally'+(hud.choosingUnit===u.id?' choosing':'')+(u.hp===0?' down':'')}><div className="fa-combat-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small newHero/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-combat-ally-data"><strong>{u.name}{u.hp===0?' · Down':hud.pendingChoices?.[u.id]?' · Ready':''}</strong><div><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small></div><div><progress className="fa-combat-focus" aria-label={u.name+' Focus'} value={u.focus} max={u.maxFocus}/><small>Focus {u.focus}/{u.maxFocus}</small></div></div></div>)}</section>
     <div className="fa-combat-actor" aria-live="polite">{choosing?actor?.name||'Choose action':hud?'Resolving round':'Preparing battle'}</div>
     <section className="fa-original-action-list" aria-label="Available combat actions">{hud?.legal.map(a=><Btn key={a.id} disabled={!choosing||!a.enabled} className={'fa-original-action '+a.action.kind} title={a.reason||a.action.summary} aria-label={a.action.name+' — '+(a.reason||a.action.summary)} onClick={()=>onAction(a.id)}><SkillArt id={a.id}/><span><kbd>{a.action.hotkey}</kbd> {a.action.name}</span><small>{a.reason||a.action.summary}</small></Btn>)}</section>
     <div className="fa-combat-focus-circle" aria-label="Current actor Focus"><strong>{actor?actor.focus:'—'}</strong><small>{actor?'Focus / '+actor.maxFocus:'Focus'}</small></div>
@@ -598,29 +668,53 @@ function OriginalCombatHud({hud,profile,encounter,onAction,onPause,onSkills}){
   </div>;
 }
 
-// Original exploration plate is transparent; the iframe remains the live world.
-function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onFocus}){
+// Crop the approved original HUD plate instead of rendering its unwanted baked-in frames.
+// Source rectangles are percentages of the original screen-10 plate.
+const EXPLORATION_ART_CROPS=Object.freeze({
+  status:[1.3,74,22.6,12],
+  quest:[1.3,10.3,24,17.9],
+  map:[82.7,1.3,16.8,27.4],
+  recovery:[90.8,69.5,4.3,6.3],
+});
+function ExplorationArtSlice({part}){
+  const [x,y,w,h]=EXPLORATION_ART_CROPS[part];
+  return <span aria-hidden="true" className="fa-clean-art-slice" style={{backgroundSize:(10000/w)+'% '+(10000/h)+'%',backgroundPosition:(100*x/(100-w))+'% '+(100*y/(100-h))+'%'}}/>;
+}
+function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onFocus,original}){
   const [zoom,setZoom]=useState(1);
   const held=useRef(new Set()),send=useRef(post);send.current=post;
   const release=()=>{for(const key of held.current)send.current('move',{key,value:false});held.current.clear();};
   useEffect(()=>{window.addEventListener('blur',release);return()=>{window.removeEventListener('blur',release);release();};},[]);
-  const members=profile?[{id:'hero',name:profile.name,hp:profile.hp,maxHp:heroStats(profile).maxHp},...activeRoster(profile).map(m=>({...m,hp:memberFor(profile,m.id).hp,maxHp:memberStats(profile,m.id).maxHp}))]:[];
   const quest=profile?.quests.grove;
   const objective=campaignPrompt(profile)||(quest==='active'?'Defeat the Grove Spirit':quest==='complete'?'Return to the journal to complete the quest':quest==='available'?'A quest is available':quest==='claimed'?'Whispering Grove Spirit completed':'No tracked quest');
+  const maxHp=profile?heroStats(profile).maxHp:1;
+  const xp=profile?.xp||0;
   const moveButtons=[['left','←'],['right','→'],['in','↑'],['out','↓'],['run','Run']].map(([key,label])=><Btn key={key} aria-label={key==='run'?'Hold to run':'Hold to move '+key} onPointerDown={e=>{e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);held.current.add(key);send.current('move',{key,value:true});}} onPointerUp={()=>{held.current.delete(key);send.current('move',{key,value:false});}} onPointerCancel={()=>{held.current.delete(key);send.current('move',{key,value:false});}} onLostPointerCapture={()=>{held.current.delete(key);send.current('move',{key,value:false});}}>{label}</Btn>);
-  return <div className="fa-original-explore">
-    <h2 className="fa-explore-quest-title">Quest Journal</h2><button className="fa-explore-objective" onClick={()=>go('08')}>{objective}</button>
-    <div className="fa-explore-region">{world?.region||'Loading world'}</div>
-    <button className="fa-explore-minimap" aria-label="Open live world map" onClick={()=>go('07')}><div style={{transform:'scale('+zoom+')'}}><RegionMap world={world} profile={profile} small/></div></button>
-    <Btn className="fa-explore-map-menu" onClick={onPause} aria-label="Open menu">☰</Btn><Btn className="fa-explore-map-journal" onClick={()=>go('08')} aria-label="Open quest journal">↗</Btn>
-    <div className="fa-explore-zoom"><Btn aria-label="Zoom in on minimap" disabled={zoom>=2} onClick={()=>setZoom(x=>Math.min(2,x+.25))}>+</Btn><Btn aria-label="Zoom out on minimap" disabled={zoom<=1} onClick={()=>setZoom(x=>Math.max(1,x-.25))}>−</Btn></div>
-    <section className="fa-explore-party" aria-label="Active party">{Array.from({length:4},(_,i)=>{const m=members[i];return <div className="fa-explore-member" key={m?.id||'empty'+i}><div className="fa-explore-portrait">{m&&(m.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={m} small/>)}</div><div className="fa-explore-member-data"><strong>{m?.name||'Empty slot'}</strong>{m?<><progress aria-label={m.name+' health'} max={m.maxHp} value={m.hp}/><small>HP {m.hp}/{m.maxHp}</small></>:<small>—</small>}</div></div>;})}</section>
-    <section className="fa-explore-progress" aria-label="Character progression"><div className="fa-explore-profile-icon">{profile&&<ArcherPortrait profile={profile} small/>}</div><div><strong>{profile?'Level '+levelFor(profile.xp):'No character'}</strong><progress aria-label="Progress to next level" value={(profile?.xp||0)%100} max={100}/><small>{profile?.xp||0} XP · {profile?.gold||0} gold</small></div></section>
-    <Btn className="fa-explore-interact" disabled={!world?.nearby} onClick={()=>post('interact')}>{world?.nearby?world.nearby+' · E':'No nearby interaction'}</Btn>
-    <Btn className="fa-explore-primary" aria-label="Jump" onClick={()=>post('jump')}>Jump</Btn><Btn className="fa-explore-secondary" aria-label="Skillbook" onClick={()=>go('12')}>Skills</Btn><Btn className="fa-explore-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn>
-    <nav className="fa-explore-nav" aria-label="Exploration menu"><Btn onClick={onPause}>Menu</Btn><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('06')}>Items</Btn><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('08')}>Journal</Btn><Btn onClick={()=>go('12')}>Skills</Btn><Btn onClick={()=>go('37')}>Events</Btn></nav>
-    <section className="fa-explore-move" aria-label="Movement controls">{moveButtons}<Btn onClick={onFocus}>WASD · Focus</Btn></section>
-    {notifications?.length>0&&<button className="fa-explore-notice" onClick={()=>go('37')} aria-label="View latest gameplay events">{notifications[0].message}</button>}
+  // Sapphire Adventure is currently local guest play. Never treat AI companions or
+  // empty roster slots as online players. A future online session must supply actual
+  // remote party membership before an exploration party list is mounted.
+  return <div className={'fa-clean-explore'+(original?' has-plate':'')} style={original?{'--fa-hud-art':'url("'+original.url+'")'}:undefined}>
+    <div className="fa-clean-left">
+      <section className="fa-clean-status" aria-label="Character health and experience"><ExplorationArtSlice part="status"/>
+        <div className="fa-clean-portrait">{profile&&<ArcherPortrait profile={profile} small newHero/>}</div>
+        <div className="fa-clean-status-data">
+          <strong title={profile?.name}>{profile?.name||'No character'} · Lv {profile?levelFor(xp):'—'}</strong>
+          <div className="fa-clean-stat-row"><span>HP</span><progress className="fa-clean-hp" aria-label="Character health" max={maxHp} value={profile?.hp||0}/><small>{profile?.hp||0}/{maxHp}</small></div>
+          <div className="fa-clean-stat-row"><span>XP</span><progress className="fa-clean-xp" aria-label="Progress to next level" value={xp%100} max={100}/><small>{xp%100}/100</small></div>
+          <small>{xp} XP · {profile?.gold||0} gold</small>
+        </div>
+      </section>
+      <section className="fa-clean-quest" aria-label="Quest Journal"><ExplorationArtSlice part="quest"/><h2>Quest Journal</h2><button type="button" className="fa-clean-objective" onClick={()=>go('08')}>{objective}</button></section>
+    </div>
+    <section className="fa-clean-map" aria-label="Minimap"><ExplorationArtSlice part="map"/>
+      <button type="button" className="fa-clean-minimap" aria-label="Open live world map" onClick={()=>go('07')}><div style={{transform:'scale('+zoom+')'}}><RegionMap world={world} profile={profile} small/></div></button>
+      <Btn className="fa-clean-map-menu" onClick={onPause} aria-label="Open menu">☰</Btn><Btn className="fa-clean-map-journal" onClick={()=>go('08')} aria-label="Open quest journal">↗</Btn>
+      <div className="fa-clean-zoom"><Btn aria-label="Zoom in on minimap" disabled={zoom>=2} onClick={()=>{setZoom(x=>Math.min(2,x+.25));onFocus();}}>+</Btn><Btn aria-label="Zoom out on minimap" disabled={zoom<=1} onClick={()=>{setZoom(x=>Math.max(1,x-.25));onFocus();}}>−</Btn></div>
+    </section>
+    <div className="fa-clean-recovery"><ExplorationArtSlice part="recovery"/><Btn className="fa-clean-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn></div>
+    <section className="fa-clean-touch-move" aria-label="Touch movement controls">{moveButtons}<Btn aria-label="Jump" className="fa-clean-touch-jump" onClick={()=>post('jump')}>Jump</Btn></section>
+    {world?.nearby&&<Btn className="fa-clean-touch-interact" aria-label={'Interact with '+world.nearby} onClick={()=>post('interact')}>E</Btn>}
+    {notifications?.length>0&&<button type="button" className="fa-clean-notice" onClick={()=>go('37')} aria-label="View latest gameplay events">{notifications[0].message}</button>}
   </div>;
 }
 
@@ -1161,7 +1255,7 @@ export default function SapphireAdventure(){
   const [equipmentFilter,setEquipmentFilter]=useState('all');
   const [companionId,setCompanionId]=useState(COMPANION.id);
   const [importSlot,setImportSlot]=useState('1'),[backupError,setBackupError]=useState(''),[backupPass,setBackupPass]=useState(''),[backupBusy,setBackupBusy]=useState(false);
-  const backupLock=useRef(false),saveBaseline=useRef(null),lastPositionSave=useRef(null);
+  const backupLock=useRef(false),saveBaseline=useRef(null),lastPositionSave=useRef(null),confirmGate=useRef(createConfirmationGate());
   const [notifications,setNotifications]=useState([]),[lesson,setLesson]=useState(0),[discovery,setDiscovery]=useState(null),[saveStatus,setSaveStatus]=useState('');
   const frame=useRef(null),stageRef=useRef(null),current=useRef({}),processed=useRef(null),startReady=useRef(false),saveTimer=useRef(null),focusRef=useRef(null),timeoutRef=useRef(null),startTimer=useRef(null),restorePending=useRef(false),battleTimer=useRef(null),failedLoad=useRef(false);
   const id=stack[stack.length-1],screen=UI_SCREENS[id];
@@ -1172,7 +1266,7 @@ export default function SapphireAdventure(){
   const root=target=>setStack([target]);
   const post=(type,data)=>frame.current?.contentWindow?.postMessage({channel:'fantasy-host',type,data},location.origin);
   const notify=(message,category='system')=>{setNotifications(old=>[{message,category,time:Date.now()},...old].slice(0,40));setNotice(message);};
-  const fail=message=>{clearTimeout(timeoutRef.current);clearTimeout(battleTimer.current);failedLoad.current=true;setError(message);go('47');};
+  const fail=message=>{confirmGate.current.cancel();setPending(null);clearTimeout(timeoutRef.current);clearTimeout(battleTimer.current);failedLoad.current=true;setError(message);go('47');};
   const transact=(operation,success)=>{const p=current.current.profile;if(!p||current.current.encounter){notify('This action is available only outside battle.');return false;}try{const next=operation(p);replaceProfile(next);autosave(next);notify(success,'activity');return true;}catch(e){notify(e.message);return false;}};
   const reloadSlots=()=>{const s=readSlots(localStorage);setSlots(s);return s;};
   useEffect(()=>{reloadSlots();setSettings(readSettings(localStorage));const changed=e=>{if(e.key===SAVE_KEY||e.key===null){reloadSlots();}};window.addEventListener('storage',changed);return()=>{window.removeEventListener('storage',changed);clearTimeout(saveTimer.current);clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);clearTimeout(battleTimer.current);};},[]);
@@ -1192,6 +1286,7 @@ export default function SapphireAdventure(){
   const importBackup=async file=>{if(!file||current.current.running||backupLock.current)return;backupLock.current=true;setBackupBusy(true);setBackupError('');const pass=backupPass,target=importSlot;setBackupPass('');try{if(file.size>MAX_ENCRYPTED_BYTES)throw Error('Save backup is too large.');const p=await importTransfer(await file.text(),pass);if(current.current.running||current.current.id!=='03')return;const before=readSlots(localStorage);if(before.error)throw Error(before.error);const previous=before.slots.find(s=>s.id===target);const occupied=Boolean(previous);requestConfirm('Import '+p.name+' into slot '+target+(occupied?' and replace the existing save?':'?'),()=>{try{if(current.current.running)throw Error('Return to title before importing.');writeSlot(localStorage,target,p,{overwrite:occupied,expectedStamp:previous?.stamp??null});reloadSlots();notify('Save imported into slot '+target);}catch(e){setBackupError(e.message);notify(e.message);}});}catch(e){setBackupError(e.message);}finally{backupLock.current=false;setBackupBusy(false);}};
   const restoreCheckpoint=()=>{if(current.current.running)return;const target=importSlot,record=slots.slots.find(s=>s.id===target);if(!record?.recovery)return;let used=false;requestConfirm('Restore the previous checkpoint for '+record.recovery.profile.name+' in slot '+target+'? Current slot progress will be replaced.',()=>{if(used)return;used=true;try{if(current.current.running)throw Error('Return to title before restoring.');recoverSlot(localStorage,target,record.stamp);reloadSlots();notify('Previous checkpoint restored');}catch(e){setBackupError(e.message);notify(e.message);}});};
   const begin=(p,saveSlot=null,stamp=saveSlot?currentSaveStamp(slots.slots,saveSlot,p):null)=>{
+    confirmGate.current.cancel();setPending(null);
     clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);restorePending.current=false;startReady.current=false;processed.current=null;failedLoad.current=false;clearTimeout(battleTimer.current);
     saveBaseline.current=saveSlot&&stamp!==undefined?{slot:saveSlot,stamp}:null;
     lastPositionSave.current={at:Date.now(),position:[...p.world.position]};
@@ -1202,13 +1297,15 @@ export default function SapphireAdventure(){
   };
   const startNew=()=>{try{const p=selectAppearance(createProfile(name),creationAppearance);replaceProfile(p);go('20');}catch(e){setNotice(e.message);}};
   const enterNew=()=>{const p=current.current.profile;if(!p)return;const empty=SLOT_IDS.find(s=>!slots.slots.some(x=>x.id===s));begin(p,empty||null,null);};
-  const leaveTitle=()=>{saveBaseline.current=null;lastPositionSave.current=null;setBackupPass('');clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);restorePending.current=false;failedLoad.current=true;clearTimeout(battleTimer.current);setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
-  const requestConfirm=(message,action)=>{setPending({message,action});go('40');};
+  const leaveTitle=()=>{confirmGate.current.cancel();saveBaseline.current=null;lastPositionSave.current=null;setBackupPass('');clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);restorePending.current=false;failedLoad.current=true;clearTimeout(battleTimer.current);setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
+  const requestConfirm=(message,action)=>{const ticket=confirmGate.current.open(message,action,current.current);if(ticket){setPending(ticket);go('40');}};
+  const dismissConfirm=()=>{confirmGate.current.cancel();setPending(null);back();};
+  const executeConfirm=ticket=>{const action=confirmGate.current.consume(ticket,current.current);if(!action)return;setPending(null);back();action();};
   const chooseAppearance=key=>{if(transact(p=>selectAppearance(p,key),'Appearance applied'))post('appearance',appearanceFor(current.current.profile).tint);};
   const openPause=()=>{if(isWorldScreen(current.current.id))go('04');};
   const onKey=code=>{
     const s=current.current.id;
-    if(code==='Escape'){if(s==='47')return;if(s==='40')setPending(null);if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
+    if(code==='Escape'){if(s==='47')return;if(s==='40'){dismissConfirm();return;}if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
     const target=HOTKEY_SCREENS[code];
     if(target&&current.current.running&&(isWorldScreen(s)||s==='04'||s===target)){if(s===target)back();else go(target);}
   };
@@ -1339,28 +1436,7 @@ export default function SapphireAdventure(){
       <Btn className="fa-painted-button fa-load-export" disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export</Btn>
       <Btn className="fa-painted-button fa-load-back" onClick={back}>Back</Btn>
     </div>:<>{pane(0,<>{validSlots.map(s=><Btn primary={selected===s.id} key={s.id} onClick={()=>setSelected(s.id)}>Slot {s.id} · {s.profile.name}</Btn>)}{!validSlots.length&&<p>No loadable saves on this browser.</p>}{slots.slots.filter(s=>s.status==='corrupt').map(s=><p key={s.id}>Slot {s.id} is damaged.</p>)}<Btn onClick={back}>Back</Btn></>)}{pane(1,<><h2>{selectedSave?.profile.name||'Select a save'}</h2>{selectedSave&&<p>Level {levelFor(selectedSave.profile.xp)} · X {selectedSave.profile.world.position[0].toFixed(1)} · {new Date(selectedSave.savedAt).toLocaleString('en-US')}</p>}</>)}{pane(2,<><Btn primary disabled={!selectedSave} onClick={()=>begin(selectedSave.profile,selectedSave.id,selectedSave.stamp)}>Load Game</Btn><Btn disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export unencrypted backup</Btn>{backupField}<Btn disabled={!selectedSave||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(selectedSave.profile,true)}>Export encrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</>)}</>;break;
-    case '03':content=original?<div className="fa-original-settings">
-      <nav className="fa-art-side-nav fa-settings-nav" aria-label="Settings navigation">
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-quality')?.focus()}><span className="fa-art-sr">Graphics</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-mute')?.focus()}><span className="fa-art-sr">Audio</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>{setLesson(1);go('34');}}><span className="fa-art-sr">Gameplay tutorial</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>{setLesson(0);go('34');}}><span className="fa-art-sr">Controls tutorial</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-motion')?.focus()}><span className="fa-art-sr">Accessibility</span></Btn>
-        <Btn className="fa-painted-button" onClick={()=>document.getElementById('fa-fullscreen')?.focus()}><span className="fa-art-sr">Interface</span></Btn>
-      </nav>
-      <section className="fa-settings-graphics" aria-label="Graphics settings">
-        <label className="fa-setting-line">Graphics quality<select id="fa-quality" value={settings.quality} onChange={e=>applySettings({quality:e.target.value})}>{['performance','balanced','high','cinematic'].map(q=><option key={q}>{q}</option>)}</select></label>
-        <div className="fa-setting-line"><span>Renderer</span><small>{world?.renderer||'Detected when world loads'}</small></div>
-        <Btn id="fa-fullscreen" onClick={()=>{if(document.fullscreenElement)document.exitFullscreen().catch(e=>setNotice(e.message));else document.documentElement.requestFullscreen?.().catch(e=>setNotice(e.message));}}>Toggle fullscreen</Btn>
-      </section>
-      <section className="fa-settings-audio" aria-label="Audio settings"><label className="fa-setting-line"><span>Mute battle audio</span><input id="fa-mute" type="checkbox" checked={settings.muted} onChange={e=>applySettings({muted:e.target.checked})}/></label><small>Changes are saved immediately on this browser.</small></section>
-      <section className="fa-settings-gameplay" aria-label="Gameplay and backup settings">
-        <label className="fa-setting-line"><span>Reduce UI and clothing motion</span><input id="fa-motion" type="checkbox" checked={settings.reducedMotion} onChange={e=>applySettings({reducedMotion:e.target.checked})}/></label>
-        {!running&&<><strong>Portable Save Backup</strong><p>Import plain or encrypted JSON locally. Keep your encryption passphrase separately; it cannot be recovered.</p>{backupField}<label>Destination slot<select value={importSlot} onChange={e=>setImportSlot(e.target.value)}>{SLOT_IDS.map(s=><option key={s} value={s}>Slot {s}</option>)}</select></label><label>Choose save backup<input disabled={backupBusy} type="file" accept=".json,application/json" onChange={e=>{const file=e.target.files?.[0];e.target.value='';if(file)importBackup(file);}}/></label>{recoveryControl}{backupError&&<p role="alert">{backupError}</p>}</>}
-      </section>
-      <Btn className="fa-painted-button fa-settings-back" onClick={back}><span className="fa-art-sr">Back</span></Btn>
-      <Btn className="fa-painted-button fa-settings-done" primary onClick={back}><span className="fa-art-sr">Apply changes and close settings</span></Btn>
-    </div>:<>{pane(0,<><h2>Settings</h2><Btn onClick={back}>Back</Btn></>)}{pane(1,<><label>Graphics quality<select value={settings.quality} onChange={e=>applySettings({quality:e.target.value})}>{['performance','balanced','high','cinematic'].map(q=><option key={q}>{q}</option>)}</select></label><label><input type="checkbox" checked={settings.muted} onChange={e=>applySettings({muted:e.target.checked})}/> Mute battle audio</label><label><input type="checkbox" checked={settings.reducedMotion} onChange={e=>applySettings({reducedMotion:e.target.checked})}/> Reduce UI and clothing motion</label><p>Renderer: {world?.renderer||'Detected when world loads'}</p><Btn onClick={()=>{if(document.fullscreenElement)document.exitFullscreen().catch(e=>setNotice(e.message));else document.documentElement.requestFullscreen?.().catch(e=>setNotice(e.message));}}>Toggle fullscreen</Btn>{!running&&<><h2>Portable Save Backup</h2><p>Import a plain or encrypted JSON backup. For encrypted files, enter the original passphrase before choosing the file. Files and passphrases are never sent to a server. Keep the passphrase separately; it cannot be recovered.</p>{backupField}<label>Destination slot<select value={importSlot} onChange={e=>setImportSlot(e.target.value)}>{SLOT_IDS.map(s=><option key={s} value={s}>Slot {s}</option>)}</select></label><label>Choose save backup<input disabled={backupBusy} type="file" accept=".json,application/json" onChange={e=>{const f=e.target.files?.[0];e.target.value='';if(f)importBackup(f);}}/></label>{recoveryControl}{backupError&&<p role="alert">{backupError}</p>}</>}<Btn primary onClick={back}>Done</Btn></>)}</>;break;
+    case '03':content=<SettingsPage original={original} settings={settings} world={world} running={running} applySettings={applySettings} back={back} onTutorial={index=>{setLesson(index);go('34');}} backupField={backupField} importSlot={importSlot} setImportSlot={setImportSlot} backupBusy={backupBusy} importBackup={importBackup} recoveryControl={recoveryControl} backupError={backupError} onNotice={setNotice}/>;break;
     case '04':content=original?<div className="fa-original-pause">
       <nav className="fa-pause-nav" aria-label="Pause navigation">
         <Btn className="fa-painted-button" onClick={back}><span className="fa-art-sr">Resume</span></Btn>
@@ -1426,7 +1502,7 @@ export default function SapphireAdventure(){
     case '07':content=<WorldMap world={world} profile={profile} encounter={encounter} original={original} layout={screen.layout} go={go} back={back} onTravel={region=>{setDestination(region);go('25');}}/>;break;
     case '08':content=<QuestJournal key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} go={go} back={back} onCampaignAction={(questId,action)=>transact(p=>changeCampaignQuest(p,questId,action),action==='accept'?'Quest accepted':'Quest completed')} onClaim={()=>{if(transact(p=>{if(p.quests.grove!=='complete')throw Error('Quest is not ready to complete.');return claimGroveQuest(p);},'Quest completed'))go('44');}}/>;break;
     case '09':content=original?<OriginalCombatHud hud={hud} profile={profile} encounter={encounter} onAction={id=>{const s=current.current;if(s.id==='09'&&s.encounter)stageRef.current?.chooseAction(id);}} onPause={openPause} onSkills={()=>go('12')}/>:<>{pane(0,<><h2>{hud?'Round '+hud.round:'Preparing combat…'}</h2><div className="fa-turns">{hud?.order.map(o=><span className={o.active?'active':''} key={o.id}>{o.name}{o.action?' · '+o.action:''}</span>)}</div></>)}{pane(1,<>{hud?.units.filter(u=>u.team==='player').map(u=><div className={'fa-party-hud-row'+(hud.choosingUnit===u.id?' choosing':'')} key={u.id}>{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}<strong>{u.name}</strong><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp} · Focus {u.focus}/{u.maxFocus}{u.hp===0?' · Down':hud.pendingChoices?.[u.id]?' · Ready':''}</small></div>)}<small aria-live="polite">{hud?.log.at(-1)}</small></>)}{pane(2,<><small>{hud?.phase==='choose'?'Choose: '+(hud.units.find(u=>u.id===hud.choosingUnit)?.name||''):'Resolving round'}</small><div className="fa-combat-actions">{hud?.legal.map(a=><Btn key={a.id} className={'fa-action '+a.action.kind} disabled={!a.enabled} title={a.reason||a.action.summary} aria-label={a.action.name+' — '+(a.reason||a.action.summary)} onClick={()=>stageRef.current?.chooseAction(a.id)}><SkillArt id={a.id}/><span className="fa-action-label"><kbd>{a.action.hotkey}</kbd> {a.action.name}</span><small>{a.reason||a.action.summary}</small></Btn>)}</div></>)}{pane(3,<>{hud?.units.filter(u=>u.team==='enemy').map(u=><div key={u.id} className={'fa-enemy-hud'+(u.hp===0?' down':'')}><strong>{u.name}</strong><progress aria-label={u.name+' health'} value={u.hp} max={u.maxHp}/><small>HP {u.hp}/{u.maxHp}</small>{hud.intents?.filter(i=>i.unitId===u.id).map(i=><div key={i.unitId} className={'fa-enemy-intent '+i.kind}><SkillArt id={i.actionId}/><div>{i.phaseName&&<small className="fa-boss-phase">{i.phaseName}</small>}<strong>{i.name}</strong><small>{i.summary}{i.targetId?' · Targets current frontline':''}</small></div></div>)}</div>)}</>)}<div className="fa-hud-top"><Btn onClick={openPause}>Pause · Esc</Btn><Btn onClick={()=>go('12')}>Skills · K</Btn></div></>;break;
-    case '10':content=original?<OriginalExplorationHud profile={profile} world={world} notifications={notifications} post={post} go={go} onPause={openPause} onFocus={()=>frame.current?.focus()}/>:<>{pane(0,<><strong>{profile?.name}</strong><p>Level {level}</p><progress value={profile?.xp%100||0} max={100}/><small>{profile?.xp||0} total XP</small><progress value={profile?.hp||0} max={stats.maxHp}/><small>HP {profile?.hp||0}/{stats.maxHp} · Gold {profile?.gold||0}</small></>)}{pane(1,<button className="fa-map-button" onClick={()=>go('07')}><RegionMap world={world} profile={profile} small/></button>)}{pane(2,<><small>{world?.region}</small>{world?.nearby&&<Btn primary onClick={()=>post('interact')}>{world.nearby} · E</Btn>}{(campaignPrompt(profile)||profile?.quests.grove==='active')&&<p>Quest: {campaignPrompt(profile)||'Defeat the Grove Spirit'}</p>}</>)}{pane(3,<div className="fa-hud-buttons"><Btn onClick={openPause}>Menu</Btn><Btn onClick={()=>go('07')}>Map</Btn><Btn onClick={()=>go('08')}>Journal</Btn><Btn onClick={()=>go('12')}>Skills</Btn></div>)}<div className="fa-touch">{[['left','←'],['right','→'],['in','↑'],['out','↓'],['run','Run']].map(([k,label])=><Btn key={k} onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);post('move',{key:k,value:true});}} onPointerUp={()=>post('move',{key:k,value:false})} onPointerCancel={()=>post('move',{key:k,value:false})} onLostPointerCapture={()=>post('move',{key:k,value:false})}>{label}</Btn>)}<Btn onClick={()=>post('jump')}>Jump</Btn></div><div className="fa-hud-top"><Btn onClick={()=>frame.current?.focus()}>Focus world · WASD · Shift run</Btn></div></>;break;
+    case '10':content=<OriginalExplorationHud profile={profile} world={world} notifications={notifications} post={post} go={go} onPause={openPause} onFocus={()=>frame.current?.focus()} original={original}/>;break;
     case '11':content=<PartyFormation key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} transact={transact} go={go} back={back} statPanel={statPanel}/>;break;
     case '12':content=<Skillbook key={profile?.id||'guest'} profile={profile} level={level} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '14':content=<BattleVictory profile={profile} encounter={encounter} result={result} hud={hud} original={original} layout={screen.layout} onContinue={victoryContinue} onItems={()=>go('38')} onDetails={()=>go('37')}/>;break;
@@ -1470,7 +1546,7 @@ export default function SapphireAdventure(){
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
     case '28':content=<Achievements key={profile?.id||'guest'} profile={profile} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '29':content=<WorldCodex key={profile?.id||'guest'} profile={profile} world={world} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back}/>;break;
+    case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back} encounter={encounter} onGift={(member,expected)=>{const q=companionGiftQuote(current.current.profile,member);if(!q.ok||q.bond!==expected||current.current.encounter)return;requestConfirm('Give '+q.cost+' Sapphire Ore to '+ROSTER.find(m=>m.id===member).name+' for +'+q.gain+' bond?',()=>transact(p=>{if(memberFor(p,member).bond!==expected)throw Error('Bond changed. Review the gift again.');return giveCompanionGift(p,member);},'Companion bond increased'));}}/>;break;
     case '31':content=<TreasureReveal profile={profile} discovery={discovery} loot={loot} encounter={encounter} original={original} layout={screen.layout} onItems={()=>go('38')} onContinue={back}/>;break;
     case '32':content=<Attributes key={profile?.id||'guest'} profile={profile} level={level} locked={!profile||Boolean(encounter&&hud?.phase!=='over')} original={original} layout={screen.layout} unlockedIds={result?.unlocked||[]} back={back} onConfirm={(base,draft)=>{const live=current.current.profile;if(!live||live!==base||(current.current.encounter&&hud?.phase!=='over')||!Array.isArray(draft)||draft.length>pointsFor(live)||draft.some(k=>!STAT_KEYS.includes(k)))return false;const next=draft.reduce((p,k)=>allocate(p,k),live);replaceProfile(next);autosave(next);finishLevel();return true;}}/>;break;
     case '33':content=<SanctuaryRest profile={profile} service={service} serviceAvailable={serviceAvailable} encounter={encounter} original={original} layout={screen.layout} onRest={()=>requestConfirm('Rest and recover all recruited party members?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter||!liveService(s.world,s.service.id))throw Error('Visit a service marker to rest.');return heal(p,{sanctuary:true});},'Health restored'))} onSave={()=>go('18')} onLeave={()=>root('10')} onRecovery={()=>go('46')}/>;break;
@@ -1480,7 +1556,7 @@ export default function SapphireAdventure(){
     case '37':content=<GlobalNotifications notifications={notifications} original={original} layout={screen.layout} back={back}/>;break;
     case '38':content=<ItemAcquisition profile={profile} encounter={encounter} result={result} hud={hud} discovery={discovery} loot={loot} origin={stack[stack.length-2]} original={original} layout={screen.layout} onInventory={()=>{if(current.current.profile&&!current.current.encounter)go('06');}} onContinue={back}/>;break;
     case '39':content=<EquipmentComparison key={profile?.id||'guest'} profile={profile} encounter={encounter} initialItem={itemId} initialWearer={wearer} original={original} layout={screen.layout} go={go} back={back} onEquip={(member,key,expected)=>{const s=current.current;if(s.id!=='39'||!s.profile||s.encounter||!Object.hasOwn(ITEMS,key))return;const item=ITEMS[key];const ok=transact(p=>{if(!p.inventory[key])throw Error('You do not own this item.');if(member!=='hero'&&!ROSTER.some(m=>m.id===member&&memberFor(p,m.id).recruited))throw Error('Wearer unavailable.');if(item.kind==='weapon'&&member==='hero'){if(p.equipped!==expected||p.equipped===key)throw Error('Equipped weapon changed. Review comparison.');return equipItem(p,key);}if(item.kind==='gear'){const equipped=gearFor(p,member)[item.slot];if(equipped!==expected||equipped===key)throw Error('Equipped gear changed. Review comparison.');return equipGear(p,member,item.slot,key);}throw Error('Unsupported equipment.');},'Equipment updated');if(ok)back();}}/>;break;
-    case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>{const f=pending?.action;setPending(null);back();f?.();}}>Confirm</Btn>,<Btn onClick={()=>{setPending(null);back();}}>Cancel</Btn>)}</>);break;
+    case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>executeConfirm(pending)}>Confirm</Btn>,<Btn onClick={dismissConfirm}>Cancel</Btn>)}</>);break;
     case '41':content=pane(0,<p role="status">{saveStatus||'No save operation in progress.'}</p>);break;
     case '42':content=<RegionDiscovery discovery={discovery} world={world} profile={profile} original={original} layout={screen.layout} onContinue={back} onMap={()=>{back();go('07');}}/>;break;
     case '43':content=<QuestOffer profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onAccept={()=>{if(transact(p=>{if(p.quests.grove!=='available')throw Error('Quest is no longer available.');return acceptGroveQuest(p);},'Quest accepted')){root('10');go('08');}}}/>;break;
@@ -1494,7 +1570,7 @@ export default function SapphireAdventure(){
     </div>:pane(0,<><h2>Unable to continue</h2><p role="alert">{error}</p><Btn primary onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}>Retry</Btn><Btn onClick={leaveTitle}>Return to Title</Btn></>);break;
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
-  const template=original?.url||templateUrl(id);
+  const template=id==='10'?null:original?.url||templateUrl(id);
   const artwork=original?{mode:'original-full',asset:null}:artFor(id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
@@ -1502,7 +1578,7 @@ export default function SapphireAdventure(){
     {encounter&&arenaReady&&profile&&<BattleSurface key={encounter.token} encounter={encounter} profile={profile} paused={id!=='09'} muted={settings.muted} reducedMotion={settings.reducedMotion} quality={settings.quality} stageRef={stageRef} onHud={handleBattleHud} onError={(message,token)=>{if(isCurrentEncounter(current.current.encounter,token))fail(message);}}/>}
     {artwork.mode==='cinematic'&&<div className={'fa-cinematic-art'+(artwork.asset==='title-original'?' title-original':'')} aria-hidden="true" style={{'--fa-scene-art':'url("'+artworkUrl+'")'}}/>}
     <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
-      <div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>
+      {id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
       {!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
       {original&&id==='35'&&<span className="fa-original-subtitle" aria-hidden="true">Fantasy Battle</span>}
       {content}

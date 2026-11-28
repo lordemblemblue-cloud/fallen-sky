@@ -1552,6 +1552,64 @@
 /* Six live conversation options share the original navigation area. */
 .fa-dialogue-escort .fa-dialogue-nav{grid-template-rows:repeat(6,minmax(0,1fr));gap:2%;overflow:auto;pointer-events:auto}
 
+
+/* Screen 03: live settings over the original painted plate. Only the selected
+   category is mounted. The soft veil suppresses the plate's old section labels. */
+.fa-settings-page{position:absolute;inset:0;pointer-events:none;color:#fff2dc;font-size:clamp(12px,min(1.35vw,2.4vh),21px);text-shadow:0 1px 3px #111f40}
+.fa-settings-categories,.fa-settings-detail,.fa-settings-actions{position:absolute;pointer-events:auto;min-width:0}
+.fa-settings-categories{display:grid;grid-template-rows:repeat(6,minmax(0,1fr));gap:2.5%;left:5%;top:28.7%;width:18.5%;height:42%}
+.fa-settings-categories .fa-settings-category{display:grid;grid-template-columns:1.6em 1fr;align-items:center;gap:.38em;text-align:left;min-height:0;width:100%;height:100%;padding:0 .72em;color:#fff1d4;border:1px solid #d9c49eaa;border-radius:45% 13% 45% 13% / 48% 45% 48% 45%;background:linear-gradient(112deg,#263a67fa,#4b6da5f5 70%,#7f9dd6f5);box-shadow:inset 0 0 0 2px #eddbb52b;font:inherit;transform:none}
+.fa-settings-categories .fa-settings-category>span:first-child{text-align:center;color:#f0d7a3;font-size:1.15em}
+.fa-settings-categories .fa-settings-category[aria-pressed="true"]{color:#23375e;text-shadow:0 1px 1px #fff9;background:linear-gradient(110deg,#d8c6a0,#fff6df 48%,#aac9ed 95%);border-color:#fff0c8;box-shadow:0 0 12px #fbe4ae80,inset 0 0 0 2px #f8ebc4a8}
+.fa-settings-categories .fa-settings-category[aria-pressed="true"]>span:first-child{color:#3c5683}
+.fa-settings-categories .fa-settings-category:hover:not([aria-pressed="true"]){background:linear-gradient(112deg,#384f7b,#6389bf,#8aa9d5);border-color:#f7e4ba}
+.fa-settings-detail{left:26.7%;top:10.7%;width:47%;height:69.9%;box-sizing:border-box;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#c5b38988 transparent;padding:clamp(12px,1.9vw,32px);display:flex;flex-direction:column;gap:.62em;border:0;border-radius:26px 42px 28px 26px;background:linear-gradient(115deg,#203b6cfa,#345990f5 57%,#42659bf2);box-shadow:inset 0 0 28px #192f6240;text-wrap:pretty}
+@supports (backdrop-filter:blur(12px)){.fa-settings-detail{background:linear-gradient(115deg,#203b6ce8,#345990d9 57%,#42659bc9);backdrop-filter:blur(18px)}}
+.fa-settings-detail h2{font-size:1.65em;font-weight:500;color:#fff1d0;line-height:1.1;margin:0;letter-spacing:.025em}
+.fa-settings-ornament{display:flex;align-items:center;gap:.45em;color:#e9d1a0;font-size:.95em;line-height:1}
+.fa-settings-ornament::before,.fa-settings-ornament::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,#e5c991aa)}
+.fa-settings-ornament::after{background:linear-gradient(90deg,#e5c991aa,transparent)}
+.fa-settings-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto);gap:.8em;align-items:center;padding:.66em 0;border-bottom:1px solid #e4cda143;min-width:0}
+.fa-settings-row>div{min-width:0}
+.fa-settings-row strong{font-weight:500;color:#fff2d5}
+.fa-settings-row small{display:block;margin-top:.27em;color:#e0eafa;font-size:.78em;line-height:1.35}
+.fa-settings-value{font-size:.85em;text-align:right;max-width:14em;overflow-wrap:anywhere;color:#e9efff}
+.fa-settings-detail select,.fa-settings-detail input:not([type="checkbox"]){min-width:0;max-width:100%;box-sizing:border-box;font:inherit;font-size:.85em;color:#fff4dc;background:linear-gradient(120deg,#263d69,#355984);border:1px solid #ddc59b9c;border-radius:7px;padding:.45em .65em;box-shadow:inset 0 1px 5px #182b514d}
+.fa-settings-detail select option{background:#263d69;color:#fff4dc}
+.fa-settings-detail input[type="checkbox"]{appearance:none;position:relative;width:2.7em;height:1.45em;margin:0;border:1px solid #d9c7a1;border-radius:1em;background:#273c61;cursor:pointer;box-shadow:inset 0 1px 4px #152548}
+.fa-settings-detail input[type="checkbox"]::after{content:"";position:absolute;left:.13em;top:.13em;width:1.03em;height:1.03em;border-radius:50%;background:#f2dfb6;box-shadow:0 1px 3px #13223d}
+.fa-settings-detail input[type="checkbox"]:checked{background:#739aca}
+.fa-settings-detail input[type="checkbox"]:checked::after{left:auto;right:.13em;background:#fff2d4}
+.fa-settings-detail input[type="file"]::file-selector-button{font:inherit;color:#fff0d3;background:#355d90;border:1px solid #c9b78c;border-radius:5px;padding:.3em .6em;margin-right:.6em;cursor:pointer}
+.fa-settings-detail .fa-button,.fa-settings-actions .fa-button{font-size:.87em;min-height:2.1em;padding:.35em .8em;border-radius:7px 14px 7px 14px;background:linear-gradient(110deg,#293f6b,#537db2);color:#fff3db;white-space:normal}
+.fa-settings-detail .fa-button:hover:not(:disabled),.fa-settings-actions .fa-button:hover:not(:disabled){background:linear-gradient(110deg,#40679e,#78a7d5)}
+.fa-settings-detail :focus-visible,.fa-settings-page .fa-button:focus-visible{outline:2px solid #fff0b8;outline-offset:3px}
+.fa-settings-hint{font-size:.78em;color:#e0eafa;margin:.2em 0;line-height:1.4}
+.fa-settings-backup{display:flex;flex-direction:column;gap:.5em;padding:.3em 0;min-width:0}
+.fa-settings-backup h3{font-weight:500;color:#fff1d0;font-size:1.05em;margin:.25em 0}
+.fa-settings-backup p{margin:0;font-size:.82em;line-height:1.4}
+.fa-settings-backup label{display:flex;flex-direction:column;gap:.28em;font-size:.88em;min-width:0}
+.fa-settings-actions{left:31.5%;top:82.2%;width:37.2%;height:6%;display:grid;grid-template-columns:34% 52%;justify-content:space-between;gap:.5em}
+.fa-settings-actions .fa-button{height:100%;min-height:0;font-size:1em;border-radius:40% 10% 40% 10% / 48% 45% 48% 45%}
+.fa-settings-actions .fa-button.primary{background:linear-gradient(110deg,#e2cda8,#fff1d6,#abc7e9);color:#24375b;text-shadow:none;border-color:#fce4b1}
+.fa-settings-fallback{font-size:clamp(13px,1.35vw,19px)}
+.fa-settings-fallback .fa-settings-categories{left:4%;top:19%;width:24%;height:61%;gap:2%}
+.fa-settings-fallback .fa-settings-detail{left:30%;top:18%;width:65%;height:64%}
+.fa-settings-fallback .fa-settings-actions{left:30%;top:84%;width:65%;height:9%;grid-template-columns:1fr 1fr}
+@media(max-aspect-ratio:4/3),(max-width:849px),(max-height:499px){
+ .fa-ui[data-screen="03"]:not([data-staged-original="true"]){overflow:auto}
+ .fa-ui[data-screen="03"]:not([data-staged-original="true"]) .fa-header{position:relative;inset:auto;padding:12px}
+ .fa-settings-fallback{position:relative;inset:auto;display:grid;grid-template-columns:minmax(0,1fr);gap:12px;padding:12px;pointer-events:auto}
+ .fa-settings-fallback .fa-settings-categories,.fa-settings-fallback .fa-settings-detail,.fa-settings-fallback .fa-settings-actions{position:relative;inset:auto;width:100%;height:auto}
+ .fa-settings-fallback .fa-settings-categories{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(42px,auto));gap:6px}
+ .fa-settings-fallback .fa-settings-categories .fa-settings-category{grid-template-columns:1fr;gap:0;text-align:center;padding:5px 2px;border-radius:9px;font-size:clamp(12px,2.3vw,15px)}
+ .fa-settings-fallback .fa-settings-categories .fa-settings-category>span:first-child{display:none}
+ .fa-settings-fallback .fa-settings-detail{padding:16px;min-height:170px;overflow:visible;border-radius:16px}
+ .fa-settings-fallback .fa-settings-actions .fa-button{min-height:42px;border-radius:9px}
+}
+@media(max-width:420px){.fa-settings-row{grid-template-columns:minmax(0,1fr) minmax(0,auto);gap:.5em}.fa-settings-row .fa-button{max-width:9em}.fa-settings-value{max-width:9em}}
+
+
 /* Original plate alignment: artwork and live coordinates share one viewport.
    Fill wide windows without cropping the plate; all percentage anchors move with it.
    The exploration/battle HUDs and narrow/mobile fallback retain their own layout. */

@@ -288,3 +288,72 @@ test('world merge preserves identity, rejects malformed metadata, and bounds leg
  assert.equal(A.updateWorld(merged,{...w,discoveries:['overflow']}),merged);
  assert.equal(A.isProfile({...p,equipped:{toString:null}}),false);
 });
+
+import {disposeResources,createCleanupScope} from '../src/components/fantasybattle/core/resourceCleanup.mjs';
+test('final GPU cleanup disposes shared references once and continues after individual failure',()=>{
+ let count=0;const shared={dispose(){count++;}},bad={dispose(){throw Error('driver');}},later={dispose(){count++;}};
+ assert.deepEqual(disposeResources([shared,null,shared,bad,later,{}]),{disposed:2,failed:1});assert.equal(count,2);
+});
+test('viewer listener scope removes all callbacks and is idempotent',()=>{
+ const scope=createCleanupScope(),target=new EventTarget();let count=0;
+ scope.listen(target,'move',()=>count++);scope.listen(target,'move',()=>count++);
+ target.dispatchEvent(new Event('move'));assert.equal(count,2);
+ scope.close();scope.close();scope.listen(target,'move',()=>count++);
+ target.dispatchEvent(new Event('move'));assert.equal(count,2);
+ const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
+ for(const marker of ['this.cleanupScope.close()','this.forge.cache.clear()','this.assets?.geoCache.clear()','this.scene.environment=null','app.destroy();throw error','stop(){clearInterval(timer);app.destroy();}'])assert.ok(world.includes(marker),marker);
+});
+
+import {createConfirmationGate} from '../src/components/fantasybattle/core/confirmationGate.mjs';
+test('confirmation actions are single use and bound to the original screen and character',()=>{
+ const g=createConfirmationGate(),base={id:'16',running:true,profile:{id:'first'},encounter:null},live={...base,id:'40',stack:['10','16','40']};
+ let calls=0;const action=()=>calls++;
+ let t=g.open('Buy',action,base);assert.equal(g.consume(t,live),action);action();
+ assert.equal(g.consume(t,live),null);assert.equal(calls,1);
+ for(const change of [{profile:{id:'other'}},{encounter:{token:'new'}},{running:false},{stack:['10','22','40']},{id:'16'}]){
+  t=g.open('Buy',action,base);assert.equal(g.consume(t,{...live,...change}),null);assert.equal(g.consume(t,live),null);
+ }
+ const old=g.open('Old',action,base),newer=g.open('New',action,base);
+ assert.equal(g.consume(old,live),null);assert.equal(g.consume(newer,live),action);
+ t=g.open('Cancel',action,base);g.cancel();assert.equal(g.consume(t,live),null);
+ assert.equal(g.open('Nested',action,live),null);
+ const title={id:'03',running:false,profile:null,encounter:null};
+ t=g.open('Import',action,title);assert.equal(g.consume(t,{...title,id:'40',stack:['01','03','40']}),action);
+ const defeat={id:'15',running:true,profile:{id:'first'},encounter:{token:'defeat'}};
+ t=g.open('Exit',action,defeat);assert.equal(g.consume(t,{...defeat,id:'40',stack:['15','40']}),action);
+});
+test('every catalog screen has an explicit runtime switch case and confirmation is gated',()=>{
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ const cases=[...page.matchAll(/case '(\d{2})':/g)].map(m=>m[1]);
+ assert.equal(new Set(cases).size,48);
+ for(const id of Object.keys(UI_SCREENS))assert.ok(cases.includes(id),id);
+ assert.ok(page.includes('confirmGate.current.consume(ticket,current.current)'));
+ assert.ok(page.includes('onClick={()=>executeConfirm(pending)}'));
+ assert.ok(page.includes('onClick={dismissConfirm}'));
+});
+
+import {bondConversation,BOND_GIFT} from '../src/components/fantasybattle/core/companionBonds.mjs';
+test('companion gifts require recruitment and ore, preserve other members and cap bond',()=>{
+ let p=A.createProfile('Companion test');
+ assert.equal(A.companionGiftQuote(p,'groveArcher').ok,false);assert.throws(()=>A.giveCompanionGift(p,'groveArcher'));
+ assert.equal(bondConversation('groveArcher',A.memberFor(p,'groveArcher')),null);
+ for(const m of A.ROSTER){p=A.rewardVictory(p,{id:m.requiredEncounter}).profile;p=A.recruitCompanion(p,m.id);}
+ p={...p,inventory:{...p.inventory,sapphireOre:50}};
+ for(const m of A.ROSTER){
+  const before=p,quote=A.companionGiftQuote(p,m.id);assert.ok(quote.ok);
+  const stats=A.memberStats(p,m.id);p=A.giveCompanionGift(p,m.id);
+  assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre-BOND_GIFT.cost);
+  assert.equal(A.memberFor(p,m.id).bond,quote.bond+quote.gain);
+  assert.deepEqual(A.memberStats(p,m.id),stats);
+  for(const other of A.ROSTER.filter(x=>x.id!==m.id))assert.deepEqual(A.memberFor(p,other.id),A.memberFor(before,other.id));
+  const lines=[0,25,75].map(bond=>bondConversation(m.id,{recruited:true,bond}));
+  assert.equal(new Set(lines).size,3);
+ }
+ assert.ok(A.isProfile(p));assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ assert.throws(()=>A.giveCompanionGift(p,'__proto__'));
+ assert.throws(()=>A.giveCompanionGift({...p,inventory:{...p.inventory,sapphireOre:0}},'groveArcher'));
+ p={...p,party:{...p.party,bond:98}};
+ const near=A.companionGiftQuote(p,'groveArcher');assert.equal(near.gain,2);
+ const max=A.giveCompanionGift(p,'groveArcher');assert.equal(A.memberFor(max,'groveArcher').bond,100);assert.throws(()=>A.giveCompanionGift(max,'groveArcher'));
+ assert.ok(A.isProfile(max));assert.equal(p.party.bond,98);
+});

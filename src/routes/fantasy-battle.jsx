@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import SapphireAdventure from '@/components/fantasybattle/SapphireAdventure';
+import '@/components/fantasybattle/titleMist.css';
 import { FANTASY_BATTLE_RELEASED } from '@/components/games/hub/gamesHubCatalog.mjs';
 
 // Block both hub launches and direct links while the third game is unfinished.
