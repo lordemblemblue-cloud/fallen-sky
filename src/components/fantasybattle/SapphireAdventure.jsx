@@ -1518,12 +1518,15 @@ export default function SapphireAdventure(){
           <div className="fa-scene-mist fa-scene-mist-left-upper"/>
           <div className="fa-scene-mist fa-scene-mist-left-lower"/>
           <div className="fa-scene-moon-glow"/>
+          <div className="fa-scene-kingdom-light"/>
           <div className="fa-scene-waterfall fa-scene-waterfall-1"/>
           <div className="fa-scene-waterfall fa-scene-waterfall-2"/>
           <div className="fa-scene-waterfall fa-scene-waterfall-3"/>
           <div className="fa-scene-mist fa-scene-mist-right-upper"/>
           <div className="fa-scene-mist fa-scene-mist-right-lower"/>
+          <div className="fa-scene-portal-glow"/>
           <div className="fa-scene-sparkles"/>
+          <div className="fa-scene-foreground-breeze"><i/><i/><i/></div>
           <div className="fa-scene-petals">{[0,1,2,3,4,5].map(n=><i key={n}/>)}</div>
         </div>}
       </div>
