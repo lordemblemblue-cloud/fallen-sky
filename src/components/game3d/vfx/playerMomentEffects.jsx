@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { createSharedEffectLight } from './sharedEffectLight.mjs';
+import { acquireEffectLight } from './effectLightPool.mjs';
 
 // Presentation-only effects for two gameplay moments on the local hero, run through GameWorld3D's activeEffects
 // list ({ update(delta), alive(), dispose() }, like vfx/playerCastLightBeam.jsx):
@@ -49,7 +51,16 @@ function makeSparks(count, color, size) {
 const ringMaterial = (color, opacity = 0.8) => new THREE.MeshBasicMaterial({ color, transparent: true, opacity,
   depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
 
-export function createSkillUseBurst({ scene, playerRef, getGroundY, color = SKILL_BURST_COLORS.default, duration = 0.65 } = {}) {
+const BURST_LIGHT_HEIGHT = 1.2;
+const burstLightPosition = new THREE.Vector3();
+
+/** The skill-use bursts' one light (vfx/sharedEffectLight.mjs); GameWorld3D creates it with the world. */
+export function createSkillUseBurstLight(scene) {
+  return createSharedEffectLight(scene, { name: 'PlayerSkillUseBurstLight', distance: 7 });
+}
+
+export function createSkillUseBurst({ scene, playerRef, getGroundY, color = SKILL_BURST_COLORS.default, duration = 0.65,
+  burstLight = null } = {}) {
   const group = new THREE.Group();
   group.name = 'PlayerSkillUseBurst';
   const ringGeo = new THREE.RingGeometry(0.42, 0.6, 64);
@@ -63,9 +74,7 @@ export function createSkillUseBurst({ scene, playerRef, getGroundY, color = SKIL
   flash.position.y = 1.15;
   flash.scale.setScalar(0.4);
   group.add(flash);
-  const light = new THREE.PointLight(color, 0, 7);
-  light.position.y = 1.2;
-  group.add(light);
+  const lightColor = new THREE.Color(color);
   const count = 36;
   const sparks = makeSparks(count, color, 0.16);
   const velocities = new Float32Array(count * 3);
@@ -79,14 +88,19 @@ export function createSkillUseBurst({ scene, playerRef, getGroundY, color = SKIL
     sparks.positions[i * 3 + 2] = Math.sin(a) * 0.15;
   }
   group.add(sparks.points);
+  // GameWorld3D passes its shared burstLight, so a cast never changes the scene's light count; without one the burst
+  // brings a light of its own, added and removed with it (added first, so the group stays the scene's last child).
+  const ownLight = !burstLight && scene ? createSkillUseBurstLight(scene) : null;
+  const light = burstLight || ownLight;
   if (scene) scene.add(group);
   let t = 0, disposed = false;
-  // GameWorld3D's activeEffects filter drops a finished effect without calling dispose(), so the effect removes
-  // itself once its time is up (its point light too: a light left in the scene changes the light count every
-  // material is compiled for). dispose() stays idempotent for a caller that does call it.
+  // GameWorld3D's activeEffects list disposes an effect once it is no longer alive (vfx/activeEffects.mjs). The
+  // effect also removes itself once its time is up, for callers that only update it, so dispose() is idempotent.
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    light?.release(group);
+    ownLight?.dispose();
     scene?.remove(group);
     ringGeo.dispose(); ringMat.dispose(); flash.material.dispose();
     sparks.geometry.dispose(); sparks.material.dispose();
@@ -107,7 +121,8 @@ export function createSkillUseBurst({ scene, playerRef, getGroundY, color = SKIL
       ringMat.opacity = 0.85 * fade;
       flash.scale.setScalar(0.4 + 1.6 * Math.min(1, t / 0.18));
       flash.material.opacity = 0.9 * Math.max(0, 1 - t / 0.35);
-      light.intensity = 3.2 * fade;
+      light?.set(group, 3.2 * fade, lightColor,
+        burstLightPosition.set(group.position.x, group.position.y + BURST_LIGHT_HEIGHT, group.position.z));
       for (let i = 0; i < count; i++) {
         sparks.positions[i * 3] += velocities[i * 3] * dt;
         sparks.positions[i * 3 + 1] += velocities[i * 3 + 1] * dt;
@@ -145,9 +160,6 @@ export function createLevelUpCelebration({ scene, playerRef, getGroundY, duratio
     transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   flash.position.y = 1.2;
   group.add(flash);
-  const light = new THREE.PointLight(color, 0, 10);
-  light.position.y = 1.4;
-  group.add(light);
   const count = 90;
   const sparks = makeSparks(count, color, 0.14);
   const seeds = new Float32Array(count * 3);
@@ -158,14 +170,17 @@ export function createLevelUpCelebration({ scene, playerRef, getGroundY, duratio
     sparks.positions[i * 3 + 1] = -1;
   }
   group.add(sparks.points);
+  // Borrowed from the world's effect light pool (vfx/effectLightPool.mjs); without a pool it is the celebration's
+  // own light, added before the group so the group stays the scene's last child.
+  const light = acquireEffectLight(scene, { color, distance: 10 });
   if (scene) scene.add(group);
   let t = 0, disposed = false;
-  // GameWorld3D's activeEffects filter drops a finished effect without calling dispose(), so the effect removes
-  // itself once its time is up (its point light too: a light left in the scene changes the light count every
-  // material is compiled for). dispose() stays idempotent for a caller that does call it.
+  // GameWorld3D's activeEffects list disposes an effect once it is no longer alive (vfx/activeEffects.mjs). The
+  // effect also removes itself once its time is up, for callers that only update it, so dispose() is idempotent.
   const dispose = () => {
     if (disposed) return;
     disposed = true;
+    light?.release();
     scene?.remove(group);
     pillarGeo.dispose(); pillarMat.dispose(); flash.material.dispose();
     for (const ring of rings) { ring.geo.dispose(); ring.mat.dispose(); }
@@ -197,7 +212,7 @@ export function createLevelUpCelebration({ scene, playerRef, getGroundY, duratio
       }
       flash.scale.setScalar(0.5 + 2.4 * Math.min(1, t / 0.22));
       flash.material.opacity = 0.95 * Math.max(0, 1 - t / 0.5);
-      light.intensity = 5.5 * envelope;
+      light?.set(5.5 * envelope, { x: group.position.x, y: group.position.y + 1.4, z: group.position.z });
       for (let i = 0; i < count; i++) {
         const phase = (t / 1.6 + seeds[i * 3 + 2]) % 1;
         const angle = seeds[i * 3] + phase * 5.5;
