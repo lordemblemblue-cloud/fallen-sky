@@ -8,7 +8,7 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 
 | Game | Package | Kind | Why first |
 |---|---|---|---|
-| Fallen Sky | WP-FS-S1 P01 opening slice M01–M03, isolated low-poly blockout | Approval (one owner "yes" to the R136 §1 scope record starts it) | The owner's first priority is the story; P01 is the only slice with a full source-to-acceptance chain |
+| Fallen Sky | WP-FS-S1 P01 opening slice M01–M03, isolated low-poly blockout | In progress (assigned by the hub on 2026-11-27 to session `local_cb70a7c5`) | The owner's first priority is the story; P01 is the only slice with a full source-to-acceptance chain |
 | Fallen Sky | WP-FS-S2 story-ID adapter; WP-FS-S3 paired-discovery state model | Ready (isolated, disabled modules) | Story-side foundations that bind no unknown content |
 | Fallen Sky | WP-FS-S5 native test run of the NPC-phase branch chain | Ready (verification) | 62 files of story work wait outside `main` |
 | Fallen Sky | WP-FS-01 skill damage curve failures | Ready | A real behaviour failure on `main` |
@@ -22,7 +22,8 @@ Every package keeps the other two games and unrelated pages untouched, runs `npm
 
 Ownership follows the terrain hand-off and R112 §2: the story agent supplies dialogue and location constraints; Claude owns terrain layout, cave and dungeon architecture and implementation within them; the owner approves consequential rules. None of these packages may resolve an intentional mystery (FALLEN_SKY_RECORD A4) or bind an unknown actor lifetime, chronology, reward policy or final position (R112 §6).
 
-### WP-FS-S1 P01: the opening slice M01–M03 as an isolated low-poly blockout — Approval
+### WP-FS-S1 P01: the opening slice M01–M03 as an isolated low-poly blockout — In progress
+- Assignment: the hub gave the R132 tickets, low-poly first, to the story session `local_cb70a7c5` on 2026-11-27, with R136's open decisions to go to the owner as one request. R136 §1 in the repo still records "No owner approval recorded"; that session records the owner's answer there.
 - Original requirements: R112 §4 (P01 work order), R113 (source-to-acceptance worksheet, 11 landmark rows, 16 stages, 14 planned tests), R130 (pinned-main technical intake), R131 (preview isolation; preferred option: a separate local dev entry with ephemeral fixtures, no live stores, quest rewards or platform changes), R132 (tickets T00–T07, ten review gates, evidence template), R133 (eleven landmark groups, 20 logical asset modules), R134 (cue, character and encounter presentation, later scope), R135 (receipts and reset acceptance), R136 (approval and evidence package), R87/R87A/R87B (low-poly-first standard and prompts). Scripts `M01.md`–`M03.md`.
 - Status: fully specified; not authorized: R136 §1 records "No owner approval recorded"; eight decisions D01–D08 open (FS-S-D6).
 - Dependencies: the owner's T00 scope record; a runner and preview path verified (R131); no edits to the platform mode or live stores.

@@ -44,7 +44,7 @@ Counted from FALLEN_SKY_RECORD Part A (R61, R86, R110, R128 and the reader's cod
 | Implemented in `main` (playable or wired) | 0 | 0 | reader's search of `src/`, `server/`, `base44/` |
 | Built in the world (terrain placed) | 0 | 0 | platform mode; no blockout exists |
 
-Story, quests and world therefore read: written 125/125, approved as canon 0, implemented 0. The first slice that can be built is P01 (M01–M03) once the owner records the scope (WP-FS-S1).
+Story, quests and world therefore read: written 125/125, approved as canon 0, implemented 0. The first slice, P01 (M01–M03), is in progress in session `local_cb70a7c5` since 2026-11-27 (WP-FS-S1).
 
 ### By area
 
@@ -126,7 +126,7 @@ Story, quests and world therefore read: written 125/125, approved as canon 0, im
 
 1. **MI-00:** export the ChatGPT, claude.ai and Gemini conversations (or the specific ones listed), and the Word manuscript.
 2. **Merges:** six of the seven hub-verified branches were merged on 2026-11-27; the cave-mouths branch remains (FS-D11). The open PRs are listed in each record.
-3. **Fallen Sky:** first FS-S-D1 (the R111 chronology decision) and FS-S-D6 (authorize P01); then FS-D1 (platform off when, with which world), FS-D2 (retire the stale cave work), FS-D16 (reuse of the Three Roads systems and models), the other story decisions FS-S-D2 to D10, and FS-D3 to FS-D15.
+3. **Fallen Sky:** first FS-S-D1 (the R111 chronology decision) and FS-S-D6 (R136's D01–D08 for P01, sent by the story session as one request); then FS-D1 (platform off when, with which world), FS-D2 (retire the stale cave work), FS-D16 (reuse of the Three Roads systems and models), the other story decisions FS-S-D2 to D10, and FS-D3 to FS-D15.
 4. **Duelist:** DA-D1 to DA-D10, first DA-D2 (progression model) and DA-D3 (server deployment).
 5. **Fantasy Battle:** FB-D1 to FB-D8, first FB-D3 (release flag before QA) and FB-D2 (story canon).
 6. **Deployment:** Base44 publish and the function deploy order (DP-01, DP-03); hosting for the Duelist match server (DP-02).

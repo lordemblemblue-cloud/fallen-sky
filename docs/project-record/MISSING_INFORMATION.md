@@ -32,7 +32,7 @@ Written 2026-11-27 from the recovery baseline (`main` `ab03f50a`). Each request 
     - Put the downloaded zips, unopened, in a new folder such as `%USERPROFILE%\Downloads\ai-exports\` and say when they are there. They will be read, not extracted into the repo; only the game-relevant decisions get written into the record, with dates.
   - **B. Export only the conversations that matter most** (print each to PDF or copy into a `.md` file):
     1. Fallen Sky: "The Threads of Our Pain" story conversations, the latest Word manuscript (`.docx`), and the conversations that produced the R-series story docs and the NPC phase docs.
-    2. Fantasy Battle: the design conversation(s) for story, campaign, party, skills, saves and the main menu; the conversation where the UI templates were approved, with the original image files (the 48-screen kit, the "Fantasy Adventure UI Design Atlas" and the "modular template batches 01–18").
+    2. Fantasy Battle: the design conversation(s) for story, campaign, party, skills, saves and the main menu. (The approved UI plates themselves are already used by the game: 47 plates and a save plaque load from Base44 media, labelled with your original file names; only their source files are not in git. See MI-FB-01 for what is still needed about them.)
     3. Fantasy Battle: who or what "Aoi", "Lyria", "Warden of Tides", "Moonlit Saber" and "Sapphire Blossom" are (they appear only as image names).
     4. Duelist Adventure: the conversations behind the Gemini HQ, escort-map, CTF and arena packages, and any original class, ranked, custom-game or shop design.
   - **C. Let a Claude session read the signed-in conversations in the app's built-in browser**, read-only: no sending, no settings, no downloads. Only with your explicit "yes" for each service.
@@ -102,7 +102,7 @@ These come from the story documents' own open questions (`docs/game3d/threads-of
 - **What has already been completed:** R113 and R130–R137 specifications; the platform; the construction prompts R113–R128 for every chapter and optional ID.
 - **What information is missing:** the owner's T00 scope record (R136 §1); the region layout and connections; for each place (still TBD in the briefs): dimensions, entry and exit points, elevation, cave connections, enemy, NPC and quest placement, hazards, boss arenas; the M04 destination.
 - **Why this information is required:** no chapter can run on a 24 m platform, and the briefs' measurements are suggestions, not coordinates (terrain hand-off).
-- **Specific questions that must be answered:** (1) Accept P01 under R131's option of a separate local-only entry? (2) Terrain owner: Claude, with Gemini only for comparison previews? (3) When does the platform mode switch off: after P01 is accepted? (4) Is there an approved map sketch for the region order?
+- **Specific questions that must be answered:** (1) P01 is now in progress (the hub assigned it on 2026-11-27); answer R136's D01–D08 when the story session sends them, and confirm R131's separate local-only entry. (2) Terrain owner: Claude, with Gemini only for comparison previews? (3) When does the platform mode switch off: after P01 is accepted? (4) Is there an approved map sketch for the region order after P01?
 - **Required files or assets:** the owner's record; any map sketch.
 - **Other systems affected:** the checkpoint allowlist, streaming, NPC placement, every quest.
 - **Work that can continue without this information:** WP-FS-S2 to S6; story-side contracts; data models; tests.
@@ -162,9 +162,9 @@ These come from the story documents' own open questions (`docs/game3d/threads-of
 ### MI-FS-W1 The world that replaces the platform
 - **Project:** Fallen Sky. **Feature:** world entry after `FALLEN_SKY_PLATFORM_MODE`.
 - **Completed:** the platform staging (PR #382); deletion of the old caves, dungeons and vortex (2026-11-25); the story-driven terrain hand-off (`CLAUDE_TERRAIN_HANDOFF.md`); low-poly construction standards and prompts (R87, R87A/B, R113–R128).
-- **Missing:** the go-ahead and order for rebuilding: which region first (the docs prepare the M01–M03 opening forest as P01), when the platform turns off, whether any old Wolfveil geometry returns, the spawn point.
+- **Missing:** the rebuild order after P01 (the M01–M03 opening forest, now in progress), when the platform turns off, and the spawn point. (Answered on 2026-11-27: the old map is not used; the map is being recreated.)
 - **Why required:** every world-dependent system (quests, enemies, bosses, gliding off cliffs, swimming, gates) is unreachable until a world loads.
-- **Questions:** (1) Is P01 (M01–M03 opening forest) the first region to build? (2) Does the platform stay until P01 is accepted? (3) Do any old Wolfveil areas stay as they were?
+- **Questions:** (1) Which region follows P01? (2) Does the platform stay until P01 is accepted? (3) Where does a new character spawn?
 - **Files:** none needed for (1)–(3). **Affected:** all world systems, WebGPU and low-poly checks. **Can continue:** platform-safe work, fixtures, tests, the WebGPU branches.
 
 ### MI-FS-W2 Dungeons and bosses
@@ -182,10 +182,10 @@ These come from the story documents' own open questions (`docs/game3d/threads-of
 ### MI-FB-01 Story canon, names and the UI kit sources
 - **Project:** Fantasy Battle. **Feature:** story, party identities, UI templates.
 - **Completed:** a six-chapter arc wired as text, marked "proposed narrative expansion" (`docs/fantasybattle/SAPPHIRE_CAMPAIGN_FOUNDATION.md` l.3); 47 plates plus a save plaque drawn from Base44-hosted images.
-- **Missing:** the owner's story, campaign, party, skills, saves and menu design; the original UI image files; who Aoi, Lyria and the Warden of Tides are and what the Moonlit Saber and Sapphire Blossom are; how the family concept (Father, Artemis/Diana, Sinala, Son) maps to the playable party.
+- **Missing:** the owner's story, campaign, party, skills, saves and menu design; who Aoi, Lyria and the Warden of Tides are and what the Moonlit Saber and Sapphire Blossom are; how the family concept (Father, Artemis/Diana, Sinala, Son) maps to the playable party; confirmation that the 47 hosted plates are the approved originals (the code labels them with the owner's file names, `sapphireArt.mjs`), and whether their source files should be committed so phones show the originals too (FB-D4).
 - **Why required:** the six chapters are an agent proposal; the directive forbids inventing story; the approved images must be used directly on every screen.
-- **Questions:** Is the six-chapter arc acceptable as canon, or replaced? Are those names characters, items or places? Is the family the party? Which recruit names replace "Grove Archer", "Pilgrim Warden", "Mist Scout"?
-- **Files:** the original kit images, the design conversation (MI-00 B.2–3). **Affected:** story, party, quests, UI text. **Can continue:** WP-FB-01 to 03.
+- **Questions:** Is the six-chapter arc acceptable as canon, or replaced? Are those names characters, items or places? Is the family the party? Which recruit names replace "Grove Archer", "Pilgrim Warden", "Mist Scout"? Are the hosted plates the approved set, and is plate 05's label removal acceptable?
+- **Files:** the design conversation (MI-00 B.2–3); the plates' source files only if they should be committed. **Affected:** story, party, quests, UI text. **Can continue:** WP-FB-01 to 03.
 
 ### MI-FB-02 Dungeons
 - **Missing:** the dungeon list; for each: region and entrance, traversal, encounters, traps, boss mechanics, completion conditions, rewards, environment description. Is the "Warden of Tides" a dungeon boss? **Completed:** an encounter-entrance screen (23) only. **Why:** none designed. **Affected:** map, encounters, rewards. **Can continue:** wilds encounters.

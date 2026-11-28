@@ -44,7 +44,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | FS-20 | Multiplayer: secure guest world join | Blocked | issue #298 | SE-02 |
 | FS-21 | PvP/PK rules, faction governance | Testing required | WORLD_PVP_PK…, FACTION_GOVERNANCE… | Server APIs; FS-D8 |
 | FS-22 | Reward authority (R137–R145 contracts and fixtures) | In progress | PR #420 and #425 merged (#425 at 18:49); fixtures only, no runtime | FS-D14; WP-FS-09 gap map |
-| FS-23 | Luna mansion geometry | Awaiting assets | issue #261 | FS-D10 |
+| FS-23 | Luna mansion geometry (old map) | Superseded unless the recreated map needs it | issue #261; owner 2026-11-27 "not using the old map" | FS-D10 |
 | FS-24 | War of Three Roads (bands 1–2 built, flag off; band 3 written) | Implemented (kept switched off by the owner, 2026-11-27) | `docs/game3d/three-empires/OWNER_REQUESTS.md`; merged `0b6ca52d` | Nothing more is built; reuse of its systems for the Threads is FS-D16 |
 | FS-25 | Cave-mouths branch `claude/wolfveil-cave-mouths-20261123` | Awaiting approval | conflicts with the 2026-11-25 removals | Close or keep (FS-D11) |
 
@@ -54,7 +54,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 |---|---|---|---|---|
 | FS-S01 | Story documentation for all 125 IDs (M01–M20, D01–D50, S01–S55) | Implemented (documentation only) | R61, R85, R86 | — |
 | FS-S02 | Chronology and causality decision (R111 P0) | Awaiting information | R111 §7 | MI-FS-S1 |
-| FS-S03 | P01 opening slice M01–M03, isolated low-poly blockout (R132 T00–T07) | Awaiting approval | R112 §4, R113, R130–R136; R136 §1 "No owner approval recorded" | MI-FS-S6; then WP-FS-S1 |
+| FS-S03 | P01 opening slice M01–M03, isolated low-poly blockout (R132 T00–T07) | In progress (assigned by the hub 2026-11-27 to session `local_cb70a7c5`) | R112 §4, R113, R130–R136; R136 §1 in the repo still reads "No owner approval recorded" | That session sends R136 D01–D08 to the owner as one request (MI-FS-S6); WP-FS-S1 |
 | FS-S04 | NPC-phase work, Phases 44–67 (fixtures, validators, M07–M18 intakes) | Awaiting approval | stacked branch chain, head PR #433; not in `main` | FS-S-D10; WP-FS-S5 native test run |
 | FS-S05 | Story-ID adapter rejecting unknown IDs (quest store accepts unknown IDs today) | Implementation-ready (isolated module) | R130 §5, R137 §1, Phase 43 risk 1 | WP-FS-S2 |
 | FS-S06 | Paired-discovery state model with the second vista (OWNER rule R66 §1) | Implementation-ready (disabled model) | R66, Phase 61 | WP-FS-S3 |
@@ -134,7 +134,7 @@ Nothing in the Fallen Sky world is "Verified" today: the default entry is the 24
 | ID | Item | Status | Source | Next step |
 |---|---|---|---|---|
 | AS-01 | Fantasy Battle final characters, companions, enemies, bosses, item icons, audio | Awaiting assets | FANTASY_BATTLE_RECORD §6 | MI-FB-05 |
-| AS-02 | Fantasy Battle original UI kit source files (committed, all screen sizes) | Awaiting assets | 48 plates on Base44 media only | MI-FB-01, FB-D4 |
+| AS-02 | Fantasy Battle approved UI plates: in use from Base44 media (47 plates + save plaque, wide screens only); source files not in git | Awaiting approval | `sapphireArt.mjs`; PR #403 | Confirm the set and whether to commit the sources (MI-FB-01, FB-D4) |
 | AS-03 | Fallen Sky gear-tier looks (192), Painted Fan, armor gaps, mount cosmetics | Awaiting assets | B4 | MI-FS-P2 |
 | AS-04 | Fallen Sky world art for the rebuilt regions | Awaiting information | Part A | MI-FS-W1 |
 | AS-05 | Duelist guard and enemy models, armour sets, #340 voice recordings | Awaiting assets | DUELIST_RECORD §6 | MI-DA-05, MI-DA-07 |
@@ -157,7 +157,7 @@ All requests are in [MISSING_INFORMATION.md](MISSING_INFORMATION.md). The first,
 | ID | Item | Status | Source |
 |---|---|---|---|
 | TS-01 | Triage the failing tests on `ab03f50a` into real bugs, stale assertions (deleted caves, old Clone UI) and environment-only failures | Implementation-ready | this record's runs (below) |
-| TS-02 | Retire or rewrite the ~45 cave/vortex tests once FS-D2 confirms the deletion | Blocked | FS-02 |
+| TS-02 | Retire or rewrite the tests tied to the old map: the ~45 cave/vortex/lunar suites and the old Wolfveil suites (world overhaul, forest trail, palace steps, north route, grotto, landscape bakes and design, five-area loading, live map, town bridge seams, Suigen) | Implementation-ready once the owner confirms (FS-D2) | PR #381; owner 2026-11-27 "not using the old map" |
 | TS-03 | R142 SIGKILL tests assume POSIX signals; on Windows the child's signal is `null` | Implementation-ready | `tests/fixtures/r142/recovery.test.mjs:40` |
 | TS-04 | Browser acceptance passes: Fantasy Battle (FB-06), Duelist two-player (DA-13), Fallen Sky once FS-01 is off | Implementation-ready | records |
 
@@ -183,7 +183,7 @@ On `0b6ca52d` (3040 tests, 2884 pass, 156 fail) the list below holds except that
 |---|---|---|---|
 | PF-01 | WebGPU physical-GPU benchmark and preview/live matrix | Implementation-ready (needs a GPU and a deployment) | FRAME_METRICS_VALIDATION_20261125.md |
 | PF-02 | Low-poly part 2 (0 MB gate hops, draw-call cuts) and the four WebGPU fixes (slices, late compile, morph key, device loss) | Implemented (merged 2026-11-27 18:27) | merges `032897d9`, `fe1fe750`, `64070750`, `308b49f6`, `90430f32`; live re-check once a world is reachable |
-| PF-03 | Low-poly part 3 (per-area budgets) | In progress | [note `low-poly-world-handover.md`] |
+| PF-03 | Low-poly part 3 (per-area budgets for the five old areas) | In progress, but it targets the old map (superseded by the owner's 2026-11-27 map decision unless the hub retargets it) | [note `low-poly-world-handover.md`] |
 | PF-04 | Duelist armour performance | Awaiting approval | PR #384 |
 | PF-05 | Startup hangs (hub, Duelist) | Awaiting approval | PR #346 |
 
