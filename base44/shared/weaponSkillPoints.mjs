@@ -17,7 +17,6 @@ export const WEAPON_SKILL_PATHS = Object.freeze([
 export const WEAPON_SKILL_CAP = AXE_LEVEL_CAP;
 export const WEAPON_SKILL_PATH_COST = WEAPON_SKILL_TIERS.reduce((a, b) => a + b, 0);
 const PATH_IDS = WEAPON_SKILL_PATHS.map(p => p.id);
-const hasOwn = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
 const levelOf = level => Number.isInteger(level) ? Math.max(1, Math.min(WEAPON_SKILL_CAP, level)) : 1;
 
 // +1 guaranteed skill point per 20 character levels, on top of 3 guaranteed.
