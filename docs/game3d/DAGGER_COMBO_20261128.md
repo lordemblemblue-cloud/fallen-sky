@@ -56,12 +56,18 @@ No game code changes. All timings in seconds:
 Measured in Blender on the keyed clips, with each body's skin deformed in every frame. All five clips pass on both
 bodies.
 
-- **Blades.** Each blade is modelled where the game seats it: along the forearm from the fist, 30 cm long, a few
-  centimetres out. No blade goes into the body, head or the other arm.
+- **Blades.** Each blade sits where the game's own grip puts it, measured live in the game:
+  - It is rigid in the hand's anatomical frame (the knuckles and the wrist).
+  - The blade comes out of the little-finger side of the fist, about 32 cm long. This is a true reverse "ice-pick"
+    grip, not along the forearm.
+  - Against that line, the first version's right hook and stab trailed the right blade about 4.5 cm into the face. The
+    right forearm now rolls 50° through those two moves (half of it during the wind-up), so the blade points down and
+    forward.
+  - No blade goes into the body, head or the other arm.
 - **Fists.** No fist goes into the head, body or the other arm.
 - **Joints.** All joints stay within their limits.
 - **Motion.** No bone flips or twitches. The arms keep a little bend, so they never lock straight. The fastest
-  limb moves at most about 36° a frame, about 2,100° a second. The only frames excused from the one-frame twitch
+  limb moves at most about 37° a frame, about 2,200° a second. The only frames excused from the one-frame twitch
   check are the first 6–7 frames of each hook, the owner's 0.04–0.06 s wind-ups.
 - **Feet and joins.** The feet stay planted (0 mm drift), and every move meets the guard within 0.15°.
 
@@ -74,20 +80,42 @@ Node v26.13.0, run in this worktree.
   - Every move starts and ends on the guard, and the idle loops.
   - Neither fist goes inside the head or torso at any frame. Worst: 5.5 cm outside the head and 14 cm outside the
     torso.
+  - Neither blade goes inside the head or torso at any frame. The blade is placed by the measured hand-frame line.
+    Worst: 12.7 cm outside the head in the right hook and the stab.
+  - On the first version's hook and stab, the blade check fails: the stab's blade is 3.5 cm inside the head.
   - At each hit, the striking fist is 13–31 cm in front of where it waits in the guard.
 - **The existing weapon tests** (`game3d-weapon-clip-pack`, `-weapon-combos`, `-weapon-feel`, `-remote-weapon-combos`,
   `-equipable-weapons` and `-weapon-exclusivity-gear-presets`): the same 5 tests fail on a clean checkout of main
   (c1bdba08) and on this branch. The rest pass.
 
-### Live in the game
+### Live in the game, both bodies
 
-Not yet run.
+Run on this branch's dev server with `/gameview?renderer=webgl` on the temporary platform. The players were the existing
+guest Eve and Adam, each with the Whisper Dagger equipped (daggers in both hands).
+- **Clips loaded.** On each body, all five dagger states in the controller were the pack's files.
+- **Clips played.** A wrap on three.js's `AnimationAction.play` logged the clips in this order on both bodies:
+
+  | Input | What played |
+  | --- | --- |
+  | Two left clicks | `daggerLight1`, then `daggerLight2`, then `idleDaggers` |
+  | A right click | `daggerStab`, then `idleDaggers` |
+  | A held left click, then let go | `daggerLight1`; after its wind-up `daggerCharge`, held at the coil (both fists by the head) while the button stayed down; the strike on release; then `idleDaggers` |
+
+  Every clip in this log was the pack's.
+- **Blades on the game's own daggers.** The game was frozen, then each clip was posed frame by frame on the player's
+  own animation mixer. The game's dagger meshes in the hands were measured against the convex shapes of the head,
+  torso and thighs.
+  - Before the fix, Eve's stab put the right blade 4.6 cm inside the head, and the right hook 1.7 cm.
+  - After it, on both bodies, every blade stayed at least 5.2 cm outside the head and torso at every frame.
+- **Frames.** They come from the game's own renderer, from behind, the right and the front. They are in the studio at
+  `AnimationAssets/Testing/dagger-game/live_*_20261128.jpg`.
+  - The pane was hidden, so they were rendered off-screen without tone mapping, which makes them darker.
 
 ## Limits
 
 - **Keyframed, not captured.**
-- **Blade checks are modelled.** The studio checks the blades on the line the game seats them on, not on the game's
-  dagger meshes. The live test shows the real daggers.
+- **The blade line is a measurement.** The studio and the test place the blade by a line measured from the game's grip
+  on 2026-11-28. If the grip changes (`weapons/weaponGripMath.js`), measure it again.
 - **Bare bodies only.** Armour and clothing were not checked.
 
 ## Undo

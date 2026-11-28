@@ -5,8 +5,9 @@
 // These checks read the files as the game does (GLTFLoader, the pack's manifest and binding rule) and pin:
 // - the owner's timing, the same numbers the code-made moves use (hit, sweep, cancel, wind-up, the charge's coil);
 // - every move starting and ending on the guard the idle loops on (the game blends between them), a seamless idle;
-// - both fists never inside the head or the torso at any frame (deeper than 1.5 cm into the convex shape of that
-//   body part's own skin, posed by the clip);
+// - both fists and both blades never inside the head or the torso at any frame (deeper than 1.5 cm into the convex
+//   shape of that body part's own skin, posed by the clip). The blade is where the game's grip puts it, measured live
+//   in the game (2026-11-28): rigid in the hand's anatomical frame, out of the little-finger side of the fist;
 // - each strike reaching out: at its hit, the striking fist is well in front of where it waits in the guard.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -25,6 +26,9 @@ const CODE = Object.fromEntries([...DAGGER_COMBO, DAGGER_CHARGE, IDLE_DAGGERS].m
 const STATES = Object.keys(CODE);
 const STRIKER = { daggerLight1: ['Right'], daggerLight2: ['Left'], daggerStab: ['Right'], daggerCharge: ['Left', 'Right'] };
 const DEPTH_LIMIT = 0.015;
+// the game's dagger in the hand's anatomical frame (x: little finger to index knuckle, y: wrist to middle knuckle, z = x cross y)
+const BLADE = { Left: { tip: [-0.3204, -0.0277, 0.1534], butt: [0.0452, 0.1114, -0.0836] },
+  Right: { tip: [-0.2985, -0.0373, -0.1739], butt: [0.0413, 0.1322, 0.0769] } };
 
 async function parse(path) {
   const b = readFileSync(path);
@@ -69,7 +73,7 @@ test('both bodies list all five dagger clips with the owner\'s timing', () => {
 
 for (const name of ['female', 'male']) {
   const rigId = BODIES[name].rigId;
-  test(`${name}: the dagger clips bind, start and end on the guard, keep the fists out of the head and body, and reach out`, async (t) => {
+  test(`${name}: the dagger clips bind, start and end on the guard, keep fists and blades out of the head and body, and reach out`, async (t) => {
     const model = await loadBody(name);
     const clips = {};
     for (const { state, url } of daggerEntries(rigId)) {
@@ -109,6 +113,17 @@ for (const name of ['female', 'male']) {
     const bone = (n) => { let f = null; model.traverse((o) => { if (!f && o.isBone && short(o.name) === n) f = o; }); return f; };
     const chest = bone('Spine2');
     const hands = { Left: bone('LeftHand'), Right: bone('RightHand') };
+    const knuckles = Object.fromEntries(['Left', 'Right'].map((side) => [side, { mid: bone(side + 'HandMiddle1'), index: bone(side + 'HandIndex1'), pinky: bone(side + 'HandPinky1') }]));
+    const bladePoints = (side) => {
+      const w = hands[side].getWorldPosition(new THREE.Vector3());
+      const y = knuckles[side].mid.getWorldPosition(new THREE.Vector3()).sub(w).normalize();
+      const x = knuckles[side].index.getWorldPosition(new THREE.Vector3()).sub(knuckles[side].pinky.getWorldPosition(new THREE.Vector3()));
+      x.sub(y.clone().multiplyScalar(x.dot(y))).normalize();
+      const z = new THREE.Vector3().crossVectors(x, y);
+      const at = ([a, b, c]) => w.clone().addScaledVector(x, a).addScaledVector(y, b).addScaledVector(z, c);
+      const tip = at(BLADE[side].tip), butt = at(BLADE[side].butt);
+      return [0.42, 0.55, 0.7, 0.85, 1].map((f) => butt.clone().lerp(tip, f));
+    };
     const v = new THREE.Vector3();
     const skinPoint = ([mesh, i]) => mesh.getVertexPosition(i, v).applyMatrix4(mesh.matrixWorld).clone();
     const depthIn = (hull, p) => -Math.max(...hull.faces.map((f) => f.distanceToPoint(p)));
@@ -133,12 +148,14 @@ for (const name of ['female', 'male']) {
         poseAt(clip, time);
         const hulls = { head: new ConvexHull().setFromPoints(groups.head.map(skinPoint)), torso: new ConvexHull().setFromPoints(groups.torso.map(skinPoint)) };
         for (const side of ['Left', 'Right']) {
-          const fist = [...groups[side].map(skinPoint), hands[side].getWorldPosition(new THREE.Vector3())];
-          for (const [part, hull] of Object.entries(hulls)) {
-            const d = Math.max(...fist.map((p) => depthIn(hull, p)));
-            const key = `${state} ${side.toLowerCase()} fist in ${part} (cm)`;
-            if (!(d * 100 <= worst[key])) worst[key] = d * 100;
-            assert.ok(d <= DEPTH_LIMIT, `${state} at ${time.toFixed(3)} s: the ${side.toLowerCase()} fist is ${(d * 100).toFixed(1)} cm inside the ${part}`);
+          const parts = { fist: [...groups[side].map(skinPoint), hands[side].getWorldPosition(new THREE.Vector3())], blade: bladePoints(side) };
+          for (const [what, pts] of Object.entries(parts)) {
+            for (const [part, hull] of Object.entries(hulls)) {
+              const d = Math.max(...pts.map((p) => depthIn(hull, p)));
+              const key = `${state} ${side.toLowerCase()} ${what} in ${part} (cm)`;
+              if (!(d * 100 <= worst[key])) worst[key] = d * 100;
+              assert.ok(d <= DEPTH_LIMIT, `${state} at ${time.toFixed(3)} s: the ${side.toLowerCase()} ${what} is ${(d * 100).toFixed(1)} cm inside the ${part}`);
+            }
           }
         }
       }
