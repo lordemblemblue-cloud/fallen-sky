@@ -5,50 +5,44 @@ import {readFileSync} from 'node:fs';
 const css=readFileSync(new URL('../src/components/fantasybattle/titleMist.css',import.meta.url),'utf8');
 const svg=readFileSync(new URL('../public/fantasybattle/sapphire/effects/title-ink-mist.svg',import.meta.url),'utf8');
 const route=readFileSync(new URL('../src/routes/fantasy-battle.jsx',import.meta.url),'utf8');
-test('mist is scoped to original title menu and cannot intercept inputs',()=>{
-  assert.ok(route.includes("import '@/components/fantasybattle/titleMist.css';"));
-  for(const pseudo of ['::before','::after'])assert.ok(css.includes('.fa-ui[data-screen="01"][data-staged-original="true"] .fa-original-menu'+pseudo));
-  assert.ok(css.includes('width: 33%'));
-  assert.ok(css.includes('pointer-events: none'));
-  assert.match(css,/\.fa-original-menu > \*\s*\{\s*z-index: 1/);
-});
-test('mist repeats by an exact positive horizontal tile distance',()=>{
-  assert.ok(css.includes('background-repeat: repeat-x'));
-  assert.ok(css.includes('background-size: var(--fa-mist-tile) 100%'));
-  assert.ok(css.includes('from { background-position-x: 0; }'));
-  assert.ok(css.includes('to { background-position-x: var(--fa-mist-tile); }'));
-  assert.ok(css.includes('linear infinite'));
-  assert.ok(svg.includes('stroke="url(#outline)"'));
-  assert.doesNotMatch(svg,/<script|<filter|<animate|<image/i);
-});
-test('both reduced motion settings suppress the decoration',()=>{
-  assert.ok(css.includes('.fa-root.reduced-motion .fa-original-menu::before'));
-  assert.ok(css.includes('@media (prefers-reduced-motion: reduce)'));
-  assert.ok((css.match(/display: none;/g)||[]).length>=2);
-});
+const adventure=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
 
-test('right-side fog is confined to original art and preserves the left menu layout',()=>{
- const selector='.fa-ui[data-screen="01"][data-staged-original="true"] .fa-template';
- for(const pseudo of ['::before','::after'])assert.ok(css.includes(selector+pseudo));
- const shared=css.slice(css.indexOf(selector+'::before,'),css.indexOf(selector+'::before {'));
- for(const value of ['right: 0','width: 69%','pointer-events: none','background-repeat: repeat-x','background-size: var(--fa-mist-tile) 100%','animation: fa-title-mist-wave'])assert.ok(shared.includes(value),value);
- const top=css.slice(css.indexOf(selector+'::before {'),css.indexOf(selector+'::after {',css.indexOf(selector+'::before {')));
- const lower=css.slice(css.indexOf(selector+'::after {',css.indexOf(selector+'::before {')),css.indexOf('/* Real controls'));
- assert.ok(top.includes('30s')&&top.includes('opacity: .22'));
- assert.ok(lower.includes('40s')&&lower.includes('opacity: .28'));
- assert.doesNotMatch(css,/\.fa-template\s*\{[^}]*position\s*:\s*relative/);
+test('four independent outlined fog bands exist inside the title art only',()=>{
+ assert.ok(route.includes("import '@/components/fantasybattle/titleMist.css';"));
+ for(const side of ['left','right'])for(const level of ['upper','lower']){
+  const name='fa-scene-mist-'+side+'-'+level;
+  assert.ok(adventure.includes('className="fa-scene-mist '+name+'"'),name);
+  assert.ok(css.includes('.'+name),name);
+ }
+ assert.match(css,/\.fa-title-scene \.fa-scene-mist\s*\{[^}]*overflow: hidden;[^}]*pointer-events: none/);
+ assert.match(css,/\.fa-scene-mist-left-upper, \.fa-scene-mist-left-lower\s*\{[^}]*width: 33%/);
+ assert.match(css,/\.fa-scene-mist-right-upper, \.fa-scene-mist-right-lower\s*\{[^}]*width: 69%/);
+ assert.doesNotMatch(css,/\.fa-original-menu::|\.fa-template::/);
 });
-test('right-side bands honor in-game and system reduced motion',()=>{
- const selector='.fa-ui[data-screen="01"][data-staged-original="true"] .fa-template';
- const reduced=css.slice(css.indexOf('.fa-root.reduced-motion'));
- const system=reduced.slice(reduced.indexOf('@media (prefers-reduced-motion: reduce)'));
- for(const pseudo of ['::before','::after']){
-  assert.ok(reduced.includes('.fa-root.reduced-motion '+selector+pseudo));
-  assert.ok(system.includes(selector+pseudo));
+test('fog uses a pre-extended repeating strip moving exactly one tile to the right',()=>{
+ assert.ok(css.includes('inset: 0 0 0 calc(-1 * var(--fa-mist-tile))'));
+ assert.ok(css.includes("repeat-x 0 center / var(--fa-mist-tile) 100%"));
+ assert.ok(css.includes('from { transform: translateX(0); }'));
+ assert.ok(css.includes('to { transform: translateX(var(--fa-mist-tile)); }'));
+ assert.ok(css.includes('linear infinite'));
+ assert.doesNotMatch(css,/background-position-x\s*:/);
+ assert.ok(svg.includes('stroke="url(#outline)"'));
+ assert.doesNotMatch(svg,/<script|<filter|<animate|<image/i);
+});
+test('four bands retain distinct speed and opacity',()=>{
+ for(const [name,duration,opacity] of [['left-upper','24s','.37'],['left-lower','34s','.46'],['right-upper','30s','.22'],['right-lower','40s','.28']]){
+  const start=css.indexOf('.fa-scene-mist-'+name+' {');
+  assert.ok(start>=0,name);
+  const rule=css.slice(start,css.indexOf('}',start));
+  assert.ok(rule.includes('--fa-mist-duration: '+duration),name);
+  assert.ok(rule.includes('opacity: '+opacity),name);
  }
 });
-
-const adventure=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+test('reduced motion suppresses the entire scene including all four fog bands',()=>{
+ assert.ok(adventure.includes("original&&id==='01'&&!settings.reducedMotion"));
+ assert.ok(css.includes('.fa-root.reduced-motion .fa-title-scene { display: none; }'));
+ assert.match(css,/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.fa-title-scene \{ display: none; \}/);
+});
 test('living scenery is mounted inside the original title plate only',()=>{
  const start=adventure.lastIndexOf('className="fa-template"');
  const scene=adventure.indexOf('className="fa-title-scene"',start);
