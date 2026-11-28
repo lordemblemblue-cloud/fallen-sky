@@ -4,6 +4,7 @@ import {treasureFor} from './treasureCatalog.mjs';
 import {BOND_GIFT} from './companionBonds.mjs';
 import {learnedPassives,applyPassives} from './passiveSkills.mjs';
 import {ULTIMATE_ID,ULTIMATE_LEVEL} from './battleRules.mjs';
+import {encounterReward} from './encounterRewards.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats,activeGearSetId,ascensionLevel,scaledSet,validAscensions,cleanAscensions,MAX_ASCENSION,SOCKET_GEMS,MAX_SOCKET_RANK,equippedSocketItems,socketFor,validSockets,cleanSockets,MAX_ENCHANT_RANK,enchantRank,enchantBonus,validEnchants,cleanEnchants} from './equipmentCatalog.mjs';
@@ -195,17 +196,15 @@ function grantLoot(p,requested){
  return {inventory,loot};
 }
 export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
-  if(!p||!encounter?.id||encounter.practice||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[]};
-  // Explicit prototype balancing: one-time 25 XP for normal encounters, 50 elite, 100 boss.
-  const xp=Math.min(100000-p.xp,encounter.category==='Boss'?100:encounter.category==='Elite'?50:25);
-  const gold=Math.min(10000000-p.gold,encounter.category==='Boss'?80:encounter.category==='Elite'?45:25);
-  const ore=encounter.category==='Boss'?3:encounter.category==='Elite'?2:1;
+  if(!p||!encounter?.id||encounter.practice||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[],firstVictory:false};
+  const reward=encounterReward(encounter);
+  const xp=Math.min(100000-p.xp,reward.xp),gold=Math.min(10000000-p.gold,reward.gold),ore=reward.ore;
   const oldLevel=levelFor(p.xp),newLevel=levelFor(p.xp+xp);
   const gearId=Object.hasOwn(ENCOUNTER_GEAR_REWARDS,encounter.id)?ENCOUNTER_GEAR_REWARDS[encounter.id]:null;
   const {inventory,loot}=grantLoot(p,[{id:'sapphireOre',count:ore},...(gearId?[{id:gearId,count:1}]:[])]);
   const completedEncounters=[...p.world.completedEncounters,encounter.id];
   const quest=p.quests.grove==='active'&&completedEncounters.includes('wilds_grove_01')?'complete':p.quests.grove;
-  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,leveled:newLevel>oldLevel,unlocked:learnedSkills(newLevel).filter(x=>!learnedSkills(oldLevel).includes(x))};
+  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,firstVictory:true,leveled:newLevel>oldLevel,unlocked:learnedSkills(newLevel).filter(x=>!learnedSkills(oldLevel).includes(x))};
 }
 export function allocate(p,key){if(!STAT_KEYS.includes(key)||pointsFor(p)<1)return p;return {...p,hp:p.hp+(key==='vitality'?10:0),attributes:{...p.attributes,[key]:p.attributes[key]+1}};}
 export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return applyPassives(addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+enhancementLevel(p,p?.equipped)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero'),p?levelFor(p.xp):0);}
