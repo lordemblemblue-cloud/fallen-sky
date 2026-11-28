@@ -1,0 +1,115 @@
+/* Sapphire sumi-e: reuse the title's actual painted scene and ink-cloud motif.
+   This is a presentation skin only. The persistent left rail and right-hand
+   workspace, live controls, navigation, and gameplay rules are not replaced. */
+.fa-docked-game-menu{
+ --fa-sumi-paper:#f4f0e6;
+ --fa-sumi-text:#172c49;
+ --fa-sumi-muted:#405875;
+ --fa-sumi-indigo:#284e84;
+ --fa-sumi-gold:#a47d40;
+ --fa-sumi-rule:#9a80495c;
+ --fa-sumi-paint:url('/fantasybattle/sapphire/backgrounds/title-original.webp');
+ --fa-sumi-cloud:url('/fantasybattle/sapphire/effects/title-ink-mist.svg');
+ font-family:Georgia,'Times New Roman',serif;
+}
+.fa-game-menu-scene.fa-docked-game-menu{
+ background:linear-gradient(90deg,#101d39b8, #1e3b6470 20%,transparent 42%);
+}
+.fa-docked-game-menu .fa-game-menu-sidebar{
+ position:relative;isolation:isolate;
+ background:linear-gradient(90deg,#101e38d9,#1c3766ae 70%,#2c54851a);
+ border-radius:12px 30px 30px 12px;
+}
+.fa-docked-game-menu .fa-game-menu-sidebar::before{
+ content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+ background:var(--fa-sumi-paint) 12% center/auto 100% no-repeat;
+ opacity:.17;mask-image:linear-gradient(90deg,#000 0%,#000 48%,transparent);
+}
+.fa-docked-game-menu .fa-game-menu-sidebar::after{
+ content:"";position:absolute;inset:auto 0 0;height:26%;z-index:-1;pointer-events:none;
+ --fa-mist-tile:320px;background:var(--fa-sumi-cloud) repeat-x 0 center/var(--fa-mist-tile) 100%;
+ mask-image:linear-gradient(90deg,#000,transparent);opacity:.35;
+ animation:fa-title-mist-wave 28s linear infinite;
+}
+.fa-docked-game-menu .fa-sidebar-brand{color:#fff1d0;border-bottom:1px solid #e4c78b80;padding-top:10px}
+.fa-docked-game-menu .fa-sidebar-brand span,.fa-docked-game-menu .fa-sidebar-group h2{color:#ead5ac}
+.fa-docked-game-menu .fa-sidebar-link{
+ background:linear-gradient(90deg,#1f4176a8,#365b903b 78%,transparent);
+ color:#f7f2e8;border-radius:12px 3px 12px 3px;
+}
+.fa-docked-game-menu .fa-sidebar-link[aria-current="page"]{
+ background:linear-gradient(105deg,#244a85,#5589bd 74%,#a9c6dd70);
+ color:#fff3d4;box-shadow:inset 3px 0 #e4c17d,inset 0 -1px #d4b479a0;
+}
+.fa-docked-game-menu .fa-sidebar-link:hover:not(:disabled){background:linear-gradient(100deg,#365c94,#779fca60)}
+.fa-docked-game-menu :is(.fa-sidebar-resume,.fa-sidebar-title){
+ color:#fff1d1;background:linear-gradient(115deg,#193664,#32639c 72%,#92b6db88);
+ border:1px solid #ddc08aa0;border-radius:18px 5px 18px 5px;
+ box-shadow:inset 0 1px #f9ecd259,0 2px 4px #10223f55;
+}
+/* One softly feathered paper-glass area; no opaque artwork or nested cards.
+   The outer edges reveal the live world; the reading area retains dark ink. */
+.fa-docked-game-menu .fa-service-workspace{
+ color:var(--fa-sumi-text);text-shadow:none;
+ background:radial-gradient(ellipse at 50% 47%,#faf6eefa 0%,#f2f3f3f5 54%,#dbe8f5e8 79%,#c3d8ecb8 93%,#b2cbe670 100%);
+ box-shadow:inset 0 1px 0 #fff7db9c;
+ scrollbar-color:#527bab #e7edf344;
+}
+.fa-docked-game-menu .fa-service-workspace::before{
+ background:var(--fa-sumi-paint) center/cover no-repeat;
+ opacity:.18;mask-image:radial-gradient(ellipse,transparent 18%,#000 90%);
+}
+.fa-docked-game-menu .fa-game-menu-header{
+ border-color:transparent;
+ border-image:linear-gradient(90deg,#c4a15d85,#e2cfa8 35%,#6b8ebb65,transparent) 1;
+}
+.fa-docked-game-menu .fa-game-menu-header h1,
+.fa-docked-game-menu .fa-game-menu-body .fa-panel h2,
+.fa-docked-game-menu .fa-game-menu-body h2,
+.fa-docked-game-menu .fa-game-menu-body h3{
+ color:var(--fa-sumi-text);text-shadow:none;
+}
+.fa-docked-game-menu .fa-game-menu-header h1{font-style:italic;font-weight:500;letter-spacing:.012em}
+.fa-docked-game-menu .fa-game-menu-header .fa-glass-kicker{color:#5b4c34;letter-spacing:.16em}
+.fa-docked-game-menu .fa-game-menu-body .fa-panel{color:var(--fa-sumi-text);text-shadow:none}
+.fa-docked-game-menu .fa-game-menu-body .fa-panel small,
+.fa-docked-game-menu .fa-pause-summary label span,
+.fa-docked-game-menu .fa-map-row span:last-child{color:var(--fa-sumi-muted)}
+.fa-docked-game-menu .fa-service-workspace .fa-button{
+ background:linear-gradient(110deg,#f3f6fae8,#d4e2f1d9 65%,#b0c9e298);
+ border:1px solid #b09a6b80;border-radius:13px 4px 13px 4px;
+ color:#1c3659;text-shadow:none;
+ box-shadow:inset 0 1px #fff9e9b8;
+}
+.fa-docked-game-menu .fa-service-workspace .fa-button:is(.primary,[aria-pressed="true"]),
+.fa-docked-game-menu .fa-service-workspace .fa-button:hover:not(:disabled){
+ color:#fff4da;background:linear-gradient(110deg,#1e3a6c,#376ca8 75%,#729fcb);
+ border-color:#b99b58;box-shadow:inset 0 1px #f9e6b87a;
+}
+.fa-docked-game-menu .fa-service-workspace .fa-button:is(.primary,[aria-pressed="true"],:hover:not(:disabled)) :is(small,strong,span){color:inherit}
+.fa-docked-game-menu .fa-service-workspace .fa-button:disabled{opacity:.63}
+.fa-docked-game-menu .fa-service-workspace :is(input:not([type=checkbox]),select){
+ background:#f7f8fae8;color:var(--fa-sumi-text);color-scheme:light;
+ border:0;border-bottom:1px solid #6a87a2a0;border-radius:5px;text-shadow:none;
+}
+.fa-docked-game-menu .fa-service-workspace :is(input,select):focus-visible,
+.fa-docked-game-menu .fa-service-workspace .fa-button:focus-visible{outline-color:#285c9b}
+.fa-docked-game-menu .fa-service-workspace select option{color:#182d4b;background:#f3f5f9}
+.fa-docked-game-menu .fa-service-workspace input::placeholder{color:#536d8a}
+.fa-docked-game-menu .fa-service-workspace :is(.fa-stats dd,.fa-item-count,.fa-service-total strong,.fa-service-balance strong,.fa-service-rows strong,.fa-trade-price,.fa-craft-material>span,.fa-forge-arrow,.fa-forge-inputs>span){color:#3d5480}
+.fa-docked-game-menu .fa-service-workspace :is(.fa-stats>div,.fa-map-row,.fa-service-balance,.fa-service-total,.fa-service-rows>div,.fa-sanctuary-card,.fa-entrance-enemy,.fa-settings-row){border-color:var(--fa-sumi-rule)}
+.fa-docked-game-menu .fa-service-workspace .fa-workspace-stat-head{background:#c1d2e375;color:#2f4d72}
+.fa-docked-game-menu .fa-service-workspace .fa-workspace-delta[data-delta="gain"]{color:#21633c}
+.fa-docked-game-menu .fa-service-workspace .fa-workspace-delta[data-delta="loss"]{color:#9e383c}
+.fa-docked-game-menu .fa-service-workspace .fa-workspace-delta:is([data-delta="same"],[data-delta="unknown"]){color:#405875}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service .fa-loading-content{color:var(--fa-sumi-text);text-shadow:none}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service :is(.fa-glass-load-heading h1,.fa-glass-save-info h2,.fa-settings-detail h2){color:var(--fa-sumi-text);text-shadow:none}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service :is(.fa-glass-load-heading p,.fa-glass-save-info small,.fa-glass-loading-hint,.fa-glass-backup,.fa-settings-hint,.fa-settings-value,.fa-settings-row small,.fa-glass-slot-info small){color:var(--fa-sumi-muted);text-shadow:none}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service .fa-glass-kicker{color:#5b4c34}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service :is(.fa-glass-save-detail,.fa-settings-detail)::before{display:none}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service .fa-settings-detail{color:var(--fa-sumi-text)}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service .fa-settings-ornament{color:#a47d40}
+.fa-docked-game-menu .fa-service-workspace .fa-embedded-service .fa-glass-load-error,
+.fa-docked-game-menu .fa-service-workspace [role="alert"]{color:#8e3038}
+@media(prefers-reduced-motion:reduce){.fa-docked-game-menu .fa-game-menu-sidebar::after{animation:none}}
+.fa-root.reduced-motion .fa-docked-game-menu .fa-game-menu-sidebar::after{animation:none}

@@ -412,16 +412,24 @@ test('original notifications show only local session events and categorize actua
  for(const forbidden of ['transact(','autosave(','rewardVictory(','localStorage'])assert.ok(!section.includes(forbidden),forbidden);
 });
 
-test('original first-time setup uses actual guest settings and routes drafts and valid saves through existing flows',()=>{
- assert.equal(stagedOriginalFor('48').wideOnly,true);
- assert.ok(templateUrl('48').startsWith('data:image/svg+xml,'));
+test('character creation and settings are separate scene-integrated steps',()=>{
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
- const section=page.slice(page.indexOf('function FirstTimeSetup('),page.indexOf('function Panel('));
- for(const marker of ['maxLength={40}','Object.entries(APPEARANCES)','settings.quality','settings.muted','settings.reducedMotion','onSettings({quality:value})','disabled={!validCount||Boolean(saveError)}','No account required','onClick={onCreate}'])assert.ok(section.includes(marker),marker);
- for(const forbidden of ['localStorage','writeSlot(','createProfile(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
- const handler=page.split('\n').find(line=>line.trim().startsWith("case '48':"));
- for(const marker of ["s.id==='48'&&!s.running&&!s.encounter","go('19')",'reloadSlots()','mostRecent(fresh.slots)','fresh.error||!latest',"go('02')",'onSettings={applySettings}'])assert.ok(handler.includes(marker),marker);
+ const section=page.slice(page.indexOf('function FirstTimeSetup('),page.indexOf('function NewAdventureSettings('));
+ const settings=page.slice(page.indexOf('function NewAdventureSettings('),page.indexOf('function Panel('));
+ for(const marker of ['CharacterCreationViewer','maxLength={40}','type="date"','onBirthday','Next · Settings','fa-character-info','onCreate()'])assert.ok(section.includes(marker),marker);
+ for(const forbidden of ['settings.quality','settings.muted','Load Existing Save','writeSlot(','localStorage','fa-original-setup'])assert.ok(!section.includes(forbidden),forbidden);
+ for(const marker of ['CharacterCreationViewer','settings.quality','settings.muted','settings.reducedMotion','Start adventure','onClick={onEnter}'])assert.ok(settings.includes(marker),marker);
+ assert.match(page,/createProfile\(name,birthday\);replaceProfile\(p\);go\('20'\)/);
+ assert.match(page,/case '48':\s*case '19':content=<FirstTimeSetup/);
+ assert.match(page,/case '20':content=<NewAdventureSettings/);
+ assert.equal(artFor('48').asset,'sanctuary');
+ const viewer=readFileSync(new URL('../src/components/fantasybattle/CharacterCreationViewer.jsx',import.meta.url),'utf8');
+ for(const marker of ['CELESTIAL_ASSETS.character.url','GLTFLoader','OrbitControls','createSceneRenderer','destroySceneRenderer','ResizeObserver','cancelAnimationFrame','releaseModel','Retry preview'])assert.ok(viewer.includes(marker),marker);
+ const css=readFileSync(new URL('../src/components/fantasybattle/sapphireCharacterCreation.css',import.meta.url),'utf8');
+ assert.match(css,/\.fa-character-layout\{[^}]*grid-template-columns:minmax\(0,1.15fr\) minmax\(0,1fr\)/);
+ assert.match(css,/\.fa-character-info::before\{[^}]*radial-gradient/);
 });
+
 
 
 import {GROVE_STORY,groveStoryState} from '../src/components/fantasybattle/core/groveStory.mjs';
@@ -738,9 +746,9 @@ test('settings page shares category navigation and actual handlers across origin
   assert.ok(section.includes("['"+category+"',"),category);
   assert.ok(section.includes("case '"+category+"':"),category);
  }
- for(const marker of ["useState('graphics')",'switch(category)','aria-pressed={category===key}','setCategory(key)','aria-controls="fa-settings-detail"','applySettings({quality:e.target.value})',"settings.muted,'muted'","settings.reducedMotion,'reducedMotion'",'onTutorial(0)','onTutorial(1)','importBackup(file)','recoveryControl','fullscreenchange','document.exitFullscreen()','document.documentElement.requestFullscreen()','fa-settings-art','fa-settings-fallback'])assert.ok(section.includes(marker),marker);
+ for(const marker of ["useState('graphics')",'switch(category)','aria-pressed={category===key}','setCategory(key)','aria-controls="fa-settings-detail"','applySettings({quality:e.target.value})',"settings.muted,'muted'","settings.reducedMotion,'reducedMotion'",'onTutorial(0)','onTutorial(1)','importBackup(file)','recoveryControl','fullscreenchange','document.exitFullscreen()','document.documentElement.requestFullscreen()','fa-settings-fallback'])assert.ok(section.includes(marker),marker);
  const route=page.slice(page.indexOf("    case '03':"),page.indexOf("    case '04':"));
- assert.ok(route.includes('<SettingsPage original={original}'));
+ assert.ok(route.includes('<SettingsPage settings={settings}'));
  assert.ok(route.includes('applySettings={applySettings}'));
  assert.ok(route.includes('importBackup={importBackup}'));
  assert.doesNotMatch(route,/getElementById/);

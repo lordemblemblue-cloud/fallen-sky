@@ -22,12 +22,14 @@ test('progress is bounded and invalid data does not appear complete',()=>{
  for(const stage of [-1,NaN,undefined,1.5,'3'])assert.equal(loadingMilestones(false,stage).completed,0);
  assert.equal(loadingMilestones(true,9).completed,3);
 });
-test('save menu uses only the right glass panel and actual valid saves',()=>{
- assert.match(menu,/fa-glass-load-panel/);
+test('save menu uses panoramic scene and actual valid saves',()=>{
+ assert.match(menu,/fa-loading-scene fa-menu-scene/);
+ assert.match(menu,/fa-loading-content fa-scene-load/);
+ assert.doesNotMatch(menu,/fa-glass-load-panel/);
  assert.match(menu,/SLOT_IDS\.map/);
  assert.match(menu,/record\?\.status==='valid'/);
  assert.match(menu,/disabled=\{!selectedSave\}/);
- assert.match(menu,/begin\(selectedSave\.profile,selectedSave\.id,selectedSave\.stamp\)/);
+ assert.match(menu,/loadDisplayedSave\(selectedSave\)/);
  assert.match(menu,/newHero/);
  assert.match(css,/\.fa-glass-load-layout\{[^}]*justify-content:flex-end/);
 });
@@ -78,4 +80,24 @@ test('world startup has one compatibility attempt and stale frame messages are i
  assert.match(src,/key=\{worldRun.id\}/);
  const route=readFileSync(new URL('../src/routes/fantasy-battle-world.jsx',import.meta.url),'utf8');
  assert.match(route,/\.\.\.event,run/);
+});
+
+test('panoramic controls show real slot count, recent save and optional manual fallback',()=>{
+ assert.match(menu,/validSlots.length\} of \{SLOT_IDS.length/);
+ assert.match(menu,/recent\?\.id===s\?' · Most recent'/);
+ assert.match(loading,/slowLoad&&!encounter&&!worldRun.webgl&&<Btn/);
+ assert.match(loading,/Try compatibility mode/);
+ assert.match(loading,/onClick=\{leaveTitle\}/);
+ const scenes=readFileSync(new URL('../src/components/fantasybattle/sapphireSceneMenus.css',import.meta.url),'utf8');
+ assert.match(scenes,/\.fa-loading-content \.fa-button:focus-visible/);
+ assert.match(scenes,/@media\(pointer:coarse\)/);
+});
+
+test('loading a displayed save rechecks the revision and gives restoration its own deadline',()=>{
+ assert.match(src,/resolveDisplayedSave\(fresh,displayed\)/);
+ assert.match(src,/loadDisplayedSave\(recent\)/);
+ assert.match(menu,/loadNotice&&/);
+ assert.match(src,/armWorldDeadline\(worldRunRef.current,true\)/);
+ assert.match(src,/restoring\?15000:run.webgl\?30000:15000/);
+ assert.match(loading,/aria-current=\{index===loading.completed\?'step':undefined\}/);
 });

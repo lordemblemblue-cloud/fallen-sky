@@ -1,0 +1,118 @@
+/* Live game menu: one continuous feathered glass wash, no baked frames.
+   All workspace sections use ordinary document flow, never artwork coordinates. */
+.fa-game-menu-scene{position:absolute;inset:0;display:flex;flex-direction:column;overflow:auto;overscroll-behavior:contain;padding:clamp(16px,3vh,38px) clamp(16px,5vw,80px);gap:clamp(14px,2.5vh,28px);background:radial-gradient(ellipse at 50% 45%,#091b36e8 0%,#102846d9 43%,#122d4c9e 72%,#091b365c 100%);scrollbar-width:thin;scrollbar-color:#97b6d1 transparent;color:#edf2f9;font-size:clamp(14px,1.15vw,18px);line-height:1.45}
+.fa-game-menu-header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;flex-shrink:0;padding-bottom:12px;border-bottom:1px solid #c8e6ff55}
+.fa-game-menu-header h1{font-size:clamp(28px,3.5vw,55px);font-weight:500;color:#f2dfb8;line-height:1.05;margin:6px 0;text-shadow:0 2px 10px #071426}
+.fa-game-menu-header nav,.fa-menu-paging{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fa-game-menu-body{display:grid;grid-template-columns:minmax(135px, .72fr) minmax(0,1.45fr) minmax(0,1.1fr);gap:clamp(14px,3vw,44px);align-items:start;flex:1;min-width:0}
+.fa-game-menu-body .fa-panel{position:relative!important;inset:auto!important;width:auto!important;height:auto!important;min-height:0;min-width:0;margin:0;padding:8px 0 20px;border:0;border-radius:0;background:none;box-shadow:none;overflow:visible;display:flex;gap:10px;font:inherit;color:inherit}
+.fa-game-menu-body .fa-panel>*{min-width:0;flex-shrink:0}
+.fa-game-menu-body .fa-panel h2,.fa-game-menu-body h2{font-size:clamp(19px,2vw,28px);font-weight:500;color:#f2dfb8;margin:0 0 8px}
+.fa-game-menu-body h3{color:#f2dfb8;font-size:1.08em;margin:10px 0 2px;font-weight:500}
+.fa-game-menu-body .fa-panel p{margin:0;overflow-wrap:anywhere}
+.fa-game-menu-body .fa-panel small{color:#c7d9ec}
+.fa-game-menu-scene .fa-button{min-height:44px;padding:8px 14px;border:1px solid #a7d5f340;border-radius:9px;background:linear-gradient(105deg,#375e8c88,#142b4c55);box-shadow:inset 0 1px #c1e7ff26;color:#edf3fa;white-space:normal;overflow-wrap:anywhere;flex-direction:row;font-size:inherit;max-width:100%}
+.fa-game-menu-scene .fa-button.primary,.fa-game-menu-scene .fa-button[aria-pressed="true"]{background:linear-gradient(105deg,#528ec4bc,#234e78a0);border-color:#b9e4ffa0;box-shadow:inset 2px 0 #b7e9ff}
+.fa-game-menu-scene .fa-button:hover:not(:disabled){background:linear-gradient(105deg,#578ec4c0,#234e78a0)}
+.fa-game-menu-scene .fa-button:focus-visible,.fa-game-menu-scene :is(input,select):focus-visible{outline:2px solid #a8e7ff;outline-offset:3px}
+.fa-game-menu-scene .fa-panel :is(input:not([type=checkbox]),select){box-sizing:border-box;width:100%;min-width:0;min-height:42px;border:0;border-bottom:1px solid #c6eaff8a;border-radius:7px;background:#152e50c4;color:#edf2fa;padding:8px 12px;font:inherit;color-scheme:dark}
+.fa-game-menu-scene progress{width:100%;height:10px;accent-color:#8bd5fa}
+.fa-game-menu-body .fa-panel .fa-archer-portrait:not(.small){width:auto;max-width:100%;max-height:clamp(120px,38vh,340px);flex:none;object-fit:contain;align-self:center}
+.fa-menu-hero{display:flex;justify-content:center;min-height:100px;background:radial-gradient(ellipse,#6aa8e229,transparent 70%)}
+.fa-game-menu-body .fa-panel .fa-button:is(.fa-journal-entry,.fa-skillbook-node,.fa-bestiary-card,.fa-item-inv-card,.fa-item-row){display:flex;justify-content:flex-start;text-align:left;padding:8px 12px;gap:10px}
+.fa-game-menu-body .fa-panel :is(.fa-item-art,.fa-skill-art){flex:none;width:42px;height:42px;max-width:42px;max-height:42px;object-fit:contain;margin:0}
+.fa-game-menu-body .fa-panel .fa-bestiary-card .fa-archer-portrait{width:40px;height:40px;max-height:none;margin:0;float:none}
+.fa-game-menu-body .fa-panel .fa-bestiary-card span{font-size:1em;text-align:left;max-height:none;overflow:visible}
+.fa-game-menu-body .fa-panel .fa-bestiary-card small{position:static;margin-left:auto}
+.fa-game-menu-body .fa-panel .fa-skillbook-node span,.fa-game-menu-body .fa-panel .fa-skillbook-node small{text-align:left}
+.fa-game-menu-body .fa-panel .fa-skillbook-node small{margin-left:auto}
+.fa-menu-item-list{display:grid;gap:7px}.fa-menu-item-name{flex:1;min-width:0;overflow-wrap:anywhere}.fa-menu-item-list .fa-item-inv-card small{margin-left:auto;white-space:nowrap}
+.fa-menu-selected-art{display:flex;justify-content:center;padding:12px;background:radial-gradient(ellipse,#7cb8ed34,transparent 65%)}
+.fa-game-menu-body .fa-panel .fa-menu-selected-art .fa-item-art{width:100px;height:100px;max-width:100px;max-height:100px}
+.fa-menu-paging{justify-content:center}
+.fa-game-menu-body.pause{display:block}.fa-pause-scene{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(220px,1fr);gap:clamp(20px,5vw,74px)}
+.fa-pause-services{display:grid;gap:18px;align-content:start}.fa-pause-group h2{margin:0 0 10px;padding-bottom:7px;border-bottom:1px solid #c3e2ff40}
+.fa-pause-service-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fa-game-menu-scene .fa-pause-service{min-height:56px;justify-content:flex-start;text-align:left}
+.fa-pause-summary{display:grid;align-content:start;gap:9px;min-width:0}.fa-pause-summary p{margin:0}.fa-pause-summary label{display:grid;gap:4px}.fa-pause-summary label span{font-size:.85em;color:#d3e3f4}
+.fa-pause-live-hero{display:flex;justify-content:center;background:radial-gradient(ellipse,#6aa8e23b,transparent 67%)}.fa-pause-live-hero .fa-archer-portrait{width:auto;max-width:100%;max-height:150px;flex:none}
+.fa-game-menu-body .fa-panel .fa-workspace-equipped{display:grid;grid-template-columns:minmax(0,1fr) 35px minmax(0,1fr);text-align:left}
+.fa-game-menu-body .fa-panel .fa-workspace-equipped .fa-item-art{width:32px;height:32px;max-width:32px;max-height:32px}
+.fa-game-menu-body .fa-panel .fa-workspace-filters{display:flex;flex-wrap:wrap;gap:6px}
+.fa-ui[data-screen="06"] .fa-game-menu-body{grid-template-columns:minmax(120px,.66fr) minmax(140px,.9fr) minmax(180px,1.2fr) minmax(200px,1.3fr)}
+.fa-ui:is([data-screen="27"],[data-screen="30"],[data-screen="39"]) .fa-game-menu-body>.fa-panel:nth-child(4){grid-column:2/-1}
+.fa-scene-save .fa-glass-load-slots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1050px){.fa-ui[data-screen="06"] .fa-game-menu-body{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}}
+@media(max-width:760px){.fa-game-menu-scene{padding:14px 5vw}.fa-game-menu-body,.fa-pause-scene,.fa-ui[data-screen="06"] .fa-game-menu-body{grid-template-columns:minmax(0,1fr)}.fa-game-menu-body .fa-panel{padding:8px 0;border-bottom:1px solid #b9dfff33}.fa-ui:is([data-screen="27"],[data-screen="30"],[data-screen="39"]) .fa-game-menu-body>.fa-panel:nth-child(4){grid-column:auto}.fa-pause-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.fa-game-menu-header nav{width:100%}.fa-game-menu-header nav .fa-button{flex:1}.fa-scene-save .fa-glass-load-slots{grid-template-columns:1fr}}
+/* Equal-weight columns and visible actions, rather than nested independent scrollers. */
+.fa-game-menu-body .fa-panel .fa-item-label{flex:1;min-width:0;overflow-wrap:anywhere}.fa-game-menu-body .fa-panel .fa-item-count{flex:none}
+.fa-game-menu-body .fa-panel .fa-item-row{width:100%}
+.fa-game-menu-body .fa-panel .fa-map-row{align-items:start;gap:10px}.fa-game-menu-body .fa-panel .fa-map-row span:first-child{overflow-wrap:anywhere}
+.fa-game-menu-body .fa-panel .fa-skillbook-node{min-height:54px}
+.fa-game-menu-body .fa-panel .fa-skillbook-node small{max-width:36%;overflow-wrap:anywhere}
+.fa-ui[data-screen="06"] .fa-game-menu-body .fa-panel .fa-workspace-compare{overflow:visible}
+.fa-scene-save .fa-glass-load-actions{width:min(100%,620px)}
+@media(max-width:380px){.fa-pause-service-grid{grid-template-columns:minmax(0,1fr)}.fa-game-menu-header nav .fa-button{min-width:100px}}
+
+/* Service workspaces: readable trade rows, one preview, explicit cost/actions.
+   The surrounding environment is the decorative surface, not fixed panels. */
+.fa-service-tabs{display:flex;gap:8px}.fa-service-tabs .fa-button{flex:1}
+.fa-service-balance,.fa-service-total{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid #bfdef447;overflow-wrap:anywhere}
+.fa-service-balance strong,.fa-service-total strong{color:#f3ddb2;text-align:right;font-variant-numeric:tabular-nums}
+.fa-service-total{border-top:1px solid #bfdef447;background:linear-gradient(90deg,transparent,#70b4ee1c,transparent)}
+.fa-game-menu-body .fa-panel .fa-merchant-card,.fa-game-menu-body .fa-panel .fa-craft-recipe{display:flex;justify-content:flex-start;text-align:left;gap:10px;padding:10px;min-height:58px}
+.fa-trade-item-label{flex:1;min-width:0;display:grid;gap:2px}.fa-game-menu-body .fa-merchant-card strong{font-size:1em}.fa-game-menu-body .fa-merchant-card span,.fa-game-menu-body .fa-merchant-card small{font-size:.85em}.fa-game-menu-body .fa-merchant-card .fa-trade-item-label{font-size:1em}
+.fa-trade-price{color:#f2dfb8;text-align:right;flex:none;max-width:32%;overflow-wrap:anywhere}
+.fa-forge-preview{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,.85fr);align-items:center;gap:12px;padding:14px 0}
+.fa-forge-inputs{display:grid;justify-items:center;gap:10px}.fa-forge-inputs>span,.fa-forge-arrow{color:#e9d9b7;font-size:1.5em}
+.fa-forge-item{width:100%;display:grid;justify-items:center;text-align:center;gap:8px;overflow-wrap:anywhere;padding:12px 0;background:radial-gradient(ellipse,#79baee22,transparent 70%)}
+.fa-forge-result{background:radial-gradient(ellipse,#91d5ff32,transparent 70%)}
+.fa-game-menu-body .fa-panel .fa-forge-item .fa-item-art{width:76px;height:76px;max-width:76px;max-height:76px}
+.fa-game-menu-body .fa-panel .fa-craft-recipe span{flex:1;min-width:0;text-align:left}.fa-game-menu-body .fa-panel .fa-craft-recipe small{margin-left:auto}
+.fa-game-menu-body .fa-panel .fa-craft-material{height:auto;padding:8px 0;gap:10px}.fa-game-menu-body .fa-panel .fa-craft-material>span{color:#f0d7ae}
+.fa-service-output{display:flex;align-items:center;gap:15px;padding:12px 0;background:radial-gradient(ellipse,#7ebceb24,transparent 72%)}
+.fa-service-output>div{min-width:0;overflow-wrap:anywhere}
+.fa-service-rows{display:grid;gap:0}.fa-service-rows>div{display:flex;justify-content:space-between;align-items:start;gap:12px;padding:9px 0;border-bottom:1px solid #c5e2f433}.fa-service-rows strong{text-align:right;color:#eddcba}
+.fa-service-party,.fa-service-enemies{display:grid;gap:10px}
+.fa-game-menu-body .fa-service-party .fa-sanctuary-card{display:grid;grid-template-columns:52px minmax(0,1fr);gap:5px 12px;padding:8px 0;text-align:left;font:inherit;border-bottom:1px solid #c8e6ff33}
+.fa-game-menu-body .fa-service-party .fa-sanctuary-portrait{position:static;width:52px;height:52px;grid-row:span 4;display:grid;place-items:center}
+.fa-game-menu-body .fa-service-party .fa-sanctuary-portrait .fa-archer-portrait{margin:0;float:none;width:48px;height:48px;object-fit:contain}
+.fa-game-menu-body .fa-service-party .fa-sanctuary-card strong{white-space:normal;overflow-wrap:anywhere}.fa-game-menu-body .fa-service-party .fa-sanctuary-card progress{width:100%;height:8px}
+.fa-game-menu-body .fa-service-enemies .fa-entrance-enemy{display:grid;grid-template-columns:64px minmax(0,1fr);text-align:left;gap:8px;padding:8px 0;border-bottom:1px solid #c8e6ff33}
+.fa-game-menu-body .fa-service-enemies .fa-entrance-enemy .fa-archer-portrait{width:64px;height:64px;object-fit:contain;grid-row:span 2;margin:0}
+@media(max-width:420px){.fa-forge-preview{grid-template-columns:minmax(0,1fr);justify-items:center}.fa-forge-arrow{transform:rotate(90deg)}.fa-forge-inputs{width:100%;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center}.fa-game-menu-body .fa-panel .fa-merchant-card{gap:6px;padding:8px}.fa-service-total{flex-wrap:wrap}}
+/* Keep return controls available during long catalog scrolls. */
+.fa-game-menu-header{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,#10263cf5,#10263ce8 80%,#10263c00);padding-top:4px}
+@media(max-height:440px){.fa-game-menu-header{position:static}}
+
+/* Owner correction: preserve a left menu; only the content to its right changes.
+   One feathered glass surface contains the live text and controls, not a full-page
+   rearrangement or a series of outlined cards. */
+.fa-game-menu-scene.fa-docked-game-menu{display:grid;grid-template-columns:clamp(150px,19vw,270px) minmax(0,1fr);align-items:stretch;gap:clamp(12px,3vw,48px);padding:clamp(12px,3vh,36px) clamp(12px,3vw,48px);overflow:hidden;background:linear-gradient(90deg,#091831a8 0%,#0c20394d 24%,transparent 55%);height:auto;box-sizing:border-box}
+.fa-game-menu-sidebar{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0;overflow:hidden;padding:6px 5px 6px 0}
+.fa-sidebar-brand{display:grid;gap:4px;padding:0 8px 10px;color:#f3dfbc;border-bottom:1px solid #bddbf04d}.fa-sidebar-brand span{font-size:.72em;letter-spacing:.14em;text-transform:uppercase;color:#d1e2f4}.fa-sidebar-brand strong{font-weight:500;font-size:clamp(21px,2.2vw,32px)}
+.fa-sidebar-links{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#91b5d1 transparent;padding:2px 5px 4px 2px}
+.fa-sidebar-group{display:grid;gap:3px;margin:12px 0 0}.fa-sidebar-group h2{font-size:.75em;letter-spacing:.1em;text-transform:uppercase;color:#d1e2f4;font-weight:500;margin:0 0 4px;padding:0 10px}
+.fa-docked-game-menu .fa-sidebar-link{display:flex;justify-content:flex-start;text-align:left;width:100%;min-height:36px;padding:7px 11px;border:0;border-radius:5px;background:linear-gradient(90deg,#2a4b7163,transparent);box-shadow:none;text-shadow:0 1px 5px #081329}
+.fa-docked-game-menu .fa-sidebar-link[aria-current="page"]{background:linear-gradient(90deg,#66a5dfa0,#3c77ac40,transparent);box-shadow:inset 3px 0 #c2ecff;color:#fff1ce}
+.fa-docked-game-menu .fa-sidebar-resume,.fa-docked-game-menu .fa-sidebar-title{flex-shrink:0;min-height:42px;width:100%}
+.fa-service-workspace{position:relative;isolation:isolate;min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;gap:12px}
+.fa-docked-game-menu .fa-service-workspace{overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#97b6d1 transparent;padding:clamp(15px,2.4vw,36px);border-radius:clamp(16px,3vw,42px);background:radial-gradient(ellipse at 48% 43%,#0a1a32ed 0%,#102947d9 48%,#1639599c 75%,#17395925 100%);box-shadow:inset 0 1px 0 #e1f1ff25}
+.fa-docked-game-menu .fa-service-workspace::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:linear-gradient(155deg,#b6dbff20,transparent 23%,transparent 77%,#8cc8ef12)}
+.fa-docked-game-menu .fa-game-menu-header{position:static;background:none;padding:0 0 12px;flex-shrink:0}
+.fa-docked-game-menu .fa-game-menu-header h1{font-size:clamp(26px,3vw,46px)}
+.fa-docked-game-menu .fa-game-menu-body{grid-template-columns:minmax(0,.78fr) minmax(0,1.35fr) minmax(0,1fr);gap:clamp(12px,2vw,30px);align-content:start;flex:0 0 auto}
+.fa-docked-game-menu .fa-game-menu-body .fa-panel{padding:4px 0 12px;background:none;border:0}
+.fa-ui[data-screen="06"] .fa-docked-game-menu .fa-game-menu-body{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fa-docked-game-menu .fa-game-menu-body.pause{display:block}
+.fa-pause-overview{max-width:680px;margin:auto;display:grid;gap:12px}
+.fa-pause-overview .fa-pause-summary{width:100%}
+.fa-embedded-service{min-width:0;display:block}
+.fa-service-workspace .fa-embedded-service .fa-loading-scene{position:relative;inset:auto;display:block;overflow:visible;padding:0;background:none;isolation:auto}
+.fa-service-workspace .fa-embedded-service .fa-loading-scene::before,.fa-service-workspace .fa-embedded-service .fa-loading-scene::after{display:none}
+.fa-service-workspace .fa-embedded-service .fa-loading-content{width:100%;margin:0;font-size:inherit}
+.fa-service-workspace .fa-embedded-service .fa-glass-load-heading h1{font-size:clamp(26px,3vw,46px)}
+.fa-service-workspace .fa-embedded-service .fa-scene-settings{gap:18px;grid-template-columns:minmax(110px,.8fr) minmax(0,1.6fr)}
+.fa-service-workspace .fa-embedded-service .fa-scene-save .fa-glass-load-slots{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}
+@media(max-width:1050px){.fa-docked-game-menu .fa-game-menu-body{grid-template-columns:repeat(2,minmax(0,1fr))}.fa-docked-game-menu .fa-game-menu-body>.fa-panel:last-child:nth-child(3){grid-column:1/-1}}
+@media(max-width:760px){.fa-game-menu-scene.fa-docked-game-menu{grid-template-columns:clamp(100px,27vw,160px) minmax(0,1fr);gap:8px;padding:9px}.fa-docked-game-menu .fa-service-workspace{padding:12px;border-radius:20px}.fa-sidebar-brand{padding-left:5px}.fa-sidebar-brand strong{font-size:19px}.fa-docked-game-menu .fa-sidebar-link{padding:7px 6px;min-height:40px;font-size:13px}.fa-sidebar-group h2{padding:0 4px;font-size:10px}.fa-docked-game-menu .fa-sidebar-resume,.fa-docked-game-menu .fa-sidebar-title{font-size:12px;padding:6px;min-height:44px}.fa-docked-game-menu .fa-game-menu-body,.fa-ui[data-screen="06"] .fa-docked-game-menu .fa-game-menu-body,.fa-service-workspace .fa-embedded-service .fa-scene-settings{grid-template-columns:minmax(0,1fr)}.fa-docked-game-menu .fa-game-menu-body>.fa-panel:nth-child(n){grid-column:auto}.fa-docked-game-menu .fa-game-menu-header h1{font-size:25px}.fa-docked-game-menu .fa-game-menu-header nav{width:auto}.fa-service-workspace .fa-embedded-service .fa-scene-settings .fa-settings-categories{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}.fa-service-workspace .fa-embedded-service .fa-glass-load-actions{width:100%}.fa-docked-game-menu .fa-game-menu-body .fa-panel{border-bottom:1px solid #b9dfff25}}
