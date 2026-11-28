@@ -331,3 +331,29 @@ test('every catalog screen has an explicit runtime switch case and confirmation 
  assert.ok(page.includes('onClick={()=>executeConfirm(pending)}'));
  assert.ok(page.includes('onClick={dismissConfirm}'));
 });
+
+import {bondConversation,BOND_GIFT} from '../src/components/fantasybattle/core/companionBonds.mjs';
+test('companion gifts require recruitment and ore, preserve other members and cap bond',()=>{
+ let p=A.createProfile('Companion test');
+ assert.equal(A.companionGiftQuote(p,'groveArcher').ok,false);assert.throws(()=>A.giveCompanionGift(p,'groveArcher'));
+ assert.equal(bondConversation('groveArcher',A.memberFor(p,'groveArcher')),null);
+ for(const m of A.ROSTER){p=A.rewardVictory(p,{id:m.requiredEncounter}).profile;p=A.recruitCompanion(p,m.id);}
+ p={...p,inventory:{...p.inventory,sapphireOre:50}};
+ for(const m of A.ROSTER){
+  const before=p,quote=A.companionGiftQuote(p,m.id);assert.ok(quote.ok);
+  const stats=A.memberStats(p,m.id);p=A.giveCompanionGift(p,m.id);
+  assert.equal(p.inventory.sapphireOre,before.inventory.sapphireOre-BOND_GIFT.cost);
+  assert.equal(A.memberFor(p,m.id).bond,quote.bond+quote.gain);
+  assert.deepEqual(A.memberStats(p,m.id),stats);
+  for(const other of A.ROSTER.filter(x=>x.id!==m.id))assert.deepEqual(A.memberFor(p,other.id),A.memberFor(before,other.id));
+  const lines=[0,25,75].map(bond=>bondConversation(m.id,{recruited:true,bond}));
+  assert.equal(new Set(lines).size,3);
+ }
+ assert.ok(A.isProfile(p));assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ assert.throws(()=>A.giveCompanionGift(p,'__proto__'));
+ assert.throws(()=>A.giveCompanionGift({...p,inventory:{...p.inventory,sapphireOre:0}},'groveArcher'));
+ p={...p,party:{...p.party,bond:98}};
+ const near=A.companionGiftQuote(p,'groveArcher');assert.equal(near.gain,2);
+ const max=A.giveCompanionGift(p,'groveArcher');assert.equal(A.memberFor(max,'groveArcher').bond,100);assert.throws(()=>A.giveCompanionGift(max,'groveArcher'));
+ assert.ok(A.isProfile(max));assert.equal(p.party.bond,98);
+});
