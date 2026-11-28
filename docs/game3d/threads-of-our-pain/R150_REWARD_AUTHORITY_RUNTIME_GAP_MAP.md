@@ -43,7 +43,7 @@ Status describes source coverage, not production acceptance. 'Partial' means exi
 | T13 restore backup | Vault restore backup owner checks, save update then ledgerRecordsFor and pendingAfterRestore separate writes | partial; R143 journal simulation, actual restore interruption unverified; R147 legacy duplicate TODO |
 | T14 paired lives | R66/R139 rules, current material discovery store not paired story claim | no live implementation identified; preserve one lifetime entitlement |
 | T15 either ending | R64A/R65/R76; no runtime ending path established in project record | blocked MI-FS-S1/S2; gear preservation not verified |
-| T16 NG+ repeat | R84 cycle policy; no approved runtime cycle ledger identified | blocked FS-S08, MI-FS-S4/S5 as applicable; no fabricated XP/rewards |
+| T16 NG+ repeat | R84 cycle policy; no approved runtime cycle ledger identified | blocked FS-S08 and MI-FS-S4; cycle-state contract still required; no fabricated XP/rewards |
 | T17 failed donor service | itemUpgrade server roll, cost and consumed arrays, gateway per-character lock; material and upgrade local writes separate | partial; R144–146 and R150, real multi-device atomicity unproven |
 | T18 local-only/conflict | createServerDice returns local for local_only and legacy unsupported newer services; conflict refuses; flush false ignored | partial; distinguish intended guest-only and compatibility fallback from verified authority; no silent policy change |
 | T19 missing art | equipment store owns instance; AXEAscendedGearVisualRuntime reads advancement, disposes materials/geos | partial; no missing-art runtime invariance test |
