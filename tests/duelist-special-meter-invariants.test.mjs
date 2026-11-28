@@ -6,9 +6,10 @@ import {
 } from '../src/components/duelist/core/classes.mjs';
 
 const actor = Object.freeze({ id: 'a', team: 'blue', hp: 100, position: { x: 0, z: 0 } });
+// facing +z (yaw 0), away from the actor at the origin: the Assassin's Shadow Execution needs the target's back
 const target = Object.freeze({
   id: 'b', team: 'red', hp: 20, maxHp: 100,
-  position: { x: 0, z: 1 }, protectedUntil: -Infinity,
+  position: { x: 0, z: 1, yaw: 0 }, protectedUntil: -Infinity,
 });
 
 test('special charge never accepts malformed or inherited event keys', () => {

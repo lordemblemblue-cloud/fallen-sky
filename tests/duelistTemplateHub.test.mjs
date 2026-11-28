@@ -96,9 +96,12 @@ test('the match shop only opens during gameplay, and story supplies are in the c
   assert.match(game, /match && <button[^>]+className="duelist-shop-toggle"/);
   assert.match(game, /shopOpen && match && match.phase !== 'over' && <ShopPanel/);
   assert.match(game, /shopOpen && quest && quest.phase === 'live' && <StorySupplyPanel/);
+  // the one-screen campaign view: field supplies and every crew action sit beside the briefing
   const story = source('src/components/duelist/menu/DuelistStoryMenu.jsx');
-  assert.match(story, /id: 'supplies', title: 'Story Shop'/);
-  assert.match(story, /QUICK JOIN OPEN CREW/);
-  assert.match(story, /HOST OPEN CREW/);
-  assert.match(story, /JOIN PRIVATE CREW/);
+  assert.match(story, /<summary>Field supplies/);
+  assert.match(story, /STORY_SUPPLIES\.map\(item =>/);
+  assert.match(story, /launch\(\{ online: 1 \}\)\}>Quick join</);
+  assert.match(story, /launch\(\{ online: 1, room: 'open' \}\)\}>Host open crew</);
+  assert.match(story, /launch\(\{ online: 1, room: code \}\)\}>Join private crew/);
+  assert.match(story, /launch\(\{ online: 1, room: item\.id \}\)/, 'open crews can be joined from the list');
 });

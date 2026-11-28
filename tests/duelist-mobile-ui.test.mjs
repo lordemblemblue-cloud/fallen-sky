@@ -63,8 +63,7 @@ test('landscape menu is a real scrollable thumb UI with two columns of modes and
   assert.match(css, /@media \(orientation:landscape\) and \(max-width:1100px\) and \(max-height:600px\)/);
   for (const selector of ['.dxt-page .dxt-header','.dxt-page .dxt-footer',
     '.dxt-page .dxt-mode-grid','.dxt-page .dxt-mode-detail',
-    '.dxt-page--reference .dcm-layout','.dxt-page--reference .dsm-layout',
-    '.dxt-page--reference .dxr-art--settings']) {
+    '.dxt-page--reference .dcm-layout','.dxt-page--reference .dsm-layout']) {
     assert.ok(css.includes(selector), selector);
   }
   assert.match(css, /overflow-y:auto/);
@@ -131,17 +130,26 @@ test('every override outranks the route stylesheets whichever of them loaded las
   }
 });
 
-test('settings panes keep their height and all six tabs stay on screen at 667 and 844 wide', () => {
-  // Squeezed flex items (min-height:0) overlapped: the controls pane covered the second tab row.
-  assert.match(rule('html .dxt-page--reference .dxr-art--settings :is(.dxr-settings-tabs,.dxr-settings-controls,.dxr-settings-preview,.dxr-settings-actions)'), /flex:none;/);
-  // From 801px the desktop sheet makes the tabs a full-width column; wrapped, they went sideways off screen.
-  assert.match(source('components/duelist/menu/duelistReferenceMenus.css'), /\.dxt-page--reference \.dxr-art--settings \.dxr-settings-tabs \{\s*grid-area:tabs; display:flex; flex-direction:column;/);
-  const tabs = rule('html .dxt-page--reference .dxr-art--settings .dxr-settings-tabs');
-  assert.match(tabs, /flex-direction:row;/);
-  assert.match(tabs, /flex-wrap:wrap;/);
-  assert.match(rule('html .dxt-page--reference .dxr-art--settings .dxr-settings-tabs button'), /flex:1 1 28%; width:auto;/);
-  assert.match(rule('html .dxt-page--reference .dxr-art--settings .dxr-settings-actions'), /position:sticky; bottom:-16px;/);
-  assert.match(rule('html .dxt-page--reference .dxr-art--settings'), /padding:45px 12px 16px;/);
+test('settings on a landscape phone: every tab reachable, panes apart, buttons above the footer', () => {
+  // Settings is the liquid-glass surface (691325e7, 10d5dc81): its own sheet lays it out on phones and outranks
+  // this one, so this sheet keeps no settings rules that could fight it (the old ones overlapped panes at 667
+  // wide and pushed tabs off screen at 844).
+  assert.ok(!rules.some(r => /dxr-art--settings|dxr-settings-/.test(r.prelude)), 'no settings rules in the mobile sheet');
+  assert.match(source('components/duelist/menu/DuelistReferenceMenus.jsx'), /className="dxr-art dxr-art--settings dxr-settings-glass"/);
+  const glass = source('components/duelist/menu/duelistReferenceMenus.css');
+  const glassRules = cssRules(glass);
+  const glassRule = prelude => glassRules.filter(r => r.prelude === prelude).map(r => r.body).join(' ');
+  const surface = 'html .dxt-page--reference .dxr-art--settings.dxr-settings-glass';
+  // tabs, controls and actions each own a grid area, so they cannot cover one another
+  assert.match(glassRule(surface), /grid-template-areas:"heading heading heading" "tabs divider controls" "tabs divider actions";/);
+  // the tab column and the controls scroll, so every tab and setting stays reachable on a short screen
+  assert.match(glassRule(surface + ' .dxr-settings-tabs'), /flex-direction:column;[^]*overflow-y:auto;/);
+  assert.match(glassRule(surface + ' .dxr-settings-controls'), /overflow-y:auto;/);
+  // on a landscape phone the surface stops at the 52 px footer, which this sheet sets
+  const phone = glass.slice(glass.indexOf('@media (orientation:landscape) and (max-width:1100px) and (max-height:600px)'));
+  assert.match(phone, new RegExp(surface.replace(/[.]/g, '\\.') + ' \\{[^}]*position:absolute; inset:0 0 52px;'));
+  assert.match(phone, /\.dxr-settings-actions \{position:static;\}/);
+  assert.match(rule('html .dxt-page .dxt-footer'), /height:52px;/);
 });
 
 test('match class picker shows its countdown and first rows on a short screen', () => {

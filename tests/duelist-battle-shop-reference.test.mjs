@@ -115,7 +115,11 @@ test('shop presents independent filter rails, linked tier nodes and touch tabs; 
  assert.match(jsx,/title="Stat filters"/);assert.match(jsx,/title="Shop filters"/);
  assert.match(jsx,/className="bs-build-tree"/);assert.match(jsx,/Builds into/);
  assert.match(jsx,/onBuy\(item.id,wanted,combine\)/);
- assert.match(css,/backdrop-filter:blur\(5px\)/);assert.match(css,/linear-gradient\(180deg,transparent 0%/);
+ // the 5px glass blur and the fading separator now come from the shared sapphire material tokens
+ const tokens=source('src/components/duelist/menu/duelistMaterialTokens.css');
+ assert.match(css,/@import '\.\.\/menu\/duelistMaterialTokens\.css'/);assert.match(css,/backdrop-filter:var\(--ds-blur\)/);
+ assert.match(tokens,/--ds-blur:blur\(5px\)/);
+ assert.match(css,/\.bs-separator::after \{[^}]*background:var\(--ds-divider\)/);assert.match(tokens,/--ds-divider:linear-gradient\(180deg,transparent,/);
  assert.match(css,/data-mobile-pane="build"/);
  const client=source('src/components/duelist/net/client.mjs');
  assert.match(client,/shop-build-unavailable/);assert.match(client,/supportsShopBuild = msg.shopBuild === true/);

@@ -111,7 +111,7 @@ test('blocked, parried, protected and spaced-out hits do not trigger immunity', 
 });
 
 test('hit streak and immunity survive authoritative own snapshots and public mirror snapshots', () => {
-  assert.equal(PROTOCOL, 16);
+  assert.equal(PROTOCOL, 21); // the current wire protocol; the streak and immunity fields below are unchanged since 16
   const world = createWorld();
   const a = addFighter(world, { id: 'a' });
   const d = addFighter(world, { id: 'd' });

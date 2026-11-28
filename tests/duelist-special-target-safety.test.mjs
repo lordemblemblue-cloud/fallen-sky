@@ -5,8 +5,10 @@ import { evaluateSpecial, CLASSES } from '../src/components/duelist/core/classes
 // These are pure validation contracts. No packet authentication, meter debit,
 // execution damage or animation playback is implemented by evaluateSpecial.
 const actor = () => ({ id: 'attacker', team: 'red', hp: 100, position: { x: 0, z: 0 } });
+// yaw 0 faces +z (core/classes.mjs behindTarget): the victim at z -1 faces -z, its back to the attacker, which the
+// Assassin's Shadow Execution requires (the Duelist's threshold execution does not look at facing)
 const target = () => ({ id: 'victim', team: 'blue', hp: 20, maxHp: 100,
-  position: { x: 0, z: -1, yaw: 0 }, protectedUntil: -Infinity });
+  position: { x: 0, z: -1, yaw: Math.PI }, protectedUntil: -Infinity });
 
 for (const classId of ['duelist', 'assassin']) {
   test(`${classId} execution rejects friendly, self, dead and protected targets without spending meter`, () => {
@@ -42,6 +44,11 @@ for (const classId of ['duelist', 'assassin']) {
     assert.deepEqual(source, beforeSource);
     assert.deepEqual(victim, beforeTarget);
     assert.equal(evaluateSpecial({ classId, meter: 100, actor: source,
-      target: { ...victim, position: { x: 0, z: -100, yaw: 0 } }, now: 10 }).reason, 'out-of-range');
+      target: { ...victim, position: { x: 0, z: -100, yaw: Math.PI } }, now: 10 }).reason, 'out-of-range');
+    // turned to face the attacker: only the Assassin's rear-arc execution refuses
+    const facing = evaluateSpecial({ classId, meter: 100, actor: source,
+      target: { ...victim, position: { x: 0, z: -1, yaw: 0 } }, now: 10 });
+    if (classId === 'assassin') assert.equal(facing.reason, 'not-behind');
+    else assert.equal(facing.allowed, true);
   });
 }

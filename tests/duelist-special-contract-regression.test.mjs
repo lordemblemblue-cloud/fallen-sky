@@ -48,8 +48,10 @@ test('trusted event awards saturate 0–100 and reject malformed or client-shape
 
 test('each special returns an intent with class-specific cost and animation, never mutating the actor', () => {
   const actor = { id: 'alpha', team: 'red', hp: 100, position: { x: 0, z: 0 } };
+  // yaw 0 faces +z (core/classes.mjs behindTarget, as the sim moves): this enemy faces -z, its back to the actor,
+  // as the Assassin's Shadow Execution requires
   const enemy = { id: 'beta', team: 'blue', hp: 20, maxHp: 100,
-    position: { x: 0, z: -1, yaw: 0 }, protectedUntil: -Infinity };
+    position: { x: 0, z: -1, yaw: Math.PI }, protectedUntil: -Infinity };
   const actorBefore = structuredClone(actor);
   const enemyBefore = structuredClone(enemy);
   for (const classId of CLASS_IDS) {
@@ -69,6 +71,7 @@ test('each special returns an intent with class-specific cost and animation, nev
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 0, actor, target: enemy }).reason, 'not-charged');
   assert.equal(evaluateSpecial({ classId: 'duelist', meter: 100, actor,
     target: { ...enemy, hp: 50 } }).reason, 'target-too-healthy');
+  // the same enemy turned to face the actor
   assert.equal(evaluateSpecial({ classId: 'assassin', meter: 100, actor,
-    target: { ...enemy, position: { x: 0, z: 1, yaw: 0 } } }).reason, 'not-behind');
+    target: { ...enemy, position: { x: 0, z: -1, yaw: 0 } } }).reason, 'not-behind');
 });
