@@ -16,6 +16,7 @@ import './sapphireCharacterWorkspaces.css';
 import './sapphireSceneMenus.css';
 import './sapphireCharacterCreation.css';
 import './sapphireGameMenus.css';
+import './sapphireInkTheme.css';
 import { GAME_MENU_GROUPS, isGameMenu, menuName, menuDestination, canResumeGame, activeMenuService } from './core/gameMenuNavigation.mjs';
 import CharacterCreationViewer from './CharacterCreationViewer.jsx';
 import {glassUiKind,usesRightGlass} from './core/glassUiPolicy.mjs';
