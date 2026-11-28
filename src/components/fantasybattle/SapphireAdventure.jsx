@@ -63,7 +63,7 @@ const SETTINGS_SECTIONS = [
 
 // The category is navigation state, not a gameplay preference. Both art modes share
 // the same controls and existing validated local save/backup handlers.
-function SettingsPage({original,settings,world,running,applySettings,back,onTutorial,backupField,importSlot,setImportSlot,backupBusy,importBackup,recoveryControl,backupError,onNotice}){
+function SettingsPage({original,settings,world,running,applySettings,back,onTutorial,backupField,importSlot,setImportSlot,backupBusy,importBackup,recoveryControl,backupError,onNotice,titleRef}){
   const [category,setCategory]=useState('graphics');
   const [fullscreen,setFullscreen]=useState(false);
   const [canFullscreen,setCanFullscreen]=useState(false);
@@ -91,7 +91,7 @@ function SettingsPage({original,settings,world,running,applySettings,back,onTuto
     default:break;
   }
   return <div className={'fa-settings-page'+(original?' fa-settings-art':' fa-settings-fallback')}>
-    {!original&&<header className="fa-glass-load-heading fa-glass-settings-heading"><span className="fa-glass-kicker">Sapphire Sumi</span><h1>Settings</h1><p>Preferences are saved on this browser.</p></header>}
+    {!original&&<header className="fa-glass-load-heading fa-glass-settings-heading"><span className="fa-glass-kicker">Sapphire Sumi</span><h1 tabIndex={-1} ref={titleRef}>Settings</h1><p>Preferences are saved on this browser.</p></header>}
     <nav className="fa-settings-categories" aria-label="Settings categories">{SETTINGS_SECTIONS.map(([key,label,icon])=><Btn key={key} className="fa-settings-category" aria-pressed={category===key} aria-controls="fa-settings-detail" onClick={()=>setCategory(key)}><span aria-hidden="true">{icon}</span><span>{label}</span></Btn>)}</nav>
     <section id="fa-settings-detail" ref={panelRef} className="fa-settings-detail" aria-labelledby="fa-settings-heading" tabIndex={0}>
       <h2 id="fa-settings-heading">{SETTINGS_SECTIONS.find(([key])=>key===category)[1]}</h2>
@@ -531,7 +531,7 @@ function RegionDiscovery({discovery,world,profile,original,layout,onContinue,onM
 
 // The original transparent conversation plate frames the actual world.
  // Service labels and availability come from the current world interaction.
-function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,back,onEscortAction}){
+function NPCDialogue({profile,world,service,serviceAvailable,original,go,back,onEscortAction,titleRef}){
   const [group,setGroup]=useState('services'),[escortQuestion,setEscortQuestion]=useState(null);
   const available=Boolean(profile&&serviceAvailable);
   const questAvailable=profile?.quests.grove==='available';
@@ -550,7 +550,7 @@ function NPCDialogue({profile,world,service,serviceAvailable,original,layout,go,
     <section className="fa-dialogue-message" aria-live="polite"><p>{message}</p></section>
     <section className="fa-dialogue-options" aria-label="Available interaction choices">{group==='escort'?escortChoices:choices}</section>
   </div>;
-  return <div className="fa-glass-load-layout"><section className="fa-glass-load-panel fa-glass-conversation" aria-labelledby="fa-glass-dialogue-title"><header className="fa-glass-load-heading"><span className="fa-glass-kicker">{world?.region||'World interaction'}</span><h1 id="fa-glass-dialogue-title">{service?.label||'Conversation'}</h1></header><p className="fa-glass-dialogue-copy" aria-live="polite">{message}</p><nav className="fa-glass-dialogue-nav" aria-label="Conversation navigation">{navigation}</nav><section className="fa-glass-dialogue-options" aria-label="Available interaction choices">{group==='escort'?escortChoices:choices}</section></section></div>;
+  return <div className="fa-glass-load-layout"><section className="fa-glass-load-panel fa-glass-conversation" aria-labelledby="fa-glass-dialogue-title"><header className="fa-glass-load-heading"><span className="fa-glass-kicker">{world?.region||'World interaction'}</span><h1 id="fa-glass-dialogue-title" tabIndex={-1} ref={titleRef}>{service?.label||'Conversation'}</h1></header><p className="fa-glass-dialogue-copy" aria-live="polite">{message}</p><nav className="fa-glass-dialogue-nav" aria-label="Conversation navigation">{navigation}</nav><section className="fa-glass-dialogue-options" aria-label="Available interaction choices">{group==='escort'?escortChoices:choices}</section></section></div>;
 }
 
 // Original offer illustration is decorative; saved quest state is authoritative.
@@ -1447,7 +1447,7 @@ export default function SapphireAdventure(){
         <details className="fa-glass-backup"><summary>Save backup options</summary><div>{backupField}<Btn disabled={!selectedSave||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(selectedSave.profile,true)}>Export encrypted backup</Btn><Btn disabled={!selectedSave||backupBusy} onClick={()=>downloadBackup(selectedSave.profile)}>Export unencrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</div></details>
       </section>
     </div>;break;
-    case '03':content=<SettingsPage original={original} settings={settings} world={world} running={running} applySettings={applySettings} back={back} onTutorial={index=>{setLesson(index);go('34');}} backupField={backupField} importSlot={importSlot} setImportSlot={setImportSlot} backupBusy={backupBusy} importBackup={importBackup} recoveryControl={recoveryControl} backupError={backupError} onNotice={setNotice}/>;break;
+    case '03':content=<SettingsPage original={original} settings={settings} world={world} running={running} applySettings={applySettings} back={back} onTutorial={index=>{setLesson(index);go('34');}} backupField={backupField} importSlot={importSlot} setImportSlot={setImportSlot} backupBusy={backupBusy} importBackup={importBackup} recoveryControl={recoveryControl} backupError={backupError} onNotice={setNotice} titleRef={focusRef}/>;break;
     case '04':content=original?<div className="fa-original-pause">
       <nav className="fa-pause-nav" aria-label="Pause navigation">
         <Btn className="fa-painted-button" onClick={back}><span className="fa-art-sr">Resume</span></Btn>
@@ -1525,9 +1525,10 @@ export default function SapphireAdventure(){
       {encounter&&<p className="fa-glass-loading-hint">Manual saves and exports are disabled during combat.</p>}{slots.error&&<p role="alert">{slots.error}</p>}
       {selected&&slots.slots.some(x=>x.id===selected)&&<p className="fa-glass-loading-hint">An occupied slot requires confirmation before overwriting.</p>}
       <div className="fa-glass-load-actions"><Btn primary disabled={!profile||!selected||Boolean(encounter)} onClick={manualSave}>Save Game</Btn><Btn onClick={back}>Back</Btn></div>
+      <details className="fa-glass-backup"><summary>Adventure details and navigation</summary><div>{profile&&<><RegionMap world={world} profile={profile} small/><p>Party: {profile.name}{activeRoster(profile).map(m=>", "+m.name).join("")}</p></>}<nav className="fa-glass-dialogue-nav" aria-label="Save game navigation"><Btn onClick={()=>{if(running)root(encounter?'09':'10');else back();}}>Resume</Btn>{['05','06','07','08'].map(target=><Btn key={target} disabled={!profile} onClick={()=>go(target)}>{UI_SCREENS[target].name}</Btn>)}<Btn onClick={()=>go('03')}>Settings</Btn><Btn onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to Title</Btn></nav></div></details>
       <details className="fa-glass-backup"><summary>Portable save backup</summary><div><p>Export your current profile without overwriting a slot.</p>{backupField}<Btn disabled={!profile||Boolean(encounter)||backupBusy||backupPass.length<12} onClick={()=>downloadBackup(profile,true)}>Export encrypted backup</Btn><Btn disabled={!profile||Boolean(encounter)||backupBusy} onClick={()=>downloadBackup(profile)}>Export unencrypted backup</Btn>{backupError&&<small role="alert">{backupError}</small>}</div></details>
     </section></div>;break;
-    case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} go={go} back={back} onEscortAction={action=>transact(p=>{const live=current.current;if(live.service?.id!==LAST_ESCORT.returnService||live.world?.nearbyService!==LAST_ESCORT.returnService||!liveService(live.world,LAST_ESCORT.returnService))throw Error('Visit the Grove rest point.');return changeCampaignQuest(p,LAST_ESCORT.id,action,{serviceId:LAST_ESCORT.returnService});},action==='accept'?'The Last Escort accepted':'The Last Escort completed')}/>;break;
+    case '13':content=<NPCDialogue key={service?.id||'none'} profile={profile} world={world} service={service} serviceAvailable={serviceAvailable} original={original} titleRef={focusRef} go={go} back={back} onEscortAction={action=>transact(p=>{const live=current.current;if(live.service?.id!==LAST_ESCORT.returnService||live.world?.nearbyService!==LAST_ESCORT.returnService||!liveService(live.world,LAST_ESCORT.returnService))throw Error('Visit the Grove rest point.');return changeCampaignQuest(p,LAST_ESCORT.id,action,{serviceId:LAST_ESCORT.returnService});},action==='accept'?'The Last Escort accepted':'The Last Escort completed')}/>;break;
     case '16':content=<MerchantShop profile={profile} service={service} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} onTrade={(mode,id,quantity)=>{const p=current.current.profile,q=tradeQuote(p,mode,id,quantity);if(!q.ok)return;const profileId=p.id,serviceId=current.current.service?.id;let used=false;requestConfirm((mode==='buy'?'Buy ':'Sell ')+quantity+' × '+ITEMS[id].name+' for '+q.total+' gold?',()=>{if(used)return;used=true;transact(live=>{const s=current.current;if(live.id!==profileId||!serviceId||s.service?.id!==serviceId||s.world?.nearbyService!==serviceId||s.encounter||!liveService(s.world,serviceId))throw Error('Return to the original service marker to trade.');return mode==='buy'?buyItem(live,id,quantity):sellItem(live,id,quantity);},mode==='buy'?'Items purchased':'Items sold');});}}/>;break;
     case '17':content=<BlacksmithShop profile={profile} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} back={back} go={go} onEnhance={(weapon,level,cost)=>{if(!Object.hasOwn(ITEMS,weapon)||ITEMS[weapon].kind!=='weapon')return;requestConfirm('Enhance '+ITEMS[weapon].name+' to +'+(level+1)+' for '+cost+' gold and 1 Sapphire Ore?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter||!liveService(s.world,s.service.id))throw Error('Visit a service marker to enhance.');if(p.equipped!==weapon||enhancementLevel(p,weapon)!==level||cost!==15+level*10)throw Error('Equipment changed. Review the new enhancement preview.');return enhanceWeapon(p);},'Weapon enhanced'));}}/>;break;
     case '21':content=<ItemInventory key={profile?.id||'guest'} profile={profile} encounter={encounter} serviceAvailable={serviceAvailable} original={original} layout={screen.layout} initialItem={itemId} onSelect={setItemId} go={go} back={back}/>;break;
