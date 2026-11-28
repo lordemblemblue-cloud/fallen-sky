@@ -1,0 +1,3312 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTEGRATION_ONLY",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourcePins": [
+    {
+      "name": "R61_STABLE_ID_INDEX.md",
+      "sha": "8c40d3963960ff682be64de24247ff1c8aea7fe0"
+    },
+    {
+      "name": "R129_SOURCE_TO_PRODUCTION_READINESS_MATRIX.md",
+      "sha": "9df10c0828fd2f32d2be6061cd14e68defd0fed2"
+    },
+    {
+      "name": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+      "sha": "e7d3fff802ff9b261d6f4fb978b9ee3305ecfaef"
+    },
+    {
+      "name": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+      "sha": "88fa2531c51f0ea097c6ecac42ca868beb31e668"
+    },
+    {
+      "name": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+      "sha": "a959dc8b8859b22dfed8c195cc6e9ae659a9d02d"
+    },
+    {
+      "name": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+      "sha": "8aae0a290654c2fc307db5dc897821700bc6a28f"
+    },
+    {
+      "name": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+      "sha": "2026183208ceef15164ae7cc35dfb5c5812c79f0"
+    },
+    {
+      "name": "R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md",
+      "sha": "af2ffdb8a285c8748683b288e76ce349f78d2d05"
+    },
+    {
+      "name": "NPC_PHASE42_REGISTRY.json",
+      "sha": "3e9772a2bb9938fcaa890eb7c81bc1aa769de516"
+    },
+    {
+      "name": "NPC_PHASE61_DISCOVERY_FRAMEWORK.json",
+      "sha": "0f9afe001ebff29a9e8fa4c051685e0b14b7534d"
+    },
+    {
+      "name": "NPC_PHASE70_NGPLUS_CONTRACT.json",
+      "sha": "e00e13182ec21c14e96c91da7ac1574958b7c12c"
+    }
+  ],
+  "classificationLegend": {
+    "P": "Persistent while authored conditions hold",
+    "C": "Conditionally revisitable",
+    "E": "Event-exclusive after verified closure",
+    "U": "Unresolved"
+  },
+  "classificationCaveat": "R80 reconstructed, not recovered verbatim; all objective classifications provisional; mixed lanes preserved verbatim; no exact actor/route/opening/closing predicate approved.",
+  "common": {
+    "noOptionalMainGate": true,
+    "sourceSpecificOptionalDependenciesAllowed": true,
+    "actualEvidenceAndActionSeparate": true,
+    "consentScoped": true,
+    "availability": [
+      "AVAILABLE",
+      "IN_PROGRESS",
+      "COMPLETE",
+      "WAITING",
+      "MISSED_THIS_CYCLE",
+      "UNRESOLVED"
+    ],
+    "positiveClosureRequired": true,
+    "temporaryBlockNotMissed": true,
+    "oneLifetimeUniqueEntitlement": true,
+    "retainLegitimateOwnership": true,
+    "neverRecreateSoldConsumedDismantled": true,
+    "repeatableRewardPolicy": "UNRESOLVED",
+    "noAutomaticCompletion": true,
+    "ngPlusRealOpportunity": true,
+    "priorHistoryImmutable": true,
+    "actualActorLifetimeRequired": true,
+    "actualRouteAndSafeExitRequired": true,
+    "serverAuthorityRequired": true,
+    "productionBindingsUnresolved": true,
+    "legacyDiscoveryDonePreserved": true,
+    "secondVistaRequired": true
+  },
+  "sideQuests": [
+    {
+      "id": "S01",
+      "title": "Roadside Robbery",
+      "primarySource": "R45-R47_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R45-R47_RECOVERED_SOURCE.md) / [R123 §13](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "P while witnessed robbery/property return valid after M06; final gate U",
+          "E optional convoy insignia",
+          "No original insignia needed to return property; never create a new robbery as receipt"
+        ]
+      },
+      "proposedFamilyAndWave": "B; W03",
+      "site": "Wolfveil south road after M06; optional West Root lead.",
+      "sourceSpecificContract": "P while witnessed robbery/property return valid after M06; final gate U; E optional convoy insignia; No original insignia needed to return property; never create a new robbery as receipt",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_001",
+        "name": "Aldren",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S02",
+      "title": "The Thief's Treasure",
+      "primarySource": "S02.md",
+      "sourceReferences": "[Source](S02.md) / [R123 §14](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "P while camp/offering custody route valid; S01 optional",
+          "E optional protected cache/crate",
+          "Local custody independent; no new cache if historical interval closes"
+        ]
+      },
+      "proposedFamilyAndWave": "B; W03+",
+      "site": "West Root outer camp and ceremonial chamber, distinct S03/D03.",
+      "sourceSpecificContract": "P while camp/offering custody route valid; S01 optional; E optional protected cache/crate; Local custody independent; no new cache if historical interval closes",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_002",
+        "name": "Kael",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S03",
+      "title": "The One Who Waited",
+      "primarySource": "S03.md",
+      "sourceReferences": "[Source](S03.md) / [R123 §15](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "C crypt offering/testimony, separate from S02 and D03",
+          "C optional written account, explicitly authorized archive copy if desk unstaffed",
+          "Archive only satisfies account evidence; cannot resurrect predecessor or mark D03 focus"
+        ]
+      },
+      "proposedFamilyAndWave": "B; W03+",
+      "site": "West Root inner crypt.",
+      "sourceSpecificContract": "C crypt offering/testimony, separate from S02 and D03; C optional written account, explicitly authorized archive copy if desk unstaffed; Archive only satisfies account evidence; cannot resurrect predecessor or mark D03 focus",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_003",
+        "name": "Eryndor",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S04",
+      "title": "Sworn at the Gate",
+      "primarySource": "S04.md",
+      "sourceReferences": "[Source](S04.md) / [R123 §16](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "P public introduction/oath choice after M06, actor phase U",
+          "E optional original registry/help",
+          "Local core not gated by registry; sacrifice cannot restore Lyra as living NPC"
+        ]
+      },
+      "proposedFamilyAndWave": "A; W03",
+      "site": "Reuse R115 Wolfveil fountain/Oath Tree/gate.",
+      "sourceSpecificContract": "P public introduction/oath choice after M06, actor phase U; E optional original registry/help; Local core not gated by registry; sacrifice cannot restore Lyra as living NPC",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_006",
+        "name": "Lyra the Seeker",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S05",
+      "title": "Three Travelers",
+      "primarySource": "S05.md",
+      "sourceReferences": "[Source](S05.md) / [R123 §17](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "C three actual local rescues with retries while danger pockets valid; exact gate U",
+          "E optional original column defense/escort and genuine arrival",
+          "If rescue phase closes, record missed—not independent NPC arrival as player rescue; NG+ for expired rescue"
+        ]
+      },
+      "proposedFamilyAndWave": "B; W03/05",
+      "site": "Gate fields S04 road bend/M14 neutral trade route; survey relation to M15.",
+      "sourceSpecificContract": "C three actual local rescues with retries while danger pockets valid; exact gate U; E optional original column defense/escort and genuine arrival; If rescue phase closes, record missed—not independent NPC arrival as player rescue; NG+ for expired rescue",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_007",
+        "name": "Garran Stoneward",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S06",
+      "title": "Noon at the Fountain",
+      "primarySource": "S06.md",
+      "sourceReferences": "[Source](S06.md) / [R123 §18](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "C after M06: live parley before M14, authored retrospective after M14",
+          "E live pre-M14 meeting and optional original water assistance; retrospective is separate",
+          "Confirmed live parley closes at M14; local quest can finish via retrospective; no assassination replay, no fake aid or keepsake"
+        ]
+      },
+      "proposedFamilyAndWave": "A; W03/05",
+      "site": "Existing Wolfveil fountain R115/R118; no duplicate square.",
+      "sourceSpecificContract": "C after M06: live parley before M14, authored retrospective after M14; E live pre-M14 meeting and optional original water assistance; retrospective is separate; Confirmed live parley closes at M14; local quest can finish via retrospective; no assassination replay, no fake aid or keepsake",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_011",
+        "name": "Sable Vey",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Live parley closes at M14; actual authored retrospective remains distinct.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S07",
+      "title": "The Wolf at the Well",
+      "primarySource": "S07.md",
+      "sourceReferences": "[Source](S07.md) / [R123 §19](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "C animal aid/caretaker only where actual authored encounter exists; local phase U",
+          "E optional historical well/animal scene",
+          "D05 focus separate; no fabricated animal or rescue"
+        ]
+      },
+      "proposedFamilyAndWave": "B; W03+",
+      "site": "D05 spring/well shared, independent meadow.",
+      "sourceSpecificContract": "C animal aid/caretaker only where actual authored encounter exists; local phase U; E optional historical well/animal scene; D05 focus separate; no fabricated animal or rescue",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_005",
+        "name": "Thoren Ashwood",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S08",
+      "title": "Letters Under the Bridge",
+      "primarySource": "S08.md",
+      "sourceReferences": "[Source](S08.md) / [R123 §20](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "P local letters while recipient/route valid; exact gate U",
+          "E optional medicine delivery/rescue at intact bridge",
+          "Actual delivery receipt once; no replay of delivered supplies in current cycle"
+        ]
+      },
+      "proposedFamilyAndWave": "B; W03+",
+      "site": "D06 pier/bend/arch and intact bridge, separate letter trail.",
+      "sourceSpecificContract": "P local letters while recipient/route valid; exact gate U; E optional medicine delivery/rescue at intact bridge; Actual delivery receipt once; no replay of delivered supplies in current cycle",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_012",
+        "name": "Elias Windrow",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S09",
+      "title": "The Miner Who Drew a Door",
+      "primarySource": "S09.md",
+      "sourceReferences": "[Source](S09.md) / [R123 §21](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "P exterior report with actual doorway/safe approach; D07 independent",
+          "E optional working hatch/crate help",
+          "Report not dependent on original observation; no manufactured hatch focus"
+        ]
+      },
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "D07 cliff and exterior camp.",
+      "sourceSpecificContract": "P exterior report with actual doorway/safe approach; D07 independent; E optional working hatch/crate help; Report not dependent on original observation; no manufactured hatch focus",
+      "readinessGate": "Provisional report pending",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_013",
+        "name": "Doran Ironroot",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "PROPOSAL_OR_REVIEW_PENDING",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S10",
+      "title": "Water Behind Water",
+      "primarySource": "D08_S10.md",
+      "sourceReferences": "[Source](D08_S10.md) / [R123 §22](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "C physical cave access through D08 paired reveal, actual report",
+          "No independent original objective; inherits D08 access prerequisite",
+          "Wait for real paired access if pending; if prerequisite expires, NG+ for missed access; no lantern or second-vista requirement"
+        ]
+      },
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "Same D08 waterfall and fisherman bank.",
+      "sourceSpecificContract": "C physical cave access through D08 paired reveal, actual report; No independent original objective; inherits D08 access prerequisite; Wait for real paired access if pending; if prerequisite expires, NG+ for missed access; no lantern or second-vista requirement",
+      "readinessGate": "Actual entry/drain/lantern/report",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_013",
+        "name": "Doran Ironroot",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Actual D08 revealed access, not lantern or second vista.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S11",
+      "title": "The Bell Below",
+      "primarySource": "D09_S11.md",
+      "sourceReferences": "[Source](D09_S11.md) / [R124 §13](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "C diver request, actual chamber inspection and report",
+          "D09 revealed access may be needed; alternate physical route U",
+          "No report from a clapper/chime claim alone; expired access prerequisite may need NG+; D09 ability and second vista not S11 completion"
+        ]
+      },
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "Reuse R123 D09 Sunken Temple and diver bank.",
+      "sourceSpecificContract": "C diver request, actual chamber inspection and report; D09 revealed access may be needed; alternate physical route U; No report from a clapper/chime claim alone; expired access prerequisite may need NG+; D09 ability and second vista not S11 completion",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_014",
+        "name": "Neris Tideborne",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "D09 access may be required, alternate route unresolved; actual report required.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S12",
+      "title": "The Empty Shrine",
+      "primarySource": "D10_S12.md",
+      "sourceReferences": "[Source](D10_S12.md) / [R124 §14](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "P local offerings/aid plan/restitution while recipients and shrine valid",
+          "Original aid-station parallel contextual only",
+          "No D10 recipe/focus gate or invented original aid; actual restitution required"
+        ]
+      },
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "Reuse R123 D10 public shrine; independent offering route.",
+      "sourceSpecificContract": "P local offerings/aid plan/restitution while recipients and shrine valid; Original aid-station parallel contextual only; No D10 recipe/focus gate or invented original aid; actual restitution required",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_015",
+        "name": "Selene Ashveil",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S13",
+      "title": "The Page That Wasn't Burned",
+      "primarySource": "R39-R41_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R39-R41_RECOVERED_SOURCE.md) / [R124 §15](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "C binder fragment, genuine record comparison, disclosure and return",
+          "C verified original notice or genuine read-only M08_NOTICE18; documented shelter duplicate if unsafe",
+          "Authored evidence reuse can satisfy notice lane; not another historical interaction; no M09 gate or inferred culprit"
+        ]
+      },
+      "proposedFamilyAndWave": "A; W03",
+      "site": "Reuse M08 archive and original shelter notice, R115/R122 A06.",
+      "sourceSpecificContract": "C binder fragment, genuine record comparison, disclosure and return; C verified original notice or genuine read-only M08_NOTICE18; documented shelter duplicate if unsafe; Authored evidence reuse can satisfy notice lane; not another historical interaction; no M09 gate or inferred culprit",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_016",
+        "name": "Orin Vellwood",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Read-only actual M08_NOTICE18 reuse permitted; not another visit.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S14",
+      "title": "The Tree That Grew Too Soon",
+      "primarySource": "D11_S14.md",
+      "sourceReferences": "[Source](D11_S14.md) / [R124 §16](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "P clear/bypass local channel and verify water reaches beds, gardener eligible",
+          "D11 older planting scene contextual, no required historical lane",
+          "New garden does not retroactively award earlier watering or D11 focus"
+        ]
+      },
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "D11 river meadow; no hidden root entry.",
+      "sourceSpecificContract": "P clear/bypass local channel and verify water reaches beds, gardener eligible; D11 older planting scene contextual, no required historical lane; New garden does not retroactively award earlier watering or D11 focus",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_017",
+        "name": "Elowen Greenveil",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S15",
+      "title": "The Quiet Watch",
+      "primarySource": "D12_S15.md",
+      "sourceReferences": "[Source](D12_S15.md) / [R124 §17](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "P actual telescope repair and keeper acknowledgment while site valid",
+          "D12 original lookout warning contextual only",
+          "No required night wait, D12 focus or historical repair receipt"
+        ]
+      },
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "D12 watchtower public balcony/repair bench.",
+      "sourceSpecificContract": "P actual telescope repair and keeper acknowledgment while site valid; D12 original lookout warning contextual only; No required night wait, D12 focus or historical repair receipt",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_018",
+        "name": "Veyron Starwatch",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S16",
+      "title": "Medicine for the Deep",
+      "primarySource": "D13_S16.md",
+      "sourceReferences": "[Source](D13_S16.md) / [R124 §18](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "E original mining-refuge supply acquisition, delivery and healer acknowledgment; exact phase U",
+          "D13 observation and M11 core aid independent",
+          "Return later if authored carrier/refuge still available; if genuinely closed without delivery, missed this cycle; NG+ for genuine delivery"
+        ]
+      },
+      "proposedFamilyAndWave": "D; W04",
+      "site": "Original mine refuge R117; reuse D13 loading shed/moss trail, separate M11 receipt.",
+      "sourceSpecificContract": "E original mining-refuge supply acquisition, delivery and healer acknowledgment; exact phase U; D13 observation and M11 core aid independent; Return later if authored carrier/refuge still available; if genuinely closed without delivery, missed this cycle; NG+ for genuine delivery",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_019",
+        "name": "Amara Dawnveil",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Actual delivery and healer acknowledgment; D13/M11 do not auto-credit.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S17",
+      "title": "The Child's Wooden Bird",
+      "primarySource": "D14_S17.md",
+      "sourceReferences": "[Source](D14_S17.md) / [R124 §19](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "E original toy repair assistance and actual return/child acknowledgment; exact phase U",
+          "D14 may observe carpenter repair even if S17 skipped; preserved artisan lead does not complete it",
+          "Resume only if repair opportunity legitimately remains; carpenter-only repair is not player action, NG+ if genuine opportunity expired"
+        ]
+      },
+      "proposedFamilyAndWave": "A; W04",
+      "site": "D14 original repair bench, preserved artisan lead only.",
+      "sourceSpecificContract": "E original toy repair assistance and actual return/child acknowledgment; exact phase U; D14 may observe carpenter repair even if S17 skipped; preserved artisan lead does not complete it; Resume only if repair opportunity legitimately remains; carpenter-only repair is not player action, NG+ if genuine opportunity expired",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_020",
+        "name": "Luma Everlight",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Actual toy repair/return and child acknowledgment; D14 model distinct.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S18",
+      "title": "The Road of Chalk",
+      "primarySource": "D15_S18.md",
+      "sourceReferences": "[Source](D15_S18.md) / [R124 §20](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "E actual original route marking and refugee escort to exit/report; exact phase U",
+          "D15 baseline marks independent; safe checkpoint recovery during active event",
+          "Retreat/migration defers at actual safe holding point, not failure; verified phase closure without arrival remains missed; no Wayfinder from S18"
+        ]
+      },
+      "proposedFamilyAndWave": "D; W04",
+      "site": "D15 original mine-exit route; independent route-marking and rescue.",
+      "sourceSpecificContract": "E actual original route marking and refugee escort to exit/report; exact phase U; D15 baseline marks independent; safe checkpoint recovery during active event; Retreat/migration defers at actual safe holding point, not failure; verified phase closure without arrival remains missed; no Wayfinder from S18",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_020",
+        "name": "Luma Everlight",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S19",
+      "title": "A Bed for the Stranger",
+      "primarySource": "R39-R41_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R39-R41_RECOVERED_SOURCE.md) / [R124 §21](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Mixed C local bed allocation and E actual original cot/clearance/blanket task, BOTH required",
+          "Either order; zero-gold referral/community allocation valid; actual prior shelter evidence only if source-eligible",
+          "Keep local lane credited if original unavailable; no full reward without both; genuinely missed required lane may need NG+"
+        ]
+      },
+      "proposedFamilyAndWave": "A; W03+",
+      "site": "Survey existing inn near M15 road; O M18/M19 or approved earlier shelter, no extra map.",
+      "sourceSpecificContract": "Mixed C local bed allocation and E actual original cot/clearance/blanket task, BOTH required; Either order; zero-gold referral/community allocation valid; actual prior shelter evidence only if source-eligible; Keep local lane credited if original unavailable; no full reward without both; genuinely missed required lane may need NG+",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_021",
+        "name": "Mara Hearthwood",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Both lanes required.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S20",
+      "title": "The Nameless Grave",
+      "primarySource": "D16_S20.md",
+      "sourceReferences": "[Source](D16_S20.md) / [R124 §22](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "C cemetery spirit, verified ledger/name comparison, report and tablet",
+          "D16 historical burial contextual only",
+          "No invented name, living witness, automatic D16 ribbon or expansion spirit restoration; later tablet is not new historical proof"
+        ]
+      },
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Public cemetery spirit/ledger, independent D16 crypt.",
+      "sourceSpecificContract": "C cemetery spirit, verified ledger/name comparison, report and tablet; D16 historical burial contextual only; No invented name, living witness, automatic D16 ribbon or expansion spirit restoration; later tablet is not new historical proof",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_003",
+        "name": "Eryndor",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S21",
+      "title": "The Smith's Last Order",
+      "primarySource": "D17_S21.md",
+      "sourceReferences": "[Source](D17_S21.md) / [R125 §13](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "E original forge allocation, player assistance, verified pin/bracket repairs (apprentice may do other), then blade completion/acknowledgment; phase U",
+          "C resume reserved stock during valid event; NPC-only repairs may support D17 observation, not S21 reward. Optional younger rubbing report separate."
+        ]
+      },
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "Reuse R124 D17 working forge, stock yard and cart bay.",
+      "sourceSpecificContract": "E original forge allocation, player assistance, verified pin/bracket repairs (apprentice may do other), then blade completion/acknowledgment; phase U; C resume reserved stock during valid event; NPC-only repairs may support D17 observation, not S21 reward. Optional younger rubbing report separate.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_022",
+        "name": "Garrick Ironheart",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S22",
+      "title": "The Cavern of Returning Steps",
+      "primarySource": "D18_S22.md",
+      "sourceReferences": "[Source](D18_S22.md) / [R125 §14](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "P public cavern survey, corrected map and explorer handover while site/actor valid",
+          "No required original lane, D18 focus or Air Recovery; do not invent alternative access after ending."
+        ]
+      },
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "Reuse R124 D18 public Inverted Cavern loop.",
+      "sourceSpecificContract": "P public cavern survey, corrected map and explorer handover while site/actor valid; No required original lane, D18 focus or Air Recovery; do not invent alternative access after ending.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_023",
+        "name": "Aster Windcrest",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S23",
+      "title": "Names in Stone",
+      "primarySource": "D19_S23.md",
+      "sourceReferences": "[Source](D19_S23.md) / [R125 §15](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Mixed C preserved survey and E genuine original worksite aid, safe panel and acknowledgment; both required",
+          "Retrospective report only from earlier real actions; M13 context or NPC-only repair cannot grant S23; preserve D19 baseline and uncertainty."
+        ]
+      },
+      "proposedFamilyAndWave": "E; W04",
+      "site": "Reuse R118 M13 and R124 D19 monument; separate optional worksite receipts.",
+      "sourceSpecificContract": "Mixed C preserved survey and E genuine original worksite aid, safe panel and acknowledgment; both required; Retrospective report only from earlier real actions; M13 context or NPC-only repair cannot grant S23; preserve D19 baseline and uncertainty.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_018",
+        "name": "Veyron Starwatch",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Both lanes required; actual earlier worksite receipt only.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S24",
+      "title": "The Night Watch's Debt",
+      "primarySource": "D20_S24.md",
+      "sourceReferences": "[Source](D20_S24.md) / [R125 §16](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Mixed C token recording/report and E actual original guard relief, validated defense/shared-watch intervals and acknowledgment",
+          "Retry at safe hold during actual event; existing retrospective uses genuine watch receipt only; D20 focus not gated."
+        ]
+      },
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Reuse R124 D20 sanctuary pass guard post and lower road.",
+      "sourceSpecificContract": "Mixed C token recording/report and E actual original guard relief, validated defense/shared-watch intervals and acknowledgment; Retry at safe hold during actual event; existing retrospective uses genuine watch receipt only; D20 focus not gated.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_007",
+        "name": "Garran Stoneward",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S25",
+      "title": "The Lantern Procession",
+      "primarySource": "R39-R41_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R39-R41_RECOVERED_SOURCE.md) / [R125 §17](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Mixed C local lantern preparation/procession and E original marker assistance plus validated group arrival; both required, either order",
+          "M13 group evidence only if it specifically verifies S25 participation; no duplicate group or fabricated arrival; authorized later supply movement subject to valid phase."
+        ]
+      },
+      "proposedFamilyAndWave": "E; W04",
+      "site": "Reuse Wolfveil public square and surveyed M13 dark-pass route.",
+      "sourceSpecificContract": "Mixed C local lantern preparation/procession and E original marker assistance plus validated group arrival; both required, either order; M13 group evidence only if it specifically verifies S25 participation; no duplicate group or fabricated arrival; authorized later supply movement subject to valid phase.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_006",
+        "name": "Lyra the Seeker",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Both lanes required; genuine group arrival.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S26",
+      "title": "The Broken Akitsu Seal",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R125 §18](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "C seal/register/disputed record, forgery verification and restored custody; explicitly supported before or after M14/M15",
+          "E optional original evacuation stamp. Validated local completion creates eligible S26 receipt; late record never rewrites prior report or proves culprit."
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Akitsu road/neutral depot; R118 regional kit, distinct O office.",
+      "sourceSpecificContract": "C seal/register/disputed record, forgery verification and restored custody; explicitly supported before or after M14/M15; E optional original evacuation stamp. Validated local completion creates eligible S26 receipt; late record never rewrites prior report or proves culprit.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_008",
+        "name": "Tome",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S27",
+      "title": "Tameri's Water",
+      "primarySource": "D21_S27.md",
+      "sourceReferences": "[Source](D21_S27.md) / [R125 §19](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Mixed C local gate test/repair and E genuine original pump repair/test; both required for full reward",
+          "Distinct verified evidence may qualify for S29 before repairs under proposed R66 adapter. Preserve personal filter fitting, no false repairs. Exact adapter remains unapproved for shipping."
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "D21 shared canal and O refugee pump; distinct personal fitting.",
+      "sourceSpecificContract": "Mixed C local gate test/repair and E genuine original pump repair/test; both required for full reward; Distinct verified evidence may qualify for S29 before repairs under proposed R66 adapter. Preserve personal filter fitting, no false repairs. Exact adapter remains unapproved for shipping.",
+      "readinessGate": "Early evidence adapter pending",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_009",
+        "name": "Henut",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Both repairs required; early verified evidence adapter proposed.",
+      "completionPolicy": "PROPOSAL_OR_REVIEW_PENDING",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S28",
+      "title": "Remoria's Missing Banner",
+      "primarySource": "D22_S28.md",
+      "sourceReferences": "[Source](D22_S28.md) / [R125 §20](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "C weave/seam/issue ledger and filed report, witness optional",
+          "E optional original rescue standard/shelter observations. Report evidence only upon actual authored filing; no inference of empire guilt or recovered banner."
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "D22 hillside work yard and captain report; O optional rescue camp.",
+      "sourceSpecificContract": "C weave/seam/issue ledger and filed report, witness optional; E optional original rescue standard/shelter observations. Report evidence only upon actual authored filing; no inference of empire guilt or recovered banner.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_010",
+        "name": "Livilla",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S29",
+      "title": "Three Accounts",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R125 §21](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "C any two distinct eligible S26/S27/S28 sources, comparison and statement; genuine clerk alternative if appropriate",
+          "E linked original three witness readings independent of local completion; third faction source is an addendum, no repeat reward. R66 adapter proposed, not implemented."
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Neutral inn, survey relationship to S19 without assuming same inn; O actual recorder shelter.",
+      "sourceSpecificContract": "C any two distinct eligible S26/S27/S28 sources, comparison and statement; genuine clerk alternative if appropriate; E linked original three witness readings independent of local completion; third faction source is an addendum, no repeat reward. R66 adapter proposed, not implemented.",
+      "readinessGate": "Two distinct eligible sources; third addendum",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_011",
+        "name": "Sable Vey",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Any two distinct eligible sources; third addendum; adapter unapproved.",
+      "completionPolicy": "PROPOSAL_OR_REVIEW_PENDING",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S30",
+      "title": "The Caravan Without Flags",
+      "primarySource": "D23_S30.md",
+      "sourceReferences": "[Source](D23_S30.md) / [R125 §22](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "C actual local merchant dispute, route choice, safe holds, bridge/bypass and recorded arrivals while escort event valid",
+          "E optional original escort; M15 trust only from real local arrival. Interruption can resume at genuine holding point; if actual event closes without arrival, missed this cycle. No M15 main gate."
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "D23 shared ridge/trade road, separate P merchant and O refugee groups.",
+      "sourceSpecificContract": "C actual local merchant dispute, route choice, safe holds, bridge/bypass and recorded arrivals while escort event valid; E optional original escort; M15 trust only from real local arrival. Interruption can resume at genuine holding point; if actual event closes without arrival, missed this cycle. No M15 main gate.",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_001",
+        "name": "Aldren",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S31",
+      "title": "The Disputed Spring",
+      "primarySource": "S31.md",
+      "sourceReferences": "[Source](S31.md) / [R126 §13](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "P actual spring inspection, repair, restored flow and allocation; E optional original catchment help",
+          "Rumor is not evidence; S07 and S27 separate"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Border hamlet; distinct D05/S07 and D21/S27 water sites.",
+      "sourceSpecificContract": "P actual spring inspection, repair, restored flow and allocation; E optional original catchment help; Rumor is not evidence; S07 and S27 separate",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_009",
+        "name": "Henut",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S32",
+      "title": "The Arrow Maker",
+      "primarySource": "S32.md",
+      "sourceReferences": "[Source](S32.md) / [R126 §14](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "C after M14 actual tally/loss/dispatch/shed evidence and report; E optional original signal interaction",
+          "Authorized late records in M15/M17 context; no fabricated dispatch, S29 substitution or culprit"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05",
+      "site": "Reuse M14 Akitsu western camp/trade road workshop kit.",
+      "sourceSpecificContract": "C after M14 actual tally/loss/dispatch/shed evidence and report; E optional original signal interaction; Authorized late records in M15/M17 context; no fabricated dispatch, S29 substitution or culprit",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_022",
+        "name": "Garrick Ironheart",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S33",
+      "title": "The Physician's Truce",
+      "primarySource": "D24_S33.md",
+      "sourceReferences": "[Source](D24_S33.md) / [R126 §15](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "P neutral clinic supply delivery and debrief; E optional original medic aid",
+          "M15 contextual only; D24 kit/recovery separate"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Reuse R125 D24 public neutral clinic; no hidden infirmary gate.",
+      "sourceSpecificContract": "P neutral clinic supply delivery and debrief; E optional original medic aid; M15 contextual only; D24 kit/recovery separate",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_019",
+        "name": "Amara Dawnveil",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S34",
+      "title": "A Wall for Everyone",
+      "primarySource": "S34.md",
+      "sourceReferences": "[Source](S34.md) / [R126 §16](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "C M15 refugee window admission order, repair and verified shelter handoff; E separate original defense",
+          "Later authorized review of genuine order/witness not repeat rescue; exact close U; D25 independent"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05",
+      "site": "M15 eligible refugee window, D25 shared motifs not same physical crossing.",
+      "sourceSpecificContract": "C M15 refugee window admission order, repair and verified shelter handoff; E separate original defense; Later authorized review of genuine order/witness not repeat rescue; exact close U; D25 independent",
+      "readinessGate": "Late review policy pending",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_024",
+        "name": "Cassian Valeward",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "PROPOSAL_OR_REVIEW_PENDING",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S35",
+      "title": "The Price of a Rumor",
+      "primarySource": "R42-R44_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R42-R44_RECOVERED_SOURCE.md) / [R126 §17](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Mixed C actual interviews/payment/dispatch and published correction; E original route/worker verification and notice update; both required",
+          "If original evidence stale, recheck only in valid phase; local correction retained; group escort optional"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Reuse existing market and actual original evacuation junction, not duplicate M15.",
+      "sourceSpecificContract": "Mixed C actual interviews/payment/dispatch and published correction; E original route/worker verification and notice update; both required; If original evidence stale, recheck only in valid phase; local correction retained; group escort optional",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_012",
+        "name": "Elias Windrow",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Both lanes required.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S36",
+      "title": "The Unsent Apology",
+      "primarySource": "R42-R44_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R42-R44_RECOVERED_SOURCE.md) / [R126 §18](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Mixed C letter delivery and actual reply/return; C original excerpt/authorized archive/record location in valid phase; both required",
+          "Meeting optional and consent-dependent; no invented forgiveness; D38/S54 separate"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Reuse opposing border towers and authorized neutral route, distinct D38/S54.",
+      "sourceSpecificContract": "Mixed C letter delivery and actual reply/return; C original excerpt/authorized archive/record location in valid phase; both required; Meeting optional and consent-dependent; no invented forgiveness; D38/S54 separate",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_027",
+        "name": "Riven Ashborne",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Both lanes required, meeting optional.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S37",
+      "title": "The Cave Beneath the Treaty",
+      "primarySource": "D26_S37.md",
+      "sourceReferences": "[Source](D26_S37.md) / [R126 §19](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "C actual satchel recovery, mural reconstruction and custody; E optional original coalition supply assistance",
+          "Consent and evidence provenance; no D26 claim or identical treaty assumption"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Reuse R125 D26 public cave, not hidden council hall.",
+      "sourceSpecificContract": "C actual satchel recovery, mural reconstruction and custody; E optional original coalition supply assistance; Consent and evidence provenance; no D26 claim or identical treaty assumption",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_011",
+        "name": "Sable Vey",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S38",
+      "title": "Hesper's Ledger",
+      "primarySource": "R45-R47_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R45-R47_RECOVERED_SOURCE.md) / [R126 §20](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Mixed C permitted folio or authorized duplicate and verified return; E original ledger/ration labels inspection and return; both required under source policy",
+          "No invented permission, Hesper identity or culpability; exact close U"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Reuse neutral archive/receiving office; separate O supply room.",
+      "sourceSpecificContract": "Mixed C permitted folio or authorized duplicate and verified return; E original ledger/ration labels inspection and return; both required under source policy; No invented permission, Hesper identity or culpability; exact close U",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_025",
+        "name": "Master Hesper",
+        "role": "INVESTIGATION_SUBJECT_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Hesper investigation subject, not verifier; both lanes required.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S39",
+      "title": "A Song Across the Line",
+      "primarySource": "R45-R47_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R45-R47_RECOVERED_SOURCE.md) / [R126 §21](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "C exchange musical phrases through approved clerk/checkpoint; E optional original evacuation song under proposed single-lane policy",
+          "Meeting/performance not required; music and completion proposal pending approval, no forced rhythm or identity claim"
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Existing opposing campfire pockets and approved checkpoint/clerk.",
+      "sourceSpecificContract": "C exchange musical phrases through approved clerk/checkpoint; E optional original evacuation song under proposed single-lane policy; Meeting/performance not required; music and completion proposal pending approval, no forced rhythm or identity claim",
+      "readinessGate": "Exchange/music approval pending",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_026",
+        "name": "Seren Silverchord",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Core exchange and optional original song proposal pending.",
+      "completionPolicy": "PROPOSAL_OR_REVIEW_PENDING",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S40",
+      "title": "The Soldier Who Remembered",
+      "primarySource": "D27_S40.md",
+      "sourceReferences": "[Source](D27_S40.md) / [R126 §22](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Mixed C actual roof15 observation/consent/private review; E genuine signal18/wreck18 observation; preserve source requirements",
+          "M16 mandatory fallback independent; no public naming without consent or repeat detention; exact phase U"
+        ]
+      },
+      "proposedFamilyAndWave": "G; W05",
+      "site": "Reuse R125 D27 and R119 M16 roof/guardroom; separate hidden balcony.",
+      "sourceSpecificContract": "Mixed C actual roof15 observation/consent/private review; E genuine signal18/wreck18 observation; preserve source requirements; M16 mandatory fallback independent; no public naming without consent or repeat detention; exact phase U",
+      "readinessGate": "Consent and original evidence",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_027",
+        "name": "Riven Ashborne",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Consent and actual original observation; M16 fallback independent.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S41",
+      "title": "Names That Don't Belong",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R127 §13](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Mixed C current private name/life evidence and E genuine original registry match; either order, actual consent-scoped resolution",
+          "If consent withheld, pending rather than secret completion; no legal identity change, forced disclosure or proven reincarnation"
+        ]
+      },
+      "proposedFamilyAndWave": "A; W05",
+      "site": "Existing village registry and actual O shelter index.",
+      "sourceSpecificContract": "Mixed C current private name/life evidence and E genuine original registry match; either order, actual consent-scoped resolution; If consent withheld, pending rather than secret completion; no legal identity change, forced disclosure or proven reincarnation",
+      "readinessGate": "Withheld consent = pending",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_016",
+        "name": "Orin Vellwood",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S42",
+      "title": "The House With Two Doors",
+      "primarySource": "D28_S42.md",
+      "sourceReferences": "[Source](D28_S42.md) / [R127 §14](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Mixed C preserved observation and E actual original rubble clearance, resident location, safe return/report",
+          "Shared matching evidence only if actually valid; D28 claim cannot complete rescue; NG+ for expired mandatory event"
+        ]
+      },
+      "proposedFamilyAndWave": "G; W05+",
+      "site": "Reuse R125 D28 shared lodging geometry, safe vestibule separate from boots.",
+      "sourceSpecificContract": "Mixed C preserved observation and E actual original rubble clearance, resident location, safe return/report; Shared matching evidence only if actually valid; D28 claim cannot complete rescue; NG+ for expired mandatory event",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_028",
+        "name": "Talia Ashwillow",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S43",
+      "title": "The Hill That Wasn't There",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R127 §15](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "C sky note, real original route evidence, D01 paired entry/claim/second vista, safe return/reflection",
+          "Actual D01 receipts reusable under authored wrapper; D01 owns sword once; reported route remains reported; no repeat glide or duplicate mountain"
+        ]
+      },
+      "proposedFamilyAndWave": "I; W03+ / D01 reuse",
+      "site": "Reuse R123 D01 exact silhouette/shelf/cave/hearth/sword/vista/watchtower.",
+      "sourceSpecificContract": "C sky note, real original route evidence, D01 paired entry/claim/second vista, safe return/reflection; Actual D01 receipts reusable under authored wrapper; D01 owns sword once; reported route remains reported; no repeat glide or duplicate mountain",
+      "readinessGate": "Read-only D01 receipts and independent route note",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_023",
+        "name": "Aster Windcrest",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Read-only D01 claim/vista; independent route and return; D01 sole sword entitlement.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S44",
+      "title": "The Mirror of Rain",
+      "primarySource": "D29_S44.md",
+      "sourceReferences": "[Source](D29_S44.md) / [R127 §16](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "C rainy-fork encounter, actual observation/scout assist and safe shelter arrival/report",
+          "Traveler waits safely while event valid; original contrast contextual; D29 mantle separate; permanent closure only verified"
+        ]
+      },
+      "proposedFamilyAndWave": "G; W05+",
+      "site": "Reuse R125 D29 ordinary shelter, not hidden mantle chamber.",
+      "sourceSpecificContract": "C rainy-fork encounter, actual observation/scout assist and safe shelter arrival/report; Traveler waits safely while event valid; original contrast contextual; D29 mantle separate; permanent closure only verified",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_014",
+        "name": "Neris Tideborne",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S45",
+      "title": "The Silence of the Lunar Vault",
+      "primarySource": "D30_S45.md",
+      "sourceReferences": "[Source](D30_S45.md) / [R127 §17](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Mixed C keeper motif/outer survey and E genuine original shelter observation",
+          "Actual report independent of D30 claim; optional guardian trial and safe surrender; no Celestial Sight"
+        ]
+      },
+      "proposedFamilyAndWave": "H; W04–05+",
+      "site": "Reuse R125 D30 public outer gallery and O shelter; inner vault independent.",
+      "sourceSpecificContract": "Mixed C keeper motif/outer survey and E genuine original shelter observation; Actual report independent of D30 claim; optional guardian trial and safe surrender; no Celestial Sight",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_004",
+        "name": "Moon Goddess",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S46",
+      "title": "The Guardian Without a War",
+      "primarySource": "S46.md",
+      "sourceReferences": "[Source](S46.md) / [R127 §18](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "C public courtyard duty marker or manifestation resolution then rest dialogue; E optional original relief",
+          "Rested guardian remains quiet in same cycle, never hostile respawn; D31 compatible record/echo proposal only; no spirit restoration"
+        ]
+      },
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Reuse D31 shrine/courtyard, separate public marker and hidden gauntlet.",
+      "sourceSpecificContract": "C public courtyard duty marker or manifestation resolution then rest dialogue; E optional original relief; Rested guardian remains quiet in same cycle, never hostile respawn; D31 compatible record/echo proposal only; no spirit restoration",
+      "readinessGate": "Rest persists",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_015",
+        "name": "Selene Ashveil",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Rest persists; compatible D31 record/echo proposed.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S47",
+      "title": "The Twelve's Broken Mosaic",
+      "primarySource": "S47.md",
+      "sourceReferences": "[Source](S47.md) / [R127 §19](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "P mosaic fragment conservation, actual verified repair and reflection; E optional original mural aid",
+          "No D32 notebook reward or invented painter/deity; genuine prior repair receipt only"
+        ]
+      },
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Reuse D32 public pilgrim cave, separate secret notebook.",
+      "sourceSpecificContract": "P mosaic fragment conservation, actual verified repair and reflection; E optional original mural aid; No D32 notebook reward or invented painter/deity; genuine prior repair receipt only",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_029",
+        "name": "Elaris Dawnseeker",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S48",
+      "title": "The Shrine of Healing",
+      "primarySource": "S48.md",
+      "sourceReferences": "[Source](S48.md) / [R127 §20](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "P channel inspection, debris clearance, seated guide, verified flow and rest; E optional original basin delivery",
+          "D33 vessel separate; no postgame garden or water effect as historical delivery"
+        ]
+      },
+      "proposedFamilyAndWave": "H; W04–05+",
+      "site": "Reuse D33 public lunar spring, keep hidden grotto/first/second focus clear.",
+      "sourceSpecificContract": "P channel inspection, debris clearance, seated guide, verified flow and rest; E optional original basin delivery; D33 vessel separate; no postgame garden or water effect as historical delivery",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_019",
+        "name": "Amara Dawnveil",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S49",
+      "title": "The Trial of the Open Hand",
+      "primarySource": "S49.md",
+      "sourceReferences": "[Source](S49.md) / [R127 §21](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "P actual food/cloth/water needs and reserve confirmed, reflection/silence; E separate optional original distribution",
+          "No personal inventory sacrifice or compulsory generosity; D34 token distinct"
+        ]
+      },
+      "proposedFamilyAndWave": "H; W04–05+",
+      "site": "Reuse D34 public grotto, distinct hidden pantry.",
+      "sourceSpecificContract": "P actual food/cloth/water needs and reserve confirmed, reflection/silence; E separate optional original distribution; No personal inventory sacrifice or compulsory generosity; D34 token distinct",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_029",
+        "name": "Elaris Dawnseeker",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S50",
+      "title": "The Unfinished Bridge",
+      "primarySource": "S50.md",
+      "sourceReferences": "[Source](S50.md) / [R127 §22](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "P public short-span supports, actual brace/deck verification, apron/marker; E optional original walkway help",
+          "Bypass alone not repair; if already repaired inspect valid state, no reward farming; D35 large span/D06 bridge separate"
+        ]
+      },
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Public short span, distinct D35 hidden large span and D06 mist bridge.",
+      "sourceSpecificContract": "P public short-span supports, actual brace/deck verification, apron/marker; E optional original walkway help; Bypass alone not repair; if already repaired inspect valid state, no reward farming; D35 large span/D06 bridge separate",
+      "readinessGate": "Actual source objectives and consent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_023",
+        "name": "Aster Windcrest",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S51",
+      "title": "The Fractured Depths",
+      "primarySource": "S51.md",
+      "sourceReferences": "[Source](S51.md) / [R128 §03](R128_S51_S55_FINAL_OPTIONAL_CONSTRUCTION_AND_COVERAGE.md) / [R82](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md)",
+      "classification": {
+        "file": "R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md",
+        "columns": [
+          "P local guide, stable inspection circuit, two markers, field kit, safe return and report. E independent original route verification → actual actor clearance → gate closure; can remain pending after local DONE.",
+          "No closure while actor in sweep. Verified bypass first. On interruption keep safe bay/committed flags; local reward remains earned. If historical closure event expires, only new valid cycle for missed action. D36 owns paired focus/chest armor/vista."
+        ]
+      },
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "Reuse R126 D36 ravine silhouette, separate public survey circuit",
+      "sourceSpecificContract": "P local guide, stable inspection circuit, two markers, field kit, safe return and report. E independent original route verification → actual actor clearance → gate closure; can remain pending after local DONE.; No closure while actor in sweep. Verified bypass first. On interruption keep safe bay/committed flags; local reward remains earned. If historical closure event expires, only new valid cycle for missed action. D36 owns paired focus/chest armor/vista.",
+      "readinessGate": "Occupied gate interlock; O independent",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_030",
+        "name": "Unnamed Goddess",
+        "role": "THEMATIC_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Local DONE and independent original actor clearance/gate closure; antagonist thematic only.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S52",
+      "title": "The Village That Chose Peace",
+      "primarySource": "S52.md",
+      "sourceReferences": "[Source](S52.md) / [R128 §04](R128_S51_S55_FINAL_OPTIONAL_CONSTRUCTION_AND_COVERAGE.md) / [R82](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md)",
+      "classification": {
+        "file": "R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md",
+        "columns": [
+          "P actual axle/ledger/witness evidence and accepted shared or timed-use agreement plus verified cleared road. E independent original rescue worker route/group safety.",
+          "Consent independent. Preserve resolved agreement, never restart old feud just because fused world loads. Original route not proof peace reverses convergence. Late testimony only if approved access; no M19 gate."
+        ]
+      },
+      "proposedFamilyAndWave": "F; W05",
+      "site": "Proposed 70×65 m village, 4–6 m road, 15×18 m common ground, mill −2 m, bypass +3 m",
+      "sourceSpecificContract": "P actual axle/ledger/witness evidence and accepted shared or timed-use agreement plus verified cleared road. E independent original rescue worker route/group safety.; Consent independent. Preserve resolved agreement, never restart old feud just because fused world loads. Original route not proof peace reverses convergence. Late testimony only if approved access; no M19 gate.",
+      "readinessGate": "Agreement persists",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_021",
+        "name": "Mara Hearthwood",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": null,
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S53",
+      "title": "The Last Supply Run",
+      "primarySource": "D37_S53.md",
+      "sourceReferences": "[Source](D37_S53.md) / [R128 §05](R128_S51_S55_FINAL_OPTIONAL_CONSTRUCTION_AND_COVERAGE.md) / [R82](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md)",
+      "classification": {
+        "file": "R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md",
+        "columns": [
+          "E authorized original convoy load, actual cart check, guarded travel, unload, verified service exit and scout arrival. C preserved store inscription, independent evidence.",
+          "Both flags kept separate; proposal is acknowledge local convoy on delivery + exit and treat inscription as optional for full DONE; final full completion policy requires approval. No inscription as proof player delivered cargo. Resume at real safe hold while event valid, NG+ if genuinely expired. D37 bag and second vista separate."
+        ]
+      },
+      "proposedFamilyAndWave": "J; W04–06",
+      "site": "Reuse R126 D37 ridge/public store and original depot, not hidden bag chamber",
+      "sourceSpecificContract": "E authorized original convoy load, actual cart check, guarded travel, unload, verified service exit and scout arrival. C preserved store inscription, independent evidence.; Both flags kept separate; proposal is acknowledge local convoy on delivery + exit and treat inscription as optional for full DONE; final full completion policy requires approval. No inscription as proof player delivered cargo. Resume at real safe hold while event valid, NG+ if genuinely expired. D37 bag and second vista separate.",
+      "readinessGate": "Inscription policy pending",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_028",
+        "name": "Talia Ashwillow",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Convoy actual delivery/exit; inscription policy pending.",
+      "completionPolicy": "PROPOSAL_OR_REVIEW_PENDING",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S54",
+      "title": "The Two Invitations",
+      "primarySource": "D38_S54.md",
+      "sourceReferences": "[Source](D38_S54.md) / [R128 §06](R128_S51_S55_FINAL_OPTIONAL_CONSTRUCTION_AND_COVERAGE.md) / [R82](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md)",
+      "classification": {
+        "file": "R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md",
+        "columns": [
+          "Mixed C preserved holder and E original holder at authored ordinary visits; both SEEN flags, selected reply (blank allowed), ACK_READY then actual ACK_SEEN on safe return.",
+          "Decline is not successful reply and may be reopened while valid; a missed visit preserves actual prior flags. No invented acknowledgment, meeting, romance or cross-world messenger. D38 archived note/claim cannot provide S54 selected reply."
+        ]
+      },
+      "proposedFamilyAndWave": "G; W04–05",
+      "site": "Reuse R126 D38 ordinary writing shelf and O rest station, separate secret quill chamber",
+      "sourceSpecificContract": "Mixed C preserved holder and E original holder at authored ordinary visits; both SEEN flags, selected reply (blank allowed), ACK_READY then actual ACK_SEEN on safe return.; Decline is not successful reply and may be reopened while valid; a missed visit preserves actual prior flags. No invented acknowledgment, meeting, romance or cross-world messenger. D38 archived note/claim cannot provide S54 selected reply.",
+      "readinessGate": "Actual acknowledgment",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_004",
+        "name": "Moon Goddess",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Both seen, selected reply, actual acknowledgment; decline not successful reply.",
+      "completionPolicy": "SOURCE_SPECIFIC_NOT_RUNTIME_APPROVED",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "S55",
+      "title": "A Place to Come Home To",
+      "primarySource": "R42-R44_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R42-R44_RECOVERED_SOURCE.md) / [R128 §07](R128_S51_S55_FINAL_OPTIONAL_CONSTRUCTION_AND_COVERAGE.md) / [R82](R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md)",
+      "classification": {
+        "file": "R82_QUEST_OBJECTIVE_AVAILABILITY_S51_S55.md",
+        "columns": [
+          "Mixed C pre-finale sanctuary garden plan/clear/channel/plant and E actual original shelter LOCATION18/WATER18/PLANT18. Both lanes required for full DONE under R66 proposal, approval pending.",
+          "Either order. Local acknowledgment can precede other lane; no full two-lane reward without both under proposed rule. Growth by authored phase. Public M20 garden or restored/fused landscape never grants S55 completion; D50 seed pouch and focus independent."
+        ]
+      },
+      "proposedFamilyAndWave": "H; W05–06",
+      "site": "Reuse surveyed M13/M18 sanctuary approach and existing shelter; D50 hidden terrace and M20 public garden distinct",
+      "sourceSpecificContract": "Mixed C pre-finale sanctuary garden plan/clear/channel/plant and E actual original shelter LOCATION18/WATER18/PLANT18. Both lanes required for full DONE under R66 proposal, approval pending.; Either order. Local acknowledgment can precede other lane; no full two-lane reward without both under proposed rule. Growth by authored phase. Public M20 garden or restored/fused landscape never grants S55 completion; D50 seed pouch and focus independent.",
+      "readinessGate": "Two-lane policy pending; no epilogue credit",
+      "coordination": {
+        "proposedNpcId": "FS_NPC_017",
+        "name": "Elowen Greenveil",
+        "role": "COORDINATION_ONLY",
+        "notQuestGiverBinding": true
+      },
+      "specialGuard": "Proposed two required lanes pending; no M20 garden credit.",
+      "completionPolicy": "PROPOSAL_OR_REVIEW_PENDING",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "actualQuestGiverId": null,
+      "approvedRewardDefinitionId": null,
+      "approvedAvailabilityPredicate": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    }
+  ],
+  "discoveries": [
+    {
+      "id": "D01",
+      "title": "The Hill That Wasn't There",
+      "primarySource": "INITIAL_DISCOVERY_BRIEFS.md",
+      "sourceReferences": "[Source](INITIAL_DISCOVERY_BRIEFS.md) / [R123 §03](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Valley / watchtower; survey separate from other mountains.",
+      "sourceSpecificContract": "Paired sky geometry, mountain sword, town vista; Damaged watchtower during safe combat lull; Temporary unsafe lull is waiting, not permanent failure; S43 shares entitlement once",
+      "readinessGate": "S43 read-only, sole sword owner",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Paired sky geometry, mountain sword, town vista",
+          "Damaged watchtower during safe combat lull",
+          "Temporary unsafe lull is waiting, not permanent failure; S43 shares entitlement once"
+        ]
+      },
+      "specialGuard": "S43 reads receipt, sole sword entitlement.",
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D02",
+      "title": "The First Footprint",
+      "primarySource": "R45-R47_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R45-R47_RECOVERED_SOURCE.md) / [R123 §04](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "B; W03",
+      "site": "Wolfveil forest edge; original river route; R122 A01/A02 interfaces only after survey.",
+      "sourceSpecificContract": "After M06, root/branch alignment, strap, vista; Actual evacuation river pause; New woodland cannot substitute; distinguish equipment from recollection",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "After M06, root/branch alignment, strap, vista",
+          "Actual evacuation river pause",
+          "New woodland cannot substitute; distinguish equipment from recollection"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D03",
+      "title": "The Offering of the Lost",
+      "primarySource": "D03.md",
+      "sourceReferences": "[Source](D03.md) / [R123 §05](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "B; W03+",
+      "site": "West Root shared S02/S03 precinct, distinct annex.",
+      "sourceSpecificContract": "Ring/arch, charm, corresponding lived vista; Shelter token stand and arch/ridge focus; S03 archive evidence never substitutes for focus",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Ring/arch, charm, corresponding lived vista",
+          "Shelter token stand and arch/ridge focus",
+          "S03 archive evidence never substitutes for focus"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D04",
+      "title": "The Unlit Window",
+      "primarySource": "D04.md",
+      "sourceReferences": "[Source](D04.md) / [R123 §06](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "A; W03",
+      "site": "Wolfveil rooftops R122 A03, distinct from D27 border town.",
+      "sourceSpecificContract": "Crescent lookout counterpart, hood, second view; Staffed refugee lookout and safe rail; Optional sign help distinct; don't infer it happened",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Crescent lookout counterpart, hood, second view",
+          "Staffed refugee lookout and safe rail",
+          "Optional sign help distinct; don't infer it happened"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D05",
+      "title": "The Wolf's Water",
+      "primarySource": "D05.md",
+      "sourceReferences": "[Source](D05.md) / [R123 §07](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "B; W03+",
+      "site": "Forest spring and S07 well, separate D33.",
+      "sourceSpecificContract": "Paw geometry, charm and second view; Contaminated well, stable rim and actual alignment; S07 animal aid separate; new clean water not history",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Paw geometry, charm and second view",
+          "Contaminated well, stable rim and actual alignment",
+          "S07 animal aid separate; new clean water not history"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D06",
+      "title": "The Bridge in the Mist",
+      "primarySource": "D06.md",
+      "sourceReferences": "[Source](D06.md) / [R123 §08](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "B; W03+",
+      "site": "River bend shared S08, not D35 gorge.",
+      "sourceSpecificContract": "Pier/bend/arch, mist bridge, belt/satchel, vista; Intact siege bridge and safe viewpoint; Wait during dangerous interval; S08 delivery not focus",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Pier/bend/arch, mist bridge, belt/satchel, vista",
+          "Intact siege bridge and safe viewpoint",
+          "Wait during dangerous interval; S08 delivery not focus"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D07",
+      "title": "The Door in the Sketch",
+      "primarySource": "D07.md",
+      "sourceReferences": "[Source](D07.md) / [R123 §09](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "D; W03",
+      "site": "West Root cliff/twin caves interface with S09 and M07; survey distinct authored footprints.",
+      "sourceSpecificContract": "Hatch/sketch alignment, gloves, vista; Working supply hatch and quartermaster corridor; S09 inspection/crate help doesn't grant focus; no repeat assistance reward",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Hatch/sketch alignment, gloves, vista",
+          "Working supply hatch and quartermaster corridor",
+          "S09 inspection/crate help doesn't grant focus; no repeat assistance reward"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D08",
+      "title": "Behind the White Water",
+      "primarySource": "D08_S10.md",
+      "sourceReferences": "[Source](D08_S10.md) / [R123 §10](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "Silent Waterfall shared S10, not retired waterfall.",
+      "sourceSpecificContract": "Paired waterfall entry, lantern, second vista; Occupied supply tunnel, ledge/arch/support; S10 shares revealed access, not item or completion; genuine migration only",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Paired waterfall entry, lantern, second vista",
+          "Occupied supply tunnel, ledge/arch/support",
+          "S10 shares revealed access, not item or completion; genuine migration only"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D09",
+      "title": "The Drowned Bell",
+      "primarySource": "D09_S11.md",
+      "sourceReferences": "[Source](D09_S11.md) / [R123 §11](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "Sunken Temple; S11 future packet consumer only.",
+      "sourceSpecificContract": "Temple entry, clapper/chime and second focus; Real warning sequence and safe platform alignment; Preserve warning and focus separately; S11 evidence distinct",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Temple entry, clapper/chime and second focus",
+          "Real warning sequence and safe platform alignment",
+          "Preserve warning and focus separately; S11 evidence distinct"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D10",
+      "title": "The Hidden Bandage",
+      "primarySource": "D10_S12.md",
+      "sourceReferences": "[Source](D10_S12.md) / [R123 §12](R123_D01_D10_S01_S10_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R77](R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md)",
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "Woodland shrine; S12 future packet consumer only.",
+      "sourceSpecificContract": "Folded-hand shrine counterpart, recipe, vista; Field aid niche with actual counterpart; S12 local restitution separate; no medical aid from observation",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R77_QUEST_OBJECTIVE_AVAILABILITY_D01_D10_S01_S10.md",
+        "columns": [
+          "Folded-hand shrine counterpart, recipe, vista",
+          "Field aid niche with actual counterpart",
+          "S12 local restitution separate; no medical aid from observation"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D11",
+      "title": "Roots of Yesterday",
+      "primarySource": "D11_S14.md",
+      "sourceReferences": "[Source](D11_S14.md) / [R124 §03](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "River meadow shared S14; survey actual river road, not D05 spring.",
+      "sourceSpecificContract": "Meadow root seam, Herbalism Satchel, vista of resident and young tree; River shelter sapling/marker/boulder/ridge; New planting does not prove old focus; S14 watering independent",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Meadow root seam, Herbalism Satchel, vista of resident and young tree",
+          "River shelter sapling/marker/boulder/ridge",
+          "New planting does not prove old focus; S14 watering independent"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D12",
+      "title": "The Second Constellation",
+      "primarySource": "D12_S15.md",
+      "sourceReferences": "[Source](D12_S15.md) / [R124 §04](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Old Watchtower shared S15; separate from M17 ridge observatory.",
+      "sourceSpecificContract": "Watchtower signal triangle, chart and warning recollection; Actual safe lookout and three signal lights; Weather/night is not a permanent deadline; stable authored sighting frame; S15 repair not required",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Watchtower signal triangle, chart and warning recollection",
+          "Actual safe lookout and three signal lights",
+          "Weather/night is not a permanent deadline; stable authored sighting frame; S15 repair not required"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D13",
+      "title": "The Remedy I Carried",
+      "primarySource": "D13_S16.md",
+      "sourceReferences": "[Source](D13_S16.md) / [R124 §05](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "D; W04",
+      "site": "Refuge ridge shared S16, consume R117 mine interface (A08).",
+      "sourceSpecificContract": "Moss/pouch counterpart, Restorative Salve recipe and delivery-bench vista; Mining refuge living moss, safe trail and older pouch; Baseline lived scene valid if S16 skipped; never grant S16 delivery receipt or promise recovery",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Moss/pouch counterpart, Restorative Salve recipe and delivery-bench vista",
+          "Mining refuge living moss, safe trail and older pouch",
+          "Baseline lived scene valid if S16 skipped; never grant S16 delivery receipt or promise recovery"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D14",
+      "title": "The Bird With One Wing",
+      "primarySource": "D14_S17.md",
+      "sourceReferences": "[Source](D14_S17.md) / [R124 §06](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "A; W04",
+      "site": "Artisan alley and corresponding refuge terrace shared S17, M12 clue only.",
+      "sourceSpecificContract": "Toy/roof/wing alignment, distinct model keepsake, lived play vista; Original repair bench, actual repaired child-owned toy and join; Carpenter's completed repair allows observation, not S17 credit; child retains toy; no duplicate companion cosmetic",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Toy/roof/wing alignment, distinct model keepsake, lived play vista",
+          "Original repair bench, actual repaired child-owned toy and join",
+          "Carpenter's completed repair allows observation, not S17 credit; child retains toy; no duplicate companion cosmetic"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D15",
+      "title": "The Chalk Road",
+      "primarySource": "D15_S18.md",
+      "sourceReferences": "[Source](D15_S18.md) / [R124 §07](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "Cave crossroads and mine-exit corridor; survey relationship to M07/M11, no inferred identical mine.",
+      "sourceSpecificContract": "Cave chalk alignment, route map/Wayfinder and mine-exit recollection; Original mine-exit marks and protected holding point; Authored baseline marks valid if S18 skipped; no false escort arrival or map reward from S18 alone",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Cave chalk alignment, route map/Wayfinder and mine-exit recollection",
+          "Original mine-exit marks and protected holding point",
+          "Authored baseline marks valid if S18 skipped; no false escort arrival or map reward from S18 alone"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D16",
+      "title": "The Last Name",
+      "primarySource": "D16_S20.md",
+      "sourceReferences": "[Source](D16_S20.md) / [R124 §08](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Cemetery shared S20; independent public archive/spirit alcove.",
+      "sourceSpecificContract": "Cemetery seal, memorial ribbon and clerk's name-reading vista; Original burial headstone, register and arch; S20 evidence separate; historical identity uncertain; no resurrection or grave restoration credit",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Cemetery seal, memorial ribbon and clerk's name-reading vista",
+          "Original burial headstone, register and arch",
+          "S20 evidence separate; historical identity uncertain; no resurrection or grave restoration credit"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D17",
+      "title": "The Cooling Forge",
+      "primarySource": "D17_S21.md",
+      "sourceReferences": "[Source](D17_S21.md) / [R124 §09](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "Mountain forge; S21 future consumer only, distinct from current blacksmith UI.",
+      "sourceSpecificContract": "Forge geometry, blade fitting/upgrade component, work recollection; Working forge and actual contours/stamp; S21 civilian work independent; no repeated work order or component grant",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Forge geometry, blade fitting/upgrade component, work recollection",
+          "Working forge and actual contours/stamp",
+          "S21 civilian work independent; no repeated work order or component grant"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D18",
+      "title": "Steps of the Other Side",
+      "primarySource": "D18_S22.md",
+      "sourceReferences": "[Source](D18_S22.md) / [R124 §10](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "Inverted Cavern; S22 future consumer only.",
+      "sourceSpecificContract": "Inverted stair counterpart, Air Recovery, second view; Appropriate authored migration after M06, stair/landing geometry; M06 is a presentation gate, not proof of original calendar chronology; S22 optional; walking route",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Inverted stair counterpart, Air Recovery, second view",
+          "Appropriate authored migration after M06, stair/landing geometry",
+          "M06 is a presentation gate, not proof of original calendar chronology; S22 optional; walking route"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D19",
+      "title": "The Missing Emblem",
+      "primarySource": "D19_S23.md",
+      "sourceReferences": "[Source](D19_S23.md) / [R124 §11](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "E; W04",
+      "site": "Hollow Mountain R118/R122 A11; S23 future consumer only.",
+      "sourceSpecificContract": "Monument panels/curve, chisel and recorded names vista; New refuge monument with fresh panels and protected bench; M13 candidate, not confirmed gate; S23 witness acknowledgment independent",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Monument panels/curve, chisel and recorded names vista",
+          "New refuge monument with fresh panels and protected bench",
+          "M13 candidate, not confirmed gate; S23 witness acknowledgment independent"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D20",
+      "title": "The Watchman's Lantern",
+      "primarySource": "D20_S24.md",
+      "sourceReferences": "[Source](D20_S24.md) / [R124 §12](R124_D11_D20_S11_S20_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R78](R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md)",
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Sanctuary pass; S24 future consumer, survey M18 ridge connection without assumption.",
+      "sourceSpecificContract": "Flame shape, cloak, watch-station recollection; Actual campfire/hooks at original watch station; Before S24 or after station secured; use completed, pending or skipped watch variant truthfully; routine handover not victory",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R78_QUEST_OBJECTIVE_AVAILABILITY_D11_D20_S11_S20.md",
+        "columns": [
+          "Flame shape, cloak, watch-station recollection",
+          "Actual campfire/hooks at original watch station",
+          "Before S24 or after station secured; use completed, pending or skipped watch variant truthfully; routine handover not victory"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D21",
+      "title": "The Gate of Water",
+      "primarySource": "D21_S27.md",
+      "sourceReferences": "[Source](D21_S27.md) / [R125 §03](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Tameri canal and S27 pump, R118 regional kit; separate D24 clinic.",
+      "sourceSpecificContract": "Canal glyph, filter plate/armor lining, water vista; Actual refugee pump queue and pipe-arch viewpoint; Neutral lever position after real repair supports observation while site valid; reserve-tap baseline if skipped/pending; no S27 repair receipt",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Canal glyph, filter plate/armor lining, water vista",
+          "Actual refugee pump queue and pipe-arch viewpoint",
+          "Neutral lever position after real repair supports observation while site valid; reserve-tap baseline if skipped/pending; no S27 repair receipt"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D22",
+      "title": "The Stitch in the Wind",
+      "primarySource": "D22_S28.md",
+      "sourceReferences": "[Source](D22_S28.md) / [R125 §04](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Remoria hillside/workshop with S28, R118 kit.",
+      "sourceSpecificContract": "Pennant stitch alignment, bracer and vista; Actual rescue camp and pennants; Baseline pennants valid without S28 rescue; no false rescue or identity inference",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Pennant stitch alignment, bracer and vista",
+          "Actual rescue camp and pennants",
+          "Baseline pennants valid without S28 rescue; no false rescue or identity inference"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D23",
+      "title": "The Road Without Flags",
+      "primarySource": "D23_S30.md",
+      "sourceReferences": "[Source](D23_S30.md) / [R125 §05](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Trade ridge and S30 caravan; survey M14/M15 interface without assuming identical road.",
+      "sourceSpecificContract": "Wheel-circle reveal, badge, Escort utility and vista; Actual cart formation; authored stationary spare wheels; Stable fallback preserves geometry, not escort credit; completed/pending/skipped S30 variants distinct",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Wheel-circle reveal, badge, Escort utility and vista",
+          "Actual cart formation; authored stationary spare wheels",
+          "Stable fallback preserves geometry, not escort credit; completed/pending/skipped S30 variants distinct"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D24",
+      "title": "The Physician's Hand",
+      "primarySource": "D24_S33.md",
+      "sourceReferences": "[Source](D24_S33.md) / [R125 §06](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Tameri clinic near irrigation road but outside D21 water hazards; S33 future consumer.",
+      "sourceSpecificContract": "Hand silhouette, field kit/Emergency Recovery and vista; Original field hospital safe supply bay and poles; S33 aid independent; no sacrifice of owned personal kit",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Hand silhouette, field kit/Emergency Recovery and vista",
+          "Original field hospital safe supply bay and poles",
+          "S33 aid independent; no sacrifice of owned personal kit"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D25",
+      "title": "The Gate That Held",
+      "primarySource": "INITIAL_DISCOVERY_BRIEFS.md",
+      "sourceReferences": "[Source](INITIAL_DISCOVERY_BRIEFS.md) / [R125 §07](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Marsh frontier fort; S34 future consumer, separate from D06/D35 bridge sites.",
+      "sourceSpecificContract": "Gate shield discovery, claim and required second vista; Actual evacuation gate brace and safe defense interval; R66 overrides older optional-vista language; keep shield if vista unfinished; S34 defense not implied",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Gate shield discovery, claim and required second vista",
+          "Actual evacuation gate brace and safe defense interval",
+          "R66 overrides older optional-vista language; keep shield if vista unfinished; S34 defense not implied"
+        ]
+      },
+      "specialGuard": "Second vista required after claim.",
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D26",
+      "title": "The Treaty in Stone",
+      "primarySource": "D26_S37.md",
+      "sourceReferences": "[Source](D26_S37.md) / [R125 §08](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "F; W05+",
+      "site": "Neutral limestone cave, S37 future consumer; separate D23 tunnel/D24 clinic.",
+      "sourceSpecificContract": "Coalition crest, note/keepsake and vista; Original supply emblems and shared rock pillars; S37 aid independent; do not identify M08 crest or identical coalition without evidence",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Coalition crest, note/keepsake and vista",
+          "Original supply emblems and shared rock pillars",
+          "S37 aid independent; do not identify M08 crest or identical coalition without evidence"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D27",
+      "title": "The Silver Signal",
+      "primarySource": "D27_S40.md",
+      "sourceReferences": "[Source](D27_S40.md) / [R125 §09](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "G; W05",
+      "site": "Reuse R119/R122 A15 border-town roof and M16 guardroom survey; S40 future consumer.",
+      "sourceSpecificContract": "Roof/chimney geometry, whistle and vista; Actual damaged roof gaps and silver lantern; S40 roof evidence separate; stable parapet or gallery only; no identity inference",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Roof/chimney geometry, whistle and vista",
+          "Actual damaged roof gaps and silver lantern",
+          "S40 roof evidence separate; stable parapet or gallery only; no identity inference"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D28",
+      "title": "The House Between",
+      "primarySource": "D28_S42.md",
+      "sourceReferences": "[Source](D28_S42.md) / [R125 §10](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "G; W05+",
+      "site": "Hamlet lodging; S42 future consumer, separate from M12 family house.",
+      "sourceSpecificContract": "Doorway, hidden lodging, boots and vista; Actual survivor lodging and braced lintel; Authored keeper-cleared route if S42 skipped; no fake repair or loss of older boots",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Doorway, hidden lodging, boots and vista",
+          "Actual survivor lodging and braced lintel",
+          "Authored keeper-cleared route if S42 skipped; no fake repair or loss of older boots"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D29",
+      "title": "Rain Across the Stone",
+      "primarySource": "D29_S44.md",
+      "sourceReferences": "[Source](D29_S44.md) / [R125 §11](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "G; W05+",
+      "site": "Storm cliff/cave; S44 future ordinary shelter consumer.",
+      "sourceSpecificContract": "Wave silhouette, mantle and vista; Original ash-rain shelter and static contour; Ordinary rain and S44 shelter do not substitute; temporary weather not permanent miss",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Wave silhouette, mantle and vista",
+          "Original ash-rain shelter and static contour",
+          "Ordinary rain and S44 shelter do not substitute; temporary weather not permanent miss"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D30",
+      "title": "The Lunar Vault's Eye",
+      "primarySource": "D30_S45.md",
+      "sourceReferences": "[Source](D30_S45.md) / [R125 §12](R125_D21_D30_S21_S30_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R79](R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md)",
+      "proposedFamilyAndWave": "H; W04–05+",
+      "site": "Lunar Vault ravine, distinct M09 sanctuary/D32 mosaic hall; S45 future outer survey.",
+      "sourceSpecificContract": "Eye alignment, three rings, charm and vista; Original emergency shelter carved stone and lintel; S45 survey independent; no Celestial Sight unlock or required guardian combat",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R79_QUEST_OBJECTIVE_AVAILABILITY_D21_D30_S21_S30.md",
+        "columns": [
+          "Eye alignment, three rings, charm and vista",
+          "Original emergency shelter carved stone and lintel",
+          "S45 survey independent; no Celestial Sight unlock or required guardian combat"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D31",
+      "title": "The Guard's Rest",
+      "primarySource": "D31.md",
+      "sourceReferences": "[Source](D31.md) / [R126 §03](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Ancient ridge shrine; S46 future shared consumer.",
+      "sourceSpecificContract": "Resting spear motif, Remnant Gauntlet and rest vista; Actual patrol rest/rack; after S46 rest, compatible non-hostile record/echo proposal only; never respawn hostile",
+      "readinessGate": "S46 rest/record alternative pending",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Resting spear motif, Remnant Gauntlet and rest vista",
+          "Actual patrol rest/rack; after S46 rest, compatible non-hostile record/echo proposal only; never respawn hostile"
+        ]
+      },
+      "specialGuard": "No hostile respawn after S46 rest.",
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D32",
+      "title": "Twelve Pieces of Dawn",
+      "primarySource": "D32-D35_DISCOVERY_BRIEFS.md",
+      "sourceReferences": "[Source](D32-D35_DISCOVERY_BRIEFS.md) / [R126 §04](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "E; W04–05+",
+      "site": "Pilgrim cave, not M18 counsel room or D30 vault; S47 future consumer.",
+      "sourceSpecificContract": "Three dawn motifs, notebook, mural-work vista; Actual shelter painter/child and motif geometry; S47 conservation independent",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Three dawn motifs, notebook, mural-work vista",
+          "Actual shelter painter/child and motif geometry; S47 conservation independent"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D33",
+      "title": "The Spring's Reflection",
+      "primarySource": "D32-D35_DISCOVERY_BRIEFS.md",
+      "sourceReferences": "[Source](D32-D35_DISCOVERY_BRIEFS.md) / [R126 §05](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "H; W04–05+",
+      "site": "Lunar spring, separate D05/S07 and S31; S48 future consumer.",
+      "sourceSpecificContract": "Bowl silhouette, healing vessel and basin vista; Actual original medic/basin; static accessible sightline; no S48 delivery credit",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Bowl silhouette, healing vessel and basin vista",
+          "Actual original medic/basin; static accessible sightline; no S48 delivery credit"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D34",
+      "title": "The Open Palm",
+      "primarySource": "D32-D35_DISCOVERY_BRIEFS.md",
+      "sourceReferences": "[Source](D32-D35_DISCOVERY_BRIEFS.md) / [R126 §06](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "H; W04–05+",
+      "site": "Roadside shelter and deity grotto; S49 future consumer.",
+      "sourceSpecificContract": "Open-palm geometry, ration token and sharing vista; Actual supply shelter and distribution geometry; S49 independent; no personal inventory sacrifice",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Open-palm geometry, ration token and sharing vista",
+          "Actual supply shelter and distribution geometry; S49 independent; no personal inventory sacrifice"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D35",
+      "title": "The Missing Span",
+      "primarySource": "D32-D35_DISCOVERY_BRIEFS.md",
+      "sourceReferences": "[Source](D32-D35_DISCOVERY_BRIEFS.md) / [R126 §07](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Mountain gorge, distinct D25 marsh bridge and S50 public bridge.",
+      "sourceSpecificContract": "Paired span, rope/grapple reward and overlook; Actual temporary rescue crossing; retain occupied collision; public S50 bridge not substitute",
+      "readinessGate": "Grapple approval",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Paired span, rope/grapple reward and overlook",
+          "Actual temporary rescue crossing; retain occupied collision; public S50 bridge not substitute"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D36",
+      "title": "The Fracture Below",
+      "primarySource": "INITIAL_DISCOVERY_BRIEFS.md",
+      "sourceReferences": "[Source](INITIAL_DISCOVERY_BRIEFS.md) / [R126 §08](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "D; W03–04+",
+      "site": "Mountain ravine and corresponding supply road; S51 future consumer.",
+      "sourceSpecificContract": "Split diamond, chest armor and cart passage overlook; Actual damaged supply route; second vista required despite old optional flag; S51 survey separate",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Split diamond, chest armor and cart passage overlook",
+          "Actual damaged supply route; second vista required despite old optional flag; S51 survey separate"
+        ]
+      },
+      "specialGuard": "Older armor retained; S51 independent.",
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D37",
+      "title": "The Last Crate",
+      "primarySource": "D37_S53.md",
+      "sourceReferences": "[Source](D37_S53.md) / [R126 §09](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "J; W04–06+",
+      "site": "Frontier ruined store and actual O stocked depot; S53 future consumer.",
+      "sourceSpecificContract": "Crate marks, Supply Bag and depot vista; Actual stocked depot/loading geometry; genuine archived load may preserve evidence only; S53 outcome variant truthful",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Crate marks, Supply Bag and depot vista",
+          "Actual stocked depot/loading geometry; genuine archived load may preserve evidence only; S53 outcome variant truthful"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D38",
+      "title": "The Letter I Never Sent",
+      "primarySource": "D38_S54.md",
+      "sourceReferences": "[Source](D38_S54.md) / [R126 §10](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "G; W05+",
+      "site": "Twin sanctuaries writing alcove, distinct M09/M13 and S36; S54 future consumer.",
+      "sourceSpecificContract": "Signature, quill/reply and writing vista; Actual protected desk/note; no invented S54 reply or identity",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Signature, quill/reply and writing vista",
+          "Actual protected desk/note; no invented S54 reply or identity"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D39",
+      "title": "The Bow Above the Marsh",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R126 §11](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Eastern marsh, independent free roam; D45 quiver separate.",
+      "sourceSpecificContract": "Bow silhouette, bow and marsh vista; Actual damaged lookout beam/braces; no M15 gate; D45 quiver separate",
+      "readinessGate": "Existing bow progression",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Bow silhouette, bow and marsh vista",
+          "Actual damaged lookout beam/braces; no M15 gate; D45 quiver separate"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D40",
+      "title": "The Twin Blades of the Dune",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R126 §12](R126_D31_D40_S31_S40_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R80](R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Tameri desert escarpment, independent free roam.",
+      "sourceSpecificContract": "Crossed blades, authorized training reward and vista; Actual original supply camp/barricades; no S26/M16 prerequisite, forced practice or new class",
+      "readinessGate": "Existing role progression",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R80_QUEST_OBJECTIVE_AVAILABILITY_D31_D40_S31_S40.md",
+        "columns": [
+          "Crossed blades, authorized training reward and vista",
+          "Actual original supply camp/barricades; no S26/M16 prerequisite, forced practice or new class"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D41",
+      "title": "The Shield of the Northern Wind",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R127 §03](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Remoria snow ridge; distinct D44 plateau.",
+      "sourceSpecificContract": "Snow-ridge crest, winter collar/cold-resistance reward and blanket vista; Actual mountain shelter broken supports and peak; safe sighting pad; no M17 or optional blanket-help gate",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Snow-ridge crest, winter collar/cold-resistance reward and blanket vista",
+          "Actual mountain shelter broken supports and peak; safe sighting pad; no M17 or optional blanket-help gate"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D42",
+      "title": "The Step of Falling Leaves",
+      "primarySource": "R35-R38_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R35-R38_RECOVERED_SOURCE.md) / [R127 §04](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Akitsu bamboo slope; use regional kit, no new settlement.",
+      "sourceSpecificContract": "Bamboo/step alignment, approved directional technique and terrace vista; Actual cleared ruined training yard and three poles; older already knows technique; practice optional; no extra dodge pool",
+      "readinessGate": "No extra dodge pool",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Bamboo/step alignment, approved directional technique and terrace vista",
+          "Actual cleared ruined training yard and three poles; older already knows technique; practice optional; no extra dodge pool"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D43",
+      "title": "The Soundless Arch",
+      "primarySource": "R39-R41_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R39-R41_RECOVERED_SOURCE.md) / [R127 §05](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Coastal shoulder and evacuation harbor; not another D01 mountain.",
+      "sourceSpecificContract": "Coastal wave geometry, ear charm/quiet-step reward and coast vista; Actual evacuation harbor damaged gantries and frame; no invented rescue, mandatory stealth or survival",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Coastal wave geometry, ear charm/quiet-step reward and coast vista",
+          "Actual evacuation harbor damaged gantries and frame; no invented rescue, mandatory stealth or survival"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D44",
+      "title": "The Ember in the Snow",
+      "primarySource": "R39-R41_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R39-R41_RECOVERED_SOURCE.md) / [R127 §06](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "High plateau, reuse D41 materials only.",
+      "sourceSpecificContract": "Thermal cave, pot/glove/warmth recipe and ridge vista; Actual blizzard camp windbreak/fire/rocks; safe sheltered focus, no forced exposure or new weather power",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Thermal cave, pot/glove/warmth recipe and ridge vista",
+          "Actual blizzard camp windbreak/fire/rocks; safe sheltered focus, no forced exposure or new weather power"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D45",
+      "title": "The Archer's Third Mark",
+      "primarySource": "R39-R41_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R39-R41_RECOVERED_SOURCE.md) / [R127 §07](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Wolfveil canopy, D39 bow separate.",
+      "sourceSpecificContract": "Canopy/quiver reward and second vista; Actual three training targets with repaired ring; practice optional; no score gate; distinct from D39 bow",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Canopy/quiver reward and second vista",
+          "Actual three training targets with repaired ring; practice optional; no score gate; distinct from D39 bow"
+        ]
+      },
+      "specialGuard": "Second vista required; practice optional.",
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D46",
+      "title": "The Breath Beneath the Lake",
+      "primarySource": "R42-R44_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R42-R44_RECOVERED_SOURCE.md) / [R127 §08](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "C; W03+",
+      "site": "Existing surveyed lake and actual original dock.",
+      "sourceSpecificContract": "Dock alignment, diving clasp/authorized reward and dry-shelf vista; Actual stable dock beam geometry during logistics lull; safe dry bypass and air pockets, no compulsory underwater risk",
+      "readinessGate": "Verified water/air volumes",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Dock alignment, diving clasp/authorized reward and dry-shelf vista",
+          "Actual stable dock beam geometry during logistics lull; safe dry bypass and air pockets, no compulsory underwater risk"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D47",
+      "title": "The Broken Clock",
+      "primarySource": "R42-R44_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R42-R44_RECOVERED_SOURCE.md) / [R127 §09](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "I; W03+ / independent",
+      "site": "Desert observatory distinct M17 and D12.",
+      "sourceSpecificContract": "Observatory mirrors, dial/log lore and second view; Actual desert station and evacuation dials; no time-stop or exact chronology inference; mirrors operate any time",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Observatory mirrors, dial/log lore and second view",
+          "Actual desert station and evacuation dials; no time-stop or exact chronology inference; mirrors operate any time"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D48",
+      "title": "The House of Echoing Steps",
+      "primarySource": "R42-R44_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R42-R44_RECOVERED_SOURCE.md) / [R127 §10](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "A; W03+",
+      "site": "Abandoned city quarter, distinct D28 lodging and S42 clearance.",
+      "sourceSpecificContract": "Lodging pavement/doorstep, shoulder guard and basement vista; Actual older paving; carving author unknown; D28 boots and S42 clearance independent; maintain return opening",
+      "readinessGate": "Actual pair, unique claim, required second vista",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Lodging pavement/doorstep, shoulder guard and basement vista",
+          "Actual older paving; carving author unknown; D28 boots and S42 clearance independent; maintain return opening"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D49",
+      "title": "The Thread Above the Clouds",
+      "primarySource": "R45-R47_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R45-R47_RECOVERED_SOURCE.md) / [R127 §11](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "I; W03+ / flight gate",
+      "site": "Highest approved gliding ridge; not a duplicate D01 mountain.",
+      "sourceSpecificContract": "Tower/glide silhouette, sash/approved handling reward and panorama vista; Actual protected lookout tower profiles; after flight unlock, exact chapter U; walking focus and safe recovery; no automatic finale survival",
+      "readinessGate": "Actual flight unlock and measured safe glide",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Tower/glide silhouette, sash/approved handling reward and panorama vista",
+          "Actual protected lookout tower profiles; after flight unlock, exact chapter U; walking focus and safe recovery; no automatic finale survival"
+        ]
+      },
+      "specialGuard": null,
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    },
+    {
+      "id": "D50",
+      "title": "The Garden Beyond the Stone",
+      "primarySource": "R45-R47_RECOVERED_SOURCE.md",
+      "sourceReferences": "[Source](R45-R47_RECOVERED_SOURCE.md) / [R127 §12](R127_D41_D50_S41_S50_OPTIONAL_CONSTRUCTION_PROMPTS.md) / [R81](R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md)",
+      "proposedFamilyAndWave": "H; W05–06",
+      "site": "Survey adjacent M13/M18 sanctuary and S55 terrace; distinct M20 public garden.",
+      "sourceSpecificContract": "Hidden garden, seed pouch and second view; Authorized original shelter visit before M19 commitment; actual beds/arch; baseline planting if S55 skipped; no M20 garden substitute",
+      "readinessGate": "Actual O visit before M19 commitment",
+      "enabled": false,
+      "approvedRuntimeId": null,
+      "originalOpportunityPredicate": null,
+      "approvedRewardDefinitionId": null,
+      "classification": {
+        "file": "R81_QUEST_OBJECTIVE_AVAILABILITY_D41_D50_S41_S50.md",
+        "columns": [
+          "Hidden garden, seed pouch and second view",
+          "Authorized original shelter visit before M19 commitment; actual beds/arch; baseline planting if S55 skipped; no M20 garden substitute"
+        ]
+      },
+      "specialGuard": "Actual original shelter visit before M19, no M20 substitute.",
+      "postEndingReachability": {
+        "SACRIFICE_RESTORATION": "UNRESOLVED",
+        "REFUSAL_FUSION": "UNRESOLVED"
+      }
+    }
+  ]
+}
