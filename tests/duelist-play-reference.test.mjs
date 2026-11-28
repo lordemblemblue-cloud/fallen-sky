@@ -20,7 +20,7 @@ test('practice keeps difficulty and opponent selection and launches locally; nor
   assert.match(menu,/onPrefs\(\{ level: e.target.value \}\)/);
   assert.match(menu,/onPrefs\(\{ foe: e.target.value \}\)/);
   assert.match(menu,/onClick=\{\(\) => launch\(mode.id\)\}/);
-  assert.match(menu,/category === 'practice' \? 'START TRAINING' : 'PRACTICE'/);
+  assert.match(menu,/category === 'practice' \? 'START TRAINING' : 'PLAY OFFLINE'/);
   assert.match(menu,/category === 'normal' && <button[^]*?onClick=\{\(\) => openServers\(mode.route\)\}/);
   assert.match(menu,/params: \{ page: 'online-play' \}, search: \{ mode: modeId \}/);
   for(const mode of TEMPLATE_MODES.practice)assert.deepEqual(templateLaunch('practice',mode.id),mode.route?{mode:mode.route,online:0}:null);
