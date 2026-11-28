@@ -6,7 +6,7 @@ import { ACTIONS, ACTION_ORDER, ULTIMATE_ID, actionsForClass } from './core/batt
 import {enemyPortrait} from './core/enemyVisuals.mjs';
 import { enemyFormation, tacticFor } from './core/enemyCatalog.mjs';
 import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalog.mjs';
-import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedSkills, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, combineQuote, combineWeapon, ascendQuote, ascendSet, socketQuote, socketEquipment, enchantQuote, enchantEquipment, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
+import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedSkills, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, combineQuote, combineWeapon, ascendQuote, ascendSet, socketQuote, socketEquipment, enchantQuote, enchantEquipment, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, recoveryQuote, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
@@ -16,7 +16,7 @@ import { ItemArt, SkillArt } from './SapphireIcons.jsx';
 import { weaponEligible, weaponMetadata, enhancementLevel } from './core/weaponCatalog.mjs';
 import { GROVE_STORY, groveStoryState } from './core/groveStory.mjs';
 import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
-import {encounterReward} from './core/encounterRewards.mjs';
+import {encounterReward,encounterRecoverySupply} from './core/encounterRewards.mjs';
 import {serviceFor,liveService} from './core/worldInteractions.mjs';
 import {createConfirmationGate} from './core/confirmationGate.mjs';
 import {bondConversation,BOND_GIFT} from './core/companionBonds.mjs';
@@ -541,7 +541,7 @@ function DungeonEntrance({profile,world,candidate,encounter,running,original,lay
   const roster=<>{enemies.length?enemies.map(e=><div className="fa-entrance-enemy" key={e.id}><EnemyPortrait enemy={e}/><strong>{e.name}</strong><small>HP {e.maxHp}</small></div>):<p>No enemy formation available.</p>}</>;
   const stats=<StatRows stats={{'Encounter type':category,'Enemy HP':lead?.maxHp??'—','Enemy attack':lead?.atk??'—','Enemy defense':lead?.def??'—'}}/>;
   const details=<><p>{description}</p>{completed&&<p>Previously defeated. First-victory rewards cannot be earned again.</p>}</>;
-  const rewards=<p>{completed?'First-victory rewards already recorded.':ready?('First victory: '+encounterReward(candidate).xp+' XP · '+encounterReward(candidate).gold+' gold · '+encounterReward(candidate).ore+' ore, plus equipment where available. No reward is granted at entry.'):'No rewards available to preview.'}</p>;
+  const rewards=<p>{completed?'First-victory rewards already recorded.':ready?('First victory: '+encounterReward(candidate).xp+' XP · '+encounterReward(candidate).gold+' gold · '+encounterReward(candidate).ore+' ore'+(encounterRecoverySupply(candidate)?' · '+encounterRecoverySupply(candidate)+' tonics':'')+', plus equipment where available. No reward is granted at entry.'):'No rewards available to preview.'}</p>;
   const controls=<><Btn primary className="fa-entrance-confirm" disabled={!ready} onClick={onDetails}>Encounter Details</Btn><Btn className="fa-entrance-leave" onClick={back}>Leave</Btn></>;
   if(original)return <div className="fa-original-entrance">
     <h2 className="fa-entrance-title">Dungeon Entrance</h2>
@@ -572,7 +572,7 @@ function BossIntroduction({profile,candidate,encounter,running,original,layout,o
   const roster=enemies.map(e=><Btn key={e.id} primary={selected?.id===e.id} aria-pressed={selected?.id===e.id} onClick={()=>setSelectedId(e.id)}><EnemyPortrait enemy={e} small/><strong>{e.name}</strong><small>HP {e.maxHp}</small></Btn>);
   const details=<StatRows stats={{HP:selected?.maxHp??'—',Attack:selected?.atk??'—',Defense:selected?.def??'—',Speed:selected?.spd??'—'}}/>;
   const tactics=<>{enemies.map(e=><div className="fa-boss-tactic" key={e.id}><EnemyPortrait enemy={e} small/><div><strong>{e.name}</strong><p>{tacticFor(e.strategy,e.archetype)}</p></div></div>)}{!enemies.length&&<p>No encounter data available.</p>}</>;
-  const reward=completed?'First-victory rewards already recorded.':ready?('First eligible victory: '+encounterReward(candidate).xp+' XP · '+encounterReward(candidate).gold+' gold · '+encounterReward(candidate).ore+' ore, plus equipment where available.'):'No reward preview available.';
+  const reward=completed?'First-victory rewards already recorded.':ready?('First eligible victory: '+encounterReward(candidate).xp+' XP · '+encounterReward(candidate).gold+' gold · '+encounterReward(candidate).ore+' ore'+(encounterRecoverySupply(candidate)?' · '+encounterRecoverySupply(candidate)+' tonics':'')+', plus equipment where available.'):'No reward preview available.';
   const enter=<Btn primary className="fa-boss-enter" disabled={!ready} onClick={onEnter}>Enter Battle</Btn>;
   if(original)return <div className="fa-original-boss">
     <h2 className="fa-boss-title">{category==='Boss'?'Boss Introduction':'Encounter Introduction'}</h2>
@@ -930,20 +930,23 @@ function SanctuaryRest({profile,service,serviceAvailable,encounter,original,layo
 
 // Consumable recovery uses the same item definition and heal transaction as inventory.
 function ConsumableRecovery({profile,encounter,original,layout,onRecover,back}){
-  const max=heroStats(profile).maxHp,hp=profile?.hp||0,owned=profile?.inventory?.recoveryTonic||0;
-  const potency=ITEMS.recoveryTonic.heal,next=Math.min(max,hp+potency),amount=Math.max(0,next-hp);
-  const allowed=Boolean(profile&&!encounter&&owned>0&&amount>0);
+  const [recipient,setRecipient]=useState('hero');
+  const members=[{id:'hero',name:profile?.name||'Leader'},...ROSTER.filter(m=>memberFor(profile,m.id).recruited)];
+  const q=recoveryQuote(profile,recipient),{max,hp,owned,next,amount}=q;
+  const potency=ITEMS.recoveryTonic.heal,allowed=Boolean(profile&&!encounter&&q.ok);
+  const name=members.find(m=>m.id===recipient)?.name||'Select recipient';
+  const selector=<label className="fa-recovery-recipient">Recipient <select value={recipient} onChange={e=>setRecipient(e.target.value)}>{members.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label>;
   const locked=useRef(false);
   const reason=!profile?'No active character.':encounter?'Recovery is not available during combat.':!owned?'No Recovery Tonics owned.':amount===0?'Health is already full.':'Ready to consume one Recovery Tonic.';
-  const recover=()=>{if(!allowed||locked.current)return;locked.current=true;if(!onRecover(hp,owned))locked.current=false;};
-  const preview=<><p>Current HP: {hp}/{max}</p><progress aria-label="Current health" value={hp} max={max}/><p>After recovery: {next}/{max}</p><progress aria-label="Health after one tonic" value={next} max={max}/><p>HP restored: +{amount}</p></>;
-  const rows=[['Recovery Tonic','Owned: '+owned],['Health restoration','Up to '+potency+' HP'],['Consumption','1 tonic'],['Gold cost','0 gold'],['Recipient',profile?.name||'No character']];
+  const recover=()=>{if(!allowed||locked.current)return;locked.current=true;if(!onRecover(recipient,q))locked.current=false;};
+  const preview=<>{selector}<p>Current HP: {hp}/{max}</p><progress aria-label="Current health" value={hp} max={max}/><p>After recovery: {next}/{max}</p><progress aria-label="Health after one tonic" value={next} max={max}/><p>HP restored: +{amount}</p></>;
+  const rows=[['Recovery Tonic','Owned: '+owned],['Health restoration','Up to '+potency+' HP'],['Consumption','1 tonic'],['Gold cost','0 gold'],['Recipient',name]];
   const confirm=<Btn primary className="fa-recovery-confirm" disabled={!allowed} onClick={recover}>Confirm Recovery</Btn>;
   if(original)return <div className="fa-original-recovery">
     <h2 className="fa-recovery-title">Healing &amp; Recovery</h2><div className="fa-recovery-kicker">Consumable recovery</div>
     <h3 className="fa-recovery-options-title">Recovery details</h3>
     <section className="fa-recovery-options" aria-label="Recovery details">{rows.map(([label,value],i)=><div key={label} className={i===0?'selected':''}><strong>{label}</strong><span>{value}</span></div>)}</section>
-    <h3 className="fa-recovery-health-title">{profile?.name||'Current character'}</h3>
+    <h3 className="fa-recovery-health-title">{name}</h3>
     <section className="fa-recovery-health">{preview}</section>
     <h3 className="fa-recovery-effects-title">Recovery preview</h3><section className="fa-recovery-effects"><div><span>HP restored</span><strong>+{amount}</strong></div><div><span>Tonics remaining</span><strong>{owned} → {allowed?owned-1:owned}</strong></div><div><span>Gold consumed</span><strong>0</strong></div></section>
     <h3 className="fa-recovery-status-title">Availability</h3><div className="fa-recovery-status" role="status">{reason}</div>
@@ -1587,7 +1590,7 @@ export default function SapphireAdventure(){
     case '43':content=<QuestOffer profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onAccept={()=>{if(transact(p=>{if(p.quests.grove!=='available')throw Error('Quest is no longer available.');return acceptGroveQuest(p);},'Quest accepted')){root('10');go('08');}}}/>;break;
     case '44':content=<QuestCompletion profile={profile} original={original} layout={screen.layout} onContinue={()=>root('10')} onJournal={()=>{root('10');go('08');}}/>;break;
     case '45':content=<SkillUnlocked key={profile?.id||'guest'} profile={profile} result={result} level={level} original={original} layout={screen.layout} onContinue={()=>{if(current.current.profile)resumeWorld();else back();}} onSkillbook={()=>{if(current.current.profile){resumeWorld();go('12');}else back();}}/>;break;
-    case '46':content=<ConsumableRecovery key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onRecover={(hp,owned)=>{const s=current.current;if(s.id!=='46'||!s.profile||s.encounter)return false;const ok=transact(p=>{if(p.hp!==hp||p.inventory.recoveryTonic!==owned)throw Error('Recovery preview changed. Review the current values.');return heal(p);},'Health restored');if(ok)back();return ok;}}/>;break;
+    case '46':content=<ConsumableRecovery key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onRecover={(recipient,expected)=>{const s=current.current;if(s.id!=='46'||!s.profile||s.encounter)return false;const ok=transact(p=>{const q=recoveryQuote(p,recipient);if(!q.ok||q.hp!==expected.hp||q.max!==expected.max||q.owned!==expected.owned||q.next!==expected.next)throw Error('Recovery preview changed. Review the current values.');return heal(p,{recipient});},'Health restored');if(ok)back();return ok;}}/>;break;
     case '47':content=original?<div className="fa-original-error">
       <h2>Unable to continue</h2><p role="alert">{error}</p>
       <Btn primary className="fa-painted-button fa-error-retry" onClick={()=>{if(current.current.encounter)retryBattle();else if(profile)begin(profile,slot,saveBaseline.current?.slot===slot?saveBaseline.current.stamp:undefined);else leaveTitle();}}><span className="fa-art-sr">Retry</span></Btn>
