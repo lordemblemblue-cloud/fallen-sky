@@ -332,9 +332,9 @@ test('original consumable recovery uses live health and rejects repeated or stal
  assert.ok(templateUrl('46').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  const section=page.slice(page.indexOf('function ConsumableRecovery('),page.indexOf('function SaveToast('));
- for(const marker of ['ITEMS.recoveryTonic.heal','Math.min(max,hp+potency)','owned>0&&amount>0','!encounter','locked.current','onRecover(hp,owned)','disabled={!allowed}','Health is already full.'])assert.ok(section.includes(marker),marker);
+ for(const marker of ['ITEMS.recoveryTonic.heal','recoveryQuote(profile,recipient)','setRecipient(e.target.value)','!encounter','locked.current','onRecover(recipient,q)','disabled={!allowed}','Health is already full.'])assert.ok(section.includes(marker),marker);
  const handler=page.split('\n').find(line=>line.trim().startsWith("case '46':"));
- for(const marker of ["s.id!=='46'",'p.hp!==hp','p.inventory.recoveryTonic!==owned','return heal(p)','if(ok)back()'])assert.ok(handler.includes(marker),marker);
+ for(const marker of ["s.id!=='46'",'q.hp!==expected.hp','q.owned!==expected.owned','q.max!==expected.max','return heal(p,{recipient})','if(ok)back()'])assert.ok(handler.includes(marker),marker);
 });
 
 test('original comparison uses actual equipment and guards changes for the chosen wearer',()=>{
