@@ -9,12 +9,12 @@ const screen=(id,next)=>src.slice(src.indexOf("    case '"+id+"':content="),src.
 test('every registered UI has one intentional presentation family',()=>{
  assert.equal(Object.keys(GLASS_UI_POLICY).length,48);
  assert.deepEqual(Object.keys(GLASS_UI_POLICY).sort(),Object.keys(UI_SCREENS).sort());
- for(const [kind,count] of Object.entries({title:1,right:3,scene:27,workspace:5,hud:2,event:9,toast:1}))assert.equal(Object.values(GLASS_UI_POLICY).filter(v=>v===kind).length,count);
+ for(const [kind,count] of Object.entries({title:1,right:3,scene:32,hud:2,event:9,toast:1}))assert.equal(Object.values(GLASS_UI_POLICY).filter(v=>v===kind).length,count);
  assert.equal(glassUiKind('invalid'),null);assert.equal(glassUiKind('__proto__'),null);
 });
 test('only intended single-panel menus replace original art at runtime',()=>{
  assert.deepEqual(Object.keys(GLASS_UI_POLICY).filter(usesRightGlass).sort(),['13','40','47']);
- assert.deepEqual(Object.keys(GLASS_UI_POLICY).filter(id=>glassUiKind(id)==='scene').sort(),['02','03','04','05','06','07','08','11','12','18','19','20','21','24','25','26','27','28','29','30','32','34','35','37','39','46','48']);
+ assert.deepEqual(Object.keys(GLASS_UI_POLICY).filter(id=>glassUiKind(id)==='scene').sort(),['02','03','04','05','06','07','08','11','12','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','32','33','34','35','37','39','46','48']);
  assert.equal(glassUiKind('09'),'hud');assert.equal(glassUiKind('10'),'hud');
  assert.match(src,/useStagedOriginal\(rightGlass\|\|glassKind==='toast'\?null:id\)/);
  assert.match(src,/data-glass-kind=\{glassKind\}/);
@@ -119,4 +119,27 @@ test('scene workspace layout is normal flow, keeps item names and real action ga
  assert.match(menus,/\.fa-game-menu-body \.fa-panel\{position:relative!important;inset:auto!important/);
  assert.match(menus,/@media\(max-width:760px\)/);
  assert.match(menus,/background:none;box-shadow:none/);
+});
+
+test('world services use scene layouts without advertising restricted actions in Escape',()=>{
+ for(const id of ['16','17','22','23','33','46']){
+  assert.equal(glassUiKind(id),'scene');assert.equal(isGameMenu(id),true);
+ }
+ for(const id of ['16','17','22','23','33'])assert.ok(!GAME_MENU_GROUPS.flatMap(g=>g.ids).includes(id));
+ const merchant=src.slice(src.indexOf('function MerchantShop('),src.indexOf('function BlacksmithShop('));
+ assert.match(merchant,/aria-label="Merchant category"/);
+ assert.match(merchant,/fa-trade-item-label/);
+ assert.match(merchant,/setSelectedId\(key\);setQuantity\(1\)/);
+ assert.match(merchant,/ready&&quote.ok/);
+ const smith=src.slice(src.indexOf('function BlacksmithShop('),src.indexOf('function CraftingShop('));
+ assert.match(smith,/fa-forge-preview/);
+ assert.match(smith,/ready&&level<5&&gold>=cost&&ore>=1/);
+ const craft=src.slice(src.indexOf('function CraftingShop('),src.indexOf('function SanctuaryRest('));
+ assert.match(craft,/new Set\(Object.values\(RECIPES\).map\(recipe=>recipe.category\)\)/);
+ assert.match(craft,/ready&&q.ok/);
+ assert.match(src,/fa-service-party/);
+ assert.match(src,/fa-service-enemies/);
+ const menus=readFileSync(new URL('../src/components/fantasybattle/sapphireGameMenus.css',import.meta.url),'utf8');
+ assert.match(menus,/\.fa-game-menu-header\{position:sticky/);
+ assert.match(menus,/\.fa-forge-preview\{display:grid/);
 });

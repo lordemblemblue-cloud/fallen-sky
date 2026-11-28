@@ -628,7 +628,7 @@ function DungeonEntrance({profile,world,candidate,encounter,running,original,lay
     <h3 className="fa-entrance-rewards-title">Rewards</h3><section className="fa-entrance-rewards">{rewards}{lead&&<p>{tacticFor(lead.strategy,lead.archetype)}</p>}</section>
     {controls}
   </div>;
-  return <><Panel rect={layout[0]}><h2>Current encounter</h2><p>{title}</p><p>{world?.region||'World not loaded'}</p><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{roster}</Panel><Panel rect={layout[2]}><h2>{title}</h2>{stats}{details}{rewards}{controls}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>Current encounter</h2><p>{title}</p><p>{world?.region||'World not loaded'}</p><p>{category} · Party {partySize}/4</p><p>{ready?'Available to preview':'Not available'}</p></Panel><Panel rect={layout[1]}><h2>Enemy formation</h2><div className="fa-service-enemies">{roster}</div></Panel><Panel rect={layout[2]}><h2>{title}</h2>{stats}{details}{lead&&<p>{tacticFor(lead.strategy,lead.archetype)}</p>}<h3>Rewards</h3>{rewards}{controls}</Panel></>;
 }
 
 // Boss introduction uses the real encounter and the same party-size scaling as battle.
@@ -840,8 +840,8 @@ function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,
   const reset=()=>{setPageIndex(0);setSelectedId(null);setQuantity(1);};
   const tabs=<>{['buy','sell'].map(m=><Btn key={m} primary={mode===m} aria-pressed={mode===m} onClick={()=>{setMode(m);reset();}}>{m==='buy'?'Buy':'Sell'}</Btn>)}</>;
   const filters=categories.map(([id,label])=><Btn key={id} primary={filter===id} aria-pressed={filter===id} onClick={()=>{setFilter(id);reset();}}>{label}</Btn>);
-  const cards=visible.map(([key,i])=><Btn key={key} className="fa-merchant-card" primary={id===key} aria-pressed={id===key} onClick={()=>setSelectedId(key)}><ItemArt id={key}/><strong>{i.name}</strong><span>{i[mode]} gold</span><small>Owned: {inv[key]||0}</small></Btn>);
-  const paging=<><Btn disabled={index===0} aria-label="Previous items" onClick={()=>setPageIndex(index-1)}>‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} aria-label="Next items" onClick={()=>setPageIndex(index+1)}>›</Btn></>;
+  const cards=visible.map(([key,i])=><Btn key={key} className="fa-merchant-card" primary={id===key} aria-pressed={id===key} onClick={()=>{setSelectedId(key);setQuantity(1);}}><ItemArt id={key}/><span className="fa-trade-item-label"><strong>{i.name}</strong><small>Owned: {inv[key]||0}</small></span><span className="fa-trade-price">{i[mode]} gold</span></Btn>);
+  const paging=<><Btn disabled={index===0} aria-label="Previous items" onClick={()=>{setPageIndex(index-1);setSelectedId(null);setQuantity(1);}}>‹</Btn><span>{index+1} / {pages}</span><Btn disabled={index>=pages-1} aria-label="Next items" onClick={()=>{setPageIndex(index+1);setSelectedId(null);setQuantity(1);}}>›</Btn></>;
   const reason=!ready?'Visit a service marker to trade.':!item?'Select an available item.':quote.reason||'Confirm the displayed trade.';
   const detail=item?<><p>Type: {item.kind}</p>{(gearMetadata(id)||weaponMetadata(id))&&<p>{gearMetadata(id)||weaponMetadata(id)}</p>}<p>Owned: {owned} · Equipped: {equipped||0}</p>{item.heal!=null&&<p>Restores up to {item.heal} HP.</p>}{item.atk!=null&&<p>Attack: +{item.atk}</p>}{item.def!=null&&<p>Defense: +{item.def}</p>}{item.spd!=null&&<p>Speed: +{item.spd}</p>}<p>Buy: {item.buy||0} gold · Sell: {item.sell||0} gold</p></>:<p>No item selected.</p>;
   const trade=<Btn primary className="fa-merchant-trade" disabled={!allowed} onClick={()=>onTrade(mode,id,quantity)}>{mode==='buy'?'Purchase':'Sell Item'}</Btn>;
@@ -856,7 +856,7 @@ function MerchantShop({profile,service,serviceAvailable,original,layout,onTrade,
     <h3 className="fa-merchant-item-name">{item?.name||'Select an item'}</h3><div className="fa-merchant-item-art">{item&&<ItemArt id={id}/>}</div>
     <section className="fa-merchant-detail">{detail}</section><div className="fa-merchant-reason" role="status">{reason}</div><div className="fa-merchant-price">{quantityControl} · {Number.isInteger(quantity)&&quantity>=1&&quantity<=MAX_TRADE_QUANTITY?price*quantity:'—'} gold</div>{trade}<Btn className="fa-merchant-back" onClick={back}>Leave</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Merchant</h2><p>Gold: {profile?.gold||0}</p>{tabs}{filters}<input aria-label="Search merchant items" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/><Btn onClick={back}>Leave</Btn></Panel><Panel rect={layout[1]}>{cards}{!visible.length&&<p>No matching items</p>}{paging}</Panel><Panel rect={layout[2]}><h2>{item?.name||'Select an item'}</h2>{detail}{quantityControl}<p>Total: {Number.isInteger(quantity)&&quantity>=1&&quantity<=MAX_TRADE_QUANTITY?price*quantity:'—'} gold</p><p>{reason}</p>{trade}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>{service?.label||'Merchant'}</h2><p className="fa-service-balance">Gold available <strong>{fmt(profile?.gold||0)}</strong></p><div className="fa-service-tabs" aria-label="Trade mode">{tabs}</div><label>Search<input aria-label="Search merchant items" placeholder="Search goods" value={query} onChange={e=>{setQuery(e.target.value);reset();}}/></label><label>Category<select aria-label="Merchant category" value={filter} onChange={e=>{setFilter(e.target.value);reset();}}>{categories.map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label><p>{ready?'Select goods to review the trade.':'Approach a service marker to trade.'}</p></Panel><Panel rect={layout[1]}><h2>{mode==='buy'?'Available goods':'Items you can sell'} · {matches.length}</h2><div className="fa-menu-item-list" aria-label="Merchant catalog">{cards}{!visible.length&&<p>No matching items.</p>}</div><div className="fa-menu-paging">{paging}</div></Panel><Panel rect={layout[2]}><h2 aria-live="polite">{item?.name||'Select an item'}</h2>{item&&<div className="fa-menu-selected-art"><ItemArt id={id}/></div>}{detail}{item&&quantityControl}<div className="fa-service-total"><span>{mode==='buy'?'Total cost':'Total proceeds'}</span><strong>{item&&Number.isInteger(quantity)&&quantity>=1&&quantity<=MAX_TRADE_QUANTITY?fmt(price*quantity):'—'} gold</strong></div><p role="status">{reason}</p>{trade}</Panel></>;
 }
 
 // Enhancement is a preview of the existing bow upgrade, never a new forging economy.
@@ -886,13 +886,13 @@ function BlacksmithShop({profile,serviceAvailable,original,layout,onEnhance,back
     <section id="fa-smith-materials" tabIndex={-1} className="fa-smith-materials">{requirements}</section><div className="fa-smith-cost">{level<5?cost+' gold':'Max'}</div>
     <Btn className="fa-smith-back" onClick={back}>Back</Btn>{trade}<Btn className="fa-smith-craft" disabled={!ready} onClick={()=>go('22')}>Crafting</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Blacksmith</h2>{requirements}<p>{reason}</p><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}>{input}{catalyst}{result}{details}</Panel><Panel rect={layout[2]}>{trade}<Btn disabled={!ready} onClick={()=>go('22')}>Crafting</Btn></Panel></>;
+  return <><Panel rect={layout[0]}><h2>Operations</h2><Btn primary aria-current="page">Enhance</Btn><Btn disabled={!ready} onClick={()=>go('22')}>Crafting</Btn><p>Enhance your equipped bow. Other forging operations are not available yet.</p><h3>Materials available</h3>{requirements}</Panel><Panel rect={layout[1]}><h2>Enhancement preview</h2><div className="fa-forge-preview"><div className="fa-forge-inputs"><div className="fa-forge-item"><small>Equipped weapon</small>{input}</div><span aria-hidden="true">+</span><div className="fa-forge-item"><small>Material</small>{catalyst}</div></div><span className="fa-forge-arrow" aria-hidden="true">→</span><div className="fa-forge-item fa-forge-result"><small>Result</small>{result}</div></div><h3>Attack preview</h3><div className="fa-service-total"><span>Current → Enhanced</span><strong>{stats.atk} → {stats.atk+(level<5&&item?2:0)}</strong></div><p>Defense and speed unchanged.</p></Panel><Panel rect={layout[2]}><h2>Enhancement details</h2>{details}<div className="fa-service-total"><span>Cost</span><strong>{level<5?cost+' gold + 1 ore':'Maximum reached'}</strong></div><p role="status">{reason}</p><p>One enhancement per confirmation. No random failure in this build.</p>{trade}</Panel></>;
 }
 
 // Only the existing Recovery Tonic recipe is available; the painting is decorative.
 function CraftingShop({profile,serviceAvailable,original,layout,onCraft,back}){
   const [category,setCategory]=useState('All'),[selected,setSelected]=useState('recoveryTonic'),[quantity,setQuantity]=useState(1);
-  const categories=['All','Consumables','Weapons','Armor','Accessories'];
+  const categories=['All',...new Set(Object.values(RECIPES).map(recipe=>recipe.category))];
   const visible=Object.values(RECIPES).filter(r=>category==='All'||r.category===category);
   const r=visible.find(r=>r.id===selected)||visible[0],item=ITEMS[r.id];
   const ore=profile?.inventory?.sapphireOre||0,gold=profile?.gold||0,owned=profile?.inventory?.[r.id]||0;
@@ -916,7 +916,7 @@ function CraftingShop({profile,serviceAvailable,original,layout,onCraft,back}){
     <h3 className="fa-craft-result-title">Crafting result</h3><section className="fa-craft-output" aria-label="Crafted item preview">{output}</section>
     <div className="fa-craft-quantity">{quantityControl} · Gold: {valid?requiredGold:'—'}</div><div className="fa-craft-status" role="status">{reason}</div>{confirm}
   </div>;
-  return <><Panel rect={layout[0]}><h2>Crafting</h2><p>{gold} gold</p>{tabs}{recipes}<Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>{item.name}</h2>{requirements}{output}</Panel><Panel rect={layout[2]}>{quantityControl}<p>{reason}</p>{confirm}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>Recipe categories</h2><p className="fa-service-balance">Gold available <strong>{fmt(gold)}</strong></p><p>Sapphire Ore: {ore}</p>{tabs}</Panel><Panel rect={layout[1]}><h2>Available recipes · {visible.length}</h2><div className="fa-menu-item-list">{recipes}</div><h3>Selected recipe</h3><div className="fa-service-output">{output}</div></Panel><Panel rect={layout[2]}><h2>Craft {item.name}</h2>{requirements}{quantityControl}<div className="fa-service-total"><span>Total cost</span><strong>{valid?requiredGold:'—'} gold · {valid?requiredOre:'—'} ore</strong></div><p role="status">{reason}</p>{confirm}</Panel></>;
 }
 
 // Sanctuary uses the saved roster's base recovery limits, exactly as recoverParty does.
@@ -938,7 +938,7 @@ function SanctuaryRest({profile,service,serviceAvailable,encounter,original,layo
     <h3 className="fa-sanctuary-total-title">Recovery preview</h3><div className="fa-sanctuary-summary"><div><strong>{missing} HP</strong><small>Total missing</small></div><div><strong>{members.length}</strong><small>Party &amp; reserves</small></div><div><strong>Free</strong><small>Rest cost</small></div></div>
     <h3 className="fa-sanctuary-party-title">Recruited party</h3><section className="fa-sanctuary-party" aria-label="Party recovery preview">{cards}{!members.length&&<p>No active profile</p>}</section>{rest}
   </div>;
-  return <><Panel rect={layout[0]}><h2>Sanctuary</h2><p>{service?.label||'Not at a sanctuary'}</p></Panel><Panel rect={layout[1]}>{cards}</Panel><Panel rect={layout[2]}>{rows}<p>{reason}</p>{rest}{save}<Btn disabled={!profile||Boolean(encounter)||!profile.inventory.recoveryTonic} onClick={onRecovery}>Recovery Tonic</Btn></Panel><Panel rect={layout[3]}><Btn onClick={onLeave}>Leave</Btn></Panel></>;
+  return <><Panel rect={layout[0]}><h2>{service?.label||'Sanctuary'}</h2><p>Rest restores your recruited party, including reserves.</p>{save}<Btn disabled={!profile||Boolean(encounter)||!profile.inventory.recoveryTonic} onClick={onRecovery}>Recovery Tonic</Btn><Btn onClick={onLeave}>Leave sanctuary</Btn></Panel><Panel rect={layout[1]}><h2>Party recovery · {members.length}</h2><div className="fa-service-party">{cards}{!members.length&&<p>No active character.</p>}</div></Panel><Panel rect={layout[2]}><h2>Recovery preview</h2><div className="fa-service-rows">{rows}</div><div className="fa-service-total"><span>Total restored</span><strong>+{missing} HP</strong></div><p role="status">{reason}</p>{rest}</Panel></>;
 }
 
 // Consumable recovery uses the same item definition and heal transaction as inventory.
@@ -962,7 +962,7 @@ function ConsumableRecovery({profile,encounter,original,layout,onRecover,back}){
     <h3 className="fa-recovery-status-title">Availability</h3><div className="fa-recovery-status" role="status">{reason}</div>
     {confirm}<Btn className="fa-recovery-back" onClick={back}>Back</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Current health</h2>{preview}</Panel><Panel rect={layout[1]}><h2>Recovery Tonic</h2><ItemArt id="recoveryTonic"/>{rows.map(([label,value])=><p key={label}>{label}: {value}</p>)}</Panel><Panel rect={layout[2]}><p>{reason}</p>{confirm}<Btn onClick={back}>Back</Btn></Panel></>;
+  return <><Panel rect={layout[0]}><h2>Current health</h2><div className="fa-menu-hero">{profile&&<ArcherPortrait profile={profile} newHero/>}</div>{preview}</Panel><Panel rect={layout[1]}><h2>Recovery Tonic</h2><div className="fa-menu-selected-art"><ItemArt id="recoveryTonic"/></div><div className="fa-service-rows">{rows.map(([label,value])=><div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div></Panel><Panel rect={layout[2]}><h2>Recovery preview</h2><div className="fa-service-total"><span>Health restored</span><strong>+{amount} HP</strong></div><p>Tonics remaining: {owned} → {allowed?owned-1:owned}</p><p role="status">{reason}</p>{confirm}</Panel></>;
 }
 
 // Compare only owned gear using the same equipment validation as the equip transaction.
