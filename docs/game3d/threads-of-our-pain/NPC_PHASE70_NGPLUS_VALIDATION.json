@@ -1,0 +1,226 @@
+{
+  "status": "ISOLATED_STATIC_AND_SYNTHETIC_ONLY",
+  "parentHead": "5c88ebd6ae33282ba1bceed8064e0de281f376f7",
+  "checks": [
+    {
+      "name": "M20 eligibility",
+      "ok": true
+    },
+    {
+      "name": "both endings",
+      "ok": true
+    },
+    {
+      "name": "level source match",
+      "ok": true
+    },
+    {
+      "name": "equipment match",
+      "ok": true
+    },
+    {
+      "name": "XP source match",
+      "ok": true
+    },
+    {
+      "name": "optional cycle",
+      "ok": true
+    },
+    {
+      "name": "no fixed cycle cap",
+      "ok": true
+    },
+    {
+      "name": "positive closure",
+      "ok": true
+    },
+    {
+      "name": "second vista",
+      "ok": true
+    },
+    {
+      "name": "lifetime entitlement",
+      "ok": true
+    },
+    {
+      "name": "no re-creation",
+      "ok": true
+    },
+    {
+      "name": "no final curve",
+      "ok": true
+    },
+    {
+      "name": "no exponential reward",
+      "ok": true
+    },
+    {
+      "name": "production disabled",
+      "ok": true
+    },
+    {
+      "name": "unknown carryover retained",
+      "ok": true
+    },
+    {
+      "name": "no cap increments",
+      "ok": true
+    },
+    {
+      "name": "one world",
+      "ok": true
+    },
+    {
+      "name": "no magical rewind",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION entry",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION gear and XP exact",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION archive/reset",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION lifetime entitlement",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION replay",
+      "ok": true
+    },
+    {
+      "name": "SACRIFICE_RESTORATION conflicting request",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION entry",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION gear and XP exact",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION archive/reset",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION lifetime entitlement",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION replay",
+      "ok": true
+    },
+    {
+      "name": "REFUSAL_FUSION conflicting request",
+      "ok": true
+    },
+    {
+      "name": "missing confirmed",
+      "ok": true
+    },
+    {
+      "name": "missing approved",
+      "ok": true
+    },
+    {
+      "name": "missing safe",
+      "ok": true
+    },
+    {
+      "name": "missing profile",
+      "ok": true
+    },
+    {
+      "name": "wrong owner",
+      "ok": true
+    },
+    {
+      "name": "wrong character",
+      "ok": true
+    },
+    {
+      "name": "stale revision",
+      "ok": true
+    },
+    {
+      "name": "wrong source cycle",
+      "ok": true
+    },
+    {
+      "name": "unfinished",
+      "ok": true
+    },
+    {
+      "name": "pending reward blocks",
+      "ok": true
+    },
+    {
+      "name": "before commit source",
+      "ok": true
+    },
+    {
+      "name": "after commit same successor",
+      "ok": true
+    },
+    {
+      "name": "low-level hypothetical entry never grants levels",
+      "ok": true
+    },
+    {
+      "name": "max level can continue",
+      "ok": true
+    },
+    {
+      "name": "high-cycle arithmetic fixture",
+      "ok": true
+    },
+    {
+      "name": "base display",
+      "ok": true
+    },
+    {
+      "name": "NG+ display",
+      "ok": true
+    },
+    {
+      "name": "later suffix",
+      "ok": true
+    },
+    {
+      "name": "low level display",
+      "ok": true
+    },
+    {
+      "name": "normal example",
+      "ok": true
+    },
+    {
+      "name": "double example",
+      "ok": true
+    },
+    {
+      "name": "duplicate XP",
+      "ok": true
+    },
+    {
+      "name": "later cycle still twice",
+      "ok": true
+    },
+    {
+      "name": "ineligible defeat",
+      "ok": true
+    },
+    {
+      "name": "unsafe integer XP blocked",
+      "ok": true
+    }
+  ]
+}
