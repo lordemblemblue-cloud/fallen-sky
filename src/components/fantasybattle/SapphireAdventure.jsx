@@ -6,7 +6,7 @@ import { ACTIONS, ACTION_ORDER, actionsForClass } from './core/battleRules.mjs';
 import {enemyPortrait} from './core/enemyVisuals.mjs';
 import { enemyFormation, tacticFor } from './core/enemyCatalog.mjs';
 import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalog.mjs';
-import { ITEMS, COMPANION, ROSTER, memberFor, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
+import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
@@ -17,6 +17,8 @@ import { weaponEligible, weaponMetadata, enhancementLevel } from './core/weaponC
 import { GROVE_STORY, groveStoryState } from './core/groveStory.mjs';
 import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
 import {serviceFor,liveService} from './core/worldInteractions.mjs';
+import {createConfirmationGate} from './core/confirmationGate.mjs';
+import {bondConversation,BOND_GIFT} from './core/companionBonds.mjs';
 import { CAMPAIGN_QUESTS, campaignQuest, changeCampaignQuest, campaignPrompt, campaignServiceNote, campaignArc, LAST_ESCORT, escortConversation } from './core/campaignQuests.mjs';
 function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" alt="" className={'fa-painted-illustration '+variant} src={'/fantasybattle/sapphire/illustrations/'+name+'.webp'} decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>;}
 
@@ -292,8 +294,8 @@ function Recruitment({profile,encounter,selected,member,onSelect,onRecruit,origi
 }
 
 // Bond points are earned by the existing companionProgress victory transaction.
-function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back}){
-  const [filter,setFilter]=useState('all');
+function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back,encounter,onGift}){
+  const [filter,setFilter]=useState('all'),[tab,setTab]=useState('Overview');
   const visible=ROSTER.filter(m=>filter==='all'||(filter==='active'?memberFor(profile,m.id).active:memberFor(profile,m.id).recruited));
   const selected=visible.find(m=>m.id===selectedId)||visible[0];
   const state=selected?memberFor(profile,selected.id):null;
@@ -307,10 +309,16 @@ function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back}){
   const choices=visible.map(m=><Btn key={m.id} primary={selected?.id===m.id} aria-pressed={selected?.id===m.id} onClick={()=>onSelect(m.id)}><ArcherPortrait companion={m} small/><strong>{m.name}</strong><small>{status(m)}</small></Btn>);
   const portrait=selected?<ArcherPortrait companion={selected}/>:<p>No companions match this filter.</p>;
   const progress=<progress aria-label="Earned companion bond" max={100} value={bond}/>;
-  const explanation=<p>Gain 5 bond per first-time victory while the recruited companion is active. Practice and repeat victories do not count.</p>;
+  const explanation=<p>Gain 5 bond per first-time victory while the recruited companion is active. Practice and repeat victories do not count. Gifts also raise bond.</p>;
   const milestones=[[0,'New companion'],[25,'Familiar'],[75,'Trusted'],[100,'Maximum bond']];
   const milestoneRows=milestones.map(([threshold,label])=><div key={threshold} className="fa-bond-milestone"><span>{label} · {threshold}</span><small>{recruited&&bond>=threshold?'Reached':'Not reached'}</small></div>);
-  const unavailable=<><p>No bond-based statistic bonuses or abilities are implemented.</p><small>Stories, gifts and dialogue are not available in this build.</small></>;
+  const quote=companionGiftQuote(profile,selected?.id),conversation=bondConversation(selected?.id,state);
+  const canGift=quote.ok&&!encounter;
+  const tabs=['Overview','Stories','Gifts','Dialogue'].map(t=><Btn key={t} primary={tab===t} aria-pressed={tab===t} onClick={()=>setTab(t)}>{t}</Btn>);
+  const gift=<Btn className="fa-bond-gift" disabled={!canGift} onClick={()=>onGift(selected.id,quote.bond)}>Gift {BOND_GIFT.cost} Ore</Btn>;
+  const talk=<Btn className="fa-bond-talk" disabled={!recruited} onClick={()=>setTab('Dialogue')}>Talk</Btn>;
+  const details=tab==='Gifts'?<><p>{BOND_GIFT.cost} Sapphire Ore → +{quote.gain??BOND_GIFT.gain} bond.</p><small>{encounter?'Available outside combat.':quote.reason||'Ready to give.'} Owned: {profile?.inventory.sapphireOre??0}</small></>:tab==='Stories'?<><p>{conversation||'Recruit this companion to read their story.'}</p><small>New conversations at bond 25 and 75.</small></>:tab==='Dialogue'?<p>{conversation||'Recruit this companion to talk.'}</p>:explanation;
+  const unavailable=<><p>No bond-based statistic bonuses or abilities are implemented.</p><small>Conversations and milestones are narrative only.</small></>;
   if(original)return <div className="fa-original-bonds">
     <h2 className="fa-bond-title">Relationships &amp; Bonds</h2><span className="fa-bond-subtitle">Companion progression</span>
     {filterControl}<section className="fa-bond-list" aria-label="Companions">{choices}{!visible.length&&<p>No matching companions</p>}</section>
@@ -318,16 +326,16 @@ function CompanionBonds({profile,selectedId,onSelect,original,layout,go,back}){
     <div className="fa-bond-portrait">{portrait}</div><div className="fa-bond-name">{selected?.name||'No companion'}</div><div className="fa-bond-role">{selected?.role||'—'}</div>
     <div className="fa-bond-level">{recruited?bond:'—'}</div><h3 className="fa-bond-tier">{tier}</h3><div className="fa-bond-points">{recruited?bond+' / 100':'—'}</div>
     <div className="fa-bond-progress">{progress}</div><div className="fa-bond-next">{nextText}</div>
-    <nav className="fa-bond-tabs" aria-label="Relationship categories"><span aria-current="page">Overview</span><Btn disabled>Stories</Btn><Btn disabled>Gifts</Btn><Btn disabled>Dialogue</Btn></nav>
-    <h3 className="fa-bond-status-heading">Relationship status</h3><div className="fa-bond-status">{tier}</div><section className="fa-bond-explanation">{explanation}</section>
+    <nav className="fa-bond-tabs" aria-label="Relationship categories">{tabs}</nav>
+    <h3 className="fa-bond-status-heading">Relationship status</h3><div className="fa-bond-status">{tier}</div><section className="fa-bond-explanation" aria-live="polite">{details}</section>
     <section className="fa-bond-earned"><strong>Earned bond</strong><p>{recruited?Math.floor(bond/5)+' bond increments':'Not recruited'}</p><small>Maximum 100</small></section>
     <h3 className="fa-bond-effect-title">Bond effects</h3><section className="fa-bond-effects">{unavailable}</section>
     <section className="fa-bond-advancement"><strong>Next milestone</strong><p>{nextText}</p></section>
     <h3 className="fa-bond-rewards-title">Bond milestones</h3><section className="fa-bond-milestones" aria-label="Bond milestones">{milestoneRows}<p>Milestones are descriptive; no rewards are claimable.</p></section>
-    <Btn className="fa-bond-gift" disabled>Gifts unavailable</Btn><Btn className="fa-bond-talk" disabled>Dialogue unavailable</Btn>
+    {gift}{talk}
     <div className="fa-bond-navigation"><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></div>
   </div>;
-  return <><Panel rect={layout[0]}><h2>Companions</h2>{filterControl}{choices}{!visible.length&&<p>No matching companions</p>}</Panel><Panel rect={layout[1]}>{portrait}<h2>{selected?.name||'No companion'}</h2><p>{tier}</p></Panel><Panel rect={layout[2]}><h2>Bond</h2>{progress}<p>{recruited?bond+'/100':'Not recruited'} · {tier}</p><p>{nextText}</p>{explanation}{milestoneRows}{unavailable}</Panel><Panel rect={layout[3]}><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></Panel></>;
+  return <><Panel rect={layout[0]}><h2>Companions</h2>{filterControl}{choices}{!visible.length&&<p>No matching companions</p>}</Panel><Panel rect={layout[1]}>{portrait}<h2>{selected?.name||'No companion'}</h2><p>{tier}</p></Panel><Panel rect={layout[2]}><h2>Bond</h2>{progress}<p>{recruited?bond+'/100':'Not recruited'} · {tier}</p><p>{nextText}</p>{tabs}{details}{milestoneRows}{unavailable}{gift}{talk}</Panel><Panel rect={layout[3]}><Btn onClick={()=>go('26')}>Recruitment</Btn><Btn onClick={()=>go('11')}>Party</Btn><Btn onClick={back}>Back</Btn></Panel></>;
 }
 
 // The concept painting is decorative; the streamed region data is authoritative.
@@ -1161,7 +1169,7 @@ export default function SapphireAdventure(){
   const [equipmentFilter,setEquipmentFilter]=useState('all');
   const [companionId,setCompanionId]=useState(COMPANION.id);
   const [importSlot,setImportSlot]=useState('1'),[backupError,setBackupError]=useState(''),[backupPass,setBackupPass]=useState(''),[backupBusy,setBackupBusy]=useState(false);
-  const backupLock=useRef(false),saveBaseline=useRef(null),lastPositionSave=useRef(null);
+  const backupLock=useRef(false),saveBaseline=useRef(null),lastPositionSave=useRef(null),confirmGate=useRef(createConfirmationGate());
   const [notifications,setNotifications]=useState([]),[lesson,setLesson]=useState(0),[discovery,setDiscovery]=useState(null),[saveStatus,setSaveStatus]=useState('');
   const frame=useRef(null),stageRef=useRef(null),current=useRef({}),processed=useRef(null),startReady=useRef(false),saveTimer=useRef(null),focusRef=useRef(null),timeoutRef=useRef(null),startTimer=useRef(null),restorePending=useRef(false),battleTimer=useRef(null),failedLoad=useRef(false);
   const id=stack[stack.length-1],screen=UI_SCREENS[id];
@@ -1172,7 +1180,7 @@ export default function SapphireAdventure(){
   const root=target=>setStack([target]);
   const post=(type,data)=>frame.current?.contentWindow?.postMessage({channel:'fantasy-host',type,data},location.origin);
   const notify=(message,category='system')=>{setNotifications(old=>[{message,category,time:Date.now()},...old].slice(0,40));setNotice(message);};
-  const fail=message=>{clearTimeout(timeoutRef.current);clearTimeout(battleTimer.current);failedLoad.current=true;setError(message);go('47');};
+  const fail=message=>{confirmGate.current.cancel();setPending(null);clearTimeout(timeoutRef.current);clearTimeout(battleTimer.current);failedLoad.current=true;setError(message);go('47');};
   const transact=(operation,success)=>{const p=current.current.profile;if(!p||current.current.encounter){notify('This action is available only outside battle.');return false;}try{const next=operation(p);replaceProfile(next);autosave(next);notify(success,'activity');return true;}catch(e){notify(e.message);return false;}};
   const reloadSlots=()=>{const s=readSlots(localStorage);setSlots(s);return s;};
   useEffect(()=>{reloadSlots();setSettings(readSettings(localStorage));const changed=e=>{if(e.key===SAVE_KEY||e.key===null){reloadSlots();}};window.addEventListener('storage',changed);return()=>{window.removeEventListener('storage',changed);clearTimeout(saveTimer.current);clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);clearTimeout(battleTimer.current);};},[]);
@@ -1192,6 +1200,7 @@ export default function SapphireAdventure(){
   const importBackup=async file=>{if(!file||current.current.running||backupLock.current)return;backupLock.current=true;setBackupBusy(true);setBackupError('');const pass=backupPass,target=importSlot;setBackupPass('');try{if(file.size>MAX_ENCRYPTED_BYTES)throw Error('Save backup is too large.');const p=await importTransfer(await file.text(),pass);if(current.current.running||current.current.id!=='03')return;const before=readSlots(localStorage);if(before.error)throw Error(before.error);const previous=before.slots.find(s=>s.id===target);const occupied=Boolean(previous);requestConfirm('Import '+p.name+' into slot '+target+(occupied?' and replace the existing save?':'?'),()=>{try{if(current.current.running)throw Error('Return to title before importing.');writeSlot(localStorage,target,p,{overwrite:occupied,expectedStamp:previous?.stamp??null});reloadSlots();notify('Save imported into slot '+target);}catch(e){setBackupError(e.message);notify(e.message);}});}catch(e){setBackupError(e.message);}finally{backupLock.current=false;setBackupBusy(false);}};
   const restoreCheckpoint=()=>{if(current.current.running)return;const target=importSlot,record=slots.slots.find(s=>s.id===target);if(!record?.recovery)return;let used=false;requestConfirm('Restore the previous checkpoint for '+record.recovery.profile.name+' in slot '+target+'? Current slot progress will be replaced.',()=>{if(used)return;used=true;try{if(current.current.running)throw Error('Return to title before restoring.');recoverSlot(localStorage,target,record.stamp);reloadSlots();notify('Previous checkpoint restored');}catch(e){setBackupError(e.message);notify(e.message);}});};
   const begin=(p,saveSlot=null,stamp=saveSlot?currentSaveStamp(slots.slots,saveSlot,p):null)=>{
+    confirmGate.current.cancel();setPending(null);
     clearTimeout(timeoutRef.current);clearTimeout(startTimer.current);restorePending.current=false;startReady.current=false;processed.current=null;failedLoad.current=false;clearTimeout(battleTimer.current);
     saveBaseline.current=saveSlot&&stamp!==undefined?{slot:saveSlot,stamp}:null;
     lastPositionSave.current={at:Date.now(),position:[...p.world.position]};
@@ -1202,13 +1211,15 @@ export default function SapphireAdventure(){
   };
   const startNew=()=>{try{const p=selectAppearance(createProfile(name),creationAppearance);replaceProfile(p);go('20');}catch(e){setNotice(e.message);}};
   const enterNew=()=>{const p=current.current.profile;if(!p)return;const empty=SLOT_IDS.find(s=>!slots.slots.some(x=>x.id===s));begin(p,empty||null,null);};
-  const leaveTitle=()=>{saveBaseline.current=null;lastPositionSave.current=null;setBackupPass('');clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);restorePending.current=false;failedLoad.current=true;clearTimeout(battleTimer.current);setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
-  const requestConfirm=(message,action)=>{setPending({message,action});go('40');};
+  const leaveTitle=()=>{confirmGate.current.cancel();saveBaseline.current=null;lastPositionSave.current=null;setBackupPass('');clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);restorePending.current=false;failedLoad.current=true;clearTimeout(battleTimer.current);setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
+  const requestConfirm=(message,action)=>{const ticket=confirmGate.current.open(message,action,current.current);if(ticket){setPending(ticket);go('40');}};
+  const dismissConfirm=()=>{confirmGate.current.cancel();setPending(null);back();};
+  const executeConfirm=ticket=>{const action=confirmGate.current.consume(ticket,current.current);if(!action)return;setPending(null);back();action();};
   const chooseAppearance=key=>{if(transact(p=>selectAppearance(p,key),'Appearance applied'))post('appearance',appearanceFor(current.current.profile).tint);};
   const openPause=()=>{if(isWorldScreen(current.current.id))go('04');};
   const onKey=code=>{
     const s=current.current.id;
-    if(code==='Escape'){if(s==='47')return;if(s==='40')setPending(null);if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
+    if(code==='Escape'){if(s==='47')return;if(s==='40'){dismissConfirm();return;}if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
     const target=HOTKEY_SCREENS[code];
     if(target&&current.current.running&&(isWorldScreen(s)||s==='04'||s===target)){if(s===target)back();else go(target);}
   };
@@ -1470,7 +1481,7 @@ export default function SapphireAdventure(){
      case '27':content=<Wardrobe key={profile?.id||'guest'} profile={profile} encounter={encounter} original={original} back={back} chooseAppearance={chooseAppearance} layout={screen.layout}/>;break;
     case '28':content=<Achievements key={profile?.id||'guest'} profile={profile} original={original} layout={screen.layout} go={go} back={back}/>;break;
     case '29':content=<WorldCodex key={profile?.id||'guest'} profile={profile} world={world} original={original} layout={screen.layout} go={go} back={back}/>;break;
-    case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back}/>;break;
+    case '30':content=<CompanionBonds profile={profile} selectedId={companionId} onSelect={setCompanionId} original={original} layout={screen.layout} go={go} back={back} encounter={encounter} onGift={(member,expected)=>{const q=companionGiftQuote(current.current.profile,member);if(!q.ok||q.bond!==expected||current.current.encounter)return;requestConfirm('Give '+q.cost+' Sapphire Ore to '+ROSTER.find(m=>m.id===member).name+' for +'+q.gain+' bond?',()=>transact(p=>{if(memberFor(p,member).bond!==expected)throw Error('Bond changed. Review the gift again.');return giveCompanionGift(p,member);},'Companion bond increased'));}}/>;break;
     case '31':content=<TreasureReveal profile={profile} discovery={discovery} loot={loot} encounter={encounter} original={original} layout={screen.layout} onItems={()=>go('38')} onContinue={back}/>;break;
     case '32':content=<Attributes key={profile?.id||'guest'} profile={profile} level={level} locked={!profile||Boolean(encounter&&hud?.phase!=='over')} original={original} layout={screen.layout} unlockedIds={result?.unlocked||[]} back={back} onConfirm={(base,draft)=>{const live=current.current.profile;if(!live||live!==base||(current.current.encounter&&hud?.phase!=='over')||!Array.isArray(draft)||draft.length>pointsFor(live)||draft.some(k=>!STAT_KEYS.includes(k)))return false;const next=draft.reduce((p,k)=>allocate(p,k),live);replaceProfile(next);autosave(next);finishLevel();return true;}}/>;break;
     case '33':content=<SanctuaryRest profile={profile} service={service} serviceAvailable={serviceAvailable} encounter={encounter} original={original} layout={screen.layout} onRest={()=>requestConfirm('Rest and recover all recruited party members?',()=>transact(p=>{const s=current.current;if(!s.service||s.world?.nearbyService!==s.service.id||s.encounter||!liveService(s.world,s.service.id))throw Error('Visit a service marker to rest.');return heal(p,{sanctuary:true});},'Health restored'))} onSave={()=>go('18')} onLeave={()=>root('10')} onRecovery={()=>go('46')}/>;break;
@@ -1480,7 +1491,7 @@ export default function SapphireAdventure(){
     case '37':content=<GlobalNotifications notifications={notifications} original={original} layout={screen.layout} back={back}/>;break;
     case '38':content=<ItemAcquisition profile={profile} encounter={encounter} result={result} hud={hud} discovery={discovery} loot={loot} origin={stack[stack.length-2]} original={original} layout={screen.layout} onInventory={()=>{if(current.current.profile&&!current.current.encounter)go('06');}} onContinue={back}/>;break;
     case '39':content=<EquipmentComparison key={profile?.id||'guest'} profile={profile} encounter={encounter} initialItem={itemId} initialWearer={wearer} original={original} layout={screen.layout} go={go} back={back} onEquip={(member,key,expected)=>{const s=current.current;if(s.id!=='39'||!s.profile||s.encounter||!Object.hasOwn(ITEMS,key))return;const item=ITEMS[key];const ok=transact(p=>{if(!p.inventory[key])throw Error('You do not own this item.');if(member!=='hero'&&!ROSTER.some(m=>m.id===member&&memberFor(p,m.id).recruited))throw Error('Wearer unavailable.');if(item.kind==='weapon'&&member==='hero'){if(p.equipped!==expected||p.equipped===key)throw Error('Equipped weapon changed. Review comparison.');return equipItem(p,key);}if(item.kind==='gear'){const equipped=gearFor(p,member)[item.slot];if(equipped!==expected||equipped===key)throw Error('Equipped gear changed. Review comparison.');return equipGear(p,member,item.slot,key);}throw Error('Unsupported equipment.');},'Equipment updated');if(ok)back();}}/>;break;
-    case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>{const f=pending?.action;setPending(null);back();f?.();}}>Confirm</Btn>,<Btn onClick={()=>{setPending(null);back();}}>Cancel</Btn>)}</>);break;
+    case '40':content=pane(0,<><h2>Confirmation</h2><p>{pending?.message||'No pending action.'}</p>{buttons(<Btn primary disabled={!pending} onClick={()=>executeConfirm(pending)}>Confirm</Btn>,<Btn onClick={dismissConfirm}>Cancel</Btn>)}</>);break;
     case '41':content=pane(0,<p role="status">{saveStatus||'No save operation in progress.'}</p>);break;
     case '42':content=<RegionDiscovery discovery={discovery} world={world} profile={profile} original={original} layout={screen.layout} onContinue={back} onMap={()=>{back();go('07');}}/>;break;
     case '43':content=<QuestOffer profile={profile} encounter={encounter} original={original} layout={screen.layout} back={back} onAccept={()=>{if(transact(p=>{if(p.quests.grove!=='available')throw Error('Quest is no longer available.');return acceptGroveQuest(p);},'Quest accepted')){root('10');go('08');}}}/>;break;

@@ -3,6 +3,7 @@ import {WORLD_MAX_X,WORLD_END_X,EXTRA_REGIONS,ARENAS,EXTRA_ENCOUNTERS,arenaForEn
 import {TREASURE_IDS,treasureFor} from '../core/treasureCatalog.mjs';
 import {WORLD_SERVICES,nearestService} from '../core/worldInteractions.mjs';
 import {createWorldTelemetry,WORLD_TELEMETRY_INTERVAL} from '../core/worldTelemetry.mjs';
+import {disposeResources,createCleanupScope} from '../core/resourceCleanup.mjs';
 import {createLocomotion,resetLocomotion,advanceVelocity,updateLocomotion} from '../core/locomotion.mjs';
 import {makeExplorationAvatar} from './explorationAvatar.js';
 
@@ -862,7 +863,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         this.camLerp = null; this.clock = new THREE.Clock(); this.fpsFrames = 0; this.fpsTimer = 0;
         this.baseDprCap = 1.25; this.keyLight = null;
         this.windScale = 1; this.petalScale = 1; this.mistScale = 1;
-        this.exportBusy = false; this.renderFailed = false; this.lastAdaptiveAt = 0; this.envMapRT = null;
+        this.cleanupScope=createCleanupScope(); this.destroyed=false; this.exportBusy = false; this.renderFailed = false; this.lastAdaptiveAt = 0; this.envMapRT = null;
       }
 
       resetInput() { Object.keys(this.keys).forEach(k => { this.keys[k] = false; }); if(this.locomotion){resetLocomotion(this.locomotion,this.grounded);this.player?.userData.applyPose?.(this.locomotion);} }
@@ -889,7 +890,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
               if (!WGPU?.WebGPURenderer || !WGPU?.MeshStandardNodeMaterial || !['uniform','vec4','texture','positionWorld','normalWorld'].every(k => TSL[k] != null)) throw new Error('Required WebGPU painterly material APIs unavailable');
               if (WGPU?.WebGPURenderer) {
                 const r = new WGPU.WebGPURenderer({ antialias: true, powerPreference: 'high-performance' });
-                await r.init();
+                try{await r.init();}catch(error){disposeResources([r]);throw error;}
                 this.renderer = r; this.renderInfo = { isWebGPU: true, backend: 'WebGPU', webgpu: WGPU, tsl: TSL };
               }
             }
@@ -932,7 +933,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         this.bindUI();
         this.applyQuality('performance');
         this.loadMode('wilds');
-        window.addEventListener('resize', () => this.onResize());
+        this.cleanupScope.listen(window,'resize', () => this.onResize());
         this.animate();
       }
 
@@ -946,8 +947,8 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         if (!this.renderInfo.isWebGPU && this.renderer.getContext) {
           try {
             const pmrem = new THREE.PMREMGenerator(this.renderer), envScene = new THREE.Scene();
-            envScene.add(new THREE.Mesh(new THREE.SphereGeometry(30, 16, 12), new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide })));
-            this.envMapRT = pmrem.fromScene(envScene, 0.04); this.scene.environment = this.envMapRT.texture; pmrem.dispose();
+            const geometry=new THREE.SphereGeometry(30,16,12),material=new THREE.MeshBasicMaterial({map:skyTex,side:THREE.BackSide});
+            try{envScene.add(new THREE.Mesh(geometry,material));this.envMapRT=pmrem.fromScene(envScene,0.04);this.scene.environment=this.envMapRT.texture;}finally{disposeResources([geometry,material,pmrem]);}
           } catch (e) { console.warn('PMREM reflection skipped:', e); }
         }
 
@@ -1037,6 +1038,26 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         const cache=this.assets?.geoCache; if (!cache || cache.size<=maxEntries) return;
         const live=new Set(); this.scene.traverse(o=>{if(o.geometry)live.add(o.geometry);});
         for (const [key,geo] of cache) { if(cache.size<=maxEntries)break; if(!live.has(geo)){cache.delete(key);geo.dispose();} }
+      }
+
+      destroy() {
+        if(this.destroyed)return;
+        this.destroyed=true;this.renderFailed=true;this.inputLocked=true;
+        cancelAnimationFrame(this.animationFrame);this.cleanupScope.close();this.resetInput();
+        try{this.clearWorld();}catch(error){console.warn('World cleanup incomplete:',error);}
+        const resources=new Set(),textures=new Set();
+        const material=m=>{if(!m)return;resources.add(m);for(const v of Object.values(m))if(v?.isTexture&&v!==this.envMapRT?.texture)textures.add(v);};
+        this.scene?.traverse(o=>{if(o.geometry)resources.add(o.geometry);for(const m of [].concat(o.material||[]))material(m);if(o.isLight&&o.shadow)resources.add(o.shadow);if(o.isInstancedMesh)resources.add(o);});
+        for(const g of this.assets?.geoCache.values()||[])resources.add(g);
+        for(const m of this.mats?.cache.values()||[])material(m);
+        for(const t of this.forge.cache.values())textures.add(t);
+        for(const type of ['geometries','materials','textures']){for(const entry of this.resourcePool[type].values())resources.add(entry.resource);this.resourcePool[type].clear();}
+        resources.add(this.envMapRT);if(this.scene)this.scene.environment=null;
+        const result=disposeResources([...resources,...textures,this.controls,this.renderer]);
+        if(result.failed)console.warn('Some viewer resources could not be disposed:',result.failed);
+        this.assets?.geoCache.clear();this.mats?.cache.clear();this.forge.cache.clear();this.resourcePool.scopes.clear();this.scene?.clear();
+        this.renderer?.domElement?.remove();
+        if(window.sapphireViewer===this){delete window.sapphireViewer;delete window.SapphireEngineModules;}
       }
 
       clearWorld() {
@@ -1663,10 +1684,10 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
         const toggleClean = () => { const c = document.body.classList.toggle('clean-view'); document.getElementById('btn-clean-view').textContent = c ? 'Show UI (H)' : 'Hide UI (H)'; };
         document.getElementById('btn-clean-view').addEventListener('click', toggleClean);
         document.getElementById('asset-category').addEventListener('change', e => { if (this.inputLocked || this.exportBusy) return; this.assetCategory = e.target.value; this.inBattleFromExplore = false; this.loadMode('assets'); });
-        document.addEventListener('click', e => { if ((this.inputLocked || this.exportBusy) && e.target.closest('button,select,input')) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
-        window.addEventListener('blur', () => this.resetInput());
-        document.addEventListener('visibilitychange', () => { if (document.hidden) this.resetInput(); });
-        window.addEventListener('keydown', e => { if (e.code === 'KeyH' && !e.repeat && !/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName || '')) toggleClean(); });
+        this.cleanupScope.listen(document,'click', e => { if ((this.inputLocked || this.exportBusy) && e.target.closest('button,select,input')) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
+        this.cleanupScope.listen(window,'blur', () => this.resetInput());
+        this.cleanupScope.listen(document,'visibilitychange', () => { if (document.hidden) this.resetInput(); });
+        this.cleanupScope.listen(window,'keydown', e => { if (e.code === 'KeyH' && !e.repeat && !/INPUT|SELECT|TEXTAREA/.test(e.target?.tagName || '')) toggleClean(); });
 
         for (const [id, key] of [['wind','windScale'],['petals','petalScale'],['mist','mistScale']]) {
           document.getElementById('s-' + id).addEventListener('input', e => { this[key] = Number(e.target.value) / 100; document.getElementById('v-' + id).textContent = e.target.value + '%'; this.updateAtmosphere(); });
@@ -1710,7 +1731,7 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
           document.getElementById(id).addEventListener('input', e => { const v = Number(e.target.value); document.getElementById(lbl).textContent = `${v}%`; this.mats.params[key] = v / 100; this.mats.syncParams(); });
         }
 
-        window.addEventListener('keydown', e => {
+        this.cleanupScope.listen(window,'keydown', e => {
           if (this.inputLocked || /INPUT|SELECT|TEXTAREA|BUTTON/.test(e.target?.tagName || '')) return;
           if (this.mode === 'wilds' && ['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
           if (e.code === 'KeyA' || e.code === 'ArrowLeft') this.keys.left = true;
@@ -1725,9 +1746,9 @@ import {makeExplorationAvatar} from './explorationAvatar.js';
             else this.openService?.();
           }
         });
-        window.addEventListener('blur', () => this.resetInput());
-        document.addEventListener('visibilitychange', () => { if(document.hidden)this.resetInput(); });
-        window.addEventListener('keyup', e => {
+        this.cleanupScope.listen(window,'blur', () => this.resetInput());
+        this.cleanupScope.listen(document,'visibilitychange', () => { if(document.hidden)this.resetInput(); });
+        this.cleanupScope.listen(window,'keyup', e => {
           if (e.code === 'KeyA' || e.code === 'ArrowLeft') this.keys.left = false;
           if (e.code === 'KeyD' || e.code === 'ArrowRight') this.keys.right = false;
           if (e.code === 'KeyW' || e.code === 'ArrowUp') this.keys.in = false;
@@ -1952,9 +1973,9 @@ export async function mountSapphireWorld(root, onEvent) {
   const registeredMarkers = new Map();
   const collect = app.collectDiscovery.bind(app);
   app.collectDiscovery = d => { if(!collect(d))return false; app.resetInput(); app.inputLocked=true; send('discovery',{id:d.id,label:d.label,world:snapshot()}); return true; };
-  await app.init();
+  try{await app.init();
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  if(app.renderFailed)throw Error('World renderer did not start.');
+  if(app.renderFailed)throw Error('World renderer did not start.');}catch(error){app.destroy();throw error;}
   const telemetry=createWorldTelemetry();
   const timer=setInterval(()=>{if(app.mode!=='wilds'||app.inputLocked||app.renderFailed)return;const sample=telemetry.sample(snapshot(),performance.now());if(sample)send('world',sample);},WORLD_TELEMETRY_INTERVAL);
   send('ready',{world:snapshot()});
@@ -1974,6 +1995,6 @@ export async function mountSapphireWorld(root, onEvent) {
     interact(){if(app.inputLocked)return;if(app.activeDiscovery)app.collectDiscovery(app.activeDiscovery);else if(app.activeEncounter)app.triggerEncounterTransition(app.activeEncounter);else app.openService();},
     move(key,value){if(Object.hasOwn(app.keys,key))app.keys[key]=!app.inputLocked && Boolean(value);},
     jump(){if(!app.inputLocked&&app.mode==='wilds'&&app.grounded){app.playerVelY=7.6;app.grounded=false;}},
-    stop(){clearInterval(timer);app.renderFailed=true;cancelAnimationFrame(app.animationFrame);app.resetInput();app.clearWorld();app.renderer?.dispose();app.controls?.dispose();}
+    stop(){clearInterval(timer);app.destroy();}
   };
 }

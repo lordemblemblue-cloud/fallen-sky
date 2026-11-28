@@ -1,6 +1,7 @@
 import {WORLD_MAX_X} from './worldExpansion.mjs';
 import {validCampaign,cleanCampaign} from './campaignQuests.mjs';
 import {treasureFor} from './treasureCatalog.mjs';
+import {BOND_GIFT} from './companionBonds.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats} from './equipmentCatalog.mjs';
@@ -57,6 +58,19 @@ export function configureParty(p,{id=COMPANION.id,active,front}={}){
  const target=front??(a.front===id&&active===false?'hero':a.front);
  if(target!=='hero'&&!activeRoster(next).some(m=>m.id===target))throw Error('Frontline must be an active member.');
  return {...next,party:{...partyFor(next),front:target}};
+}
+export function companionGiftQuote(p,id){
+ const m=ROSTER.find(m=>m.id===id),state=m&&p?memberFor(p,id):null;
+ if(!state?.recruited)return {ok:false,reason:'Recruit this companion first.'};
+ if(state.bond>=100)return {ok:false,reason:'Maximum bond reached.'};
+ if((p.inventory?.[BOND_GIFT.item]??0)<BOND_GIFT.cost)return {ok:false,reason:'Requires '+BOND_GIFT.cost+' Sapphire Ore.'};
+ return {ok:true,reason:null,cost:BOND_GIFT.cost,gain:Math.min(100-state.bond,BOND_GIFT.gain),bond:state.bond};
+}
+export function giveCompanionGift(p,id){
+ if(!isProfile(p))throw Error('Invalid profile.');
+ const q=companionGiftQuote(p,id);if(!q.ok)throw Error(q.reason);
+ const state=memberFor(p,id);
+ return withMember({...p,inventory:{...p.inventory,[BOND_GIFT.item]:p.inventory[BOND_GIFT.item]-q.cost}},id,{...state,bond:state.bond+q.gain});
 }
 export function companionProgress(p,encounter,units){
  if(encounter?.practice||p.world.completedEncounters.includes(encounter?.id))return partyFor(p);
