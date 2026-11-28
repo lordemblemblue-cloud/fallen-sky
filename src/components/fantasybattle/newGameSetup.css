@@ -1,0 +1,41 @@
+/* Owner-approved replacement of crowded setup/creation plates. Clean scenic art,
+   no baked labels; one fading glass veil rather than stacked boxes. */
+.fa-ui.page[data-new-game="true"]{inset:0;width:100%;height:100%;transform:none;overflow:auto;background:transparent}
+.fa-ui[data-new-game="true"] .fa-template,.fa-ui[data-new-game="true"] .fa-header{display:none!important}
+.fa-original-menu .fa-painted-button.fa-new-game-label{background:linear-gradient(110deg,#14264c,#2c5184 55%,#1d3764);border:1px solid #e0c68c;border-radius:11px 20px;box-shadow:inset 0 0 0 2px #c9b5803b;text-shadow:0 2px 4px #0c1730;color:#fff2d4}
+.fa-original-menu .fa-painted-button.fa-new-game-label:hover:not(:disabled){background:linear-gradient(110deg,#2c4c78,#5475a8 55%,#304d7a)}
+.fa-new-game{position:relative;min-height:100%;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);align-items:center;gap:clamp(12px,3vw,64px);padding:clamp(72px,11vh,130px) clamp(20px,8vw,150px) clamp(20px,5vh,56px);background:linear-gradient(90deg,#12234842,#172e5480 55%,#102542bb),url('/fantasybattle/sapphire/backgrounds/celestial.webp') center/cover;color:#fff4e1;font-family:Georgia,'Times New Roman',serif;text-shadow:0 1px 4px #132345}
+.fa-new-brand{position:absolute;top:4%;left:clamp(20px,8vw,150px);display:flex;flex-direction:column;gap:4px;color:#fff2d4;letter-spacing:.05em;font-size:clamp(20px,2.5vw,42px)}
+.fa-new-brand small{font-size:.38em;text-transform:uppercase;letter-spacing:.24em;color:#e8d3a8}
+.fa-new-hero{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto;align-items:center;justify-items:center;min-height:0;height:clamp(320px,70vh,780px);isolation:isolate}
+.fa-new-hero-halo{position:absolute;inset:5% 0 12%;z-index:-1;background:radial-gradient(ellipse,#91b6e75c 0%,#668bbd36 35%,transparent 70%);pointer-events:none}
+.fa-new-hero-model{max-width:100%;height:100%;max-height:100%;object-fit:contain;min-height:0;filter:drop-shadow(0 10px 18px #0b1c4255)}
+.fa-new-hero-fallback{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;max-height:100%;gap:8px}
+.fa-new-hero-fallback .fa-archer-portrait{width:min(240px,100%);max-height:48vh;object-fit:contain}
+.fa-new-hero-fallback small,.fa-new-hero-caption small{font-size:.85em;color:#e2e9f9;text-align:center}
+.fa-new-hero-caption{display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;color:#fff1d4}
+.fa-new-hero-caption>span{font-size:.75em;text-transform:uppercase;letter-spacing:.16em;color:#e9d6b1}
+.fa-new-hero-caption strong{font-weight:500;font-size:clamp(24px,3vw,40px)}
+.fa-new-detail{min-width:0;display:flex;flex-direction:column;gap:clamp(10px,1.7vh,20px);padding:clamp(16px,3vw,48px);background:linear-gradient(90deg,transparent,#1b365cb8 14%,#182e52df 70%,#13284980);text-wrap:pretty;font-size:clamp(15px,1.2vw,20px)}
+@supports(backdrop-filter:blur(14px)){.fa-new-detail{backdrop-filter:blur(14px);background:linear-gradient(90deg,#213a6030,#1b365ca6 15%,#182e52c2 75%,#13284970)}}
+.fa-new-step{display:flex;align-items:center;gap:.9em;font-size:.78em;color:#c8d8ed;letter-spacing:.035em}
+.fa-new-step [aria-current="step"]{color:#ffe7b4;font-weight:600}
+.fa-new-detail h1{font-size:clamp(26px,3.2vw,52px);line-height:1.1;font-weight:500;margin:0;color:#fff0d1}
+.fa-new-rule{display:flex;align-items:center;gap:8px;color:#e5c78c}
+.fa-new-rule::before,.fa-new-rule::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,#e6c891a0,transparent)}
+.fa-new-rule::before{background:linear-gradient(90deg,transparent,#e6c891a0)}
+.fa-new-detail p{margin:0;line-height:1.45}.fa-new-note{font-size:.82em;color:#d9e6f9}
+.fa-new-name{display:flex;flex-direction:column;gap:8px;color:#f4dfb9}
+.fa-new-name input,.fa-new-preferences select{background:#18345a9e;color:#fff4df;border:0;border-bottom:1px solid #d7bc86;border-radius:6px 6px 0 0;min-width:0;padding:.75em;font:inherit}
+.fa-new-name input::placeholder{color:#bdcce0}.fa-new-preferences select option{background:#1b355c;color:#fff4df}
+.fa-new-info{margin:0}.fa-new-info>div,.fa-new-preferences>label{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #d8c28f50;padding:.7em 0;min-width:0}.fa-new-info dd{margin:0;color:#ffe5ac;text-align:right}
+.fa-new-preferences input[type=checkbox]{appearance:none;width:2.5em;height:1.35em;border-radius:1em;border:1px solid #d3bc8c;background:#1b3458;position:relative;flex:none;cursor:pointer}
+.fa-new-preferences input[type=checkbox]::after{content:"";position:absolute;top:.13em;left:.15em;width:.95em;height:.95em;border-radius:50%;background:#dfca9b}
+.fa-new-preferences input[type=checkbox]:checked{background:#749dcc}.fa-new-preferences input[type=checkbox]:checked::after{left:auto;right:.15em;background:#fff1d0}
+.fa-new-actions{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
+.fa-new-action{font:inherit;font-size:.9em;min-height:44px;padding:.6em 1.1em;color:#fff1d6;border:1px solid #c9b48093;border-radius:6px 14px;background:linear-gradient(120deg,#142a4eaa,#3c6098ad);cursor:pointer}
+.fa-new-action.primary{color:#1b3355;background:linear-gradient(105deg,#e6c997,#fff2d9,#a9c7e5);border-color:#e6ca91;text-shadow:none}
+.fa-new-action:disabled{opacity:.5;cursor:not-allowed}.fa-new-action:hover:not(:disabled){filter:brightness(1.15)}
+.fa-new-game :focus-visible{outline:2px solid #ffdfa1;outline-offset:3px}
+@media(max-width:700px) and (orientation:portrait){.fa-new-game{grid-template-columns:minmax(0,1fr);gap:12px;padding:72px 14px 20px}.fa-new-hero{height:35vh;min-height:190px}.fa-new-detail{padding:18px;background:#142c50b8}.fa-new-brand{top:12px;left:18px}.fa-new-hero-caption{padding:4px 0}.fa-new-hero-caption strong{font-size:24px}}
+@media(max-height:500px) and (orientation:landscape){.fa-new-game{padding:46px 20px 16px;gap:10px;align-items:start}.fa-new-brand{top:8px;left:20px;font-size:20px}.fa-new-hero{height:260px;min-height:0}.fa-new-detail{padding:12px;gap:8px;font-size:14px}.fa-new-detail h1{font-size:24px}.fa-new-action{min-height:36px}}

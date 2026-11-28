@@ -407,16 +407,23 @@ test('original notifications show only local session events and categorize actua
  for(const forbidden of ['transact(','autosave(','rewardVictory(','localStorage'])assert.ok(!section.includes(forbidden),forbidden);
 });
 
-test('original first-time setup uses actual guest settings and routes drafts and valid saves through existing flows',()=>{
+test('New Game is character first with a separate optional settings screen and guarded entry',()=>{
  assert.equal(stagedOriginalFor('48').wideOnly,true);
- assert.ok(templateUrl('48').startsWith('data:image/svg+xml,'));
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
- const section=page.slice(page.indexOf('function FirstTimeSetup('),page.indexOf('function Panel('));
- for(const marker of ['maxLength={40}','Object.entries(APPEARANCES)','settings.quality','settings.muted','settings.reducedMotion','onSettings({quality:value})','disabled={!validCount||Boolean(saveError)}','No account required','onClick={onCreate}'])assert.ok(section.includes(marker),marker);
- for(const forbidden of ['localStorage','writeSlot(','createProfile(','transact(','autosave('])assert.ok(!section.includes(forbidden),forbidden);
- const handler=page.split('\n').find(line=>line.trim().startsWith("case '48':"));
- for(const marker of ["s.id==='48'&&!s.running&&!s.encounter","go('19')",'reloadSlots()','mostRecent(fresh.slots)','fresh.error||!latest',"go('02')",'onSettings={applySettings}'])assert.ok(handler.includes(marker),marker);
+ const setup=readFileSync(new URL('../src/components/fantasybattle/NewGameSetup.jsx',import.meta.url),'utf8');
+ const css=readFileSync(new URL('../src/components/fantasybattle/newGameSetup.css',import.meta.url),'utf8');
+ for(const marker of ['maxLength={40}','name.trim()','step===\'character\'','onNext','onStart','onSettingsPage','settings.quality','settings.muted','settings.reducedMotion','No account required'])assert.ok(setup.includes(marker),marker);
+ for(const forbidden of ['localStorage','writeSlot(','createProfile(','transact(','autosave('])assert.ok(!setup.includes(forbidden),forbidden);
+ assert.ok(page.includes('onClick={openNewGame}><span>New Game</span>'));
+ assert.ok(page.includes('case \'48\':content=<NewGameSetup step="character"'));
+ assert.ok(page.includes('case \'19\':content=<NewGameSetup step="settings"'));
+ assert.ok(page.includes("live.id!=='19'||live.running||live.encounter"));
+ assert.ok(page.includes("SLOT_IDS.find(s=>!fresh.slots.some(x=>x.id===s))"));
+ assert.ok(page.includes("begin(p,empty||null,null)"));
+ assert.ok(page.includes('disabled={!recent}'));
+ assert.ok(css.includes('[data-new-game="true"]'));
 });
+
 
 
 import {GROVE_STORY,groveStoryState} from '../src/components/fantasybattle/core/groveStory.mjs';
