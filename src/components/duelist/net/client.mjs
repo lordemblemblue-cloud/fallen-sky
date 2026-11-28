@@ -306,6 +306,13 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
   function connect(resume) {
     const socket = url === ACTOR_TRANSPORT ? createActorSocket({ mode, matchId }) : new WebSocket(url);
     ws = socket;
+    // Opening a socket is not enough: the match service must actually admit us.
+    const admissionDeadline = setTimeout(() => {
+      if (stopped || ws !== socket || status === 'ready' || status === 'error' || status === 'closed') return;
+      ws = null;
+      try { socket.close(); } catch { /* already closed */ }
+      setStatus('error', 'The match server did not respond in time. Retry joining.');
+    }, 20000);
     socket.onopen = () => { if (ws === socket) send({ t: 'hello', v: PROTOCOL, token: token || '', name, body, ...(resume ? { resume } : {}) }); };
     socket.onmessage = (event) => {
       if (ws !== socket) return;
@@ -313,7 +320,7 @@ export function createOnlineSource({ url, token, name, body, mode, mission = 'co
       try { msg = JSON.parse(event.data); } catch { return; }
       if (lag) setTimeout(() => { if (ws === socket) receive(msg); }, lag * 500); else receive(msg);
     };
-    socket.onclose = (e) => { if (ws === socket) lost(e.code); };
+    socket.onclose = (e) => { clearTimeout(admissionDeadline); if (ws === socket) lost(e.code); };
     socket.onerror = () => {}; // its close follows
   }
 

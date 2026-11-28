@@ -9,6 +9,7 @@
 // keys are dropped: the target keeps its own proportions.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { withAssetDeadline } from './assets.mjs';
 import { MOTION_PACK_URL } from '../core/motionPack.data.mjs';
 
 const packs = new Map();
@@ -21,7 +22,7 @@ export const OFF_CENTRE = 0.5;
 // { root, rig, clips: Map(name -> AnimationClip) } for a clip GLB, loaded once.
 export function loadClipSource(url = MOTION_PACK_URL) {
   if (!packs.has(url)) {
-    packs.set(url, new GLTFLoader().loadAsync(url).then((gltf) => ({
+    packs.set(url, withAssetDeadline(new GLTFLoader().loadAsync(url), url).then((gltf) => ({
       root: gltf.scene,
       rig: describeRig(gltf.scene),
       clips: new Map(gltf.animations.map((c) => [c.name, c])),

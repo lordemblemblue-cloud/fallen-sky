@@ -25,6 +25,8 @@ export default function LiveAppIntro({ onComplete }) {
 
   useEffect(() => {
     playWithSound();
+    // The optional cinematic must never block access to either game.
+    const watchdog = window.setTimeout(onComplete, 15000);
     // Browsers that block unmuted autoplay do not always reject play().
     const blockedCheck = window.setTimeout(() => {
       const video = videoRef.current;
@@ -32,9 +34,10 @@ export default function LiveAppIntro({ onComplete }) {
     }, 1000);
     return () => {
       window.clearTimeout(blockedCheck);
+      window.clearTimeout(watchdog);
       videoRef.current?.pause();
     };
-  }, [playWithSound]);
+  }, [playWithSound, onComplete]);
 
   useEffect(() => {
     // Bound startup even if the media server or autoplay stalls.

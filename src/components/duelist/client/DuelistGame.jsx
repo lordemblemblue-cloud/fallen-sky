@@ -260,7 +260,25 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
     setChoiceSeconds(CLASS_CHOICE_PROMPT_SECONDS);
     setHud(null);
     setNet(null);
-    const selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
+    let selectedRenderer;
+    try {
+      selectedRenderer = createSceneRenderer('duelist-adventure', { gameplay: true, antialias: true, powerPreference: 'high-performance' });
+    } catch (error) {
+      console.error('[duelist] renderer creation failed', error);
+      setStatus('error');
+      return undefined;
+    }
+    let rendererReady = false, rendererFailed = false;
+    const gpuDeadline = window.setTimeout(() => {
+      if (!disposed && !rendererReady) { rendererFailed = true; setStatus('error'); }
+    }, 20000);
+    Promise.resolve(selectedRenderer.ready).then(() => {
+      if (!disposed && !rendererFailed) rendererReady = true;
+      window.clearTimeout(gpuDeadline);
+    }).catch(error => {
+      window.clearTimeout(gpuDeadline);
+      if (!disposed) { rendererFailed = true; console.error('[duelist] renderer initialization failed', error); setStatus('error'); }
+    });
     const renderer = selectedRenderer.renderer;
     window.__duelistGameRenderer = renderer;
     window.__duelistGameRendererChoice = { kind: selectedRenderer.kind, reason: selectedRenderer.reason };
@@ -427,7 +445,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
             s.kind === 'enemy' ? 0xffc9b8 : s.kind === 'ally' ? 0xd9c6ff : TEAM_COLORS[s.team] ? fighterColor(s.team) : 0xdfe9f5,
             enemy);
         }
-      }).catch((error) => { console.error('[duelist] could not load a fighter', error); setStatus('error'); })
+      }).catch((error) => { if (!disposed) { console.error('[duelist] could not load a fighter', error); setStatus('error'); } })
         .finally(() => { pending.delete(s.id); building = false; });
     };
 
@@ -886,11 +904,20 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       frame = requestAnimationFrame(loop);
       const dt = Math.min(0.1, (now - last) / 1000) * timeScale;
       last = now;
-      if (!manual) tick(dt);
+      if (rendererFailed) { cancelAnimationFrame(frame); return; }
+      if (rendererReady && !manual) {
+        try { tick(dt); } catch (error) {
+          rendererFailed = true;
+          cancelAnimationFrame(frame);
+          console.error('[duelist] arena frame failed', error);
+          setStatus('error');
+        }
+      }
     };
     frame = requestAnimationFrame(loop);
     return () => {
       disposed = true;
+      window.clearTimeout(gpuDeadline);
       cancelAnimationFrame(frame);
       observer.disconnect();
       source.dispose();
@@ -1056,7 +1083,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
         <MatchLoadingScreen mode={mode} message={(mode === 'story' ? CREW_TEXT : NET_TEXT)[net.status]} />
       )}
       {waiting && (net.status === 'error' || net.status === 'closed') && (
-        <MatchLoadingScreen mode={mode} variant="error" message={net.detail || 'Not connected.'} />
+        <MatchLoadingScreen mode={mode} variant="error" message={net.detail || 'Not connected.'} onRetry={again} onLeave={onLeave} />
       )}
       {waiting && net.status === 'reconnecting' && (
         <MatchLoadingScreen mode={mode} message={net.detail || 'Connection lost. Reconnecting…'}
@@ -1066,7 +1093,7 @@ function DuelistMatch({ entryClassConfirmed = false, mode = 'practice', botLevel
       {!online && status === 'loading' && (
         <MatchLoadingScreen mode={mode} message={mode === 'story' ? 'Breaking into the depot…' : 'Forging the arena…'} />
       )}
-      {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The fighters could not be loaded." />}
+      {status === 'error' && <MatchLoadingScreen mode={mode} variant="error" message="The arena or its fighters could not finish loading." onRetry={again} onLeave={onLeave} />}
       {showPicker && (
         <ClassPicker current={current} pending={classAnswer?.ok ? classAnswer.pending : null} fighter={youBody} keys={classKeys} progress={match.me?.progress || progressRef.current} matchBoost={match.me?.matchBoost || 0}
           live={match.phase === 'live' && !hud?.dead} onPick={pickClass}

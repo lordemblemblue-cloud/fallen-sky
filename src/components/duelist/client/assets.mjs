@@ -19,9 +19,16 @@ export const BODY_HEIGHT = 1.7;
 export const LOCOMOTION_CLIPS = Object.freeze({ idle: 'Combat_Idle', walk: 'Walk', run: 'Run' });
 export const MOVEMENT_CLIPS = Object.freeze({ roll: 'Front_Roll', backFlip: 'Back_Flip', flipLeft: 'Flip_Left', flipRight: 'Flip_Right' });
 
+// Bound network/decoder stalls; failed loads are evicted so retry can recover.
+export function withAssetDeadline(promise, url, ms = 30000) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Asset load timed out: ${url}`)), ms);
+  })]).finally(() => clearTimeout(timer));
+}
 const cache = new Map();
 const load = (url) => {
-  if (!cache.has(url)) cache.set(url, new GLTFLoader().loadAsync(url).catch((error) => { cache.delete(url); throw error; }));
+  if (!cache.has(url)) cache.set(url, withAssetDeadline(new GLTFLoader().loadAsync(url), url).catch((error) => { cache.delete(url); throw error; }));
   return cache.get(url);
 };
 
