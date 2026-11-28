@@ -570,3 +570,31 @@ test('reference starter and tactically guarded late-game party remain viable in 
  assert.ok(starter.wins>=56);assert.ok(boss.wins>=40&&boss.wins<64);assert.ok(final.wins>=40&&final.wins<64);
  assert.ok(boss.rounds>starter.rounds);assert.ok(final.rounds>starter.rounds);
 });
+
+import {ENCOUNTER_REWARDS,encounterReward} from '../src/components/fantasybattle/core/encounterRewards.mjs';
+test('main path funds level four and Moonfall before Gatekeeper without optional rewards',()=>{
+ const route=['wilds_grove_01','wilds_pilgrimage_01','wilds_pilgrimage_02','wilds_waterfall_01','wilds_heights_01','wilds_heights_02','wilds_sanctuary_guard'];
+ let p=A.createProfile('Progression');
+ assert.equal(Object.keys(ENCOUNTER_REWARDS).length,14);
+ for(const id of route){
+  const q=encounterReward({id,category:'Boss'}),v=A.rewardVictory(p,{id,category:'Boss'});
+  assert.equal(v.xp,q.xp);assert.equal(v.gold,q.gold);assert.equal(v.firstVictory,true);
+  assert.equal(v.profile.inventory.sapphireOre-p.inventory.sapphireOre,q.ore);
+  assert.equal(A.rewardVictory(v.profile,{id}).firstVictory,false);
+  p=v.profile;
+  for(const m of A.ROSTER.filter(m=>m.requiredEncounter===id))p=A.recruitCompanion(p,m.id);
+ }
+ assert.equal(p.xp,300);assert.equal(p.gold,280);assert.equal(p.inventory.sapphireOre,12);
+ assert.equal(A.levelFor(p.xp),4);assert.ok(A.availableActions(4).includes(B.ULTIMATE_ID));
+ p=A.equipItem(A.buyItem(p,'sapphireBow'),'sapphireBow');
+ p=A.enhanceWeapon(p);p=A.enhanceWeapon(p);p=A.enhanceWeapon(p);
+ p=A.equipGear(p,'hero','armor','moonveilRaiment');p=A.equipGear(p,'hero','mantle','moonveilVeil');
+ assert.ok(A.isProfile(p));assert.equal(A.activeRoster(p).length,3);
+ assert.equal(p.gold,115);assert.equal(p.inventory.sapphireOre,9);
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+ const capped=A.rewardVictory({...p,xp:100000}, {id:'wilds_sanctuary_boss'});
+ assert.equal(capped.xp,0);assert.equal(capped.firstVictory,true);
+ assert.equal(A.rewardVictory(capped.profile,{id:'wilds_sanctuary_boss'}).firstVictory,false);
+ assert.equal(A.rewardVictory(p,{id:'wilds_astral_elite',practice:true}).firstVictory,false);
+ assert.deepEqual(encounterReward({id:'unknown',category:'Elite'}),{xp:50,gold:45,ore:2});
+});
