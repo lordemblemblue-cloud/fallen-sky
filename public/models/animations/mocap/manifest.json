@@ -10,7 +10,11 @@
         "Glide_Hang",
         "Sprint",
         "Swim_Forward",
-        "Swim_Idle"
+        "Swim_Idle",
+        "Jump_Start",
+        "Jump_Loop",
+        "Jump_Land",
+        "Fall_Loop"
       ]
     },
     "fused-female-v1": {
@@ -21,7 +25,11 @@
         "Glide_Hang",
         "Sprint",
         "Swim_Forward",
-        "Swim_Idle"
+        "Swim_Idle",
+        "Jump_Start",
+        "Jump_Loop",
+        "Jump_Land",
+        "Fall_Loop"
       ]
     }
   }
