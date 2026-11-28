@@ -4,7 +4,7 @@ import {treasureFor} from './treasureCatalog.mjs';
 import {BOND_GIFT} from './companionBonds.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
-import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats,activeGearSetId,ascensionLevel,scaledSet,validAscensions,cleanAscensions,MAX_ASCENSION} from './equipmentCatalog.mjs';
+import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats,activeGearSetId,ascensionLevel,scaledSet,validAscensions,cleanAscensions,MAX_ASCENSION,SOCKET_GEMS,MAX_SOCKET_RANK,equippedSocketItems,socketFor,validSockets,cleanSockets} from './equipmentCatalog.mjs';
 export const SAVE_KEY='fantasyBattle.sapphire.saves.v1';
 export const SETTINGS_KEY='fantasyBattle.sapphire.settings.v1';
 export const ITEMS=Object.freeze({
@@ -99,7 +99,7 @@ export function createProfile(name){
   return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited)&&validAscensions(p,id=>memberFor(p,id).recruited);}catch{return false;}
+  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited)&&validAscensions(p,id=>memberFor(p,id).recruited)&&validSockets(p,id=>memberFor(p,id).recruited);}catch{return false;}
 }
 // Legacy records have no revision. A complete serialized record also catches same-time edits.
 export const slotStamp=record=>record===undefined?null:JSON.stringify(record);
@@ -270,6 +270,19 @@ export function ascendSet(p,wearer='hero'){
  const q=ascendQuote(p,wearer);if(!q.ok)throw Error(q.reason);
  return {...p,gold:p.gold-q.cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore},ascensions:{...p.ascensions,[wearer]:{...p.ascensions?.[wearer],[q.setId]:q.level+1}}};
 }
+// Gems are formed in place from ore. One permanent socket record per wearer and item type.
+export function socketQuote(p,wearer,key,gem){
+ const existing=socketFor(p,wearer,key),same=existing?.gem===gem,rank=same?existing.rank:0;
+ const cost=20+rank*20,ore=2+rank;
+ const eligible=wearer==='hero'||ROSTER.some(m=>m.id===wearer&&memberFor(p,wearer).recruited);
+ const reason=!p||!eligible?'Select a recruited party member.':!equippedSocketItems(p,wearer).includes(key)?'Equip an eligible item first.':!Object.hasOwn(SOCKET_GEMS,gem)?'Choose a valid gem.':rank>=MAX_SOCKET_RANK?'Maximum gem rank reached.':p.gold<cost?'Insufficient gold.':(p.inventory.sapphireOre??0)<ore?'Insufficient Sapphire Ore.':null;
+ return {ok:!reason,reason,wearer,key,gem,existing,rank,nextRank:Math.min(MAX_SOCKET_RANK,rank+1),cost,ore,replacing:Boolean(existing&&!same)};
+}
+export function socketEquipment(p,wearer,key,gem){
+ if(!isProfile(p))throw Error('Invalid profile.');
+ const q=socketQuote(p,wearer,key,gem);if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore},sockets:{...p.sockets,[wearer]:{...p.sockets?.[wearer],[key]:{gem,rank:q.nextRank}}}};
+}
 // Each recipe creates an existing catalog item; no new inventory keys or save migration.
 const recipe=(id,category,ore,gold,level)=>Object.freeze({id,category,ore,gold,level});
 export const RECIPES=Object.freeze({
@@ -327,6 +340,7 @@ export function parseBackup(raw){
     ...(p.gear===undefined?{}:{gear:Object.fromEntries(Object.keys(p.gear).map(id=>[id,{...gearFor(p,id)}]))}),
     enhancements:cleanEnhancements(p),
     ...(p.ascensions===undefined?{}:{ascensions:cleanAscensions(p)}),
+    ...(p.sockets===undefined?{}:{sockets:cleanSockets(p)}),
     rewardedDiscoveries:[...p.rewardedDiscoveries],attributes:Object.fromEntries(STAT_KEYS.map(k=>[k,p.attributes[k]])),
     world:{position:[...w.position],discoveries:[...w.discoveries],completedEncounters:[...w.completedEncounters],visitedRegions:[...w.visitedRegions]},
     quests:{grove:p.quests.grove,...cleanCampaign(p)},createdAt:p.createdAt};
