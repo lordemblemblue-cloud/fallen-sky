@@ -1,0 +1,17 @@
+# R156 — WP-FS-03 approved weapon skill cap subpackage
+
+Fallen Sky FS-04 / WP-FS-03. Base main cde33d43073293c700c31611cf3bfcf56673f84c. Separate branch test/r156-weapon-skill-cap-155; R155 PR #459 and blocked R150–R154 PR #451 are independent. Owner's recorded "Carry on to 155" is in the existing branch's docs/game3d/LEVEL_CAP_155_20261119.md. No new balance decision inferred.
+
+## Completed
+
+Ported only the earlier shared weaponSkillPoints.mjs (blob 8a925a8a81458a97312aa16dbcb59b5f4fa65d2e) from claude/level-cap-155-20261119, replacing the literal cap 100 with AXE_LEVEL_CAP. Existing path costs, tier predicates, charged bonuses, and formula stay unchanged. Levels 1–100 retain their prior entitlements; 100=502, 113=606, 120=663, 140=844, 155=994. All three existing trees cost 600; remaining 394 unspent at 155. No new spending path, NG+ entitlement or automatic allocation. Main's existing axePowerBudget.ts blob 285f6cd907487777b15df747697ceca99dceda87 and par rows are completely untouched (including current post-100 extrapolation); old branch uses a different post-100 curve that is not ported.
+
+## Exact targeted test evidence
+
+Base44 app sandbox Node v24.22.1; git archive of pinned main shared sources and existing test extracted to disposable /tmp, candidate files written there only, removed on exit. Executed node --experimental-strip-types --test tests/game3d/weapon-skill-points.test.mjs tests/game3d/r156-weapon-cap-vault.test.mjs. 8 tests, 8 pass, 0 fail/skipped/TODO, 152.235355 ms; exit 0. Actual shared save validator tested for 600-point allocations at levels 112/113/155/156. Existing assertions ported from previous branch; additional all-level 1–100 equivalence and full-tree threshold checks. All three committed source/test blobs match the executed files exactly: shared module 8a925a8a81458a97312aa16dbcb59b5f4fa65d2e, existing tests 28da9bc01e1585a8932cc628b3440fcd3226bbd3, new vault tests 0e3106f7828858037d7d5c7b608f8c7208e3202e. Commits 25f2f2ce, 882853d6, e5d6e1f7. Full suite, lint, build, melee-free-aim level-155 and browser/visual checks NOT RUN. Temporary fixture is not a deployed app.
+
+## Remaining scope
+
+WP-FS-03 is partial: old-cap XP banking not ported here. Current main recomputes XP requirement, clamps level to 155 and zeros XP at 155; earlier branch's loader is older and must not replace current loader/character-identity guards. Old level-100 cap marker, already converted saves, prior accumulated XP and current cap behavior need separate reconciliation. Next R157: narrow preservation of provably old-cap XP, no payout, no change to current XP curve, no restoration of guessed lost XP. Explicit payout remains FS-D3 / MI-FS-P1. Ascension threshold and enemy tuning unchanged. Private server preview cap reconciliation and full prior branch tests also remain. Before owner-authorized site release, deploy compatible characterVault and guestCharacterVault validators first (they import characterSaveRules, which imports weaponSkillPoints); schema registration, concurrency and provider evidence from R151–154 are blockers to claiming cloud functionality. Other functions/worker in old branch's deploy list require separate review before broader cap release, not assumed by this narrow patch.
+
+Hand-back: approved weapon-point subpackage only; candidate source and two tests; no assets; targeted proof above; no live data, app sandbox checkout edits, merge or deployment. Owner review and exact branch full checks pending. Preserve guest-only entry, existing skill damage settings, and all other games.
