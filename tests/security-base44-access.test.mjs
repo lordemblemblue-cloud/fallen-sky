@@ -157,3 +157,19 @@ test('guest save request size enforcement precedes parsing and privileged access
   assert.ok(source.indexOf('await readBoundedGuestBody(req)') < source.indexOf('JSON.parse(raw'));
   assert.ok(source.indexOf('JSON.parse(raw') < source.indexOf('const base44 = createClientFromRequest(req)'));
 });
+
+test('signed automation endpoints bound request memory and check signature freshness before privileged access', () => {
+  for (const name of ['partyLifecycle', 'clanMembershipNotifier']) {
+    const source = readFileSync(new URL('../base44/functions/' + name + '/entry.ts', import.meta.url), 'utf8');
+    const bodyRead = source.indexOf('await readBoundedGuestBody(req, 16_000)');
+    const freshness = 'Math.abs(Date.now() - Number(stamp)) > 120_000';
+    const first = source.indexOf(freshness);
+    const last = source.lastIndexOf(freshness);
+    const hmac = source.indexOf('crypto.subtle.sign');
+    const service = source.indexOf('base44.asServiceRole');
+    assert.doesNotMatch(source, /await req\.text\(/, name);
+    assert.ok(first >= 0 && first < bodyRead && bodyRead < last && last < hmac && hmac < service, name);
+    assert.match(source, /if \(raw === null\) return (reply|respond)\(\{ error: 'Request too large' \}, 413\)/, name);
+    assert.match(source, /if \(!same(Signature|Hash)\(signature, expected\)\)/, name);
+  }
+});
