@@ -1,10 +1,10 @@
 import { CELESTIAL_ASSETS } from './world/celestialAssets.mjs';
 
-// Render a single full-body frame from the approved model; no extra game loop,
-// no duplicate renderer per screen, no claim of an authored idle animation.
+// Capture three full-body views using one renderer and one model load.
+// No continuous game loop; failed captures can be retried.
 let request;
 export function previewNewGameHero(){
- if(!request)request=capture().catch(()=>null);
+ if(!request)request=capture().catch(()=>{request=undefined;return null;});
  return request;
 }
 async function capture(){
@@ -30,10 +30,19 @@ async function capture(){
   camera.up.copy(up);camera.position.copy(center).addScaledVector(front,size.length()*2);camera.lookAt(center);
   const created=createSceneRenderer('fantasy-battle',{alpha:true,antialias:true,powerPreference:'low-power'});renderer=created.renderer;
   await created.ready;renderer.setPixelRatio(1);renderer.setSize(512,640,false);renderer.setClearColor(0x000000,0);
-  if(renderer.isWebGPURenderer&&typeof renderer.renderAsync==='function')await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
-  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=640;const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)throw Error('Preview canvas unavailable');
-  ctx.drawImage(renderer.domElement,0,0);const pixels=ctx.getImageData(0,0,512,640).data;let visible=0;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>32)visible++;if(visible<100)throw Error('Empty preview');
-  return canvas.toDataURL('image/png');
+  const canvas=document.createElement('canvas');canvas.width=512;canvas.height=640;
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});if(!ctx)throw Error('Preview canvas unavailable');
+  const frames={};
+  for(const [id,angle] of [['front',0],['left',Math.PI/5],['right',-Math.PI/5]]){
+   const direction=front.clone().applyAxisAngle(up,angle);
+   camera.position.copy(center).addScaledVector(direction,size.length()*2);camera.lookAt(center);
+   if(renderer.isWebGPURenderer&&typeof renderer.renderAsync==='function')await renderer.renderAsync(scene,camera);else renderer.render(scene,camera);
+   ctx.clearRect(0,0,512,640);ctx.drawImage(renderer.domElement,0,0);
+   const pixels=ctx.getImageData(0,0,512,640).data;let visible=0;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>32)visible++;
+   if(visible>=100)frames[id]=canvas.toDataURL('image/png');
+   if(id==='front'&&!frames.front)throw Error('Empty preview');
+  }
+  return Object.freeze(frames);
  }finally{
   const resources=[];model?.traverse(o=>{if(o.geometry)resources.push(o.geometry);if(o.skeleton?.boneTexture)resources.push(o.skeleton.boneTexture);for(const m of Array.isArray(o.material)?o.material:[o.material]){if(!m)continue;resources.push(m);for(const v of Object.values(m))if(v?.isTexture)resources.push(v);}});
   try{disposeResources(resources);}finally{destroySceneRenderer(renderer);}

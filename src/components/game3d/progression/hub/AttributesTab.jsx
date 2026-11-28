@@ -166,7 +166,8 @@ export default function AttributesTab({ hud }) {
 
         <div className="mt-5">
           <StatLine label="Level" value={hud?.level || 1} />
-          <StatLine label="XP" value={`${hud?.xp || 0} / ${hud?.xpForNext || 0}`} />
+          <StatLine label="XP" value={hud?.xpForNext === Infinity ? 'MAX' : `${hud?.xp || 0} / ${hud?.xpForNext || 0}`} />
+          {hud?.xpBankedAtOldCap > 0 && <StatLine label="XP kept at the old cap" value={hud.xpBankedAtOldCap} />}
           <StatLine label="Current HP" value={`${Math.round(hud?.hp || 0)} / ${Math.round(d.maxHP || hud?.maxHP || 0)}`} />
           <StatLine label="Maximum Chi" value={Math.round(d.chi || 0)} />
         </div>

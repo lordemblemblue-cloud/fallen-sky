@@ -39,3 +39,14 @@
 .fa-new-game :focus-visible{outline:2px solid #ffdfa1;outline-offset:3px}
 @media(max-width:700px) and (orientation:portrait){.fa-new-game{grid-template-columns:minmax(0,1fr);gap:12px;padding:72px 14px 20px}.fa-new-hero{height:35vh;min-height:190px}.fa-new-detail{padding:18px;background:#142c50b8}.fa-new-brand{top:12px;left:18px}.fa-new-hero-caption{padding:4px 0}.fa-new-hero-caption strong{font-size:24px}}
 @media(max-height:500px) and (orientation:landscape){.fa-new-game{padding:46px 20px 16px;gap:10px;align-items:start}.fa-new-brand{top:8px;left:20px;font-size:20px}.fa-new-hero{height:260px;min-height:0}.fa-new-detail{padding:12px;gap:8px;font-size:14px}.fa-new-detail h1{font-size:24px}.fa-new-action{min-height:36px}}
+
+/* Compact angle selection; no continuous motion or extra render loop. */
+.fa-new-view-controls{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.fa-new-view-controls button{font:inherit;font-size:12px;min-height:36px;padding:5px 12px;color:#e7d9b8;background:#12294d99;border:0;border-bottom:1px solid #d5ba8260;border-radius:5px;cursor:pointer}
+.fa-new-view-controls button[aria-pressed="true"]{color:#fff2ca;background:#5578a78c;border-bottom-color:#f6dfa6}
+.fa-new-view-controls button:disabled{opacity:.5;cursor:default}
+.fa-new-preview-emblem{font-size:clamp(48px,8vw,110px);color:#e7d2a3;line-height:1;opacity:.8}
+.fa-new-hero-fallback{max-width:90%;text-align:center}
+.fa-new-detail{overflow-wrap:anywhere}
+.fa-new-preferences select{max-width:48%}
+@media(max-height:500px) and (orientation:landscape){.fa-new-view-controls button{min-height:30px;padding:3px 8px}.fa-new-hero-caption{padding:4px 0;gap:2px}.fa-new-hero-caption strong{font-size:22px}.fa-new-view-controls{margin-bottom:2px}}

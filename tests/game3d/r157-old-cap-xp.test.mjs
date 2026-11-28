@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {bankXPAboveCapRaise as bank} from '../../src/components/game3d/progression/oldCapXPBank.mjs';
+import {checkCharacterSave} from '../../base44/shared/characterSaveRules.ts';
+const old={level:100,xp:5000,xpForNext:null};
+test('old cap retains every XP without payout',()=>{const b=bank(old,100,160);assert.deepEqual(b,{xp:159,xpBankedAtOldCap:4841});assert.equal(b.xp+b.xpBankedAtOldCap,5000);assert.deepEqual(bank(old,100,160),b);assert.equal(old.xp,5000);});
+test('resaved and later-level characters keep bank without repeat migration',()=>{const b=bank(old,100,160);assert.deepEqual(bank({...old,...b,xpForNext:160},100,160),b);assert.deepEqual(bank({level:101,xp:9,xpForNext:160,xpBankedAtOldCap:4841},101,160),{xp:9,xpBankedAtOldCap:4841});});
+test('only explicit level-100 legacy null marker migrates',()=>{for(const s of [{...old,xpForNext:160},{level:100,xp:5000},{level:99,xp:5000,xpForNext:null},{level:101,xp:5000,xpForNext:null}])assert.deepEqual(bank(s,s.level,160),{xp:5000,xpBankedAtOldCap:0});});
+test('under threshold and current cap remain unchanged',()=>{assert.deepEqual(bank({...old,xp:30},100,160),{xp:30,xpBankedAtOldCap:0});assert.deepEqual(bank({level:155,xp:5000,xpForNext:null,xpBankedAtOldCap:4841},155,Infinity),{xp:0,xpBankedAtOldCap:4841});});
+test('existing valid bank preserved, invalid bank cannot create XP',()=>{assert.deepEqual(bank({...old,xpBankedAtOldCap:10},100,160),{xp:159,xpBankedAtOldCap:4851});for(const v of [-1,Infinity,'12',null,NaN])assert.equal(bank({level:101,xp:9,xpBankedAtOldCap:v},101,160).xpBankedAtOldCap,0);});
+test('actual vault validator accepts optional nonnegative bank and rejects invalid amounts',()=>{const hero={level:100,xp:159,baseStats:{strength:0,dexterity:0,constitution:0,focus:0},unspentPoints:0};const check=h=>checkCharacterSave({wwm_player_progression_v1:JSON.stringify(h)});assert.equal(check(hero).ok,true);assert.equal(check({...hero,xpBankedAtOldCap:4841}).ok,true);for(const v of [-1,'1',null,{}])assert.equal(check({...hero,xpBankedAtOldCap:v}).ok,false);});
+test('current HUD loader and persistence keep safety guards and inert bank',()=>{const s=readFileSync(new URL('../../src/components/game3d/playerHUDStore.jsx',import.meta.url),'utf8');assert.match(s,/bankXPAboveCapRaise\(parsed, level, xpForLevel\(level\)\)/);assert.match(s,/state\.xpBankedAtOldCap > 0 \? \{ xpBankedAtOldCap: state\.xpBankedAtOldCap \}/);assert.match(s,/characterIdentity\(\) !== stateOwner/);assert.match(s,/if \(level >= AXE_LEVEL_CAP\) \{/);const award=s.slice(s.indexOf('export function awardXP'),s.indexOf('export function awardXP')+3500);assert.doesNotMatch(award,/xpBankedAtOldCap/);});

@@ -1269,7 +1269,7 @@ export default function SapphireAdventure(){
   };
   const openNewGame=()=>{if(current.current.running)return;setName('');setCreationAppearance('silver');go('48');};
   const nextNewGame=()=>{if(current.current.id==='48'&&!current.current.running&&!current.current.encounter&&name.trim())go('19');};
-  const startNew=()=>{const live=current.current;if(live.id!=='19'||live.running||live.encounter)return;try{const p=selectAppearance(createProfile(name),creationAppearance);const fresh=reloadSlots();const empty=!fresh.error?SLOT_IDS.find(s=>!fresh.slots.some(x=>x.id===s)):null;live.id='35';begin(p,empty||null,null);}catch(e){setNotice(e.message);}};
+  const startNew=()=>{const live=current.current;if(live.id!=='19'||live.running||live.encounter)return;try{const p=selectAppearance(createProfile(name),creationAppearance);const fresh=reloadSlots();const empty=!fresh.error?SLOT_IDS.find(s=>!fresh.slots.some(x=>x.id===s)):null;live.id='35';begin(p,empty||null,null);if(!empty)notify(fresh.error?'Save storage unavailable. This session is not autosaved.':'All save slots are occupied. This session is not autosaved.');}catch(e){setNotice(e.message);}};
   const enterNew=()=>{const p=current.current.profile;if(!p)return;const empty=SLOT_IDS.find(s=>!slots.slots.some(x=>x.id===s));begin(p,empty||null,null);};
   const leaveTitle=()=>{confirmGate.current.cancel();saveBaseline.current=null;lastPositionSave.current=null;setBackupPass('');clearTimeout(startTimer.current);clearTimeout(timeoutRef.current);restorePending.current=false;failedLoad.current=true;clearTimeout(battleTimer.current);setRunning(false);setEncounter(null);setArenaReady(false);setHud(null);setResult(null);replaceProfile(null);setWorld(null);setPending(null);root('01');reloadSlots();};
   const requestConfirm=(message,action)=>{const ticket=confirmGate.current.open(message,action,current.current);if(ticket){setPending(ticket);go('40');}};
@@ -1357,6 +1357,7 @@ export default function SapphireAdventure(){
   const buttons=(...children)=><div className="fa-buttons">{children}</div>;
   const pane=(i,content,cls)=> <Panel key={i} rect={screen.layout[i]} className={cls}>{content}</Panel>;
   const onboarding=id==='48'||id==='19';
+  const newGameStorage=slots.error?'unavailable':SLOT_IDS.some(s=>!slots.slots.some(x=>x.id===s))?'available':'full';
   const original=useStagedOriginal(onboarding?null:id);
   const manualSave=()=>{const target=selected,profileId=current.current.profile?.id,previous=slots.slots.find(x=>x.id===target),occupied=Boolean(previous);let used=false;const perform=()=>{if(used)return;used=true;const live=current.current;if(!profileId||live.profile?.id!==profileId||live.encounter){notify('Character or combat state changed. Select a save again.');return;}save(target,occupied,live.profile,previous?.stamp??null);};if(occupied)requestConfirm('Overwrite slot '+target+'? Existing progress in this slot will be replaced.',perform);else perform();};
   let content;
@@ -1373,8 +1374,8 @@ export default function SapphireAdventure(){
       <div className="fa-menu-save">{recent?<><strong>{recent.profile.name}</strong><small>Level {levelFor(recent.profile.xp)}</small></>:<span>No saved game</span>}</div>
       {slots.error&&<small className="fa-menu-error" role="alert">{slots.error}</small>}
     </div>:pane(0,<><div className="fa-title-mark" aria-hidden="true">✧</div><h1>Fantasy Battle</h1><p className="fa-title-subtitle">A Sapphire Sumi adventure</p><div className="fa-title-divider" aria-hidden="true"/><Btn primary onClick={openNewGame}>New Game</Btn><Btn disabled={!recent} onClick={()=>begin(recent.profile,recent.id,recent.stamp)}>Continue</Btn><Btn disabled={!validSlots.length} onClick={()=>{setSelected(recent?.id||null);go('02');}}>Load Game</Btn><Btn onClick={()=>go('03')}>Settings</Btn><a className="fa-button" href="/">Back to Games</a>{slots.error&&<small role="alert">{slots.error}</small>}</>);break;
-    case '48':content=<NewGameSetup step="character" name={name} onName={setName} settings={settings} onSettings={applySettings} back={back} onNext={nextNewGame} onStart={startNew} onSettingsPage={()=>go('03')} focusRef={focusRef} portrait={<ArcherPortrait profile={{name,appearance:creationAppearance}} newHero/>}/>;break;
-    case '19':content=<NewGameSetup step="settings" name={name} onName={setName} settings={settings} onSettings={applySettings} back={back} onNext={nextNewGame} onStart={startNew} onSettingsPage={()=>go('03')} focusRef={focusRef} portrait={<ArcherPortrait profile={{name,appearance:creationAppearance}} newHero/>}/>;break;
+    case '48':content=<NewGameSetup step="character" name={name} onName={setName} settings={settings} onSettings={applySettings} back={back} onNext={nextNewGame} onStart={startNew} onSettingsPage={()=>go('03')} focusRef={focusRef} storageState={newGameStorage}/>;break;
+    case '19':content=<NewGameSetup step="settings" name={name} onName={setName} settings={settings} onSettings={applySettings} back={back} onNext={nextNewGame} onStart={startNew} onSettingsPage={()=>go('03')} focusRef={focusRef} storageState={newGameStorage}/>;break;
     case '20':content=original?<div className="fa-original-selection">
       <section className="fa-selection-character">{profile&&<><ArcherPortrait profile={profile} small/><strong>{profile.name}</strong><span>{appearanceFor(profile).name}</span></>}</section>
       <section className="fa-selection-extra"><p>{profile?'Your new adventurer is ready.':'Create a character or load a saved game.'}</p><Btn onClick={back}>Back</Btn></section>
