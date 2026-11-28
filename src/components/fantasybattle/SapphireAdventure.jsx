@@ -1513,7 +1513,16 @@ export default function SapphireAdventure(){
     {encounter&&arenaReady&&profile&&<BattleSurface key={encounter.token} encounter={encounter} profile={profile} paused={id!=='09'} muted={settings.muted} reducedMotion={settings.reducedMotion} quality={settings.quality} stageRef={stageRef} onHud={handleBattleHud} onError={(message,token)=>{if(isCurrentEncounter(current.current.encounter,token))fail(message);}}/>}
     {artwork.mode==='cinematic'&&<div className={'fa-cinematic-art'+(artwork.asset==='title-original'?' title-original':'')} aria-hidden="true" style={{'--fa-scene-art':'url("'+artworkUrl+'")'}}/>}
     <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
-      <div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>
+      <div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}>
+        {original&&id==='01'&&!settings.reducedMotion&&<div className="fa-title-scene" data-quality={settings.quality}>
+          <div className="fa-scene-moon-glow"/>
+          <div className="fa-scene-waterfall fa-scene-waterfall-1"/>
+          <div className="fa-scene-waterfall fa-scene-waterfall-2"/>
+          <div className="fa-scene-waterfall fa-scene-waterfall-3"/>
+          <div className="fa-scene-sparkles"/>
+          <div className="fa-scene-petals">{[0,1,2,3,4,5].map(n=><i key={n}/>)}</div>
+        </div>}
+      </div>
       {!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
       {original&&id==='35'&&<span className="fa-original-subtitle" aria-hidden="true">Fantasy Battle</span>}
       {content}
