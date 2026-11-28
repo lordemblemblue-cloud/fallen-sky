@@ -24,3 +24,16 @@ test('celestial scene and transparent information rail are scoped to selection',
   assert.ok(css.includes('background:none;box-shadow:none;border:0;backdrop-filter:none'));
   assert.ok(css.includes('prefers-reduced-motion:reduce'));
 });
+
+test('creation and faction retain the same celestial art while using existing controls', () => {
+  assert.ok(css.includes('[data-entry-step="creator"] .axe-login-scene'));
+  assert.ok(css.includes('[data-entry-step="faction"] .axe-login-scene'));
+  assert.ok(css.includes('[data-entry-step="creator"] .axe-login-creator-inworld .creator-save'));
+  assert.ok(jsx.includes('<CharacterCreationModal embedded factionId={selectedFaction}'));
+  assert.ok(jsx.includes('setStep(\'select\')'));
+});
+test('vital meter uses recorded maximum and never fabricates missing values', () => {
+  assert.ok(jsx.includes('Number.isFinite(maximum) && maximum > 0'));
+  assert.ok(jsx.includes('celestialFraction(selected.chi ?? selected.currentChi,selected.maxChi)'));
+  assert.ok(css.includes('.axe-celestial-meter-row'));
+});
