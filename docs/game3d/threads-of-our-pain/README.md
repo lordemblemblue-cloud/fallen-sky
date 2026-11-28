@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **FOCUS4-20261127 — D21–D30 discovery refinement (draft, D25 previously covered):** [What survived the crossing](FOCUS4_20261127_D21_D30_REFINEMENT.md). Nine dialogue and terrain deltas; FOCUS series 32/50. Preserve primary rewards and distinct S27/S28/S30/S33/S37/S40/S42/S44/S45 receipts. Not built or verified.
+
 > **FOCUS3-20261127 — D11–D20 discovery refinement (draft):** [The things we leave behind](FOCUS3_20261127_D11_D20_REFINEMENT.md). Ten dialogue and terrain deltas, 23/50 refined in FOCUS series; primary rewards and independent side quest receipts retained. Not built or verified.
 
 > **FOCUS2-20261127 — D02–D10 discovery variety (draft):** [The places between ordinary lives](FOCUS2_20261127_D02_D10_REFINEMENT.md). Nine candidate scene passes and Claude terrain deltas; thirteen discoveries refined across FOCUS/FOCUS2, rewards and distinct side quest receipts unchanged. No build or tests.
