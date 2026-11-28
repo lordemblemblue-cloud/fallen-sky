@@ -27,13 +27,16 @@ test('an authored pack clip is preferred; fallback embedded clip never needs a T
 });
 
 test('the home and character stages prepare a stance before showing each model', () => {
-  for (const file of ['menu/DuelistHangarStage.jsx', 'menu/DuelistCharacterPreview.jsx']) {
+  // the Home HQ puts the fighter on an anchor that is already in the scene; the preview adds it to the scene
+  for (const [file, show] of [['menu/DuelistHangarStage.jsx', 'fighterAnchor.add(model)'], ['menu/DuelistCharacterPreview.jsx', 'scene.add(model)']]) {
     const content = source(file);
     assert.match(content, /await prepareIdlePreview/);
     assert.match(content, /if \(!active\) \{ prepared\.dispose\(\); return; \}/);
-    assert.ok(content.indexOf('await prepareIdlePreview') < content.indexOf('scene.add(model)'));
+    assert.ok(content.includes(show), `${file} shows the model with ${show}`);
+    assert.ok(content.indexOf('await prepareIdlePreview') < content.indexOf(show), `${file} prepares the stance first`);
     assert.match(content, /idlePose\?\.dispose\(\)/);
   }
+  assert.match(source('menu/DuelistHangarStage.jsx'), /scene\.add\(fighterAnchor\)/);
   assert.match(source('menu/DuelistTemplateHub.jsx'), /DuelistHangarStage fighter=\{prefs\.fighter\} classId=\{prefs\.classId\}/);
 });
 
