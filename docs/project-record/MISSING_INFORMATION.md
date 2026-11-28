@@ -158,6 +158,7 @@ These come from the story documents' own open questions (`docs/game3d/threads-of
 ---
 
 ### MI-FS-P4 Reward transaction integration and provider evidence (open)
+- **R151 evidence update:** [R151 Base44 intake](../game3d/threads-of-our-pain/R151_BASE44_PROVIDER_INTAKE_AND_CORRECTION_GATES.md). Actual Node runs completed (14 compatibility passes, 1 failing TODO, 6 diagnostic observations); app schema API omits five Game3D entities and confirms three named schemas not found. Deployed function listing truncated. Provider guarantees, schema reconciliation and disposable scope remain open.
 - **Project:** Fallen Sky. **Feature:** FS-22 / WP-FS-09 / FS-D14, Blacksmith and quest reward authority.
 - **Completed:** R139 contract; R140–R149 isolated fixtures; [R150 gap map](../game3d/threads-of-our-pain/R150_REWARD_AUTHORITY_RUNTIME_GAP_MAP.md) maps all 20 cases and reproduces three client-path gaps using actual source excerpts with injected I/O.
 - **Missing:** deployed SDK and conditional-update/upsert guarantees for Game3D entities; actual discovery function/schema; disposable staging scope and checkout runner; approval of legacy ambiguous-ID reconciliation, restore semantics, and client/server application strategy.
