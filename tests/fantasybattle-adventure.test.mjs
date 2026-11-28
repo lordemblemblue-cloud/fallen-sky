@@ -638,3 +638,69 @@ test('campaign recovery supplies are finite, first-victory only and inventory ca
  assert.equal(cap.profile.inventory.recoveryTonic,100000);assert.equal(cap.loot.find(l=>l.id==='recoveryTonic').count,1);
  assert.ok(A.isProfile(cap.profile));
 });
+
+import {gearFor as recoveryGearFor,gearEligible as recoveryGearEligible} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+test('registered first wins restore at most 40 percent max HP of participating party members',()=>{
+ let p=A.createProfile('Field recovery');
+ p=A.recruitCompanion(A.rewardVictory(p,{id:'wilds_grove_01'}).profile,'groveArcher');
+ const result=A.rewardVictory(p,{id:'wilds_pilgrimage_01'},20,[{id:'groveArcher',hp:10}]);
+ assert.equal(result.profile.hp,68);assert.equal(A.memberFor(result.profile,'groveArcher').hp,44);
+ assert.deepEqual(result.recovery.map(({id,amount})=>({id,amount})),[{id:'hero',amount:48},{id:'groveArcher',amount:34}]);
+ assert.equal(A.memberFor(result.profile,'groveArcher').bond,5);
+ assert.equal(A.rewardVictory(result.profile,{id:'wilds_pilgrimage_01'},1).profile,result.profile);
+ assert.deepEqual(A.rewardVictory(result.profile,{id:'wilds_pilgrimage_02',practice:true},1).recovery,[]);
+ const capped=A.rewardVictory(result.profile,{id:'wilds_pilgrimage_02'},119,[{id:'groveArcher',hp:84}]);
+ assert.equal(capped.profile.hp,120);assert.equal(A.memberFor(capped.profile,'groveArcher').hp,85);
+ assert.equal(capped.recovery.reduce((sum,x)=>sum+x.amount,0),2);
+ const reserve=A.configureParty(capped.profile,{id:'groveArcher',active:false});
+ const later=A.rewardVictory(reserve,{id:'wilds_waterfall_01'},1,[{id:'groveArcher',hp:1}]);
+ assert.equal(A.memberFor(later.profile,'groveArcher').hp,85);assert.ok(A.isProfile(later.profile));
+ assert.deepEqual(A.parseBackup(A.exportBackup(later.profile)),later.profile);
+});
+test('continuous mandatory campaign with actual earned resources and two forward rest stops is viable',()=>{
+ const route=Object.keys(ENCOUNTER_BALANCE).filter(id=>!['wilds_cave_01','wilds_heights_elite','wilds_moonveil_elite'].includes(id));
+ const attackOrder=['moonfall','chargedShot','shieldBash','daggerLunge','volley','swordFlurry','daggerFlurry','quickShot','swordSlash','daggerJab','guard','bulwark'];
+ function run(seed){
+  let p=A.createProfile('Continuous reference'),used=0,rest=0;
+  for(let i=0;i<route.length;i++){
+   const id=route[i],atService=['wilds_sanctuary_guard','wilds_moonveil_01'].includes(id);
+   if(atService&&(p.hp<A.heroStats(p).maxHp||A.partyNeedsRest(p))){p=A.heal(p,{sanctuary:true});rest++;}
+   else for(let k=0;k<16;k++){
+    const q=['hero',...A.activeRoster(p).map(m=>m.id)].map(w=>A.recoveryQuote(p,w)).filter(q=>q.ok&&q.amount>=25).sort((a,b)=>a.hp/a.max-b.hp/b.max)[0];
+    if(!q)break;p=A.heal(p,{recipient:q.recipient});used++;
+   }
+   if(atService){
+    if(p.equipped==='starterBow'&&p.gold>=90)p=A.equipItem(A.buyItem(p,'sapphireBow'),'sapphireBow');
+    while(p.equipped!=='starterBow'&&p.gold>=15+(p.enhancements[p.equipped]||0)*10&&p.inventory.sapphireOre>0&&(p.enhancements[p.equipped]||0)<5)p=A.enhanceWeapon(p);
+   }
+   const allies=[{id:'hero',team:'player',...A.heroStats(p),hp:p.hp,actions:A.availableActions(A.levelFor(p.xp))},...A.activeRoster(p).map(m=>({...m,...A.memberStats(p,m.id),team:'player',hp:A.memberFor(p,m.id).hp,actions:m.combatClass?B.actionsForClass(m.combatClass):['quickShot','guard','volley']}))];
+   const front=A.partyFor(p).front;allies.sort((a,b)=>Number(b.id===front)-Number(a.id===front));
+   let battle=B.createBattle({seed:seed*101+i,units:[...allies,...enemyFormation({id},allies.length)]});
+   for(let k=0;k<45&&battle.phase==='choose';k++){
+    const choices={};
+    for(const u of battle.units.filter(u=>!u.ko&&u.team==='enemy'))choices[u.id]=B.chooseAiAction(battle,u.id);
+    const frontline=battle.units.find(u=>u.team==='player'&&!u.ko);
+    for(const u of battle.units.filter(u=>!u.ko&&u.team==='player')){
+     const legal=B.legalActions(battle,u.id).filter(a=>a.enabled).map(a=>a.id),guard=u.id==='pilgrimWarden'?'bulwark':'guard';
+     choices[u.id]=u===frontline&&['celestialLance','starfall','eclipseRay'].includes(choices.rival)&&legal.includes(guard)?guard:attackOrder.find(a=>legal.includes(a));
+    }
+    battle=B.resolveRound(battle,choices).battle;
+   }
+   if(battle.winner!=='player')return {id,used,rest,finished:i};
+   p=A.rewardVictory(p,{id,category:ENCOUNTER_BALANCE[id].category},battle.units.find(u=>u.id==='hero').hp,battle.units).profile;
+   for(const m of A.ROSTER.filter(m=>m.requiredEncounter===id)){p=A.recruitCompanion(p,m.id);if(m.id==='pilgrimWarden')p=A.configureParty(p,{id:m.id,front:m.id});}
+   while(A.pointsFor(p)>0)p=A.allocate(p,'strength');
+   for(const [key,item] of Object.entries(GEAR))if(p.inventory[key]&&recoveryGearEligible(p,key)){
+    for(const wearer of ['hero',...A.activeRoster(p).map(m=>m.id)]){
+     const old=recoveryGearFor(p,wearer)[item.slot];
+     if(!old||item.requiredLevel>GEAR[old].requiredLevel)try{p=A.equipGear(p,wearer,item.slot,key);break;}catch{/* already assigned */}
+    }
+   }
+   assert.ok(A.isProfile(p));
+  }
+  return {id:'complete',used,rest,finished:route.length,gold:p.gold,ore:p.inventory.sapphireOre,tonics:p.inventory.recoveryTonic};
+ }
+ const runs=Array.from({length:64},(_,i)=>run(i+1)),complete=runs.filter(r=>r.id==='complete');
+ assert.ok(complete.length>=16,'at least 16 of 64 no-retry runs complete');
+ assert.ok(complete.every(r=>r.finished===11&&r.rest<=2&&r.used<=14&&r.gold>=0&&r.tonics>=0));
+});
