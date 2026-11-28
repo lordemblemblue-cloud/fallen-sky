@@ -1,0 +1,349 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_INTAKE_ONLY",
+  "questId": "M20",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "R64A_OWNER_ENDING_RECONCILIATION.md",
+    "R65_M19-M20_REVISED_FINALE.md",
+    "R94_M19-M20_SOURCE_GROUNDED_FINALE_REFINEMENTS.md",
+    "R107_M11-M20_VOICE_AND_CINEMATIC_SELECTION_PASS.md",
+    "R121_M19_M20_FINALE_AND_POSTGAME_CONSTRUCTION_PROMPTS.md",
+    "R76_OWNER_POSTGAME_CONTINUATION.md",
+    "R76A_MISSABLE_QUESTS_AND_NEW_GAME_PLUS.md",
+    "R84_UNIFIED_NEW_GAME_PLUS_PROGRESSION_CONTRACT.md",
+    "R111_LAWS_BETWEEN_REALITIES_WRITER_DECISION_PACKET.md"
+  ],
+  "chronology": {
+    "originalLocalOrderRelativeToM05": "UNRESOLVED",
+    "approvalRequired": "R111",
+    "m05ExperiencedDeathPreserved": true
+  },
+  "input": {
+    "requires": [
+      "M19_COMPLETE",
+      "BRANCH_COMMITTED",
+      "SAFE_DESTINATION"
+    ],
+    "scope": "OWNER_CHARACTER_CAMPAIGN_CYCLE",
+    "immutableBranch": true,
+    "productionCommitImplemented": false
+  },
+  "commonStages": [
+    {
+      "id": "M20_ENTER",
+      "requires": [
+        "M19_COMPLETE"
+      ],
+      "anchor": "APPROVED_DESTINATION",
+      "evidence": "Read existing immutable branch receipt, same owner/character/cycle, verified safe destination and one age-18 avatar; no new branch selection"
+    }
+  ],
+  "branchStages": {
+    "SACRIFICE_RESTORATION": [
+      {
+        "id": "A_AWAKEN",
+        "requires": [
+          "M20_ENTER"
+        ],
+        "anchor": "R65_A_WAKE",
+        "evidence": "Actual restored awakening, ordinary sky and safe control"
+      },
+      {
+        "id": "A_GRASS",
+        "requires": [
+          "A_AWAKEN"
+        ],
+        "anchor": "R65_A_WAKE/RIDGE",
+        "evidence": "Actual grass observation or authored accessible equivalent"
+      },
+      {
+        "id": "A_SKY",
+        "requires": [
+          "A_AWAKEN"
+        ],
+        "anchor": "R65_A_WAKE/RIDGE",
+        "evidence": "Actual sky observation or authored accessible equivalent"
+      },
+      {
+        "id": "A_RIDGE",
+        "requires": [
+          "A_AWAKEN"
+        ],
+        "anchor": "R65_A_WAKE/RIDGE",
+        "evidence": "Actual ridge observation or authored accessible equivalent"
+      },
+      {
+        "id": "A_REALIZATION",
+        "requires": [
+          "A_GRASS",
+          "A_SKY",
+          "A_RIDGE"
+        ],
+        "anchor": "RIDGE",
+        "evidence": "Recognize survival of his existence and reality, not a dream"
+      },
+      {
+        "id": "A_HISTORICAL_RECORD",
+        "requires": [
+          "A_REALIZATION"
+        ],
+        "anchor": "R65_A_MARKER",
+        "evidence": "Actual ancient marker or approved custodian record, no exact unverified date or living former acquaintance"
+      },
+      {
+        "id": "A_REFLECTION",
+        "requires": [
+          "A_HISTORICAL_RECORD"
+        ],
+        "anchor": "R65_A_MARKER",
+        "evidence": "Actual reflection, including silence; intention only, no new quest or spirit grant"
+      },
+      {
+        "id": "A_REST",
+        "requires": [
+          "A_REFLECTION"
+        ],
+        "anchor": "R65_A_REST",
+        "evidence": "Safe trail checkpoint, retain committed branch and ownership"
+      }
+    ],
+    "REFUSAL_FUSION": [
+      {
+        "id": "B_AWAKEN",
+        "requires": [
+          "M20_ENTER"
+        ],
+        "anchor": "R65_B_TURNOUT",
+        "evidence": "Actual fused age-18 destination and mapped damage; exact playable start policy pending"
+      },
+      {
+        "id": "B_ROUTE_BRIEF",
+        "requires": [
+          "B_AWAKEN"
+        ],
+        "anchor": "R65_B_TURNOUT",
+        "evidence": "Actual worker report, local verified/reported/unknown status"
+      },
+      {
+        "id": "B_ASSIST",
+        "requires": [
+          "B_ROUTE_BRIEF"
+        ],
+        "anchor": "SIGN or R65_B_BYPASS",
+        "evidence": "Actual marker hold or small bundle along verified pedestrian bypass; equivalent credit, no inventory deduction"
+      },
+      {
+        "id": "B_REST",
+        "requires": [
+          "B_ASSIST"
+        ],
+        "anchor": "R65_B_REST",
+        "evidence": "Actual safe rest checkpoint, separate from coda"
+      },
+      {
+        "id": "B_CODA",
+        "requires": [
+          "B_REST"
+        ],
+        "anchor": "R65_B_CODA_VIEW",
+        "evidence": "Separate roughly twenty-year authored cinematic or equivalent accessible skip/summary; not live spawn or age change"
+      }
+    ]
+  },
+  "terminal": {
+    "id": "M20_COMPLETE",
+    "requires": [],
+    "anchor": "COMMITTED_BRANCH_SAFE_REST",
+    "evidence": "Branch-specific terminal milestones and validated original branch receipt; continued play, no automatic NG+",
+    "requiresByBranch": {
+      "SACRIFICE_RESTORATION": [
+        "A_REST"
+      ],
+      "REFUSAL_FUSION": [
+        "B_REST",
+        "B_CODA"
+      ]
+    }
+  },
+  "branches": {
+    "SACRIFICE_RESTORATION": {
+      "oneAge18Existence": true,
+      "restoredReality": true,
+      "formerAge15Acquaintances": "ANCIENT_HISTORY_DECEASED",
+      "exactElapsedTime": null,
+      "mandatoryAmnesia": false,
+      "futureSpiritMigration": "UNAPPROVED_EXPANSION",
+      "separatePlayableAvatars": false
+    },
+    "REFUSAL_FUSION": {
+      "oneAge18Existence": true,
+      "preservedLandformsOriginalScars": true,
+      "priorDeathTimelineReplaced": true,
+      "rebuildingCodaYearsApprox": 20,
+      "playableStartPhase": null,
+      "automaticAge38": false,
+      "universalSurvival": false,
+      "separatePlayableAvatars": false
+    }
+  },
+  "actors": [
+    {
+      "role": "age-18 protagonist",
+      "branch": "BOTH",
+      "runtimeId": null
+    },
+    {
+      "role": "present-day custodian if approved",
+      "branch": "SACRIFICE_RESTORATION",
+      "runtimeId": null,
+      "fallback": "AUTHORIZED_HISTORICAL_RECORD"
+    },
+    {
+      "role": "worker",
+      "branch": "REFUSAL_FUSION",
+      "runtimeId": null,
+      "lifetimeApprovalRequired": true
+    },
+    {
+      "role": "older worker in coda",
+      "branch": "REFUSAL_FUSION",
+      "runtimeId": null,
+      "lifetimeApprovalRequired": true
+    },
+    {
+      "role": "apprentice in coda",
+      "branch": "REFUSAL_FUSION",
+      "runtimeId": null,
+      "lifetimeApprovalRequired": true
+    }
+  ],
+  "coordinationCandidates": [
+    {
+      "id": "FS_NPC_017",
+      "name": "Elowen Greenveil",
+      "relationship": "S55 garden thematic association only; no living appearance or descendant inferred"
+    }
+  ],
+  "restored": {
+    "observations": [
+      "GRASS",
+      "SKY",
+      "RIDGE"
+    ],
+    "anyOrder": true,
+    "ordinarySky": true,
+    "noBurningSky": true,
+    "custodianOptional": true,
+    "historicalRecordFallback": true,
+    "exactElapsedYears": null,
+    "noFabricatedSkippedAcquaintance": true,
+    "reflectionChoices": [
+      "remember_names",
+      "learn_what_happened",
+      "silence"
+    ],
+    "reflectionIsNewQuest": false,
+    "spiritRestorationUnlocked": false,
+    "formerRealmPortal": false,
+    "thirdRealityPlacement": "UNRESOLVED"
+  },
+  "fusion": {
+    "mappedDamageOnly": true,
+    "workAlternatives": [
+      "hold_marker",
+      "carry_bundle"
+    ],
+    "equivalentCredit": true,
+    "inventoryDeduction": false,
+    "combatRequired": false,
+    "localStatusClasses": [
+      "VERIFIED",
+      "REPORTED",
+      "UNKNOWN"
+    ],
+    "namedSurvivorLifetimeRequired": true,
+    "coda": {
+      "approxYears": 20,
+      "separateScene": true,
+      "skipEquivalent": true,
+      "liveSpawn": false,
+      "changesAvatarAge": false,
+      "descendantInferred": false,
+      "completeRecovery": false
+    },
+    "playableStartPhase": null
+  },
+  "continuation": {
+    "retainOwnedEquipment": true,
+    "retainInstanceIdsEnhancementsSockets": true,
+    "retainActualLevel": true,
+    "retainEligibleProgressReceiptsConsentVista": true,
+    "neverRecreateSoldConsumedDismantled": true,
+    "borrowedPropsNotPermanent": true,
+    "destinationIncompatibility": "RECOVER_OWNERSHIP_AND_USABILITY",
+    "otherCarryover": "UNRESOLVED",
+    "eligibleQuestRewardsAdvanceCharacter": true,
+    "actualAccessPredicatesRequired": true,
+    "expiredChapterOpportunity": "MISSED_THIS_CYCLE",
+    "noAutomaticCompletion": true,
+    "ngPlusOptional": true,
+    "ngPlusAutoStart": false,
+    "liveFormerWorldTravel": false,
+    "exactRestoredAccess": "UNRESOLVED",
+    "baseCap": 155,
+    "ngPlusFirstCapTarget": 310,
+    "ngPlusFirstCapFinalized": false,
+    "ngPlusEnemyXpTarget": 2
+  },
+  "optionalIndependent": [
+    "S55",
+    "D50"
+  ],
+  "optionalNotes": "Thematic association only. D50 historical shelter requirement must precede M19 commitment; no M20 garden substitute. S55 independent source lanes; no inferred actor survival or reward.",
+  "routes": {
+    "SACRIFICE_RESTORATION": [
+      "R65_A_WAKE",
+      "RIDGE",
+      "R65_A_MARKER/RECORD",
+      "R65_A_REST"
+    ],
+    "REFUSAL_FUSION": [
+      "R65_B_TURNOUT",
+      "SIGN or R65_B_BYPASS",
+      "R65_B_REST",
+      "separate R65_B_CODA_VIEW"
+    ],
+    "transforms": null
+  },
+  "recovery": {
+    "sameBranchOnly": true,
+    "noBranchRewrite": true,
+    "priorReceiptRequired": true,
+    "noCanonicalPreviewWrites": true,
+    "noDuplicateReward": true,
+    "checkpointCodaDistinct": true
+  },
+  "completion": {
+    "next": "POSTGAME_ELIGIBLE",
+    "autoAccept": false,
+    "rewardGrant": false,
+    "newPower": false,
+    "creditsDoNotReset": true,
+    "requiresActualCommittedBranch": true
+  },
+  "prohibitions": [
+    "second active avatar",
+    "mandatory amnesia",
+    "living former acquaintances in A",
+    "named descendants without evidence",
+    "automatic age 38",
+    "automatic NG+",
+    "unapproved realm portal",
+    "automatic spirit restoration",
+    "mandatory optional quests",
+    "duplicate equipment",
+    "runtime activation"
+  ]
+}
