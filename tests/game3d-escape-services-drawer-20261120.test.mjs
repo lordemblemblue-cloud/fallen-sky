@@ -25,7 +25,7 @@ test('K toggles Skill Book and switches from Character',()=>{
   assert.equal(getGame3DMenuShortcut({code:'KeyC',target:{closest:()=>null}}),'character');
   assert.equal(getGame3DMenuShortcut({code:'KeyK',target:{closest:()=>null}}),'skills');
 });
-test('Launcher owns Services and Scoreboard; settings shows only option categories',()=>{
+test('Launcher owns Services and Ranked; settings shows only option categories',()=>{
   const ids=GAME3D_PAUSE_SECTIONS.map(section=>section.id);
   for(const id of ['services','scoreboard','audio','controls','graphics','ui','community'])
     assert.ok(ids.includes(id),id);
@@ -79,7 +79,13 @@ test('Services and Faction are real accessible tiles with no redundant settings 
   assert.match(pause,/const openSettings=\(\)=>\{selectView\('graphics'\);setSurface\('settings'\);setLauncherGroup\(null\);\}/);
   assert.doesNotMatch(pause,/className="axe3d-pause__settings-back"/);
   assert.match(pause,/onClick=\{openScoreboard\}/);
-  assert.match(pause,/onClick=\{\(\)=>onOpenMap\?\.\(\)\}/);
+  const footer=pause.slice(pause.indexOf('<footer className="axe3d-pause__launcher-footer">'),pause.indexOf('</footer>',pause.indexOf('<footer className="axe3d-pause__launcher-footer">')));
+  assert.match(footer,/aria-label="Open ranked"/);
+  assert.match(footer,/aria-label="Character logout" onClick=\{openCharacterLogout\}/);
+  assert.doesNotMatch(footer,/onOpenMap|<span>Map<\/span>/);
+  assert.match(pause,/const openCharacterLogout=\(\)=>\{selectView\('session'\);setSurface\('settings'\);setConfirmAction\('character'\);\}/);
+  assert.match(pause,/typeof onReturnToCharacterSelect==='function'\)onReturnToCharacterSelect\(\)/);
+  assert.equal(GAME3D_PAUSE_SECTIONS.find(s=>s.id==='scoreboard').label,'Ranked');
 });
 test('Letter hotkeys work even while launcher is open, and input remains guarded',()=>{
   const pause=read('src/components/game3d/PauseMenu.jsx');

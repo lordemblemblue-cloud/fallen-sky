@@ -52,6 +52,7 @@ import EchoChronicleOverlay from '../components/game3d/social/EchoChronicleOverl
 import ChronicleBlueprintLibrary from '../components/game3d/chronicle/ChronicleBlueprintLibrary';
 import MiniGamesHub from '../components/game3d/minigames/MiniGamesHub';
 import '../components/game3d/hud/Game3DHUDPlacement.css';
+import '../components/game3d/hud/FallenSkyCelestialWorld.css';
 import CharacterVaultSync from '../components/game3d/character/CharacterVaultSync';
 import GuestCharacterCloudSync from '../components/game3d/character/GuestCharacterCloudSync';
 import DuelSystem from '../components/game3d/social/DuelSystem';
@@ -760,6 +761,7 @@ export default function GameView() {
     <div className="game3d-view fixed inset-0 bg-black overflow-hidden"
       style={{'--game3d-community-scale':communityHUD.scale*gameUIScale,
         '--game3d-ui-scale':gameUIScale}}
+      data-celestial-world={phase === 'world' ? 'true' : undefined}
       data-display-class={game3DViewportClass(cssViewport)}
       data-interface-size={displaySettings.uiScale}
       data-service-mode={services.active ? 'true' : 'false'} data-services-open={services.active || services.expanded ? 'true' : 'false'}>

@@ -39,6 +39,7 @@ import './CharacterSelectionRefinement.css';
 import './CharacterFactionDossier.css';
 import './CharacterCreatorOriginalLayout.css';
 import '@/components/onboarding/creator-viewport-fix.css';
+import './CharacterCelestialSelection.css';
 
 
 function displayField(value, fallback) {
@@ -354,7 +355,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
   }, [settingsOpen, showCreate, showEditPlatformAvatar, workflowOpen, recoveryOpen, codeOpen, recoveryBusy, deleteTarget, deleteBusy, onBack, step]);
 
   return (
-    <main className={'axe-login axe-login--live-entry axe-login--arcane'+(entering?' axe-login--entering':'')} aria-label="Game 3D character selection" data-entry-step={step} data-live-world={liveWorld?'true':'false'} data-world-ready={worldReady?'true':'false'} data-motion={motionEnabled?'on':'off'} data-info-tab={infoTab} style={chronicle.css}>
+    <main className={'axe-login axe-login--live-entry axe-login--arcane'+(entering?' axe-login--entering':'')} aria-label="Game 3D character selection" data-entry-step={step} data-selection-theme={step==='select'?'celestial-v2':undefined} data-live-world={liveWorld?'true':'false'} data-world-ready={worldReady?'true':'false'} data-motion={motionEnabled?'on':'off'} data-info-tab={infoTab} style={chronicle.css}>
       <div className="axe-login-scene" aria-hidden="true"><div className="axe-login-glyph"/><div className="axe-login-scrim" /></div>
       {step !== 'start' && <FallenSkyBetaNotice context="creation" />}
       {step==='start' && <button type="button" className="axe-login-entrance-settings"
@@ -371,9 +372,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
         {step==='faction'?'Choose a Faction':'Select Your Character'}
       </h1>}
       {step==='select' && <>
-        <aside className="axe-login-stats-panel axe-login-info-rail" aria-label="Selected character information">
-          <div className="axe-login-info-scroll">
-            <header className="axe-chronicle-intro" aria-label="Selected character summary">
+        <header className="axe-chronicle-intro axe-celestial-identity" aria-label="Selected character summary">
               <div className="axe-login-selected-identity">
                 <p className="axe-login-panel-kicker">LIVING CHRONICLE</p>
                 {selected ? <>
@@ -386,6 +385,8 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
                 </> : <p className="axe-login-empty">Create a character to begin a new chronicle.</p>}
               </div>
             </header>
+        <aside className="axe-login-stats-panel axe-login-info-rail" aria-label="Selected character information">
+          <div className="axe-login-info-scroll">
             {selected && <>
               <nav className="axe-chronicle-tabs" role="tablist" aria-label="Character details">
                 {CHRONICLE_TABS.map(item=><button type="button" key={item.id}
@@ -536,6 +537,7 @@ export default function CharacterLoginScreen({ onPlay, onBack, workflowEnabled =
                   onClick={()=>{keyboardCharacterNavRef.current=false;setSelectedIndex(index);setStartError('');}}
                   aria-pressed={offset===0} tabIndex={offset===0?0:-1}
                   aria-label={`${character.name}, level ${character.level}${offset===0?', selected':''}`}>
+                  <span className="axe-celestial-medallion" aria-hidden="true">{Array.from(character.name || "?")[0]?.toUpperCase()}</span>
                   <span className="axe-crossline-name"><strong>{character.name}</strong>
                     {character.isDevTest && <small className="axe-crossline-editor"><Crown size={11}/> EDITOR</small>}
                   </span>
