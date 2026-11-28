@@ -1,3 +1,4 @@
+import './fantasybattle-character-workspaces.test.mjs';
 import './fantasybattle-glass-load.test.mjs';
 import './fantasybattle-glass-system.test.mjs';
 import test from 'node:test';
