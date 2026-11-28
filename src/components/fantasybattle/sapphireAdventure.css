@@ -1563,3 +1563,7 @@
 .fa-skillbook-ultimate-nodes{position:absolute;left:35.3%;top:51%;width:34.4%;height:11.8%;display:flex;justify-content:flex-start;pointer-events:auto}
 .fa-skillbook-ultimate-nodes .fa-button{width:32%;min-width:0;font-size:.72em;display:flex;flex-direction:column;justify-content:center;gap:.1em}
 .fa-skillbook-ultimate-nodes .fa-skill-art{height:48%;width:auto;max-width:70%}
+
+/* Recipient selection fits inside the existing scrollable recovery health panel. */
+.fa-recovery-recipient{display:flex;align-items:center;gap:.3em;flex-wrap:wrap}
+.fa-recovery-recipient select{min-width:0;max-width:100%;flex:1;font:inherit;background:#182b4c;color:#e6efff;border:1px solid #748aaa;border-radius:3px}
