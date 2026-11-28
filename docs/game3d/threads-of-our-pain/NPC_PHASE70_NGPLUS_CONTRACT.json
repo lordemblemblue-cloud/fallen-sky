@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "status": "SOURCE_CONTRACT_AND_SYNTHETIC_TEST_ONLY",
+  "enabled": false,
+  "shippingBlocked": true,
+  "sourceFiles": [
+    "R76_OWNER_POSTGAME_CONTINUATION.md",
+    "R76A_MISSABLE_QUESTS_AND_NEW_GAME_PLUS.md",
+    "R76B_UNLIMITED_NEW_GAME_PLUS.md",
+    "R76C_LEVEL_CAP_PROGRESSION.md",
+    "R76D_NEW_GAME_PLUS_LEVEL_DISPLAY.md",
+    "R76E_NEW_GAME_PLUS_ENEMY_SCALING.md",
+    "R84_UNIFIED_NEW_GAME_PLUS_PROGRESSION_CONTRACT.md",
+    "R64A_OWNER_ENDING_RECONCILIATION.md",
+    "R65_M19-M20_REVISED_FINALE.md"
+  ],
+  "entry": {
+    "requires": [
+      "M20_COMPLETE",
+      "EXPLICIT_CONFIRMATION",
+      "VERIFIED_OWNER_CHARACTER_CYCLE",
+      "CURRENT_REVISION",
+      "APPROVED_POLICY",
+      "SAFE_OPENING_PREFLIGHT",
+      "APPROVED_DIFFICULTY_PROFILE"
+    ],
+    "optional": true,
+    "fromEitherEnding": true,
+    "fixedCycleCap": null,
+    "automatic": false,
+    "oneSuccessorPerSourceCycle": true,
+    "archivePriorBranch": true,
+    "preCommitFailure": "RESTORE_SOURCE",
+    "postCommitFailure": "RECOVER_SAME_SUCCESSOR",
+    "scope": "OWNER_CHARACTER_SOURCE_CYCLE",
+    "implementation": "NOT_IMPLEMENTED",
+    "productionEnabled": false
+  },
+  "ownership": {
+    "retain": [
+      "actualLevel",
+      "earnedXP",
+      "ownedGearInstanceIds",
+      "equippedAndStoredOwnership",
+      "enhancement",
+      "sockets",
+      "lifetimeEntitlements"
+    ],
+    "resetOnlyCycleState": [
+      "storyChapter",
+      "cycleQuestObjectives",
+      "cycleNpcPhase",
+      "cycleEncounterState",
+      "cycleTemporaryProps"
+    ],
+    "archive": [
+      "priorEnding",
+      "priorCycleHistory",
+      "priorQuestReceipts",
+      "consentAndEvidenceHistory"
+    ],
+    "pendingRewardReconciliationRequired": true,
+    "doNotMergeInventoryCopies": true,
+    "neverRecreateSoldConsumedDismantled": true,
+    "unapprovedCarryover": [
+      "gold",
+      "materials",
+      "consumables",
+      "skillRanksAndOtherUnlocksExactPolicy",
+      "achievements",
+      "accountCosmetics",
+      "repeatRewardPolicy",
+      "gearCaps"
+    ],
+    "incompatibleGear": "RECOVER_OWNERSHIP_AND_USABILITY"
+  },
+  "level": {
+    "baseCap": 155,
+    "firstNgPlusCapTarget": 310,
+    "permanentCeiling": "UNRESOLVED",
+    "extraLevelsEachCycle": false,
+    "entryGrantsLevelOrXP": false,
+    "belowCapEntryEligibility": "UNRESOLVED",
+    "singleBluePlus": true,
+    "cycleLabelSeparate": true,
+    "displayActualLevel": true,
+    "atCapCyclesAllowed": true
+  },
+  "difficulty": {
+    "baseCampaignUnchanged": true,
+    "roleMatchedReferences": [
+      "NORMAL",
+      "ELITE",
+      "BOSS"
+    ],
+    "firstCycleAnchors": [
+      {
+        "region": "OPENING",
+        "reference": "ORIGINAL_LATE_GAME_COMPARABLE_ROLE"
+      },
+      {
+        "region": "MIDDLE",
+        "reference": "ORIGINAL_ENDGAME_COMPARABLE_ROLE"
+      },
+      {
+        "region": "LATE",
+        "reference": "SURPASS_ORIGINAL_ENDGAME_WITH_COUNTERPLAY"
+      }
+    ],
+    "candidateReferenceMultipliers": [
+      1.5,
+      2
+    ],
+    "candidateHpNear": 2,
+    "finalFormula": null,
+    "actualStatSurveyRequired": true,
+    "stableRegionCurveProposed": true,
+    "livePlayerMatchingApproved": false,
+    "stackRebaseAndGlobalFactor": false,
+    "eachCycleHarder": true,
+    "unboundedExponentialStats": false,
+    "highCycleNumericalSafetyRequired": true,
+    "challengeAtCapRequired": true,
+    "extraEnemySpawnsRequired": false
+  },
+  "rewards": {
+    "eligibleEnemyXpMultiplier": 2,
+    "normalReferenceRequired": true,
+    "applyOncePerEligibleDefeat": true,
+    "cycleExponent": false,
+    "blanketOtherRewardMultiplier": false,
+    "uniqueEntitlementLifetime": true,
+    "previousCyclePendingReceiptReconcile": true,
+    "exactRoundingAndModifiers": "UNRESOLVED",
+    "authoritativeDefeatRequired": true
+  },
+  "quests": {
+    "availability": [
+      "AVAILABLE",
+      "IN_PROGRESS",
+      "COMPLETE",
+      "WAITING",
+      "MISSED_THIS_CYCLE",
+      "UNRESOLVED"
+    ],
+    "positiveClosureRequired": true,
+    "newCycleRealAuthoredOpportunity": true,
+    "priorHistoryImmutable": true,
+    "repeatNarrativeDoesNotDuplicateItem": true,
+    "previouslyMissedUnclaimedRelicEarnable": true,
+    "secondVistaRequired": true,
+    "alternateAcquisition": "UNAPPROVED",
+    "formerWorldPortal": false
+  },
+  "terrain": {
+    "oneActiveCycle": true,
+    "reuseApprovedWorld": true,
+    "actorLifetimeAndPhaseRequired": true,
+    "actualPerformanceEvidenceRequired": true
+  },
+  "prohibitions": [
+    "automatic NG+",
+    "level reset",
+    "free XP",
+    "repeat unique grant",
+    "old ending rewrite",
+    "public privileged grant",
+    "client-authoritative XP",
+    "inferred actor resurrection",
+    "unapproved level cap increase",
+    "runtime activation"
+  ]
+}
