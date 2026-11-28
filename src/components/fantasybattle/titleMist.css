@@ -1,0 +1,50 @@
+/* Decorative ink-wash clouds on the original Fantasy Battle title only.
+   Two repeating vector bands move one exact tile to the right; no layout,
+   gameplay or renderer work is scheduled. Original artwork stays untouched. */
+.fa-ui[data-screen="01"][data-staged-original="true"] .fa-original-menu::before,
+.fa-ui[data-screen="01"][data-staged-original="true"] .fa-original-menu::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 33%;
+  z-index: 0;
+  pointer-events: none;
+  background-image: url('/fantasybattle/sapphire/effects/title-ink-mist.svg');
+  background-repeat: repeat-x;
+  background-size: var(--fa-mist-tile) 100%;
+  background-position: 0 center;
+  mask-image: linear-gradient(90deg, transparent, #000 9%, #000 67%, transparent 100%);
+  animation: fa-title-mist-wave var(--fa-mist-duration) linear infinite;
+}
+.fa-ui[data-screen="01"][data-staged-original="true"] .fa-original-menu::before {
+  --fa-mist-tile: clamp(230px, 31vw, 540px);
+  --fa-mist-duration: 24s;
+  top: 1%;
+  height: 18%;
+  opacity: .37;
+}
+.fa-ui[data-screen="01"][data-staged-original="true"] .fa-original-menu::after {
+  --fa-mist-tile: clamp(260px, 35vw, 600px);
+  --fa-mist-duration: 34s;
+  bottom: 0;
+  height: 29%;
+  opacity: .46;
+  animation-delay: -13s;
+}
+/* Real controls and dynamic save data always paint above decorative mist. */
+.fa-ui[data-screen="01"][data-staged-original="true"] .fa-original-menu > * {
+  z-index: 1;
+}
+@keyframes fa-title-mist-wave {
+  from { background-position-x: 0; }
+  to { background-position-x: var(--fa-mist-tile); }
+}
+.fa-root.reduced-motion .fa-original-menu::before,
+.fa-root.reduced-motion .fa-original-menu::after {
+  animation: none;
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fa-original-menu::before,
+  .fa-original-menu::after { animation: none; display: none; }
+}
