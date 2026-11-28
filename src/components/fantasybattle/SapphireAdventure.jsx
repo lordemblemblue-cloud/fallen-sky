@@ -659,7 +659,7 @@ const EXPLORATION_ART_CROPS=Object.freeze({
   status:[1.3,74,22.6,12],
   quest:[1.3,10.3,24,17.9],
   map:[82.7,1.3,16.8,27.4],
-  actions:[86.3,69,12.9,16.7],
+  recovery:[90.8,69.5,4.3,6.3],
 });
 function ExplorationArtSlice({part}){
   const [x,y,w,h]=EXPLORATION_ART_CROPS[part];
@@ -696,10 +696,8 @@ function OriginalExplorationHud({profile,world,notifications,post,go,onPause,onF
       <Btn className="fa-clean-map-menu" onClick={onPause} aria-label="Open menu">☰</Btn><Btn className="fa-clean-map-journal" onClick={()=>go('08')} aria-label="Open quest journal">↗</Btn>
       <div className="fa-clean-zoom"><Btn aria-label="Zoom in on minimap" disabled={zoom>=2} onClick={()=>{setZoom(x=>Math.min(2,x+.25));onFocus();}}>+</Btn><Btn aria-label="Zoom out on minimap" disabled={zoom<=1} onClick={()=>{setZoom(x=>Math.max(1,x-.25));onFocus();}}>−</Btn></div>
     </section>
-    <section className="fa-clean-actions" aria-label="Exploration actions"><ExplorationArtSlice part="actions"/>
-      <Btn className="fa-clean-jump" aria-label="Jump" onClick={()=>{post('jump');onFocus();}}>Jump</Btn><Btn className="fa-clean-skills" aria-label="Skillbook" onClick={()=>go('12')}>Skills</Btn><Btn className="fa-clean-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn>
-    </section>
-    <section className="fa-clean-touch-move" aria-label="Touch movement controls">{moveButtons}</section>
+    <div className="fa-clean-recovery"><ExplorationArtSlice part="recovery"/><Btn className="fa-clean-item" aria-label="Recovery tonic" disabled={!profile?.inventory?.recoveryTonic} onClick={()=>go('46')}>+</Btn></div>
+    <section className="fa-clean-touch-move" aria-label="Touch movement controls">{moveButtons}<Btn aria-label="Jump" className="fa-clean-touch-jump" onClick={()=>post('jump')}>Jump</Btn></section>
     {world?.nearby&&<Btn className="fa-clean-touch-interact" aria-label={'Interact with '+world.nearby} onClick={()=>post('interact')}>E</Btn>}
     {notifications?.length>0&&<button type="button" className="fa-clean-notice" onClick={()=>go('37')} aria-label="View latest gameplay events">{notifications[0].message}</button>}
   </div>;
