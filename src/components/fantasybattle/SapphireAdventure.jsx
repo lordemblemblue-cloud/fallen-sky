@@ -6,7 +6,7 @@ import { ACTIONS, ACTION_ORDER, actionsForClass } from './core/battleRules.mjs';
 import {enemyPortrait} from './core/enemyVisuals.mjs';
 import { enemyFormation, tacticFor } from './core/enemyCatalog.mjs';
 import { UI_SCREENS, PAUSE_LINKS, HOTKEY_SCREENS, UNSUPPORTED } from './uiCatalog.mjs';
-import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, combineQuote, combineWeapon, ascendQuote, ascendSet, socketQuote, socketEquipment, enchantQuote, enchantEquipment, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
+import { ITEMS, COMPANION, ROSTER, memberFor, companionGiftQuote, giveCompanionGift, activeRoster, partyNeedsRest, partyFor, recruitCompanion, configureParty, APPEARANCES, appearanceFor, selectAppearance, exportBackup, slotStamp, recoverSlot, positionSaveDue, SAVE_KEY, SETTINGS_KEY, SLOT_IDS, STAT_KEYS, DEFAULT_SETTINGS, createProfile, readSlots, writeSlot, mostRecent, readSettings, updateWorld, rewardVictory, allocate, heroStats, levelFor, pointsFor, availableActions, learnedSkills, learnedAt, acceptGroveQuest, claimGroveQuest, collectLoot, equipItem, equipGear, memberStats, gearComparison, buyItem, sellItem, enhanceWeapon, combineQuote, combineWeapon, ascendQuote, ascendSet, socketQuote, socketEquipment, enchantQuote, enchantEquipment, RECIPES, craftQuote, craftItem, tradeQuote, MAX_TRADE_QUANTITY, heal, travelTo, comparison } from './core/adventureState.mjs';
 import './fantasybattle.css';
 import './sapphireAdventure.css';
 import { artFor, artUrl, templateUrl, stagedOriginalFor, ORIGINAL_SAVE_PLAQUE } from './sapphireArt.mjs';
@@ -19,6 +19,7 @@ import {treasureFor,treasureProgress} from './core/treasureCatalog.mjs';
 import {serviceFor,liveService} from './core/worldInteractions.mjs';
 import {createConfirmationGate} from './core/confirmationGate.mjs';
 import {bondConversation,BOND_GIFT} from './core/companionBonds.mjs';
+import {PASSIVES,PASSIVE_IDS,learnedPassives} from './core/passiveSkills.mjs';
 import { CAMPAIGN_QUESTS, campaignQuest, changeCampaignQuest, campaignPrompt, campaignServiceNote, campaignArc, LAST_ESCORT, escortConversation } from './core/campaignQuests.mjs';
 function PaintedIllustration({name,variant=''}){return <img aria-hidden="true" alt="" className={'fa-painted-illustration '+variant} src={'/fantasybattle/sapphire/illustrations/'+name+'.webp'} decoding="async" onError={e=>{e.currentTarget.hidden=true;}}/>;}
 
@@ -38,7 +39,7 @@ function ArcherPortrait({profile,small=false,companion=false}){
 
 const EMPTY={slots:[],error:null};
 const fmt=(n)=>new Intl.NumberFormat('en-US').format(n);
-const skillName=id=>ACTIONS[id]?.name||id;
+const skillName=id=>ACTIONS[id]?.name||PASSIVES[id]?.name||id;
 const isWorldScreen=id=>id==='10'||id==='09';
 
 // Onboarding only edits existing settings and a draft character; creation and save writes stay in their existing guarded flows.
@@ -136,11 +137,13 @@ function Wardrobe({profile,encounter,original,back,chooseAppearance,layout}){
 function Skillbook({profile,level,original,layout,go,back}){
   const [selectedId,setSelectedId]=useState(ACTION_ORDER[0]);
   const learned=profile?availableActions(level):[];
-  const action=ACTIONS[selectedId];
-  const unlocked=learned.includes(selectedId);
+  const action=ACTIONS[selectedId],passive=PASSIVES[selectedId];
+  const passiveLearned=profile?learnedPassives(level):[];
+  const unlocked=learned.includes(selectedId)||passiveLearned.includes(selectedId);
   const status=id=>learned.includes(id)?'Learned':'Level '+learnedAt[id]+' required';
   const choices=ACTION_ORDER.map(id=><Btn key={id} className="fa-skillbook-node" primary={selectedId===id} aria-pressed={selectedId===id} aria-label={ACTIONS[id].name+' · '+status(id)} onClick={()=>setSelectedId(id)}><SkillArt id={id}/><span>{ACTIONS[id].name}</span><small>{status(id)}</small></Btn>);
-  const details=<><strong>{action.name}</strong><p>{action.summary}</p><p>{unlocked?'Learned':'Unlocks automatically at level '+learnedAt[selectedId]}</p><p>Hotkey: {action.hotkey} · Focus cost: {action.focusCost} · Gain: {action.focusGain}</p>{action.kind==='attack'?<p>Power {action.power} · Hits {action.hits} · Accuracy {Math.round(action.accuracy*100)}%</p>:<p>Damage reduction: {Math.round((1-action.guardFactor)*100)}% for this round.</p>}</>;
+  const passiveChoices=PASSIVE_IDS.map(id=><Btn key={id} primary={selectedId===id} aria-pressed={selectedId===id} onClick={()=>setSelectedId(id)}><strong>{PASSIVES[id].name}</strong><small>{passiveLearned.includes(id)?'Learned':'Level '+PASSIVES[id].level}</small></Btn>);
+  const details=passive?<><strong>{passive.name}</strong><p>{passive.summary}</p><p>{unlocked?'Always active':'Unlocks automatically at level '+passive.level}</p><p>No Focus cost or action required.</p></>:<><strong>{action.name}</strong><p>{action.summary}</p><p>{unlocked?'Learned':'Unlocks automatically at level '+learnedAt[selectedId]}</p><p>Hotkey: {action.hotkey} · Focus cost: {action.focusCost} · Gain: {action.focusGain}</p>{action.kind==='attack'?<p>Power {action.power} · Hits {action.hits} · Accuracy {Math.round(action.accuracy*100)}%</p>:<p>Damage reduction: {Math.round((1-action.guardFactor)*100)}% for this round.</p>}</>;
   if(original)return <div className="fa-original-skillbook">
     <h2 className="fa-skillbook-title">Skillbook</h2><span className="fa-skillbook-subtitle">Master your arts</span>
     <nav className="fa-skillbook-nav" aria-label="Character services"><Btn onClick={()=>go('05')}>Character</Btn><span aria-current="page">Skillbook</span><Btn onClick={()=>go('32')}>Attributes</Btn><Btn onClick={()=>go('06')}>Equipment</Btn><Btn onClick={back}>Back</Btn></nav>
@@ -148,20 +151,20 @@ function Skillbook({profile,level,original,layout,go,back}){
     <span className="fa-skillbook-filter">Archer abilities</span>
     <div className="fa-skillbook-active-label"><strong>Active skills</strong><small>Combat actions</small></div>
     <section className="fa-skillbook-nodes" aria-label="Archer combat skills">{choices}</section>
-    <div className="fa-skillbook-passive-label"><strong>Passive skills</strong><small>Not available</small></div>
+    <div className="fa-skillbook-passive-label"><strong>Passive skills</strong><small>Automatic effects</small></div><section className="fa-skillbook-passive-nodes" aria-label="Passive skills">{passiveChoices}</section>
     <div className="fa-skillbook-ultimate-label"><strong>Ultimate skills</strong><small>Not available</small></div>
-    <section className="fa-skillbook-progress"><h3>Progression</h3><p>{profile?learned.length+' / '+ACTION_ORDER.length+' learned':'No active character'}</p><p>Abilities unlock automatically as the character levels up.</p></section>
+    <section className="fa-skillbook-progress"><h3>Progression</h3><p>{profile?(learned.length+passiveLearned.length)+' / '+(ACTION_ORDER.length+PASSIVE_IDS.length)+' learned':'No active character'}</p><p>Abilities unlock automatically as the character levels up.</p></section>
     <section className="fa-skillbook-rules"><h3>Battle rules</h3><p>Choose an action, then resolve the round. Focus is earned and spent in battle.</p></section>
     <div className="fa-skillbook-footer">{profile?.name||'No active character'} · Archer</div>
-    <h3 className="fa-skillbook-selected-title">{action.name}</h3>
-    <div className="fa-skillbook-icon"><SkillArt id={selectedId}/></div>
-    <div className="fa-skillbook-status">{status(selectedId)}</div>
+    <h3 className="fa-skillbook-selected-title">{passive?.name||action?.name}</h3>
+    <div className="fa-skillbook-icon">{passive?<strong>Passive · +{passive.amount} {passive.stat.toUpperCase()}</strong>:<SkillArt id={selectedId}/>}</div>
+    <div className="fa-skillbook-status">{passive?(unlocked?"Learned":"Level "+passive.level+" required"):status(selectedId)}</div>
     <section className="fa-skillbook-description" aria-live="polite">{details}</section>
-    <div className="fa-skillbook-requirement">Required level: {learnedAt[selectedId]}</div>
+    <div className="fa-skillbook-requirement">Required level: {passive?.level??learnedAt[selectedId]}</div>
     <div className="fa-skillbook-materials"><strong>Upgrade materials</strong><p>Not required. No manual skill upgrades are implemented.</p></div>
     <Btn className="fa-skillbook-done" onClick={back}>Done</Btn>
   </div>;
-  return <><Panel rect={layout[0]}><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('32')}>Attributes</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Archer abilities</h2>{choices}</Panel><Panel rect={layout[2]}><h2>Progression</h2>{details}<p>Skills unlock automatically when the required level is reached.</p></Panel></>;
+  return <><Panel rect={layout[0]}><Btn onClick={()=>go('05')}>Character</Btn><Btn onClick={()=>go('32')}>Attributes</Btn><Btn onClick={back}>Back</Btn></Panel><Panel rect={layout[1]}><h2>Archer abilities</h2>{choices}<h3>Passive skills</h3>{passiveChoices}</Panel><Panel rect={layout[2]}><h2>Progression</h2>{details}<p>Skills unlock automatically when the required level is reached.</p></Panel></>;
 }
 
 // Allocation is a local draft until confirmation; leaving the page discards it.
@@ -187,7 +190,7 @@ function Attributes({profile,level,locked,original,layout,onConfirm,back,unlocke
   </div>;
   const comparison=[['Current HP',profile?.hp,preview?.hp],['Maximum HP',before.maxHp,after.maxHp],['Attack',before.atk,after.atk],['Defense',before.def,after.def],['Speed',before.spd,after.spd]];
   const stats=<>{comparison.map(([label,a,b])=><div key={label} className="fa-attr-stat"><span>{label}</span><span>{profile?a:'—'} → {profile?b:'—'}</span></div>)}</>;
-  const skills=unlockedIds.filter(id=>ACTION_ORDER.includes(id)&&availableActions(level).includes(id));
+  const skills=unlockedIds.filter(id=>learnedSkills(level).includes(id));
   const actions=<><Btn className="fa-attr-reset" disabled={locked||!draft.length} onClick={()=>setDraft([])}>Reset</Btn><Btn primary className="fa-attr-confirm" disabled={locked||!profile} onClick={confirm}>Confirm allocation</Btn><Btn className="fa-attr-cancel" onClick={back}>Back</Btn></>;
   if(original)return <div className="fa-original-attributes">
     <h2 className="fa-attr-title">Attributes</h2><div className="fa-attr-level">Level {profile?level:'—'}</div>
@@ -196,27 +199,27 @@ function Attributes({profile,level,locked,original,layout,onConfirm,back,unlocke
     {rows.map(row)}
     <div className="fa-attr-unused">No additional attribute available</div>
     <h3 className="fa-attr-stat-heading">Stat preview</h3><section className="fa-attr-comparison" aria-label="Current and projected statistics">{stats}</section>
-    <h3 className="fa-attr-skills-heading">New skills</h3><section className="fa-attr-skills" aria-label="Newly unlocked abilities">{skills.length?skills.map(id=><div key={id}><SkillArt id={id}/><span>{ACTIONS[id].name}</span></div>):<p>No new abilities from this level.</p>}</section>
+    <h3 className="fa-attr-skills-heading">New skills</h3><section className="fa-attr-skills" aria-label="Newly unlocked abilities">{skills.length?skills.map(id=><div key={id}>{PASSIVES[id]?<span>Passive</span>:<SkillArt id={id}/>}<span>{skillName(id)}</span></div>):<p>No new abilities from this level.</p>}</section>
     {actions}
   </div>;
-  return <><Panel rect={layout[0]}><h2>{profile?.name||'No character'}</h2><p>Level {level}</p><p>{remaining} available · {draft.length} pending</p></Panel><Panel rect={layout[1]}><h2>Stat preview</h2>{stats}{skills.map(id=><p key={id}>{ACTIONS[id].name} unlocked</p>)}</Panel><Panel rect={layout[2]}><h2>Allocate points</h2>{rows.map(row)}{actions}</Panel></>;
+  return <><Panel rect={layout[0]}><h2>{profile?.name||'No character'}</h2><p>Level {level}</p><p>{remaining} available · {draft.length} pending</p></Panel><Panel rect={layout[1]}><h2>Stat preview</h2>{stats}{skills.map(id=><p key={id}>{skillName(id)} unlocked</p>)}</Panel><Panel rect={layout[2]}><h2>Allocate points</h2>{rows.map(row)}{actions}</Panel></>;
 }
 
 // Celebration art is not a skill icon or an award. Display only committed unlocks.
 function SkillUnlocked({profile,result,level,original,layout,onContinue,onSkillbook}){
   const learned=profile?availableActions(level):[];
-  const ids=Array.isArray(result?.unlocked)?[...new Set(result.unlocked)].filter(id=>ACTION_ORDER.includes(id)&&learned.includes(id)):[];
+  const ids=Array.isArray(result?.unlocked)?[...new Set(result.unlocked)].filter(id=>(ACTION_ORDER.includes(id)&&learned.includes(id))||learnedPassives(level).includes(id)):[];
   const [index,setIndex]=useState(0);
   const selected=ids[Math.min(index,Math.max(0,ids.length-1))];
-  const action=selected?ACTIONS[selected]:null;
-  const detail=action?<><div className="fa-unlock-action"><SkillArt id={selected}/><strong>{action.name}</strong></div><p>{action.summary}</p><p>Learned at level {learnedAt[selected]} · Hotkey {action.hotkey}</p><p>Focus cost {action.focusCost} · Gain {action.focusGain}</p></>:<p>No newly unlocked abilities in this result.</p>;
+  const action=selected?ACTIONS[selected]:null,passive=PASSIVES[selected];
+  const detail=passive?<><strong>{passive.name}</strong><p>{passive.summary}</p><p>Learned at level {passive.level} · Always active</p></>:action?<><div className="fa-unlock-action"><SkillArt id={selected}/><strong>{action.name}</strong></div><p>{action.summary}</p><p>Learned at level {learnedAt[selected]} · Hotkey {action.hotkey}</p><p>Focus cost {action.focusCost} · Gain {action.focusGain}</p></>:<p>No newly unlocked abilities in this result.</p>;
   const paging=ids.length>1?<div className="fa-unlock-paging"><Btn disabled={index<=0} onClick={()=>setIndex(i=>Math.max(0,i-1))}>Previous</Btn><span>{Math.min(index+1,ids.length)} / {ids.length}</span><Btn disabled={index>=ids.length-1} onClick={()=>setIndex(i=>Math.min(ids.length-1,i+1))}>Next</Btn></div>:null;
   const controls=<><Btn className="fa-unlock-book" disabled={!profile} onClick={onSkillbook}>View Skillbook</Btn><Btn primary className="fa-unlock-continue" onClick={onContinue}>Continue</Btn></>;
   if(original)return <div className="fa-original-unlock">
     <h2 className="fa-unlock-title">{ids.length?'Skill Unlocked':'Skill Progression'}</h2>
     <p className="fa-unlock-subtitle">{profile?profile.name+' · Level '+level:'No active character'}</p>
-    <h3 className="fa-unlock-name">{action?.name||'No new skill'}</h3>
-    <div className="fa-unlock-type">{action?('Archer · '+(action.kind==='guard'?'Defense':'Attack')):'Progression'}</div>
+    <h3 className="fa-unlock-name">{passive?.name||action?.name||'No new skill'}</h3>
+    <div className="fa-unlock-type">{passive?'Archer · Passive':action?('Archer · '+(action.kind==='guard'?'Defense':'Attack')):'Progression'}</div>
     <section className="fa-unlock-details" aria-live="polite">{detail}{paging}</section>
     {controls}
   </div>;
@@ -641,7 +644,7 @@ function BattleVictory({profile,encounter,result,hud,original,layout,onContinue,
   const allies=units.filter(u=>u.team==='player'),enemies=units.filter(u=>u.team==='enemy');
   const currentLevel=profile?levelFor(profile.xp):0,previousLevel=profile?levelFor(Math.max(0,profile.xp-xp)):0;
   const rows=allies.map(u=><div key={u.id} className="fa-victory-member"><div className="fa-victory-portrait">{u.id==='hero'?<ArcherPortrait profile={profile} small/>:<ArcherPortrait companion={ROSTER.find(m=>m.id===u.id)} small/>}</div><div className="fa-victory-member-data"><strong>{u.name}</strong><small>{u.id==='hero'?'Level '+previousLevel+(currentLevel>previousLevel?' → '+currentLevel+' · Level up':''):'Companion'} · {u.hp===0?'Down':'Survived'}</small><progress aria-label={u.name+' final health'} value={u.hp} max={u.maxHp}/><small>Final HP {u.hp}/{u.maxHp}{u.id==='hero'?' · +'+xp+' XP':''}</small></div></div>);
-  const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':xp===0?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(id=>ACTIONS[id]?.name||id).join(', ')}</p>}</>;
+  const rewards=<><p>{!verified?'No confirmed victory result.':encounter.practice?'Practice battle · no progression rewards':xp===0?'Repeat victory · first-victory rewards already recorded':'First-victory rewards earned'}</p>{earned.length?earned.map(l=><div className="fa-victory-loot" key={l.id}><ItemArt id={l.id}/><span>{ITEMS[l.id]?.name||l.id} ×{l.count}</span></div>):<p>No items awarded.</p>}{verified&&result.leveled&&<p>Level {currentLevel} reached · {pointsFor(profile)} unspent points</p>}{verified&&result.unlocked?.length>0&&<p>New abilities: {result.unlocked.map(skillName).join(', ')}</p>}</>;
   const sanctuaryCleared=verified&&!encounter.practice&&encounter.id==='wilds_sanctuary_boss'&&profile.world.completedEncounters.includes('wilds_sanctuary_boss');
   const astralCleared=verified&&!encounter.practice&&encounter.id==='wilds_astral_elite'&&profile.world.completedEncounters.includes('wilds_astral_elite');
   const summary=<><p>Result: {verified?'Victory':'Unavailable'}</p>{astralCleared&&<p>The Vanguard has fallen. Review the journal to record the final chapter objectives.</p>}{sanctuaryCleared&&<p>The Gatekeeper has fallen silent. Review the journal to record the sanctuary objectives.</p>}<p>Rounds: {verified?hud.round:'—'}</p><p>Enemies defeated: {enemies.filter(u=>u.hp===0).length}/{enemies.length}</p><p>Allies standing: {allies.filter(u=>u.hp>0).length}/{allies.length}</p><p>Experience: +{xp}</p><p>Gold: +{gold}</p><small>Duration, damage totals and battle ranks are not tracked in this build.</small></>;
@@ -1488,7 +1491,7 @@ export default function SapphireAdventure(){
       </section>
       <section className="fa-character-lower fa-character-appearance"><h3>Appearance</h3><p>{profile?appearanceFor(profile).name:'No character'}</p><Btn disabled={!profile||Boolean(encounter)} onClick={()=>go('27')}>Wardrobe</Btn></section>
       <section className="fa-character-lower fa-character-gear"><h3>Equipment</h3>{profile&&<><p>Bow: {ITEMS[profile.equipped]?.name||'None'}</p>{GEAR_SLOTS.map(s=><p key={s}>{gearSlotLabel(s)}: {GEAR[gearFor(profile,'hero')[s]]?.name||'None'}</p>)}{activeGearSet(profile,'hero')&&<p>Active set: {activeGearSet(profile,'hero').name} +{ascensionLevel(profile,'hero',activeGearSetId(profile,'hero'))}</p>}</>}</section>
-      <section className="fa-character-lower fa-character-skills"><h3>Learned skills</h3>{profile&&availableActions(level).map(k=><p key={k}>{skillName(k)}</p>)}</section>
+      <section className="fa-character-lower fa-character-skills"><h3>Learned skills</h3>{profile&&learnedSkills(level).map(k=><p key={k}>{skillName(k)}</p>)}</section>
       <Btn className="fa-character-back" onClick={back}>Back</Btn><Btn className="fa-character-done" primary onClick={back}>Done</Btn>
     </div>:<>{pane(0,nav(['06','12','32','27']))}{pane(1,<><h2>{profile?.name||'No character'}</h2><ArcherPortrait profile={profile}/><p>Archer · Level {level}</p></>)}{pane(2,statPanel)}</>;break;
     case '06':{
