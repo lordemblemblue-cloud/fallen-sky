@@ -17,6 +17,7 @@ export const ACTIONS = Object.freeze({
     summary: 'Heavy hit. Acts last. Costs 2 Focus.' }),
   volley: Object.freeze({ id: 'volley', name: 'Triple Volley', skill: 'volley', hotkey: '3', kind: 'attack', power: 11, hits: 3, accuracy: 0.8, critChance: 0.08, priority: 0, focusCost: 1, focusGain: 0,
     summary: 'Three arrows, each rolls to hit. Costs 1 Focus.' }),
+  moonfall: Object.freeze({id:'moonfall',name:'Moonfall',skill:'chargedShot',hotkey:'5',kind:'attack',ultimate:true,power:58,hits:1,accuracy:.95,critChance:.15,priority:-1,focusCost:3,focusGain:0,summary:'A powerful single shot. Costs 3 Focus; once per battle.'}),
   swordSlash: Object.freeze({id:'swordSlash',name:'Silver Cleave',skill:'swordSlash',hotkey:'1',kind:'attack',power:17,hits:1,accuracy:0.96,critChance:0.08,priority:1,focusCost:0,focusGain:1,summary:'A reliable sword strike. +1 Focus.'}),
   shieldBash: Object.freeze({id:'shieldBash',name:'Shield Bash',skill:'shieldBash',hotkey:'2',kind:'attack',power:29,hits:1,accuracy:0.95,critChance:0.08,priority:2,focusCost:2,focusGain:0,summary:'An early shield strike. Costs 2 Focus.'}),
   swordFlurry: Object.freeze({id:'swordFlurry',name:'Twin Cleave',skill:'swordFlurry',hotkey:'3',kind:'attack',power:11,hits:2,accuracy:0.9,critChance:0.1,priority:0,focusCost:1,focusGain:0,summary:'Two sword strikes. Costs 1 Focus.'}),
@@ -51,7 +52,9 @@ export const ENEMY_KITS=Object.freeze({
 });
 export function bossPhase(unit){if(unit?.archetype!=='gatekeeper')return null;const ratio=unit.hp/unit.maxHp;return ratio<=.30?3:ratio<=.65?2:1;}
 export const BOSS_PHASE_NAMES=Object.freeze({1:'Astral Watch',2:'Falling Stars',3:'Total Eclipse'});
-function unitKit(u){return u.team==='enemy'&&Object.hasOwn(ENEMY_KITS,u.archetype)?ENEMY_KITS[u.archetype]:actionsForClass(u.combatClass);}
+export const ULTIMATE_ID='moonfall';
+export const ULTIMATE_LEVEL=4;
+function unitKit(u){if(u.team==='player'&&u.id==='hero'&&(!u.combatClass||u.combatClass==='archer')&&u.actions?.includes(ULTIMATE_ID))return [...ACTION_ORDER,ULTIMATE_ID];return u.team==='enemy'&&Object.hasOwn(ENEMY_KITS,u.archetype)?ENEMY_KITS[u.archetype]:actionsForClass(u.combatClass);}
 function phaseAllows(unit,id){const phase=bossPhase(unit);return id==='starfall'?phase>=2:id==='eclipseRay'?phase===3:true;}
 /** mulberry32 step on an explicit state: returns [value in [0, 1), next state]. */
 export function rngNext(state) {
@@ -101,6 +104,7 @@ export function legalActions(battle, unitId) {
     if (!unit || unit.ko) reason = 'down';
     else if (battle.phase !== 'choose') reason = 'battle over';
     else if (!phaseAllows(unit,id)) reason = 'not available in this phase';
+    else if (a.ultimate && unit.ultimateUsed) reason = 'already used this battle';
     else if (unit.focus < a.focusCost) reason = `needs ${a.focusCost} Focus`;
     return { id, action: a, enabled: reason === null, reason };
   });
@@ -195,6 +199,7 @@ export function resolveRound(battle, choices) {
     const target = targets[0];
     const focusBefore = actor.focus;
     actor.focus -= action.focusCost;
+    if(action.ultimate)actor.ultimateUsed=true;
     const step = { actor: actorId, action: action.id, target: target.id, hits: [] };
     if (action.kind === 'guard') {
       actor.guarding = true;
