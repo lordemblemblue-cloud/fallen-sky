@@ -7,6 +7,7 @@ Research input for the three-empire war (session `three-empires`). Written 2026-
 **Sources**
 - Interactive map site (mapgenie, "skyrim/maps/skyrim"). Its page carries the full marker list (2,568 markers with positions, 76 categories). The counts and every distance below were computed from that data in the browser, not by eye.
 - Video "I 100%'d Skyrim in 100 hours" (YouTube `WdebDXqxjG0`, 5 h 51 min 30 s), a run that completes every quest. Its automatic captions were read in the browser and searched, and frames were stepped through at the world-map moments. Times below are video times `h:mm:ss`.
+- **Update 2026-11-27:** the owner replaced that video with a 21-hour no-commentary main-line walkthrough. What it shows about real pacing (length per beat, indoor/outdoor rhythm, map use) is in [REFERENCE_LONGPLAY_NOTES.md](REFERENCE_LONGPLAY_NOTES.md), which corrects the main-line length in section 4.1.
 
 **Scale used for every distance** (see section 2 for the check): one map cell = 4,096 game units ≈ 58.5 m, and one degree on the map site ≈ 182 cells ≈ **10.65 km**. Player run speed 370 units/s ≈ **5.3 m/s**, sprint 500 units/s ≈ **7.1 m/s** (vanilla values as published on modding pages; the conversion of a unit to 1.43 cm is the community convention, not an official figure).
 
@@ -247,7 +248,7 @@ Beat lists only, in our own words. Kind of beat: **T** talk, **V** travel, **D**
 | 18 | Cross into the land of the dead | S | — | 20 min |
 | 19 | Final battle; **side choice afterwards: spare or kill the old master** (4:55:00) | S, **C** | — | 10 min |
 
-**Rhythm:** talk → travel → dungeon → set piece, then a twist every 4–5 quests (6, 9, 13, 15). Long dungeons are always followed by a short talk or a spectacle, never by another long dungeon. The peak is visited three times (5, 12, 14) so the land's landmark becomes the story's spine. **About 9–10 hours of normal play**, 6 dungeons, 8 set pieces, 2 real choices.
+**Rhythm:** talk → travel → dungeon → set piece, then a twist every 4–5 quests (6, 9, 13, 15). Long dungeons are always followed by a short talk or a spectacle, never by another long dungeon. The peak is visited three times (5, 12, 14) so the land's landmark becomes the story's spine. 6 dungeons, 8 set pieces, 2 real choices. This section first guessed "about 9–10 hours of normal play"; the owner's longplay video took **about 21 hours** on foot and horseback without fast travel, about 50 minutes per beat (see [REFERENCE_LONGPLAY_NOTES.md](REFERENCE_LONGPLAY_NOTES.md)).
 
 ### 4.2 One faction line: the thieves (≈12 story quests + side structure)
 
