@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 const source = path => readFileSync(new URL('../' + path, import.meta.url),'utf8');
 
-test('Game 3D host provides legacy navigation context inside TanStack client boundary',()=>{
+test('Game 3D host keeps legacy navigation context inside TanStack client boundary',()=>{
   const host=source('src/components/game3d/Game3DHost.jsx');
   const game=source('src/pages/GameView.jsx');
-  assert.match(game,/useNavigate.*from ['"]react-router-dom['"]/);
+  assert.match(game,/useNavigate.*from ['"]@tanstack\/react-router['"]/);
   assert.match(host,/import\s*\{\s*MemoryRouter\s*\}\s*from\s*['"]react-router-dom['"]/);
   assert.match(host,/<MemoryRouter>[\s\S]*<GameView\s*\/>[\s\S]*<\/MemoryRouter>/);
 });
