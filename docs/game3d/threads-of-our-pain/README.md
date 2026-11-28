@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **FOCUS2-20261127 — D02–D10 discovery variety (draft):** [The places between ordinary lives](FOCUS2_20261127_D02_D10_REFINEMENT.md). Nine candidate scene passes and Claude terrain deltas; thirteen discoveries refined across FOCUS/FOCUS2, rewards and distinct side quest receipts unchanged. No build or tests.
+
 > **FOCUS-20261127 — first four paired discoveries (draft):** [Four things the hands remember](FOCUS_20261127_D01_D25_D36_D31_REFINEMENT.md). D01/D25/D36/D31 dialogue and terrain deltas; independent paired alignments and required second vista, safe egress and single reward. No new quests or implementation.
 
 > **FINALE-20261127 — M18–M20 emotional pacing (draft):** [A world worth waking in](FINALE_20261127_M18_M20_EMOTIONAL_PACING.md). Five candidate beats, three chapter terrain deltas; preserve R64A/R65/R84, R98 causality and R111 unknowns. No new outcome, reward or implementation.
