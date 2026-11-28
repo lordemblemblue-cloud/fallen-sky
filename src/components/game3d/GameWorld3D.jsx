@@ -86,6 +86,7 @@ import { MASTERY_MAX_LEVEL } from './progression/weaponSynergyData';
 import { shouldUseBowAimingLocomotion } from './player/BowMovementRules.mjs';
 import { createGame3DBowAimVisuals } from './vfx/Game3DBowSpiritBird.mjs';
 import { tickActiveEffects, disposeActiveEffects } from './vfx/activeEffects.mjs';
+import { createEffectLightPool } from './vfx/effectLightPool.mjs';
 import { SKILL_TYPE } from './skills/skillTypes';
 import { getPlayerHUD as getHUDForSkill } from './playerHUDStore';
 import { tickCompanionCooldowns } from './companionAbilityStore';
@@ -241,11 +242,11 @@ import { createPlayerGlide } from './player/playerGlide.mjs';
 import { createGliderProp } from './player/gliderProp.mjs';
 import { createWaterSurfaceIndex } from './axe/world/game3dWaterSurface.mjs';
 import { createPlayerMomentGestures } from './player/playerMomentGestures.mjs';
-import { createSkillUseBurst, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
+import { createSkillUseBurst, createSkillUseBurstLight, createLevelUpCelebration, skillBurstColor } from './vfx/playerMomentEffects.jsx';
 import { createMountFlightController, MOUNT_FLIGHT } from './character/mountFlight.mjs';
 import WorldEnvironmentHUD from './WorldEnvironmentHUD';
 import { getDetroitWeather } from '@/functions/getDetroitWeather';
-import { createPlayerCastLightBeam } from './vfx/playerCastLightBeam';
+import { createPlayerCastLight, createPlayerCastLightBeam } from './vfx/playerCastLightBeam';
 import { createQuestEnemySpawner } from './questEnemySpawner';
 import { spawnLivingQuestNPC } from './npc/spawnLivingQuestNPC';
 import {loadAXEQuestNPCVisual} from './npc/axeAnimatedQuestNpcGLB.mjs';
@@ -1646,6 +1647,14 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
     const handleAXEAerialSkillCast = () => {
       playerAnim?.requestJump?.();
     };
+    // A skill cast's beam and burst light the scene through one light each, there from before the first frame until
+    // teardown (vfx/sharedEffectLight.mjs): a light per cast changed the scene's light count, and three.js then
+    // recompiled every lit material in the middle of the fight.
+    const playerCastLight = createPlayerCastLight(scene);
+    const skillUseBurstLight = createSkillUseBurstLight(scene);
+    // Companion abilities, legacy spells and the level-up celebration borrow lights from this pool, for the same
+    // reason (vfx/effectLightPool.mjs).
+    const effectLightPool = createEffectLightPool(scene);
     const handlePlayerSkillCastStart = (e) => {
       const duration = e.detail?.duration || 0.45;
       activeEffects.current.push(createPlayerCastLightBeam({
@@ -1654,6 +1663,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
         playerRef: modelRef,
         getGroundY: (x, z) => sampleGroundY?.(x, z) ?? 0,
         duration,
+        castLight: playerCastLight,
       }));
       // The skill's own moment: a burst in the weapon family's color and a power-surge gesture layered over
       // whatever strike the cast plays. Presentation only; nothing here changes the cast.
@@ -1661,6 +1671,7 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       activeEffects.current.push(createSkillUseBurst({
         scene, playerRef: modelRef, getGroundY: (x, z) => sampleGroundY?.(x, z) ?? 0,
         color: skillBurstColor(castSkill?.weapon_type), duration: Math.max(0.5, Math.min(0.9, duration)),
+        burstLight: skillUseBurstLight,
       }));
       momentGestures.play('skillCast', { seconds: Math.max(0.45, Math.min(0.8, duration)) });
     };
@@ -6127,6 +6138,9 @@ function GameWorldScene({recoveryReason,onRendererFailure,region='wolfveil',worl
       // The render loop has stopped, so dispose the effects still in flight here rather than leave them
       // (and the cast beam's window listener) holding on to this scene.
       activeEffects.current = disposeActiveEffects(activeEffects.current);
+      playerCastLight.dispose();
+      skillUseBurstLight.dispose();
+      effectLightPool.dispose();
       heldAOEKeys.clear();
       chargedKeys.clear();
       cancelBowCharge();
