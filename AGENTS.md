@@ -1,5 +1,9 @@
 # AGENTS.md
 
+## Project record and agent hand-offs (2026-11-27)
+
+Before taking any task on Fallen Sky, Duelist Adventure or Fantasy Battle, read [docs/project-record/](docs/project-record/README.md): the per-game development records, the centralized backlog, the work packages and the open missing-information requests. Hand work between ChatGPT, Claude, Gemini and other approved agents by [the hand-off protocol](docs/project-record/AGENT_HANDOFF_PROTOCOL.md). Build only Implementation-ready packages; never fill a missing-information gap by guessing.
+
 ## Fallen Sky story-driven terrain handoff (2026-11-26)
 
 For Fallen Sky Game 3D terrain, cave, dungeon and world rebuilding work, read [The Threads of Our Pain handoff](docs/game3d/threads-of-our-pain/CLAUDE_TERRAIN_HANDOFF.md) and its index first. The story task supplies dialogue and location constraints; the terrain agent owns blockout and implementation. Do not revive superseded War of Three Roads geometry by default or alter approved story beats. Follow existing security and performance rules.
