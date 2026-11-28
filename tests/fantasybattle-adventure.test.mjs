@@ -442,3 +442,41 @@ test('socket gems apply only to equipped eligible types, upgrade and replace wit
  for(const sockets of [{hero:{starterBow:{gem:'ruby',rank:1}}},{hero:{sapphireBow:{gem:'ruby',rank:4}}},{hero:{sapphireBow:{gem:'bogus',rank:1}}},{mistScout:{pilgrimCuirass:{gem:'ruby',rank:1}}},null])assert.equal(A.isProfile({...p,sockets}),false);
  assert.equal(Object.keys(SOCKET_GEMS).length,3);
 });
+
+import {enchantRank,enchantBonus} from '../src/components/fantasybattle/core/equipmentCatalog.mjs';
+test('enchant scales only original equipment attributes, caps ranks and preserves other upgrade systems',()=>{
+ let p={...A.createProfile('Enchanter'),xp:300,gold:1000};
+ p={...p,inventory:{...p.inventory,sapphireOre:50,sapphireBow:1,pilgrimCuirass:2,pilgrimCloak:1}};
+ assert.equal(A.enchantQuote(p,'hero','starterBow').ok,false);
+ assert.throws(()=>A.enchantEquipment(p,'hero','sapphireBow'));
+ p=A.equipItem(p,'sapphireBow');p=A.equipGear(p,'hero','armor','pilgrimCuirass');p=A.equipGear(p,'hero','mantle','pilgrimCloak');
+ p=A.enhanceWeapon(p);p=A.socketEquipment(p,'hero','sapphireBow','ruby');p=A.ascendSet(p,'hero');
+ const before=p,baseline=A.heroStats(p);
+ for(let rank=1;rank<=3;rank++){
+  const q=A.enchantQuote(p,'hero','sapphireBow'),prior=p;
+  assert.ok(q.ok);assert.equal(q.nextRank,rank);
+  p=A.enchantEquipment(p,'hero','sapphireBow');
+  assert.equal(p.gold,prior.gold-q.cost);assert.equal(p.inventory.sapphireOre,prior.inventory.sapphireOre-q.ore);
+  assert.equal(enchantRank(p,'hero','sapphireBow'),rank);
+  assert.ok(Math.abs(A.heroStats(p).atk-baseline.atk-4*rank/10)<1e-9);
+  assert.equal(A.heroStats(p).def,baseline.def);assert.equal(A.heroStats(p).spd,baseline.spd);
+  assert.ok(A.isProfile(p));
+ }
+ assert.throws(()=>A.enchantEquipment(p,'hero','sapphireBow'));
+ assert.deepEqual(p.enhancements,before.enhancements);assert.deepEqual(p.sockets,before.sockets);assert.deepEqual(p.ascensions,before.ascensions);
+ p=A.enchantEquipment(p,'hero','pilgrimCuirass');
+ assert.ok(Math.abs(A.heroStats(p).def-baseline.def-.4)<1e-9);
+ assert.deepEqual(enchantBonus('pilgrimCuirass',1),{atk:.1,def:.4,spd:0});
+ const stowed=A.equipItem(p,'starterBow');assert.equal(enchantRank(stowed,'hero','sapphireBow'),3);
+ assert.deepEqual(A.heroStats(A.equipItem(stowed,'sapphireBow')),A.heroStats(p));
+ const removed=A.equipGear(p,'hero','armor',null);
+ assert.equal(enchantRank(removed,'hero','pilgrimCuirass'),1);
+ assert.deepEqual(A.heroStats(A.equipGear(removed,'hero','armor','pilgrimCuirass')),A.heroStats(p));
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);assert.deepEqual(A.parseBackup(A.exportBackup(before)),before);
+ assert.equal(A.enchantQuote({...p,gold:0},'hero','pilgrimCuirass').ok,false);
+ assert.equal(A.enchantQuote({...p,inventory:{...p.inventory,sapphireOre:0}},'hero','pilgrimCuirass').ok,false);
+ let ally=A.recruitCompanion(A.rewardVictory(p,{id:'wilds_grove_01'}).profile,'groveArcher');
+ ally=A.equipGear(ally,'groveArcher','armor','pilgrimCuirass');const hs=A.heroStats(ally),as=A.memberStats(ally,'groveArcher');
+ ally=A.enchantEquipment(ally,'groveArcher','pilgrimCuirass');assert.deepEqual(A.heroStats(ally),hs);assert.ok(Math.abs(A.memberStats(ally,'groveArcher').def-as.def-.4)<1e-9);
+ for(const enchants of [null,{hero:{starterBow:1}},{hero:{sapphireBow:4}},{hero:{sapphireBow:1.5}},{hero:{unknown:1}},{mistScout:{pilgrimCuirass:1}}])assert.equal(A.isProfile({...p,enchants}),false);
+});
