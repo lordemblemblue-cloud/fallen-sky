@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **FOCUS3-20261127 — D11–D20 discovery refinement (draft):** [The things we leave behind](FOCUS3_20261127_D11_D20_REFINEMENT.md). Ten dialogue and terrain deltas, 23/50 refined in FOCUS series; primary rewards and independent side quest receipts retained. Not built or verified.
+
 > **FOCUS2-20261127 — D02–D10 discovery variety (draft):** [The places between ordinary lives](FOCUS2_20261127_D02_D10_REFINEMENT.md). Nine candidate scene passes and Claude terrain deltas; thirteen discoveries refined across FOCUS/FOCUS2, rewards and distinct side quest receipts unchanged. No build or tests.
 
 > **FOCUS-20261127 — first four paired discoveries (draft):** [Four things the hands remember](FOCUS_20261127_D01_D25_D36_D31_REFINEMENT.md). D01/D25/D36/D31 dialogue and terrain deltas; independent paired alignments and required second vista, safe egress and single reward. No new quests or implementation.
