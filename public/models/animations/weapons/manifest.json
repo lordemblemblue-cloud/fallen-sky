@@ -101,6 +101,21 @@
             0.4333,
             0.6167
           ]
+        },
+        "bowDraw": {
+          "file": "female/bowDraw.glb",
+          "duration": 0.45,
+          "nock": 0.16,
+          "full": 0.45,
+          "hit": 0.45,
+          "cancel": 0.45
+        },
+        "bowHold": {
+          "file": "female/bowHold.glb",
+          "duration": 1.6,
+          "hit": 0.0,
+          "cancel": 1.6,
+          "loop": true
         }
       }
     }
