@@ -196,6 +196,7 @@ before(async () => {
     registry: 'skills/skillRegistry.jsx',
     curve: 'skills/skillDamageCurve.mjs',
     inv: 'axe/equipment/AXEEquipmentInventoryStore.js',
+    loadout: 'axe/equipment/AXEWeaponLoadoutRules.mjs',
     storage: 'characterStorage.jsx',
     pipeline: 'progression/weaponMastery/WeaponScalingPipeline.jsx',
   };
@@ -346,6 +347,9 @@ const weaponItem = (name, masteryWeaponId, axeWeaponRole) => ({
   name, slot: 'weapon', category: 'weapon', masteryWeaponId, axeWeaponRole, rarity: 'common', baseStats: { damage: 8 },
 });
 const owned = {};
+// Weapons sit in three persistent slots (AXEWeaponLoadoutRules.mjs), and a switch only draws a weapon
+// that is already equipped. So a weapon that is not equipped is equipped into a slot (replacing the one
+// in hand when all three are taken), which also draws it; one that is equipped is drawn with a switch.
 function hold(kind) {
   if (!owned[kind]) {
     const spec = {
@@ -358,8 +362,16 @@ function hold(kind) {
     assert.ok(added.ok, JSON.stringify(added));
     owned[kind] = added.item.instanceId;
   }
-  const switched = api.inv.switchAXEInventoryWeapon(owned[kind], { level: 100 });
-  assert.ok(switched.ok, `${kind}: ${JSON.stringify(switched)}`);
+  const id = owned[kind];
+  const context = { level: 100 };
+  const slotsFull = api.inv.getEquippedAXEItemsByCategory('weapon').length >= api.loadout.MAX_AXE_EQUIPPED_WEAPONS;
+  const drawn = api.inv.getAXEEquipmentItem(id).equipped
+    ? api.inv.switchAXEInventoryWeapon(id, context)
+    : api.inv.equipAXEInventoryItem(id, {
+      ...context, replaceWeaponInstanceId: slotsFull ? api.inv.getActiveEquippedAXEWeapon()?.instanceId : null,
+    });
+  assert.ok(drawn.ok, `${kind}: ${JSON.stringify(drawn)}`);
+  assert.equal(api.inv.getActiveEquippedAXEWeapon()?.instanceId, id, `${kind} is the weapon in hand`);
 }
 
 // Starts a cast and returns a function that lets time pass and gives back every strike it fired.
