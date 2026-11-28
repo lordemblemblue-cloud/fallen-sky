@@ -3,6 +3,7 @@ import {validCampaign,cleanCampaign} from './campaignQuests.mjs';
 import {treasureFor} from './treasureCatalog.mjs';
 import {BOND_GIFT} from './companionBonds.mjs';
 import {learnedPassives,applyPassives} from './passiveSkills.mjs';
+import {ULTIMATE_ID,ULTIMATE_LEVEL} from './battleRules.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats,activeGearSetId,ascensionLevel,scaledSet,validAscensions,cleanAscensions,MAX_ASCENSION,SOCKET_GEMS,MAX_SOCKET_RANK,equippedSocketItems,socketFor,validSockets,cleanSockets,MAX_ENCHANT_RANK,enchantRank,enchantBonus,validEnchants,cleanEnchants} from './equipmentCatalog.mjs';
@@ -91,7 +92,7 @@ const uniqueStrings=a=>Array.isArray(a)&&a.length<=1000&&a.every(x=>typeof x==='
 const integer=(n,min,max)=>Number.isInteger(n)&&n>=min&&n<=max;
 const copy=o=>JSON.parse(JSON.stringify(o));
 export const levelFor=xp=>1+Math.floor(xp/100);
-export const learnedAt=Object.freeze({quickShot:1,guard:1,volley:2,chargedShot:3});
+export const learnedAt=Object.freeze({quickShot:1,guard:1,volley:2,chargedShot:3,[ULTIMATE_ID]:ULTIMATE_LEVEL});
 export const availableActions=level=>Object.keys(learnedAt).filter(k=>level>=learnedAt[k]);
 export const learnedSkills=level=>[...availableActions(level),...learnedPassives(level)];
 export const pointsFor=p=>Math.max(0,levelFor(p.xp)-1-STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0));
