@@ -525,3 +525,48 @@ test('Moonfall is a leader-only full-Focus ultimate, used at most once per battl
  assert.ok(result.unlocked.includes('windstep'));
  assert.equal(B.ACTIONS[B.ULTIMATE_ID].skill,'chargedShot');
 });
+
+import {ENCOUNTER_BALANCE,encounterBalance} from '../src/components/fantasybattle/core/enemyCatalog.mjs';
+test('all 14 encounters have fixed regional tuning and bounded party-size scaling',()=>{
+ assert.equal(Object.keys(ENCOUNTER_BALANCE).length,14);
+ assert.equal(encounterBalance('__proto__'),null);
+ for(const [id,tier] of Object.entries(ENCOUNTER_BALANCE)){
+  const solo=enemyFormation({id},1),full=enemyFormation({id},4);
+  assert.equal(solo[0].maxHp,tier.hp);
+  assert.equal(full[0].maxHp,Math.round(tier.hp*1.54));
+  assert.equal(full[0].atk,tier.atk);assert.equal(full[0].def,tier.def);
+  assert.equal(enemyFormation({id},NaN)[0].maxHp,tier.hp);
+  assert.deepEqual(enemyFormation({id},999),full);
+  assert.ok(full.every(u=>['maxHp','atk','def','spd'].every(k=>Number.isInteger(u[k])&&u[k]>0)));
+ }
+ assert.ok(encounterBalance('wilds_astral_elite').hp>encounterBalance('wilds_grove_01').hp);
+ assert.equal(enemyFormation({id:'wilds_grove_01',practice:true},1)[0].maxHp,120);
+});
+test('reference starter and tactically guarded late-game party remain viable in deterministic battles',()=>{
+ const leader={id:'hero',team:'player',maxHp:140,atk:28,def:22,spd:13,actions:['quickShot','guard','volley','chargedShot','moonfall']};
+ const party=[{id:'pilgrimWarden',team:'player',maxHp:135,atk:10,def:18,spd:7,combatClass:'warden'},leader,{id:'groveArcher',team:'player',maxHp:85,atk:10,def:10,spd:9,actions:['quickShot','guard','volley']},{id:'mistScout',team:'player',maxHp:75,atk:13,def:10,spd:16,combatClass:'scout'}];
+ function simulate(id,allies){
+  let wins=0,rounds=0;
+  for(let seed=1;seed<=64;seed++){
+   let battle=B.createBattle({seed,units:[...allies,...enemyFormation({id},allies.length)]});
+   for(let n=0;n<45&&battle.phase==='choose';n++){
+    const choices={};
+    for(const u of battle.units.filter(u=>!u.ko&&u.team==='enemy'))choices[u.id]=B.chooseAiAction(battle,u.id);
+    const front=battle.units.find(u=>u.team==='player'&&!u.ko);
+    for(const u of battle.units.filter(u=>!u.ko&&u.team==='player')){
+     const legal=B.legalActions(battle,u.id).filter(a=>a.enabled).map(a=>a.id);
+     const guard=u.id==='pilgrimWarden'?'bulwark':'guard';
+     const danger=['celestialLance','starfall','eclipseRay'].includes(choices.rival);
+     choices[u.id]=u===front&&danger&&legal.includes(guard)?guard:['moonfall','chargedShot','shieldBash','daggerLunge','volley','swordFlurry','daggerFlurry','quickShot','swordSlash','daggerJab','guard','bulwark'].find(a=>legal.includes(a));
+    }
+    battle=B.resolveRound(battle,choices).battle;
+   }
+   wins+=Number(battle.winner==='player');rounds+=battle.round-1;
+  }
+  return {wins,rounds};
+ }
+ const starter=simulate('wilds_grove_01',[{...leader,maxHp:120,atk:12,def:10,spd:11,actions:['quickShot','guard']}]);
+ const boss=simulate('wilds_sanctuary_boss',party),final=simulate('wilds_astral_elite',party);
+ assert.ok(starter.wins>=56);assert.ok(boss.wins>=40&&boss.wins<64);assert.ok(final.wins>=40&&final.wins<64);
+ assert.ok(boss.rounds>starter.rounds);assert.ok(final.rounds>starter.rounds);
+});
