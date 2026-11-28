@@ -480,3 +480,22 @@ test('enchant scales only original equipment attributes, caps ranks and preserve
  ally=A.enchantEquipment(ally,'groveArcher','pilgrimCuirass');assert.deepEqual(A.heroStats(ally),hs);assert.ok(Math.abs(A.memberStats(ally,'groveArcher').def-as.def-.4)<1e-9);
  for(const enchants of [null,{hero:{starterBow:1}},{hero:{sapphireBow:4}},{hero:{sapphireBow:1.5}},{hero:{unknown:1}},{mistScout:{pilgrimCuirass:1}}])assert.equal(A.isProfile({...p,enchants}),false);
 });
+
+import {PASSIVES,learnedPassives,applyPassives} from '../src/components/fantasybattle/core/passiveSkills.mjs';
+test('automatic passives unlock from level without spending points or adding actions',()=>{
+ const p=A.createProfile('Passive test'),base=A.heroStats(p);
+ assert.deepEqual(learnedPassives(1),[]);assert.deepEqual(A.heroStats(p),base);
+ for(const [xp,atk,def,spd] of [[100,1,0,0],[200,1,1,0],[300,1,1,1],[400,1,1,1]]){
+  const next={...p,xp},stats=A.heroStats(next);
+  assert.deepEqual(stats,{...base,atk:base.atk+atk,def:base.def+def,spd:base.spd+spd});
+  assert.equal(A.pointsFor(next),xp/100);assert.ok(A.isProfile(next));
+  assert.deepEqual(A.parseBackup(A.exportBackup(next)),next);
+  assert.ok(A.availableActions(A.levelFor(xp)).every(id=>!Object.hasOwn(PASSIVES,id)));
+ }
+ const result=A.rewardVictory({...p,xp:99},{id:'passive-test',category:'Normal'});
+ assert.ok(result.unlocked.includes('steadyAim'));assert.ok(result.unlocked.includes('volley'));
+ assert.deepEqual(A.rewardVictory(result.profile,{id:'passive-test',category:'Normal'}).unlocked,[]);
+ assert.deepEqual(applyPassives(base,4),A.heroStats({...p,xp:300}));assert.deepEqual(base,A.heroStats(p));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ for(const marker of ['fa-skillbook-passive-nodes','PASSIVE_IDS.map','learnedPassives(level)','learnedSkills(level).includes(id)','result.unlocked.map(skillName)'])assert.ok(page.includes(marker),marker);
+});
