@@ -17,3 +17,6 @@ export function menuDestination(stack,target,hotkey=false){
  if(hotkey&&!stack.includes('04'))return [root,target];
  return [root,'04',target];
 }
+
+const parentService=Object.freeze({'26':'11','32':'05','39':'06','46':'21','16':'21','17':'06','22':'21','23':'07','33':'05'});
+export const activeMenuService=id=>Object.hasOwn(parentService,id)?parentService[id]:id;

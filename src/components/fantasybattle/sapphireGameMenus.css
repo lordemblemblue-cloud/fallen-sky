@@ -84,3 +84,35 @@
 /* Keep return controls available during long catalog scrolls. */
 .fa-game-menu-header{position:sticky;top:0;z-index:2;background:linear-gradient(180deg,#10263cf5,#10263ce8 80%,#10263c00);padding-top:4px}
 @media(max-height:440px){.fa-game-menu-header{position:static}}
+
+/* Owner correction: preserve a left menu; only the content to its right changes.
+   One feathered glass surface contains the live text and controls, not a full-page
+   rearrangement or a series of outlined cards. */
+.fa-game-menu-scene.fa-docked-game-menu{display:grid;grid-template-columns:clamp(150px,19vw,270px) minmax(0,1fr);align-items:stretch;gap:clamp(12px,3vw,48px);padding:clamp(12px,3vh,36px) clamp(12px,3vw,48px);overflow:hidden;background:linear-gradient(90deg,#091831a8 0%,#0c20394d 24%,transparent 55%);height:auto;box-sizing:border-box}
+.fa-game-menu-sidebar{display:flex;flex-direction:column;gap:10px;min-width:0;min-height:0;overflow:hidden;padding:6px 5px 6px 0}
+.fa-sidebar-brand{display:grid;gap:4px;padding:0 8px 10px;color:#f3dfbc;border-bottom:1px solid #bddbf04d}.fa-sidebar-brand span{font-size:.72em;letter-spacing:.14em;text-transform:uppercase;color:#d1e2f4}.fa-sidebar-brand strong{font-weight:500;font-size:clamp(21px,2.2vw,32px)}
+.fa-sidebar-links{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#91b5d1 transparent;padding:2px 5px 4px 2px}
+.fa-sidebar-group{display:grid;gap:3px;margin:12px 0 0}.fa-sidebar-group h2{font-size:.75em;letter-spacing:.1em;text-transform:uppercase;color:#d1e2f4;font-weight:500;margin:0 0 4px;padding:0 10px}
+.fa-docked-game-menu .fa-sidebar-link{display:flex;justify-content:flex-start;text-align:left;width:100%;min-height:36px;padding:7px 11px;border:0;border-radius:5px;background:linear-gradient(90deg,#2a4b7163,transparent);box-shadow:none;text-shadow:0 1px 5px #081329}
+.fa-docked-game-menu .fa-sidebar-link[aria-current="page"]{background:linear-gradient(90deg,#66a5dfa0,#3c77ac40,transparent);box-shadow:inset 3px 0 #c2ecff;color:#fff1ce}
+.fa-docked-game-menu .fa-sidebar-resume,.fa-docked-game-menu .fa-sidebar-title{flex-shrink:0;min-height:42px;width:100%}
+.fa-service-workspace{position:relative;isolation:isolate;min-width:0;min-height:0;flex:1;display:flex;flex-direction:column;gap:12px}
+.fa-docked-game-menu .fa-service-workspace{overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#97b6d1 transparent;padding:clamp(15px,2.4vw,36px);border-radius:clamp(16px,3vw,42px);background:radial-gradient(ellipse at 48% 43%,#0a1a32ed 0%,#102947d9 48%,#1639599c 75%,#17395925 100%);box-shadow:inset 0 1px 0 #e1f1ff25}
+.fa-docked-game-menu .fa-service-workspace::before{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;border-radius:inherit;background:linear-gradient(155deg,#b6dbff20,transparent 23%,transparent 77%,#8cc8ef12)}
+.fa-docked-game-menu .fa-game-menu-header{position:static;background:none;padding:0 0 12px;flex-shrink:0}
+.fa-docked-game-menu .fa-game-menu-header h1{font-size:clamp(26px,3vw,46px)}
+.fa-docked-game-menu .fa-game-menu-body{grid-template-columns:minmax(0,.78fr) minmax(0,1.35fr) minmax(0,1fr);gap:clamp(12px,2vw,30px);align-content:start;flex:0 0 auto}
+.fa-docked-game-menu .fa-game-menu-body .fa-panel{padding:4px 0 12px;background:none;border:0}
+.fa-ui[data-screen="06"] .fa-docked-game-menu .fa-game-menu-body{grid-template-columns:repeat(2,minmax(0,1fr))}
+.fa-docked-game-menu .fa-game-menu-body.pause{display:block}
+.fa-pause-overview{max-width:680px;margin:auto;display:grid;gap:12px}
+.fa-pause-overview .fa-pause-summary{width:100%}
+.fa-embedded-service{min-width:0;display:block}
+.fa-service-workspace .fa-embedded-service .fa-loading-scene{position:relative;inset:auto;display:block;overflow:visible;padding:0;background:none;isolation:auto}
+.fa-service-workspace .fa-embedded-service .fa-loading-scene::before,.fa-service-workspace .fa-embedded-service .fa-loading-scene::after{display:none}
+.fa-service-workspace .fa-embedded-service .fa-loading-content{width:100%;margin:0;font-size:inherit}
+.fa-service-workspace .fa-embedded-service .fa-glass-load-heading h1{font-size:clamp(26px,3vw,46px)}
+.fa-service-workspace .fa-embedded-service .fa-scene-settings{gap:18px;grid-template-columns:minmax(110px,.8fr) minmax(0,1.6fr)}
+.fa-service-workspace .fa-embedded-service .fa-scene-save .fa-glass-load-slots{grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr))}
+@media(max-width:1050px){.fa-docked-game-menu .fa-game-menu-body{grid-template-columns:repeat(2,minmax(0,1fr))}.fa-docked-game-menu .fa-game-menu-body>.fa-panel:last-child:nth-child(3){grid-column:1/-1}}
+@media(max-width:760px){.fa-game-menu-scene.fa-docked-game-menu{grid-template-columns:clamp(100px,27vw,160px) minmax(0,1fr);gap:8px;padding:9px}.fa-docked-game-menu .fa-service-workspace{padding:12px;border-radius:20px}.fa-sidebar-brand{padding-left:5px}.fa-sidebar-brand strong{font-size:19px}.fa-docked-game-menu .fa-sidebar-link{padding:7px 6px;min-height:40px;font-size:13px}.fa-sidebar-group h2{padding:0 4px;font-size:10px}.fa-docked-game-menu .fa-sidebar-resume,.fa-docked-game-menu .fa-sidebar-title{font-size:12px;padding:6px;min-height:44px}.fa-docked-game-menu .fa-game-menu-body,.fa-ui[data-screen="06"] .fa-docked-game-menu .fa-game-menu-body,.fa-service-workspace .fa-embedded-service .fa-scene-settings{grid-template-columns:minmax(0,1fr)}.fa-docked-game-menu .fa-game-menu-body>.fa-panel:nth-child(n){grid-column:auto}.fa-docked-game-menu .fa-game-menu-header h1{font-size:25px}.fa-docked-game-menu .fa-game-menu-header nav{width:auto}.fa-service-workspace .fa-embedded-service .fa-scene-settings .fa-settings-categories{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:auto}.fa-service-workspace .fa-embedded-service .fa-glass-load-actions{width:100%}.fa-docked-game-menu .fa-game-menu-body .fa-panel{border-bottom:1px solid #b9dfff25}}

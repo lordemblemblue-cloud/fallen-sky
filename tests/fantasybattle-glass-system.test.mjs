@@ -84,7 +84,7 @@ test('approved Settings cannot select the obsolete boxed or original-art branch'
  assert.match(src,/case '03':content=<SettingsPage settings=/);
 });
 
-import { GAME_MENU_GROUPS, isGameMenu, menuDestination, canResumeGame, menuName } from '../src/components/fantasybattle/core/gameMenuNavigation.mjs';
+import { GAME_MENU_GROUPS, isGameMenu, menuDestination, canResumeGame, menuName, activeMenuService } from '../src/components/fantasybattle/core/gameMenuNavigation.mjs';
 import { PAUSE_LINKS } from '../src/components/fantasybattle/uiCatalog.mjs';
 test('all pause services are visible exactly once and use scene presentation',()=>{
  const ids=GAME_MENU_GROUPS.flatMap(g=>g.ids);
@@ -111,8 +111,8 @@ test('navigation never stacks redundant service pages or resumes a victory/defea
 });
 test('scene workspace layout is normal flow, keeps item names and real action gates',()=>{
  const menus=readFileSync(new URL('../src/components/fantasybattle/sapphireGameMenus.css',import.meta.url),'utf8');
- assert.match(src,/gameMenu&&id!=='18'\?<div className="fa-game-menu-scene"/);
- assert.match(src,/gameMenu&&running\?\{mode:'overlay',asset:null\}/);
+ assert.match(src,/menuShell\?<div className=\{'fa-game-menu-scene'/);
+ assert.match(src,/menuShell&&running\?\{mode:'overlay',asset:null\}/);
  assert.match(src,/fa-menu-item-name">\{i.name\}/);
  assert.match(src,/const enabled=Boolean\(profile&&!encounter&&item/);
  assert.match(src,/canResumeGame\(live.stack\)\)root\(live.stack\[0\]\)/);
@@ -142,4 +142,22 @@ test('world services use scene layouts without advertising restricted actions in
  const menus=readFileSync(new URL('../src/components/fantasybattle/sapphireGameMenus.css',import.meta.url),'utf8');
  assert.match(menus,/\.fa-game-menu-header\{position:sticky/);
  assert.match(menus,/\.fa-forge-preview\{display:grid/);
+});
+
+test('owner-approved dock keeps the service menu mounted while swapping only the right workspace',()=>{
+ assert.match(src,/key=\{dockedMenu\?'docked-game-menu':id\}/);
+ assert.match(src,/dockedMenu&&<aside className="fa-game-menu-sidebar"/);
+ assert.match(src,/id="fa-service-workspace" className="fa-service-workspace" aria-label=\{menuName\(id\)\} key=\{id\}/);
+ assert.match(src,/running&&canResumeGame\(stack\)&&\(gameMenu\|\|id==='03'\)/);
+ assert.match(src,/id==='18'\|\|id==='03'\?<div className="fa-embedded-service"/);
+ assert.match(src,/activeMenuService\(id\)===target\?'page'/);
+ const menus=readFileSync(new URL('../src/components/fantasybattle/sapphireGameMenus.css',import.meta.url),'utf8');
+ assert.match(menus,/\.fa-game-menu-scene\.fa-docked-game-menu\{display:grid;grid-template-columns:/);
+ assert.match(menus,/\.fa-docked-game-menu \.fa-service-workspace\{[^}]*background:radial-gradient/);
+ assert.match(menus,/\.fa-service-workspace \.fa-embedded-service \.fa-loading-scene\{position:relative/);
+});
+
+test('child pages keep their parent menu highlighted and all primary destinations stay stable',()=>{
+ for(const group of GAME_MENU_GROUPS)for(const id of group.ids)assert.equal(activeMenuService(id),id);
+ for(const [child,parent] of Object.entries({'26':'11','32':'05','39':'06','46':'21','16':'21','17':'06','22':'21','23':'07','33':'05'}))assert.equal(activeMenuService(child),parent);
 });

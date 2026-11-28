@@ -16,7 +16,7 @@ import './sapphireCharacterWorkspaces.css';
 import './sapphireSceneMenus.css';
 import './sapphireCharacterCreation.css';
 import './sapphireGameMenus.css';
-import { GAME_MENU_GROUPS, isGameMenu, menuName, menuDestination, canResumeGame } from './core/gameMenuNavigation.mjs';
+import { GAME_MENU_GROUPS, isGameMenu, menuName, menuDestination, canResumeGame, activeMenuService } from './core/gameMenuNavigation.mjs';
 import CharacterCreationViewer from './CharacterCreationViewer.jsx';
 import {glassUiKind,usesRightGlass} from './core/glassUiPolicy.mjs';
 import {loadingMilestones} from './core/loadingMilestones.mjs';
@@ -1348,13 +1348,13 @@ export default function SapphireAdventure(){
   const executeConfirm=ticket=>{const action=confirmGate.current.consume(ticket,current.current);if(!action)return;setPending(null);back();action();};
   const chooseAppearance=key=>{if(transact(p=>selectAppearance(p,key),'Appearance applied'))post('appearance',appearanceFor(current.current.profile).tint);};
   const openPause=()=>{if(isWorldScreen(current.current.id))go('04');};
-  const openGameService=(target,hotkey=false)=>{const live=current.current;if(!live.running||(!isGameMenu(target)&&target!=='03'))return;setStack(old=>menuDestination(old,target,hotkey));};
-  const resumeGame=()=>{const live=current.current;if(live.running&&isGameMenu(live.id)&&canResumeGame(live.stack))root(live.stack[0]);};
+  const openGameService=(target,hotkey=false)=>{const live=current.current;if(!live.running||live.id===target||(!isGameMenu(target)&&target!=='03'))return;setStack(old=>menuDestination(old,target,hotkey));};
+  const resumeGame=()=>{const live=current.current;if(live.running&&(isGameMenu(live.id)||live.id==='03')&&canResumeGame(live.stack))root(live.stack[0]);};
   const onKey=code=>{
     const s=current.current.id;
     if(code==='Escape'){if(s==='47')return;if(s==='40'){dismissConfirm();return;}if(isWorldScreen(s))openPause();else if(s!=='35'&&s!=='01')back();return;}
     const target=HOTKEY_SCREENS[code];
-    if(target&&current.current.running&&(isWorldScreen(s)||isGameMenu(s))){if(s===target)back();else openGameService(target,true);}
+    if(target&&current.current.running&&(isWorldScreen(s)||isGameMenu(s)||s==='03')){if(s===target)back();else openGameService(target,true);}
   };
   const startBattle=(e)=>{
     if(current.current.encounter)return;
@@ -1431,6 +1431,8 @@ export default function SapphireAdventure(){
   const pane=(i,content,cls)=> <Panel key={i} rect={screen.layout[i]} className={cls}>{content}</Panel>;
   const customLoad=id==='02'||id==='35'||(id==='47'&&loadFailure);
   const gameMenu=isGameMenu(id);
+  const dockedMenu=running&&canResumeGame(stack)&&(gameMenu||id==='03');
+  const menuShell=gameMenu||dockedMenu;
   const glassKind=glassUiKind(id),rightGlass=usesRightGlass(id)||glassKind==='scene'; // both use clean scene art, no baked UI plate
   const original=useStagedOriginal(rightGlass||glassKind==='toast'?null:id);
   const manualSave=()=>{const target=selected,profileId=current.current.profile?.id,previous=slots.slots.find(x=>x.id===target),occupied=Boolean(previous);let used=false;const perform=()=>{if(used)return;used=true;const live=current.current;if(!profileId||live.profile?.id!==profileId||live.encounter){notify('Character or combat state changed. Select a save again.');return;}save(target,occupied,live.profile,previous?.stamp??null);};if(occupied)requestConfirm('Overwrite slot '+target+'? Existing progress in this slot will be replaced.',perform);else perform();};
@@ -1470,16 +1472,13 @@ export default function SapphireAdventure(){
       </section>
     </div>;break;
     case '03':content=<SettingsPage settings={settings} world={world} running={running} applySettings={applySettings} back={back} onTutorial={index=>{setLesson(index);go('34');}} backupField={backupField} importSlot={importSlot} setImportSlot={setImportSlot} backupBusy={backupBusy} importBackup={importBackup} recoveryControl={recoveryControl} backupError={backupError} onNotice={setNotice} titleRef={focusRef}/>;break;
-    case '04':content=<div className="fa-pause-scene">
-      <section className="fa-pause-services" aria-label="Game services">
-        {GAME_MENU_GROUPS.map(group=><div className="fa-pause-group" key={group.label}><h2>{group.label}</h2><div className="fa-pause-service-grid">{group.ids.map(target=><Btn key={target} className="fa-pause-service" onClick={()=>openGameService(target)}><span>{menuName(target)}</span></Btn>)}</div></div>)}
-      </section>
+    case '04':content=<div className="fa-pause-overview">
       <section className="fa-pause-summary" aria-label="Current adventure">
         <div className="fa-pause-live-hero">{profile&&<ArcherPortrait profile={profile} newHero/>}</div>
         <h2>{profile?.name||'Your adventure'}</h2><p>Level {level} · {world?.region||'Sapphire Wilds'}</p>
         {profile&&<><label>Health <progress aria-label="Health" value={profile.hp} max={stats.maxHp}/><span>{profile.hp} / {stats.maxHp}</span></label><label>Experience <progress aria-label="Level progress" value={profile.xp%100} max={100}/><span>{profile.xp%100} / 100</span></label><p>{fmt(profile.gold)} gold · {pointsFor(profile)} unspent points</p></>}
         <RegionMap world={world} profile={profile} small/>
-        <Btn onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to title</Btn>
+        
       </section>
     </div>;break;
     case '05':content=original?<div className="fa-original-character">
@@ -1597,19 +1596,30 @@ export default function SapphireAdventure(){
     default:content=<>{pane(0,<><h2>{screen.name}</h2><p>This screen is reserved for the corresponding gameplay service. No items, currencies, rewards or transactions are simulated.</p><Btn onClick={back}>Back</Btn></>)}{screen.layout.length>1&&pane(screen.layout.length-1,<p>Gameplay service not available in the current archer prototype.</p>)}</>;break;
   }
   const template=id==='10'?null:rightGlass||glassKind==='toast'?null:original?.url||templateUrl(id);
-  const artwork=gameMenu&&running?{mode:'overlay',asset:null}:original?{mode:'original-full',asset:null}:artFor(id==='47'&&loadFailure?'35':id,running);
+  const artwork=menuShell&&running?{mode:'overlay',asset:null}:original?{mode:'original-full',asset:null}:artFor(id==='47'&&loadFailure?'35':id,running);
   const artworkUrl=artUrl(artwork.asset);
   return <main className={'fa-root'+(settings.reducedMotion?' reduced-motion':'')}>
     {running?<iframe className="fa-world" ref={frame} key={worldRun.id} src={'/fantasy-battle-world?run='+worldRun.id+(worldRun.webgl?'&renderer=webgl':'')} title="Sapphire Wilds 3D world" tabIndex={id==='10'?0:-1} style={{pointerEvents:id==='10'?'auto':'none'}}/>:<div className="fa-title-art"/>}
     {encounter&&arenaReady&&profile&&<BattleSurface key={encounter.token} encounter={encounter} profile={profile} paused={id!=='09'} muted={settings.muted} reducedMotion={settings.reducedMotion} quality={settings.quality} stageRef={stageRef} onHud={handleBattleHud} onError={(message,token)=>{if(isCurrentEncounter(current.current.encounter,token))fail(message);}}/>}
     {artwork.mode==='cinematic'&&<div className={'fa-cinematic-art'+(artwork.asset==='title-original'?' title-original':'')} aria-hidden="true" style={{'--fa-scene-art':'url("'+artworkUrl+'")'}}/>}
-    <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-glass-kind={glassKind} data-glass-load={customLoad?'true':undefined} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
+    <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={dockedMenu?'docked-game-menu':id} data-screen={id} data-glass-kind={glassKind} data-glass-load={customLoad?'true':undefined} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
       {!rightGlass&&glassKind!=='toast'&&id!=='10'&&<div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}/>}
       {!rightGlass&&glassKind!=='toast'&&!isWorldScreen(id)&&id!=='01'&&<header className="fa-header"><div className="fa-heading"><span className="fa-heading-kicker" aria-hidden="true">Sapphire Sumi</span><h1 tabIndex={-1} ref={focusRef}>{screen.name}</h1></div>{!['35','14','15','40','47','45'].includes(id)&&<Btn onClick={back}>Back · Esc</Btn>}</header>}
-      {gameMenu&&id!=='18'?<div className="fa-game-menu-scene"><header className="fa-game-menu-header">
-        <div><span className="fa-glass-kicker">Sapphire Sumi · {id==='04'?'Adventure paused':'Game services'}</span><h1 tabIndex={-1} ref={focusRef}>{menuName(id)}</h1></div>
-        <nav aria-label="Menu navigation">{id!=='04'&&<Btn onClick={back}>Back</Btn>}{id!=='04'&&running&&canResumeGame(stack)&&<Btn onClick={()=>openGameService('04')}>Game menu</Btn>}{running&&canResumeGame(stack)&&<Btn primary onClick={resumeGame}>Resume game</Btn>}</nav>
-      </header><div className={'fa-game-menu-body'+(id==='04'?' pause':'')}>{content}</div></div>:content}
+      {menuShell?<div className={'fa-game-menu-scene'+(dockedMenu?' fa-docked-game-menu':'')}>
+        {dockedMenu&&<aside className="fa-game-menu-sidebar" aria-label="Game menu">
+          <div className="fa-sidebar-brand"><span>Sapphire Sumi</span><strong>Game menu</strong></div>
+          <Btn className="fa-sidebar-resume" primary onClick={resumeGame}>Resume game</Btn>
+          <nav className="fa-sidebar-links" aria-label="Game services">
+            <Btn className="fa-sidebar-link" aria-current={id==='04'?'page':undefined} onClick={()=>openGameService('04')}>Overview</Btn>
+            {GAME_MENU_GROUPS.map(group=><section className="fa-sidebar-group" key={group.label}><h2>{group.label}</h2>{group.ids.map(target=><Btn key={target} className="fa-sidebar-link" aria-current={activeMenuService(id)===target?'page':undefined} aria-controls="fa-service-workspace" onClick={()=>openGameService(target)}>{menuName(target)}</Btn>)}</section>)}
+          </nav>
+          <Btn className="fa-sidebar-title" onClick={()=>requestConfirm('Return to the title? Unsaved progress may be lost.',leaveTitle)}>Return to title</Btn>
+        </aside>}
+        <section id="fa-service-workspace" className="fa-service-workspace" aria-label={menuName(id)} key={id}>
+          {id!=='18'&&id!=='03'&&<header className="fa-game-menu-header"><div><span className="fa-glass-kicker">Sapphire Sumi · {id==='04'?'Adventure paused':'Game services'}</span><h1 tabIndex={-1} ref={focusRef}>{menuName(id)}</h1></div>{id!=='04'&&<nav aria-label="Page navigation"><Btn onClick={back}>Back</Btn></nav>}</header>}
+          {id==='18'||id==='03'?<div className="fa-embedded-service">{content}</div>:<div className={'fa-game-menu-body'+(id==='04'?' pause':'')}>{content}</div>}
+        </section>
+      </div>:content}
     </div>
     {saveStatus?<SaveToast status={saveStatus}/>:notice&&<aside className="fa-notice" role="status">{notice}</aside>}
   </main>;
