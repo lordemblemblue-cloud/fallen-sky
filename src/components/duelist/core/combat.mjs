@@ -141,7 +141,7 @@ export function strike(attacker, defender, moveId, { now, defenderFacesAttacker 
     Math.max(result.stagger || 0, through ? move.stagger : 0);
   if (staggerFor > 0 && moveId !== 'grip') stagger(defender, staggerFor, now);
   const knockback = immune ? 0 : (through ? move.knockback : move.knockback * 0.25) * knockbackTaken(defender);
-  if (knockback) effects.push({ type: 'knockback', defender: defender.id, from: attacker.id, distance: knockback });
+  if (knockback) effects.push({ type: 'knockback', defender: defender.id, from: attacker.id, distance: knockback, move: moveId });
   // a push or a throw knocks down; a pull only drags the target into reach (to be hit, not to fall)
   if (!immune && through && move.knockback >= KNOCKDOWN.distance && !result.killed) {
     knockDown(defender, now);

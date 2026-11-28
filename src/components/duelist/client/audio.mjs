@@ -203,6 +203,11 @@ export function createDuelAudio() {
       tone(d, t, { f0: 95, f1: 38, peak: 0.75, attack: 0.002, decay: 0.25 });
       noiseBurst(d, t, { type: 'lowpass', f0: 700, f1: 120, q: 0.8, peak: 0.55, decay: 0.3 });
     },
+    pushSlide(t, d) {
+      // a pushed body skidding back along the floor (a recording named pushSlide plays instead where there is one)
+      noiseBurst(d, t, { type: 'bandpass', f0: 1500, f1: 320, q: 0.7, peak: 0.32, attack: 0.03, decay: 0.68, rate: 0.6 });
+      noiseBurst(d, t, { type: 'lowpass', f0: 420, f1: 90, q: 0.7, peak: 0.28, attack: 0.02, decay: 0.6 });
+    },
     collapse(t, d) {
       // the Veil shatters: many small bright pieces, a hollow drop
       noiseBurst(d, t, { type: 'highpass', f0: 4500, f1: 2500, q: 0.6, peak: 0.5, decay: 0.35 });

@@ -81,6 +81,7 @@ export function createDirector({ world, vfx, audio, actors, playerId = 'you' }) 
         }
         else if (e.type === 'heal') audio.play(audio.has?.('mend') ? 'mend' : 'resist', chestOf(e.target));
         else if (e.type === 'execution') audio.play(audio.has?.('executionStab') ? 'executionStab' : 'collapse', chestOf(e.defender));
+        else if (e.type === 'slide') audio.play('pushSlide', chestOf(e.target)); // a pushed body skids along the floor
         else if (e.type === 'seized') audio.play('executionPull', chestOf(e.target));
         else if (e.type === 'shove') audio.play('shove', chestOf(e.target));
         else if (e.type === 'blink') audio.play('blink', chestOf(e.by));

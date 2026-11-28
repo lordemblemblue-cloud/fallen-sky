@@ -19,7 +19,7 @@ import { createAbilityFx } from './abilityFx.mjs';
 export const EFFECT_COLORS = Object.freeze({ quick: 0xfff0a8, rage: 0xff5238, cloak: 0xb779ff, empower: 0xd09bff, dominated: 0xb779ff,mend: 0x6dffb0, levitate: 0xcfe9ff });
 
 export const COLORS = Object.freeze({ stable: 0x9ff4ff, unstable: 0xffb05a, collapsed: 0xffffff, shield: 0x4f8cff, breach: 0xb06bff,
-  wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8, round: 0xff9a70 });
+  wound: 0xff4a3a, parry: 0xfff6d6, telekinesis: 0x9fd8ff, core: 0xe9fbff, dust: 0x6f8aa8, wind: 0x4a5866, round: 0xff9a70 });
 
 // ---------- particles
 const P_VERTEX = /* glsl */`
@@ -512,6 +512,8 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
   };
   let time = 0;
   const thrown = new Map(); // actor -> seconds of trail left
+  const sliding = new Map(); // actor -> seconds of slide left (a push: dust kicked up along the floor as it goes)
+  const waves = []; // the push's bends in the air, each at its own moment: { at, from, r1, strength }
   // A defeated body comes apart: light lifts off it, more and more of it, and the body flickers out as it falls. It
   // stays unseen until the fighter stands again (revive()).
   const DISSOLVE = Object.freeze({ from: 0.45, to: 1.6, hex: 0xbfe6ff });
@@ -559,15 +561,20 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       const feet = actor.root.position;
       const yaw = Math.atan2(dir.x, dir.z);
       if (kind === 'push') {
-        cones.launch({ from: hand, dir: forward, length: 8, spread: 0.55, ttl: 0.42 });
-        warp?.ring({ at: hand.clone().addScaledVector(forward, 0.4), kind: 'out', r0: 0.2, r1: 6.5, strength: 0.045, thickness: 0.3, ttl: 0.5 });
-        arena?.arc({ x: feet.x, z: feet.z, yaw, arc: 80, from: 0.6, to: 10, width: 0.9, strength: 1.0, ttl: 0.55 });
-        flashes.flash(hand, COLORS.telekinesis, 10, 0.25);
-        for (let i = 0; i < 46; i++) {
-          const v = forward.clone().multiplyScalar(11 + Math.random() * 8).add(new THREE.Vector3(rand(3.5), rand(2), rand(3.5)));
-          particles.spawn(hand.x, hand.y, hand.z, v.x, v.y, v.z, { hex: i % 3 ? COLORS.telekinesis : COLORS.core, size: 0.045, ttl: 0.45, damping: 3.2 });
+        // wind (owner, 2026-11-22: "translucent ... you can clearly kind of see the wind ... not so bright"): no flash
+        // and no glowing burst. The air bends the picture wave after wave as it rushes forward, faint streaks ride
+        // it, and it kicks the dust up off the floor.
+        cones.launch({ from: hand, dir: forward, length: 8, spread: 0.4, ttl: 0.5, hex: COLORS.wind });
+        // weak, small bends: the warp's colour fringes and glow grow with its strength, and the wind should stay clear
+        for (let i = 0; i < 5; i++) {
+          waves.push({ at: time + i * 0.05, from: hand.clone().addScaledVector(forward, 0.5 + i * 1.4), r1: 1.2 + i * 0.45, strength: 0.026 - i * 0.003 });
         }
-        floorDust(feet.x + forward.x * 1.2, feet.z + forward.z * 1.2, 26, 8, { dir: forward, spread: 1.3 });
+        arena?.arc({ x: feet.x, z: feet.z, yaw, arc: 80, from: 0.6, to: 10, width: 0.9, strength: 0.3, ttl: 0.55 });
+        for (let i = 0; i < 14; i++) {
+          const v = forward.clone().multiplyScalar(12 + Math.random() * 7).add(new THREE.Vector3(rand(2.5), rand(1.2), rand(2.5)));
+          particles.spawn(hand.x, hand.y, hand.z, v.x, v.y, v.z, { hex: COLORS.wind, size: 0.03, ttl: 0.4, damping: 3 });
+        }
+        floorDust(feet.x + forward.x * 1.2, feet.z + forward.z * 1.2, 40, 10, { dir: forward, spread: 1.0 });
       } else if (kind === 'pull') {
         const far = hand.clone().addScaledVector(forward, 7);
         cones.launch({ from: hand, dir: forward, pull: true, length: 9, spread: 0.5, ttl: 0.42 });
@@ -721,6 +728,7 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
       if (e.type === 'blink' && actors[e.by]) { fx.blink(actors[e.by], e.from, e.to); feel.shake = 0.2; }
       if (e.type === 'shove' && actors[e.target]) { fx.shove(actors[e.by] || null, actors[e.target]); feel.shake = 0.45; feel.stop = 0.05; }
       if (e.type === 'launched' && actors[e.target]) fx.launched(actors[e.target]);
+      if (e.type === 'slide' && actors[e.target]) sliding.set(actors[e.target], e.seconds || 0.7); // a push slides the body along the floor
       if (e.type === 'dominanceBroken' && actors[e.target]) fx.dominanceBroken(actors[e.target]);
       if (e.type === 'airDash' && actors[e.by]) fx.airDash(actors[e.by], facing(actors[e.by]));
       if (e.type === 'airJump' && actors[e.by]) fx.airJump(actors[e.by]);
@@ -806,6 +814,20 @@ export function createDuelVfx(scene, { warp = null, arena = null, camera = null 
         }
       } else tether.hide();
       warp?.hold(lenses);
+      // the push's wind: its waves bend the picture one after another as it runs forward
+      for (let i = waves.length - 1; i >= 0; i--) {
+        const w = waves[i];
+        if (time < w.at) continue;
+        warp?.ring({ at: w.from, kind: 'out', r0: 0.15, r1: w.r1, strength: w.strength, thickness: 0.28, ttl: 0.38 });
+        waves.splice(i, 1);
+      }
+      // a pushed body sliding along the floor kicks up dust, less as it slows
+      for (const [actor, left] of sliding) {
+        if (left <= 0) { sliding.delete(actor); continue; }
+        sliding.set(actor, left - dt);
+        const at = actor.root.position;
+        floorDust(at.x, at.z, Math.random() < Math.min(1, left * 2.5) ? 2 : 1, 1.8 * Math.min(1, left * 2));
+      }
       // a thrown body trails light while it flies
       for (const [actor, left] of thrown) {
         if (left <= 0) { thrown.delete(actor); continue; }
