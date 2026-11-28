@@ -6,7 +6,7 @@ const storage=()=>{const m=new Map();return {getItem:k=>m.get(k)??null,setItem:(
 test('empty saves and valid round trip',()=>{const s=storage();assert.equal(A.mostRecent(A.readSlots(s).slots),null);const p=A.createProfile('Archer');A.writeSlot(s,'1',p);assert.equal(A.mostRecent(A.readSlots(s).slots).profile.id,p.id);assert.throws(()=>A.writeSlot(s,'1',p));});
 test('corrupted saves never become loadable',()=>{const s=storage();s.setItem(A.SAVE_KEY,'{"1":{"profile":{},"savedAt":0}}');assert.equal(A.readSlots(s).slots[0].status,'corrupt');assert.equal(A.mostRecent(A.readSlots(s).slots),null);});
 test('quest, victory, duplicate reward, skill unlock, stats',()=>{let p=A.acceptGroveQuest(A.createProfile('Archer'));let v=A.rewardVictory(p,{id:'wilds_grove_01',category:'Normal'},80);assert.equal(v.xp,25);assert.equal(v.profile.quests.grove,'complete');assert.equal(A.rewardVictory(v.profile,{id:'wilds_grove_01'}).xp,0);p=A.claimGroveQuest(v.profile);assert.equal(A.claimGroveQuest(p),p);v=A.rewardVictory(p,{id:'boss',category:'Boss'});assert.equal(v.leveled,true);assert.ok(v.unlocked.includes('volley'));assert.equal(A.heroStats(A.allocate(v.profile,'strength')).atk,A.heroStats(v.profile).atk+2);});
-test('inventory transactions and one-time discovery loot',()=>{let p=A.createProfile('Archer');p={...p,gold:200,world:{...p.world,discoveries:['d']}};let l=A.collectLoot(p,'d');assert.equal(l.loot.length,2);assert.equal(A.collectLoot(l.profile,'d').loot.length,0);p=A.buyItem(l.profile,'sapphireBow');p=A.equipItem(p,'sapphireBow');assert.equal(A.heroStats(p).atk,16);assert.throws(()=>A.sellItem(p,'sapphireBow'));p=A.enhanceWeapon(p);assert.equal(A.heroStats(p).atk,18);p={...p,hp:50};p=A.heal(p);assert.equal(p.hp,90);assert.equal(A.heal(p,{sanctuary:true}).hp,120);assert.ok(A.isProfile(p));});
+test('inventory transactions and one-time discovery loot',()=>{let p=A.createProfile('Archer');p={...p,gold:200,world:{...p.world,discoveries:['disc_pilgrimage']}};let l=A.collectLoot(p,'disc_pilgrimage');assert.equal(l.loot.length,3);assert.equal(A.collectLoot(l.profile,'disc_pilgrimage').loot.length,0);p=A.buyItem(l.profile,'sapphireBow');p=A.equipItem(p,'sapphireBow');assert.equal(A.heroStats(p).atk,16);assert.throws(()=>A.sellItem(p,'sapphireBow'));p=A.enhanceWeapon(p);assert.equal(A.heroStats(p).atk,18);p={...p,hp:50};p=A.heal(p);assert.equal(p.hp,90);assert.equal(A.heal(p,{sanctuary:true}).hp,120);assert.ok(A.isProfile(p));});
 test('craft and travel gates',()=>{let p=A.createProfile('Archer');assert.throws(()=>A.craftTonic(p));assert.throws(()=>A.travelTo(p,{id:'r',minX:35,maxX:75}));p={...p,inventory:{...p.inventory,sapphireOre:2},world:{...p.world,visitedRegions:['r']}};p=A.craftTonic(p);assert.equal(p.inventory.recoveryTonic,2);assert.equal(p.inventory.sapphireOre,0);assert.equal(A.travelTo(p,{id:'r',minX:35,maxX:75}).world.position[0],41);});
 test('48 text-free templates',()=>{assert.equal(Object.keys(UI_SCREENS).length,48);for(const id of Object.keys(UI_SCREENS)){assert.ok(makeTemplate(id).includes('<svg'));assert.ok(!/<text[ >]/.test(makeTemplate(id)));}});
 
@@ -111,3 +111,180 @@ test('encrypted transfer round trip, random salt, wrong passphrase, tampering an
 import {isCurrentEncounter,currentSaveStamp} from '../src/components/fantasybattle/core/battleLifecycle.mjs';
 test('stale battle completion and retry acknowledgements cannot apply to a different encounter',()=>{assert.ok(isCurrentEncounter({token:'new'},'new'));for(const token of ['old',null,undefined,''])assert.equal(isCurrentEncounter({token:'new'},token),false);assert.equal(isCurrentEncounter(null,'new'),false);});
 test('loading a stale character snapshot cannot adopt a newer save baseline',()=>{const s=storage(),p=A.createProfile('Snapshot');A.writeSlot(s,'1',p);const old=A.readSlots(s).slots[0];A.writeSlot(s,'1',{...p,gold:20},{overwrite:true,expectedStamp:old.stamp});const records=A.readSlots(s).slots;assert.equal(currentSaveStamp(records,'1',p),undefined);assert.equal(currentSaveStamp(records,'1',records[0].profile),records[0].stamp);assert.equal(currentSaveStamp(records,'2',p),null);});
+
+
+test('registered encounter gear drops are real inventory items, one-time and portable',()=>{
+ let p=A.createProfile('Loot hunter');
+ assert.equal(Object.keys(A.ENCOUNTER_GEAR_REWARDS).length,14);
+ for(const [id,item] of Object.entries(A.ENCOUNTER_GEAR_REWARDS)){
+  assert.ok(Object.hasOwn(A.ITEMS,item));
+  const before=p.inventory[item]??0;
+  const v=A.rewardVictory(p,{id,category:'Normal'});
+  assert.equal(v.profile.inventory[item],before+1);
+  assert.ok(v.loot.some(l=>l.id===item&&l.count===1));
+  assert.equal(A.rewardVictory(v.profile,{id}).profile,v.profile);
+  p=v.profile;
+ }
+ assert.ok(A.isProfile(p));
+ assert.deepEqual(A.parseBackup(A.exportBackup(p)),p);
+});
+test('practice and capped reward quantities cannot create invalid inventory or duplicate loot',()=>{
+ let p=A.createProfile('Loot cap');
+ const practice=A.rewardVictory(p,{id:'wilds_grove_01',practice:true});
+ assert.equal(practice.profile,p);assert.deepEqual(practice.loot,[]);
+ p={...p,xp:99999,gold:9999999,inventory:{...p.inventory,sapphireOre:99999,groveRing:100000,groveVest:100000,recoveryTonic:100000},world:{...p.world,discoveries:['disc_pilgrimage']}};
+ const v=A.rewardVictory(p,{id:'wilds_grove_01',category:'Boss'});
+ assert.equal(v.xp,1);assert.equal(v.gold,1);
+ assert.deepEqual(v.loot,[{id:'sapphireOre',count:1}]);
+ assert.ok(A.isProfile(v.profile));
+ const t=A.collectLoot(v.profile,'disc_pilgrimage');
+ assert.deepEqual(t.loot,[]);assert.ok(A.isProfile(t.profile));
+ assert.equal(A.collectLoot(t.profile,'disc_pilgrimage').profile,t.profile);
+});
+
+test('bulk trade quotes and transactions agree, bound quantities and protect equipped copies',()=>{
+ const p={...A.createProfile('Trader'),gold:1000};
+ const q=A.tradeQuote(p,'buy','sapphirePlate',3);
+ assert.equal(q.total,300);assert.ok(q.ok);
+ let next=A.buyItem(p,'sapphirePlate',3);assert.equal(next.gold,700);assert.equal(next.inventory.sapphirePlate,3);
+ next=A.equipGear(next,'hero','armor','sapphirePlate');
+ assert.throws(()=>A.sellItem(next,'sapphirePlate',3));
+ next=A.sellItem(next,'sapphirePlate',2);
+ assert.equal(next.inventory.sapphirePlate,1);assert.equal(next.gold,784);assert.ok(A.isProfile(next));
+ for(const qty of [0,-1,1.5,100,Infinity,'2',null]){assert.equal(A.tradeQuote(p,'buy','sapphirePlate',qty).ok,false);assert.throws(()=>A.buyItem(p,'sapphirePlate',qty));}
+ assert.equal(A.tradeQuote(p,'buy','__proto__').ok,false);
+ assert.throws(()=>A.sellItem({...next,gold:10000000},'recoveryTonic'));
+ assert.throws(()=>A.buyItem({...p,inventory:{...p.inventory,sapphirePlate:99999}},'sapphirePlate',2));
+ assert.equal(p.gold,1000);
+});
+test('six recipes are level-gated, atomic, save compatible and cannot yield a resale profit',()=>{
+ const p={...A.createProfile('Smith'),gold:1000,inventory:{...A.createProfile('Inventory').inventory,sapphireOre:100}};
+ assert.equal(Object.keys(A.RECIPES).length,6);
+ for(const r of Object.values(A.RECIPES)){
+  const item=A.ITEMS[r.id];assert.ok(item);assert.ok(r.ore*A.ITEMS.sapphireOre.sell+r.gold>=item.sell);
+  const ready={...p,xp:(r.level-1)*100};
+  const q=A.craftQuote(ready,r.id,2);assert.ok(q.ok);
+  const next=A.craftItem(ready,r.id,2);assert.equal(next.gold,ready.gold-q.gold);assert.equal(next.inventory.sapphireOre,100-q.ore);assert.equal(next.inventory[r.id],(ready.inventory[r.id]??0)+2);
+  assert.ok(A.isProfile(next));assert.deepEqual(A.parseBackup(A.exportBackup(next)),next);
+  if(r.level>1)assert.throws(()=>A.craftItem(p,r.id));
+ }
+ assert.throws(()=>A.craftItem(p,'__proto__'));assert.throws(()=>A.craftItem(p,'recoveryTonic',0));
+ assert.throws(()=>A.craftItem({...p,inventory:{...p.inventory,recoveryTonic:100000}},'recoveryTonic'));
+ assert.throws(()=>A.craftItem({...p,gold:0},'sapphireBow'));
+ assert.throws(()=>A.craftItem({...p,inventory:{...p.inventory,sapphireOre:0}},'recoveryTonic'));
+ assert.equal(p.inventory.sapphireOre,100);
+});
+
+import {TREASURES,TREASURE_IDS,treasureFor,treasureProgress} from '../src/components/fantasybattle/core/treasureCatalog.mjs';
+test('all five real discovery markers award distinct persistent treasure exactly once',()=>{
+ let p=A.createProfile('Explorer');
+ assert.deepEqual(treasureProgress(p),{found:0,collected:0,total:5});
+ assert.equal(A.collectLoot(p,'disc_pilgrimage').profile,p);
+ const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
+ for(const id of TREASURE_IDS){
+  assert.ok(world.includes(id),id);
+  const t=treasureFor(id);assert.ok(t.label);
+  p={...p,world:{...p.world,discoveries:[...p.world.discoveries,id]}};
+  const result=A.collectLoot(p,id);assert.deepEqual(result.loot,t.loot);
+  for(const row of result.loot){assert.ok(Object.hasOwn(A.ITEMS,row.id));assert.equal(result.profile.inventory[row.id],(p.inventory[row.id]??0)+row.count);}
+  p=result.profile;assert.ok(A.isProfile(p));
+  assert.equal(A.collectLoot(p,id).profile,p);
+ }
+ assert.equal(new Set(Object.values(TREASURES).map(t=>t.loot[2].id)).size,5);
+ assert.deepEqual(treasureProgress(p),{found:5,collected:5,total:5});
+ const loaded=A.parseBackup(A.exportBackup(p));assert.deepEqual(loaded,p);
+ assert.equal(A.collectLoot(loaded,'disc_astral').profile,loaded);
+ const forged={...p,world:{...p.world,discoveries:[...p.world.discoveries,'unknown','__proto__']}};
+ assert.equal(A.collectLoot(forged,'unknown').profile,forged);assert.equal(A.collectLoot(forged,'__proto__').profile,forged);
+});
+
+import {WORLD_SERVICES,serviceFor,withinService,nearestService,liveService,PLANNED_ANCHORS,validAnchorTransform} from '../src/components/fantasybattle/core/worldInteractions.mjs';
+test('service placement retains original coordinates and rejects out-of-range interactions',()=>{
+ assert.deepEqual(WORLD_SERVICES.map(s=>[s.id,s.x,s.z]),[['grove_service',9,-1.4],['sanctuary_service',191,-1.4],['moonveil_service',226,-1.4]]);
+ for(const s of WORLD_SERVICES){
+  const p=[s.x,12,s.z],w={mode:'wilds',position:p,nearbyService:s.id};
+  assert.equal(serviceFor(s.id),s);assert.equal(nearestService(p,()=>12),s);assert.ok(withinService(p,s,12));assert.ok(liveService(w,s.id));
+  assert.equal(withinService([s.x,14,s.z],s,12),false);
+  assert.equal(nearestService([s.x+3,12,s.z],()=>12),null);
+  assert.equal(liveService({...w,position:[s.x+3,12,s.z]},s.id),false);
+  assert.equal(liveService({...w,mode:'sanctuary'},s.id),false);
+  assert.equal(liveService({...w,nearbyService:'unknown'},s.id),false);
+ }
+ assert.equal(serviceFor('__proto__'),null);assert.equal(liveService(null,'grove_service'),false);
+ assert.equal(nearestService([NaN,12,0],()=>12),null);
+});
+test('planned anchors remain inactive and candidate transform review is bounded',()=>{
+ assert.equal(PLANNED_ANCHORS.length,24);
+ assert.equal(new Set(PLANNED_ANCHORS.map(a=>a.id)).size,24);
+ for(const a of PLANNED_ANCHORS){assert.equal(a.transform,null);assert.equal(a.status,'awaiting-approved-map');}
+ const t={position:[55,5,-2.2],facing:0,radius:2};
+ assert.ok(validAnchorTransform('fb.pilgrim.ledger',t));
+ for(const bad of [{...t,position:[190,5,0]},{...t,position:[55,NaN,0]},{...t,position:[55,5,10]},{...t,radius:0},{...t,radius:4},{...t,facing:Infinity}])assert.equal(validAnchorTransform('fb.pilgrim.ledger',bad),false);
+ assert.equal(validAnchorTransform('unknown',t),false);
+ const world=readFileSync(new URL('../src/components/fantasybattle/world/sapphireWorld.js',import.meta.url),'utf8');
+ assert.ok(world.includes('app.servicePoints=WORLD_SERVICES'));
+ assert.ok(world.includes('else this.openService?.();'));
+ assert.ok(world.includes("'Interact [E]'"));
+ const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
+ assert.ok(page.includes('liveService(e.world,registered.id)'));assert.ok(page.includes('gearSlotLabel(item.slot)'));
+ assert.ok(!page.includes('item.gearSlotLabel(slot)'));
+});
+
+test('previous save checkpoint is bounded, explicit, and revision checked',()=>{
+ const s=storage(),p=A.createProfile('Traveler');
+ const first=A.writeSlot(s,'1',p,{expectedStamp:null});
+ assert.equal(A.readSlots(s).slots[0].recovery,null);
+ const second=A.writeSlot(s,'1',{...p,gold:10},{overwrite:true,expectedStamp:A.slotStamp(first)});
+ const third=A.writeSlot(s,'1',{...p,gold:20},{overwrite:true,expectedStamp:A.slotStamp(second)});
+ const row=A.readSlots(s).slots[0];assert.equal(row.recovery.profile.gold,10);
+ assert.equal(third.previous.previous,undefined);
+ assert.throws(()=>A.recoverSlot(s,'1',A.slotStamp(second)));
+ const restored=A.recoverSlot(s,'1',row.stamp);
+ assert.equal(restored.profile.gold,10);assert.equal(restored.previous.profile.gold,20);
+ assert.ok(A.isProfile(restored.profile));assert.equal(A.readSlots(s).slots[0].profile.gold,10);
+});
+test('a damaged current slot can recover a valid prior record but malformed storage is not overwritten',()=>{
+ const s=storage(),p=A.createProfile('Recovery');
+ const first=A.writeSlot(s,'2',p);
+ const second=A.writeSlot(s,'2',{...p,gold:30},{overwrite:true,expectedStamp:A.slotStamp(first)});
+ const raw=JSON.parse(s.getItem(A.SAVE_KEY));raw['2'].profile={};s.setItem(A.SAVE_KEY,JSON.stringify(raw));
+ const row=A.readSlots(s).slots[0];assert.equal(row.status,'corrupt');assert.equal(row.recovery.profile.id,p.id);
+ assert.equal(A.recoverSlot(s,'2',row.stamp).profile.gold,0);
+ s.setItem(A.SAVE_KEY,'broken');assert.throws(()=>A.recoverSlot(s,'2',A.slotStamp(second)));assert.equal(s.getItem(A.SAVE_KEY),'broken');
+});
+test('movement checkpoints throttle writes, require actual displacement, and reject invalid position',()=>{
+ const last={at:100,position:[6,0,0]};
+ assert.equal(A.positionSaveDue(last,[10,0,0],10099),false);
+ assert.equal(A.positionSaveDue(last,[6.2,0,0],10100),false);
+ assert.equal(A.positionSaveDue(last,[7,0,0],10100),true);
+ assert.equal(A.positionSaveDue(last,[6,10,0],10100),false);
+ assert.equal(A.positionSaveDue(last,[NaN,0,0],10100),false);
+ assert.equal(A.positionSaveDue(null,[7,0,0],10100),false);
+});
+
+import {createWorldTelemetry,WORLD_HEARTBEAT_INTERVAL} from '../src/components/fantasybattle/core/worldTelemetry.mjs';
+test('unchanged exploration telemetry suppresses redundant updates but preserves checkpoint heartbeat',()=>{
+ const t=createWorldTelemetry(),world={position:[6,0,0],discoveries:[],encounters:[],mode:'wilds'};
+ assert.deepEqual(t.sample(world,0),{world,unchanged:false});
+ for(let n=250;n<WORLD_HEARTBEAT_INTERVAL;n+=250)assert.equal(t.sample({...world},n),null);
+ assert.deepEqual(t.sample(world,2000),{world,unchanged:true});
+ const moved={...world,position:[8,0,0]};
+ assert.deepEqual(t.sample(moved,2250),{world:moved,unchanged:false});
+ assert.equal(t.sample(moved,2500),null);
+ const found={...moved,discoveries:['disc_pilgrimage']};
+ assert.deepEqual(t.sample(found,2750),{world:found,unchanged:false});
+ t.reset();assert.deepEqual(t.sample(found,2800),{world:found,unchanged:false});
+});
+test('world merge preserves identity, rejects malformed metadata, and bounds legacy histories',()=>{
+ const p=A.createProfile('Telemetry'),w={position:[...p.world.position],discoveries:[],regions:[]};
+ assert.equal(A.updateWorld(p,w),p);
+ assert.equal(A.updateWorld(p,{...w,regions:{},discoveries:['x'.repeat(161)]}),p);
+ assert.equal(A.updateWorld(p,{...w,position:[NaN,0,0]}),p);
+ const moved=A.updateWorld(p,{...w,position:[7,0,0]});assert.notEqual(moved,p);assert.equal(moved.world.discoveries,p.world.discoveries);
+ const region=A.updateWorld(moved,{...w,position:[35,0,0],regions:[null,{id:'first',minX:0,maxX:35},{id:'second',minX:35,maxX:75}]});
+ assert.deepEqual(region.world.visitedRegions,['second']);
+ const legacy={...p,world:{...p.world,discoveries:Array(999).fill('legacy')}};
+ const merged=A.updateWorld(legacy,{...w,discoveries:['new','overflow']});assert.equal(merged.world.discoveries.length,1000);assert.ok(A.isProfile(merged));
+ assert.equal(A.updateWorld(merged,{...w,discoveries:['overflow']}),merged);
+ assert.equal(A.isProfile({...p,equipped:{toString:null}}),false);
+});

@@ -1,5 +1,6 @@
 import {WORLD_MAX_X} from './worldExpansion.mjs';
 import {validCampaign,cleanCampaign} from './campaignQuests.mjs';
+import {treasureFor} from './treasureCatalog.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats} from './equipmentCatalog.mjs';
@@ -84,17 +85,23 @@ export function createProfile(name){
   return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);
+  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);}catch{return false;}
 }
 // Legacy records have no revision. A complete serialized record also catches same-time edits.
 export const slotStamp=record=>record===undefined?null:JSON.stringify(record);
+const validSaveRecord=s=>Boolean(s&&Number.isFinite(s.savedAt)&&isProfile(s.profile));
+const checkpoint=s=>({savedAt:s.savedAt,profile:copy(s.profile)});
+export const POSITION_SAVE_INTERVAL=10000;
+export function positionSaveDue(last,position,now){
+ return Boolean(last&&Number.isFinite(now)&&now-last.at>=POSITION_SAVE_INTERVAL&&Array.isArray(position)&&position.length===3&&position.every(Number.isFinite)&&Math.hypot(position[0]-last.position[0],position[2]-last.position[2])>=1);
+}
 export function readSlots(storage){
   let raw;try{raw=storage.getItem(SAVE_KEY);}catch(error){return {slots:[],error:String(error?.message||error)};}
   if(!raw)return {slots:[],error:null};
   if(raw.length>3*MAX_BACKUP_BYTES*2)return {slots:[],error:'Save data exceeds the local size limit. No save has been removed.'};
   let data;try{data=JSON.parse(raw);}catch{return {slots:[],error:'Save data is damaged. No save has been removed.'};}
   if(!data||typeof data!=='object'||Array.isArray(data))return {slots:[],error:'Save format is invalid.'};
-  return {slots:SLOT_IDS.filter(id=>Object.hasOwn(data,id)).map(id=>{const s=data[id];return isProfile(s?.profile)&&Number.isFinite(s?.savedAt)?{id,status:'valid',savedAt:s.savedAt,profile:s.profile,stamp:slotStamp(s)}:{id,status:'corrupt',stamp:slotStamp(s)};}),error:null};
+  return {slots:SLOT_IDS.filter(id=>Object.hasOwn(data,id)).map(id=>{const s=data[id],recovery=validSaveRecord(s?.previous)?checkpoint(s.previous):null;return validSaveRecord(s)?{id,status:'valid',savedAt:s.savedAt,profile:s.profile,stamp:slotStamp(s),recovery}:{id,status:'corrupt',stamp:slotStamp(s),recovery};}),error:null};
 }
 export function writeSlot(storage,id,profile,{overwrite=false,expectedStamp}={}){
   if(!SLOT_IDS.includes(id)||!isProfile(profile))throw Error('Invalid save slot or profile.');
@@ -106,31 +113,82 @@ export function writeSlot(storage,id,profile,{overwrite=false,expectedStamp}={})
   if(Object.hasOwn(data,id)&&!overwrite)throw Error('Confirm overwrite first.');
   const prior=Object.hasOwn(data,id)?data[id]:null;
   const previousTime=Number.isFinite(prior?.savedAt)?prior.savedAt:0;
-  const record={savedAt:Math.max(Date.now(),previousTime+1),profile:copy(profile)};
+  const previous=validSaveRecord(prior)?checkpoint(prior):validSaveRecord(prior?.previous)?checkpoint(prior.previous):null;
+  const record={savedAt:Math.max(Date.now(),previousTime+1),profile:copy(profile),...(previous?{previous}:{})};
   const next=JSON.stringify({...data,[id]:record});
   if(next.length>3*MAX_BACKUP_BYTES*2)throw Error('Save data exceeds the local size limit.');
   storage.setItem(SAVE_KEY,next);
   return record;
 }
+// Recovery is explicit, revision-checked and never automatically replaces a save.
+export function recoverSlot(storage,id,expectedStamp){
+ if(typeof expectedStamp!=='string')throw Error('Select a recovery checkpoint first.');
+ const state=readSlots(storage);
+ if(state.error)throw Error(state.error);
+ const slot=state.slots.find(s=>s.id===id);
+ if(!slot?.recovery||slot.stamp!==expectedStamp)throw Error('Recovery checkpoint changed or is unavailable.');
+ return writeSlot(storage,id,slot.recovery.profile,{overwrite:true,expectedStamp});
+}
 export function mostRecent(slots){return slots.filter(s=>s.status==='valid').sort((a,b)=>b.savedAt-a.savedAt)[0]||null;}
 export function readSettings(storage){
   try{const p=JSON.parse(storage.getItem(SETTINGS_KEY)||'{}');return {quality:['performance','balanced','high','cinematic'].includes(p.quality)?p.quality:'performance',muted:p.muted===true,reducedMotion:p.reducedMotion===true};}catch{return {...DEFAULT_SETTINGS};}
 }
+// Preserve existing references when no actual progress changes. Bounded merge cannot invalidate a legacy save.
+function mergeWorldIds(previous,incoming){
+ if(!uniqueStrings(incoming))return previous;
+ const known=new Set(previous),added=[];
+ for(const id of incoming){if(!known.has(id)&&previous.length+added.length<1000){known.add(id);added.push(id);}}
+ return added.length?[...previous,...added]:previous;
+}
 export function updateWorld(p,w){
-  if(!p||!w||!Array.isArray(w.position)||w.position.length!==3||!w.position.every(Number.isFinite))return p;
-  const region=w.regions?.find(r=>w.position[0]>=r.minX&&w.position[0]<=r.maxX);
-  return {...p,world:{...p.world,position:[Math.max(1.5,Math.min(WORLD_MAX_X,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))],discoveries:uniqueStrings(w.discoveries)?[...new Set([...p.world.discoveries,...w.discoveries])]:p.world.discoveries,visitedRegions:region?[...new Set([...p.world.visitedRegions,region.id])]:p.world.visitedRegions}};
+ if(!p||!w||!Array.isArray(w.position)||w.position.length!==3||!w.position.every(Number.isFinite))return p;
+ const old=p.world;
+ const position=[Math.max(1.5,Math.min(WORLD_MAX_X,w.position[0])),w.position[1],Math.max(-6.8,Math.min(3.4,w.position[2]))];
+ const region=Array.isArray(w.regions)&&w.regions.length<=32?w.regions.find(r=>r&&typeof r.id==='string'&&r.id.length<=160&&Number.isFinite(r.minX)&&Number.isFinite(r.maxX)&&r.minX<r.maxX&&position[0]>=r.minX&&position[0]<r.maxX):null;
+ const discoveries=mergeWorldIds(old.discoveries,w.discoveries);
+ const visitedRegions=region?mergeWorldIds(old.visitedRegions,[region.id]):old.visitedRegions;
+ if(position.every((value,i)=>value===old.position[i])&&discoveries===old.discoveries&&visitedRegions===old.visitedRegions)return p;
+ return {...p,world:{...old,position,discoveries,visitedRegions}};
+}
+// One guaranteed equipment drop per registered first victory. Values are prototype tuning.
+export const ENCOUNTER_GEAR_REWARDS=Object.freeze({
+ wilds_grove_01:'groveRing',
+ wilds_pilgrimage_01:'pilgrimCloak',
+ wilds_pilgrimage_02:'pilgrimPendant',
+ wilds_waterfall_01:'mistJacket',
+ wilds_cave_01:'pilgrimBow',
+ wilds_heights_01:'pilgrimCuirass',
+ wilds_heights_02:'moonveilVeil',
+ wilds_heights_elite:'moonveilRing',
+ wilds_sanctuary_guard:'moonveilRaiment',
+ wilds_sanctuary_boss:'astralCarapace',
+ wilds_moonveil_01:'moonveilPendant',
+ wilds_moonveil_elite:'moonveilBow',
+ wilds_astral_01:'astralMantle',
+ wilds_astral_elite:'astralBow'
+});
+// Award only items that fit the existing save bounds; report exactly what was added.
+function grantLoot(p,requested){
+ const inventory={...p.inventory},loot=[];
+ for(const {id,count} of requested){
+  if(!Object.hasOwn(ITEMS,id))continue;
+  const awarded=Math.min(count,100000-(inventory[id]??0));
+  if(awarded>0){inventory[id]=(inventory[id]??0)+awarded;loot.push({id,count:awarded});}
+ }
+ return {inventory,loot};
 }
 export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
-  if(!p||!encounter?.id||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[]};
+  if(!p||!encounter?.id||encounter.practice||p.world.completedEncounters.includes(encounter.id))return {profile:p,xp:0,leveled:false,unlocked:[],gold:0,loot:[]};
   // Explicit prototype balancing: one-time 25 XP for normal encounters, 50 elite, 100 boss.
-  const xp=encounter.category==='Boss'?100:encounter.category==='Elite'?50:25;
-  const gold=encounter.category==='Boss'?80:encounter.category==='Elite'?45:25;
+  const xp=Math.min(100000-p.xp,encounter.category==='Boss'?100:encounter.category==='Elite'?50:25);
+  const gold=Math.min(10000000-p.gold,encounter.category==='Boss'?80:encounter.category==='Elite'?45:25);
   const ore=encounter.category==='Boss'?3:encounter.category==='Elite'?2:1;
   const oldLevel=levelFor(p.xp),newLevel=levelFor(p.xp+xp);
+  const gearId=Object.hasOwn(ENCOUNTER_GEAR_REWARDS,encounter.id)?ENCOUNTER_GEAR_REWARDS[encounter.id]:null;
+  const {inventory,loot}=grantLoot(p,[{id:'sapphireOre',count:ore},...(gearId?[{id:gearId,count:1}]:[])]);
   const completedEncounters=[...p.world.completedEncounters,encounter.id];
   const quest=p.quests.grove==='active'&&completedEncounters.includes('wilds_grove_01')?'complete':p.quests.grove;
-  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre+ore},world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot:[{id:'sapphireOre',count:ore}],leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
+  return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,leveled:newLevel>oldLevel,unlocked:availableActions(newLevel).filter(x=>!availableActions(oldLevel).includes(x))};
 }
 export function allocate(p,key){if(!STAT_KEYS.includes(key)||pointsFor(p)<1)return p;return {...p,hp:p.hp+(key==='vitality'?10:0),attributes:{...p.attributes,[key]:p.attributes[key]+1}};}
 export function heroStats(p){const a=p?.attributes||{vitality:0,strength:0,defense:0,speed:0};return addGearStats({maxHp:120+10*a.vitality,atk:12+2*a.strength+(ITEMS[p?.equipped]?.atk||0)+enhancementLevel(p,p?.equipped)*2,def:10+2*a.defense,spd:11+a.speed},p,'hero');}
@@ -138,8 +196,10 @@ export function acceptGroveQuest(p){return p.quests.grove!=='available'?p:{...p,
 export function claimGroveQuest(p){return p.quests.grove!=='complete'?p:{...p,quests:{...p.quests,grove:'claimed'}};}
 
 export function collectLoot(p,id) {
-  if(!p.world.discoveries.includes(id)||p.rewardedDiscoveries.includes(id))return {profile:p,loot:[]};
-  return {profile:{...p,rewardedDiscoveries:[...p.rewardedDiscoveries,id],inventory:{...p.inventory,recoveryTonic:p.inventory.recoveryTonic+1,sapphireOre:p.inventory.sapphireOre+2}},loot:[{id:'recoveryTonic',count:1},{id:'sapphireOre',count:2}]};
+  const treasure=treasureFor(id);
+  if(!treasure||!p?.world?.discoveries.includes(id)||p.rewardedDiscoveries.includes(id))return {profile:p,loot:[]};
+  const {inventory,loot}=grantLoot(p,treasure.loot);
+  return {profile:{...p,rewardedDiscoveries:[...p.rewardedDiscoveries,id],inventory},loot};
 }
 export function equipItem(p,id) {
   if(!Object.hasOwn(WEAPONS,id)||!p.inventory[id])throw Error('You do not own that weapon.');
@@ -149,23 +209,53 @@ export function equipItem(p,id) {
 export function equipGear(p,wearer,slot,id){if(!isProfile(p))throw Error('Invalid profile.');const next=setGear(p,wearer,slot,id,k=>memberFor(p,k).recruited);if(!isProfile(next))throw Error('Invalid equipment allocation.');return next;}
 export function memberStats(p,id){if(id==='hero')return heroStats(p);const m=ROSTER.find(x=>x.id===id);if(!m)throw Error('Unknown party member.');return addGearStats({maxHp:m.maxHp,atk:m.atk,def:m.def,spd:m.spd},p,id);}
 export function gearComparison(p,wearer,id){if(!Object.hasOwn(GEAR,id))return null;try{return {current:memberStats(p,wearer),candidate:memberStats(equipGear(p,wearer,GEAR[id].slot,id),wearer)};}catch{return null;}}
-export function buyItem(p,id) {
-  const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;if(!item?.buy||p.gold<item.buy||(p.inventory[id]??0)>=100000)throw Error('Insufficient gold or unavailable item.');
-  return {...p,gold:p.gold-item.buy,inventory:{...p.inventory,[id]:(p.inventory[id]??0)+1}};
+// Shared quote/transaction rules; browser-local progression, not server authority.
+export const MAX_TRADE_QUANTITY=99;
+export function tradeQuote(p,mode,id,quantity=1){
+ const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;
+ const fail=reason=>({ok:false,reason,total:0});
+ if(!p||!item||!['buy','sell'].includes(mode)||!integer(quantity,1,MAX_TRADE_QUANTITY)||!item[mode])return fail('Unavailable trade.');
+ const owned=p.inventory[id]??0,total=item[mode]*quantity;
+ const equipped=item.kind==='gear'?gearCount(p,id):p.equipped===id?1:0;
+ const reason=mode==='buy'?(p.gold<total?'Insufficient gold.':owned+quantity>100000?'Inventory limit reached.':null):(owned-equipped<quantity?'Not enough unequipped copies.':p.gold+total>10000000?'Gold limit reached.':null);
+ return {ok:!reason,reason,total,owned,equipped,quantity};
 }
-export function sellItem(p,id) {
-  const item=Object.hasOwn(ITEMS,id)?ITEMS[id]:null;if(!item?.sell||!p.inventory[id]||(p.equipped===id&&p.inventory[id]===1)||(item.kind==='gear'&&p.inventory[id]<=gearCount(p,id)))throw Error('Cannot sell this item.');
-  return {...p,gold:p.gold+item.sell,inventory:{...p.inventory,[id]:p.inventory[id]-1}};
+function tradeItem(p,mode,id,quantity){
+ const quote=tradeQuote(p,mode,id,quantity);
+ if(!quote.ok)throw Error(quote.reason);
+ const sign=mode==='buy'?1:-1;
+ return {...p,gold:p.gold-sign*quote.total,inventory:{...p.inventory,[id]:quote.owned+sign*quantity}};
 }
+export const buyItem=(p,id,quantity=1)=>tradeItem(p,'buy',id,quantity);
+export const sellItem=(p,id,quantity=1)=>tradeItem(p,'sell',id,quantity);
 export function enhanceWeapon(p) {
   const id=p.equipped,lv=enhancementLevel(p,id),cost=15+lv*10;
   if(!weaponEligible(p,id)||!p.inventory[id]||lv>=5||p.gold<cost||p.inventory.sapphireOre<1)throw Error('Enhancement requires gold, ore and a weapon below +5.');
   return {...p,gold:p.gold-cost,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-1},enhancements:{...p.enhancements,[id]:lv+1}};
 }
-export function craftTonic(p) {
-  if(p.inventory.sapphireOre<2)throw Error('Requires two Sapphire Ore.');
-  return {...p,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-2,recoveryTonic:p.inventory.recoveryTonic+1}};
+// Each recipe creates an existing catalog item; no new inventory keys or save migration.
+const recipe=(id,category,ore,gold,level)=>Object.freeze({id,category,ore,gold,level});
+export const RECIPES=Object.freeze({
+ recoveryTonic:recipe('recoveryTonic','Consumables',2,0,1),
+ groveVest:recipe('groveVest','Armor',3,22,1),
+ sapphireBow:recipe('sapphireBow','Weapons',4,50,1),
+ pilgrimPendant:recipe('pilgrimPendant','Accessories',4,30,2),
+ moonveilRing:recipe('moonveilRing','Accessories',5,45,3),
+ astralPendant:recipe('astralPendant','Accessories',7,65,4)
+});
+export function craftQuote(p,id,quantity=1){
+ const r=Object.hasOwn(RECIPES,id)?RECIPES[id]:null;
+ if(!p||!r||!integer(quantity,1,MAX_TRADE_QUANTITY))return {ok:false,reason:'Unavailable recipe.'};
+ const ore=r.ore*quantity,gold=r.gold*quantity,owned=p.inventory[id]??0;
+ const reason=levelFor(p.xp)<r.level?'Requires party level '+r.level+'.':p.inventory.sapphireOre<ore?'Not enough Sapphire Ore.':p.gold<gold?'Insufficient gold.':owned+quantity>100000?'Inventory limit reached.':null;
+ return {ok:!reason,reason,ore,gold,owned,quantity};
 }
+export function craftItem(p,id,quantity=1){
+ const q=craftQuote(p,id,quantity);
+ if(!q.ok)throw Error(q.reason);
+ return {...p,gold:p.gold-q.gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore,[id]:q.owned+quantity}};
+}
+export const craftTonic=p=>craftItem(p,'recoveryTonic');
 export function heal(p,{sanctuary=false}={}) {
   const max=heroStats(p).maxHp;if(sanctuary){if(p.hp>=max&&!partyNeedsRest(p))throw Error('Health is already full.');return recoverParty({...p,hp:max});}
   if(p.hp>=max)throw Error('Health is already full.');
