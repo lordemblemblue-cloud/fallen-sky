@@ -856,7 +856,7 @@ test('menu, notice and diagnostics are connected',()=>{
   assert.match(menu,/rememberGame3DPlatformSetting\(\{display:saved\}\)/);
   assert.match(menu,/rememberGame3DPlatformSetting\(\{gpuProfile:profile\}\)/);
   const view=source('src/pages/GameView.jsx');
-  assert.match(view,/\{phase==='world' && <Game3DAreaNotice \/>\}/);
+  assert.match(view,/\{phase==='world' && !isPlatformRegion\(worldRegion\) && <Game3DAreaNotice \/>\}/);
   assert.match(source('src/components/game3d/Game3DAreaNotice.jsx'),/game3dWorldRegionChange/);
   const overlay=source('src/components/game3d/debug/RenderStatsOverlay.jsx');
   assert.match(overlay,/describeGame3DAreaBudget\(evaluateGame3DAreaBudget\(/);
