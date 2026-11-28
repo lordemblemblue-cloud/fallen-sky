@@ -108,7 +108,7 @@ import {encryptBackup,importTransfer,MAX_ENCRYPTED_BYTES} from '../src/component
 test('stale overwrite cannot replace newer local save, even with same character',()=>{const s=storage(),p=A.createProfile('Conflict');const first=A.writeSlot(s,'1',p,{expectedStamp:null});const changed=A.writeSlot(s,'1',{...p,gold:5},{overwrite:true,expectedStamp:A.slotStamp(first)});assert.throws(()=>A.writeSlot(s,'1',{...p,gold:99},{overwrite:true,expectedStamp:A.slotStamp(first)}),/conflict/i);assert.equal(A.readSlots(s).slots[0].profile.gold,5);assert.equal(A.readSlots(s).slots[0].stamp,A.slotStamp(changed));assert.throws(()=>A.writeSlot(s,'1',p,{overwrite:true,expectedStamp:null}),/conflict/i);});
 test('encrypted transfer round trip, random salt, wrong passphrase, tampering and bounded metadata',async()=>{const p=A.createProfile('Private Traveler'),pass='correct horse garden lantern';const a=await encryptBackup(p,pass),b=await encryptBackup(p,pass);assert.notEqual(a,b);assert.ok(!a.includes(p.name));assert.deepEqual(await importTransfer(a,pass),p);assert.deepEqual(await importTransfer(A.exportBackup(p)),p);await assert.rejects(importTransfer(a,'wrong password example'),/Incorrect passphrase/);const x=JSON.parse(a);x.ciphertext=(x.ciphertext[0]==='A'?'B':'A')+x.ciphertext.slice(1);await assert.rejects(importTransfer(JSON.stringify(x),pass),/Incorrect passphrase/);x.iterations=999999999;await assert.rejects(importTransfer(JSON.stringify(x),pass),/Unsupported/);await assert.rejects(importTransfer(' '.repeat(MAX_ENCRYPTED_BYTES+1),pass),/too large/);await assert.rejects(encryptBackup(p,'short'),/12/);});
 
-import {isCurrentEncounter,currentSaveStamp} from '../src/components/fantasybattle/core/battleLifecycle.mjs';
+import {isCurrentEncounter,currentSaveStamp,resolveDisplayedSave} from '../src/components/fantasybattle/core/battleLifecycle.mjs';
 test('stale battle completion and retry acknowledgements cannot apply to a different encounter',()=>{assert.ok(isCurrentEncounter({token:'new'},'new'));for(const token of ['old',null,undefined,''])assert.equal(isCurrentEncounter({token:'new'},token),false);assert.equal(isCurrentEncounter(null,'new'),false);});
 test('loading a stale character snapshot cannot adopt a newer save baseline',()=>{const s=storage(),p=A.createProfile('Snapshot');A.writeSlot(s,'1',p);const old=A.readSlots(s).slots[0];A.writeSlot(s,'1',{...p,gold:20},{overwrite:true,expectedStamp:old.stamp});const records=A.readSlots(s).slots;assert.equal(currentSaveStamp(records,'1',p),undefined);assert.equal(currentSaveStamp(records,'1',records[0].profile),records[0].stamp);assert.equal(currentSaveStamp(records,'2',p),null);});
 
@@ -359,4 +359,31 @@ test('companion gifts require recruitment and ore, preserve other members and ca
  const near=A.companionGiftQuote(p,'groveArcher');assert.equal(near.gain,2);
  const max=A.giveCompanionGift(p,'groveArcher');assert.equal(A.memberFor(max,'groveArcher').bond,100);assert.throws(()=>A.giveCompanionGift(max,'groveArcher'));
  assert.ok(A.isProfile(max));assert.equal(p.party.bond,98);
+});
+
+test('displayed saves are revision-checked before opening and never silently substituted',()=>{
+ const s=storage(),p=A.createProfile('Saved hero');
+ A.writeSlot(s,'1',p);
+ const displayed=A.readSlots(s).slots[0];
+ assert.equal(resolveDisplayedSave(A.readSlots(s),displayed).record.stamp,displayed.stamp);
+ A.writeSlot(s,'1',{...p,gold:p.gold+1},{overwrite:true,expectedStamp:displayed.stamp});
+ assert.equal(resolveDisplayedSave(A.readSlots(s),displayed).record,null);
+ assert.match(resolveDisplayedSave(A.readSlots(s),displayed).message,/changed/);
+ const newer=A.readSlots(s).slots[0];
+ assert.equal(resolveDisplayedSave(A.readSlots(s),newer).record.stamp,newer.stamp);
+ s.setItem(A.SAVE_KEY,'{"1":{"profile":{},"savedAt":0}}');
+ assert.equal(resolveDisplayedSave(A.readSlots(s),newer).record,null);
+ s.setItem(A.SAVE_KEY,'not json');
+ assert.match(resolveDisplayedSave(A.readSlots(s),newer).message,/unchanged/);
+});
+
+test('optional fictional birthday validates calendar dates and survives local saves and backups',()=>{
+ const s=storage(),legacy=A.createProfile('Legacy'),p=A.createProfile('New Archer','2000-02-29');
+ assert.equal(legacy.birthday,undefined);assert.ok(A.isProfile(legacy));
+ assert.equal(p.birthday,'2000-02-29');assert.ok(A.isProfile(p));
+ A.writeSlot(s,'1',p);assert.equal(A.readSlots(s).slots[0].profile.birthday,p.birthday);
+ assert.equal(A.parseBackup(A.exportBackup(p)).birthday,p.birthday);
+ for(const date of ['2023-02-29','2026-04-31','2026-13-01','0000-01-01','not a date','2026-1-1']){
+  assert.equal(A.validCharacterBirthday(date),false);assert.throws(()=>A.createProfile('Invalid',date));assert.equal(A.isProfile({...p,birthday:date}),false);
+ }
 });

@@ -93,13 +93,19 @@ export const levelFor=xp=>1+Math.floor(xp/100);
 export const learnedAt=Object.freeze({quickShot:1,guard:1,volley:2,chargedShot:3});
 export const availableActions=level=>Object.keys(learnedAt).filter(k=>level>=learnedAt[k]);
 export const pointsFor=p=>Math.max(0,levelFor(p.xp)-1-STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0));
-export function createProfile(name){
+export function validCharacterBirthday(value){
+  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||value.startsWith('0000-'))return false;
+  const time=Date.parse(value+'T00:00:00Z');
+  return Number.isFinite(time)&&new Date(time).toISOString().slice(0,10)===value;
+}
+export function createProfile(name,birthday=''){
   const clean=String(name??'').trim().slice(0,40);
   if(!clean)throw Error('Enter a character name.');
-  return {version:1,id:globalThis.crypto.randomUUID(),name:clean,appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
+  if(birthday!==''&&!validCharacterBirthday(birthday))throw Error('Enter a valid character birthday.');
+  return {version:1,id:globalThis.crypto.randomUUID(),name:clean,...(birthday?{birthday}:{}),appearance:'silver',party:partyFor(null),xp:0,hp:120,gold:0,inventory:{starterBow:1,sapphireBow:0,recoveryTonic:1,sapphireOre:0},equipped:'starterBow',enhancements:{starterBow:0,sapphireBow:0},rewardedDiscoveries:[],attributes:{vitality:0,strength:0,defense:0,speed:0},world:{position:[6,0,0],discoveries:[],completedEncounters:[],visitedRegions:[]},quests:{grove:'available'},createdAt:Date.now()};
 }
 export function isProfile(p){
-  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);}catch{return false;}
+  try{return p?.version===1&&typeof p.id==='string'&&p.id.length<=80&&typeof p.name==='string'&&p.name.trim().length>0&&p.name.length<=40&&(p.birthday===undefined||validCharacterBirthday(p.birthday))&&integer(p.xp,0,100000)&&STAT_KEYS.every(k=>integer(p.attributes?.[k],0,1000))&&STAT_KEYS.reduce((n,k)=>n+p.attributes[k],0)<=levelFor(p.xp)-1&&Array.isArray(p.world?.position)&&p.world.position.length===3&&p.world.position.every(Number.isFinite)&&p.world.position[0]>=1.5&&p.world.position[0]<=WORLD_MAX_X&&p.world.position[2]>=-6.8&&p.world.position[2]<=3.4&&uniqueStrings(p.world.discoveries)&&uniqueStrings(p.world.completedEncounters)&&uniqueStrings(p.world.visitedRegions)&&['available','active','complete','claimed'].includes(p.quests?.grove)&&Number.isFinite(p.createdAt)&&integer(p.hp,1,heroStats(p).maxHp)&&integer(p.gold,0,10000000)&&Object.keys(ITEMS).every(k=>integer((GEAR_IDS.includes(k)||(WEAPON_IDS.includes(k)&&!LEGACY_WEAPONS.includes(k)))&&!Object.hasOwn(p.inventory||{},k)?0:p.inventory?.[k],0,100000))&&validWeapons(p)&&uniqueStrings(p.rewardedDiscoveries)&&(p.appearance===undefined||Object.hasOwn(APPEARANCES,p.appearance))&&validCampaign(p)&&validParty(p)&&validGear(p,id=>memberFor(p,id).recruited);}catch{return false;}
 }
 // Legacy records have no revision. A complete serialized record also catches same-time edits.
 export const slotStamp=record=>record===undefined?null:JSON.stringify(record);
@@ -294,12 +300,12 @@ export function exportBackup(profile){
   return JSON.stringify({format:'fantasy-battle-guest-save',version:1,profile},null,2);
 }
 export function parseBackup(raw){
-  if(typeof raw!=='string'||raw.length>MAX_BACKUP_BYTES||new TextEncoder().encode(raw).length>MAX_BACKUP_BYTES)throw Error('Save backup is too large.');
+  if(typeof raw!=='string'||raw.length>MAX_BACKUP_BYTES||new globalThis.TextEncoder().encode(raw).length>MAX_BACKUP_BYTES)throw Error('Save backup is too large.');
   let data;try{data=JSON.parse(raw);}catch{throw Error('Save backup is not valid JSON.');}
   if(data?.format!=='fantasy-battle-guest-save'||data.version!==1||!isProfile(data.profile))throw Error('This is not a valid Fantasy Battle save backup.');
   // Pick supported fields to avoid preserving unknown or injected properties.
   const p=data.profile,w=p.world;
-  return {version:1,id:p.id,name:p.name,appearance:p.appearance||'silver',party:cleanParty(p),xp:p.xp,hp:p.hp,gold:p.gold,
+  return {version:1,id:p.id,name:p.name,...(p.birthday===undefined?{}:{birthday:p.birthday}),appearance:p.appearance||'silver',party:cleanParty(p),xp:p.xp,hp:p.hp,gold:p.gold,
     inventory:Object.fromEntries(Object.keys(ITEMS).filter(k=>Object.hasOwn(p.inventory,k)).map(k=>[k,p.inventory[k]])),equipped:p.equipped,
     ...(p.gear===undefined?{}:{gear:Object.fromEntries(Object.keys(p.gear).map(id=>[id,{...gearFor(p,id)}]))}),
     enhancements:cleanEnhancements(p),

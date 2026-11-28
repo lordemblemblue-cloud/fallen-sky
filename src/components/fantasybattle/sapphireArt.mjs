@@ -2,7 +2,7 @@
 // All labels, values, icons and controls remain independent from the art.
 import { UI_SCREENS } from './uiCatalog.mjs';
 export const ART_ROOT='/fantasybattle/sapphire';
-const full={ '01':'title-original','02':'sanctuary','03':'sanctuary','14':'celestial','15':'moonlit','19':'celestial','20':'sanctuary','31':'ruins','32':'celestial','35':'wilds','36':'ruins','38':'celestial','42':'wilds','44':'celestial','45':'celestial','48':'title-original' };
+const full={ '01':'title-original','02':'sanctuary','03':'sanctuary','14':'celestial','15':'moonlit','19':'celestial','20':'sanctuary','31':'ruins','32':'celestial','35':'wilds','36':'ruins','38':'celestial','42':'wilds','44':'celestial','45':'celestial','48':'sanctuary' };
 const ambient={'05':'sanctuary','06':'moonlit','07':'wilds','08':'wilds','11':'sanctuary','12':'celestial','16':'wilds','17':'ruins','18':'sanctuary','21':'moonlit','22':'ruins','23':'ruins','24':'moonlit','25':'wilds','26':'sanctuary','27':'celestial','28':'celestial','29':'wilds','30':'sanctuary','33':'sanctuary','34':'wilds','43':'wilds','46':'sanctuary'};
 export function artFor(id,running=false){
  const s=UI_SCREENS[id]; if(!s)return {mode:'transparent',asset:null};

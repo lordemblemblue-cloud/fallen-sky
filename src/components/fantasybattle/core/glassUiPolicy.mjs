@@ -1,8 +1,9 @@
 // Each registered UI screen has a deliberate presentation policy. Never use
 // a single narrow information panel for a map, inventory or live combat HUD.
 const groups = {
-  title:['01','19','20','48'],
-  right:['02','03','13','18','35','40','47'],
+  title:['01'],
+  right:['13','18','40','47'],
+  scene:['02','03','19','20','35','48'],
   workspace:['05','06','07','08','11','12','16','17','21','22','23','24','25','26','27','28','29','30','32','33','34','37','39','46'],
   pause:['04'],
   hud:['09','10'],

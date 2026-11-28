@@ -40,7 +40,7 @@
 
 /* Owner-approved panoramic loading scene. No boxed panel or browser chrome.
    The existing clean world illustration remains behind all live controls. */
-.fa-loading-scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;overflow:auto;padding:clamp(14px,5vh,56px) clamp(16px,9vw,160px);background:radial-gradient(ellipse at 50% 54%,#091b39c9 0%,#152e55a6 30%,#213e684d 55%,transparent 79%);isolation:isolate}
+.fa-loading-scene{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;padding:clamp(14px,5vh,56px) clamp(16px,9vw,160px);background:radial-gradient(ellipse at 50% 54%,#091b39c9 0%,#152e55a6 30%,#213e684d 55%,transparent 79%);isolation:isolate}
 .fa-loading-scene::before,.fa-loading-scene::after{content:"";position:absolute;z-index:-1;pointer-events:none;left:-8%;right:-8%;height:30%;border-radius:48% 62% 48% 65% / 35% 55% 35% 55%;background:linear-gradient(176deg,transparent 12%,#8cc5ff13 34%,#c2dfff36 48%,#67a6ed24 57%,transparent 83%);box-shadow:0 -1px 20px #a8d8ff26;filter:blur(2px);transform:rotate(-5deg);animation:fa-loading-mist 9s ease-in-out infinite alternate}
 .fa-loading-scene::before{top:30%}.fa-loading-scene::after{top:55%;transform:rotate(4deg);animation-delay:-4s}
 @keyframes fa-loading-mist{from{translate:-3% 0;opacity:.5}to{translate:3% -8px;opacity:1}}
@@ -68,3 +68,6 @@
 @media(max-height:540px){.fa-loading-scene{padding:10px 7vw;align-items:flex-start}.fa-loading-content{gap:7px;font-size:14px}.fa-loading-content .fa-glass-load-heading h1{font-size:clamp(25px,6vh,36px)}.fa-loading-content .fa-glass-load-heading{gap:3px;padding:0}.fa-loading-emblem{font-size:22px}.fa-loading-content .fa-glass-loading-steps{gap:3px}.fa-loading-content .fa-glass-loading-hint{padding-top:6px}.fa-loading-content .fa-button{min-height:36px}}
 @media(prefers-reduced-motion:reduce){.fa-loading-scene::before,.fa-loading-scene::after{animation:none}}
 .reduced-motion .fa-loading-scene::before,.reduced-motion .fa-loading-scene::after{animation:none}
+.fa-loading-scene::before,.fa-loading-scene::after{will-change:translate,opacity;filter:none}
+@media(prefers-reduced-motion:reduce){.fa-loading-scene::before,.fa-loading-scene::after{will-change:auto}}
+.reduced-motion .fa-loading-scene::before,.reduced-motion .fa-loading-scene::after{will-change:auto}

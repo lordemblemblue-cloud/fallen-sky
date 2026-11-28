@@ -1,0 +1,90 @@
+/* Load Game and Settings share the approved panoramic loading atmosphere.
+   Only live controls are drawn; no baked text, chrome or outer card. */
+.fa-ui[data-glass-kind="scene"]{background:transparent;overflow:hidden}
+.fa-menu-scene{padding:clamp(16px,5vh,56px) clamp(16px,8vw,132px);overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#91b5d1 transparent}
+.fa-menu-scene .fa-loading-content{width:min(100%,1120px);font-size:clamp(14px,1.35vw,20px);overflow-wrap:anywhere}
+.fa-menu-scene .fa-glass-load-heading h1{font-size:clamp(32px,5vw,68px)}
+.fa-menu-scene .fa-glass-load-heading{padding-bottom:clamp(6px,2vh,24px)}
+.fa-scene-save-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:clamp(20px,5vw,80px);align-items:center}
+.fa-scene-load .fa-glass-load-slots{gap:12px}
+.fa-scene-load .fa-glass-slot{display:grid;grid-template-columns:50px minmax(0,1fr);gap:14px;text-align:left;min-height:66px;padding:8px 18px;border:0;border-radius:12px;background:linear-gradient(90deg,#16375da8,#1d3c6866 65%,transparent);box-shadow:inset 0 -1px #c4e7ff60;color:#e8f1fc}
+.fa-scene-load .fa-glass-slot[aria-pressed="true"]{background:linear-gradient(90deg,#6aacfaa0,#3d7ec778 65%,#3d7ec712);box-shadow:inset 2px 0 #b8edff,inset 0 -1px #b8edff96,0 0 14px #83c8ff25}
+.fa-scene-load .fa-glass-slot-info strong{white-space:normal;overflow-wrap:anywhere}
+.fa-scene-load .fa-glass-slot-icon .fa-archer-portrait.small{margin:0;float:none}
+.fa-scene-load .fa-glass-save-detail{display:grid;grid-template-columns:minmax(60px,120px) minmax(0,1fr);gap:clamp(12px,2vw,30px);border:0;padding:14px 0;background:transparent;min-height:120px}
+.fa-scene-load .fa-glass-save-detail>p{grid-column:1/-1;color:#e2edf9}
+.fa-scene-load .fa-glass-save-portrait{height:clamp(95px,19vh,190px);width:100%}
+.fa-scene-load .fa-glass-save-info{gap:7px;overflow-wrap:anywhere}
+.fa-scene-load .fa-glass-save-info h2{font-size:clamp(22px,3vw,40px)}
+.fa-scene-load .fa-glass-save-info small{color:#c5def4}
+.fa-scene-load .fa-glass-load-actions{align-self:end;display:flex;flex-wrap:wrap;justify-content:flex-end;width:min(100%,440px)}
+.fa-scene-load .fa-glass-load-actions .fa-button{flex:1;min-width:110px}
+.fa-scene-load .fa-glass-backup{border:0;border-top:1px solid #bed7ef55;padding:12px 0 0;color:#e2eefb}
+.fa-scene-load .fa-glass-backup>div{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.fa-scene-load .fa-glass-backup label,.fa-scene-load .fa-glass-backup [role="alert"]{grid-column:1/-1}
+.fa-menu-scene .fa-scene-settings{position:relative;inset:auto;pointer-events:auto;display:grid;grid-template-columns:minmax(145px,1fr) minmax(0,2.2fr);align-items:start;gap:clamp(12px,3vw,44px);padding:0;margin:auto;height:auto;background:none;border:0;box-shadow:none}
+.fa-scene-settings .fa-glass-settings-heading{grid-column:1/-1}
+.fa-menu-scene .fa-scene-settings :is(.fa-settings-categories,.fa-settings-detail,.fa-settings-actions){position:static;inset:auto;width:100%;height:auto;min-width:0}
+.fa-menu-scene .fa-scene-settings .fa-settings-categories{grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(6,minmax(44px,auto));gap:9px}
+.fa-menu-scene .fa-scene-settings .fa-settings-category{display:grid;grid-template-columns:1.5em minmax(0,1fr);gap:9px;align-items:center;text-align:left;border:0;border-radius:8px;padding:8px 12px;min-height:44px;background:linear-gradient(90deg,#2548719c,#25487116);box-shadow:inset 0 -1px #b6d8f050;color:#edf4ff;text-shadow:0 1px 4px #102647;overflow-wrap:anywhere}
+.fa-menu-scene .fa-scene-settings .fa-settings-category>span:first-child{display:block}
+.fa-menu-scene .fa-scene-settings .fa-settings-category[aria-pressed="true"]{background:linear-gradient(90deg,#579bd6aa,#406f9f35);box-shadow:inset 2px 0 #b8edff,inset 0 -1px #b8edff80;color:#fff1d0}
+.fa-menu-scene .fa-scene-settings .fa-settings-category[aria-pressed="true"]>span:first-child{color:#fff1d0}
+.fa-menu-scene .fa-scene-settings .fa-settings-detail{background:none;border:0;border-radius:0;box-shadow:none;backdrop-filter:none;min-height:0;padding:0;overflow:visible;gap:10px}
+.fa-scene-settings .fa-settings-detail h2{font-size:clamp(24px,3vw,38px)}
+.fa-scene-settings .fa-settings-row{border-bottom:1px solid #d3e8ff43;padding:clamp(10px,2vh,20px) 0}
+.fa-scene-settings .fa-settings-detail select,.fa-scene-settings .fa-settings-detail input:not([type="checkbox"]){background:#11274fb8;border-color:#c7eaff80;border-radius:10px;min-height:40px}
+.fa-scene-settings .fa-settings-detail input[type="checkbox"]{min-width:2.7em}
+.fa-menu-scene .fa-scene-settings .fa-settings-actions{grid-column:1/-1;justify-self:end;display:grid;grid-template-columns:1fr 1fr;width:min(100%,400px);gap:12px}
+.fa-menu-scene .fa-scene-settings .fa-settings-actions .fa-button{height:auto;min-height:44px;border-radius:999px}
+.fa-menu-scene .fa-button.primary:not(.fa-glass-slot){background:linear-gradient(140deg,#579cd5a8,#254f83a6 70%,#b2e6ff80);color:#fff3dc}
+.fa-menu-scene :is(.fa-button,input,select,summary):focus-visible{outline:2px solid #a4e3ff;outline-offset:3px}
+@media(max-width:700px){
+ .fa-menu-scene{padding:16px 6vw;align-items:flex-start}
+ .fa-scene-save-columns,.fa-menu-scene .fa-scene-settings{grid-template-columns:minmax(0,1fr);gap:14px}
+ .fa-menu-scene .fa-scene-settings .fa-settings-categories{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;gap:6px}
+ .fa-menu-scene .fa-scene-settings .fa-settings-category{display:flex;flex-direction:column;justify-content:center;text-align:center;padding:5px;font-size:13px;gap:4px}
+ .fa-scene-load .fa-glass-load-actions,.fa-menu-scene .fa-scene-settings .fa-settings-actions{width:100%}
+ .fa-scene-load .fa-glass-backup>div{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-height:540px){.fa-menu-scene{padding:12px 6vw}.fa-menu-scene .fa-glass-load-heading h1{font-size:clamp(26px,7vh,38px)}.fa-scene-load .fa-glass-slot{min-height:48px;padding:4px 12px;grid-template-columns:38px minmax(0,1fr)}.fa-scene-load .fa-glass-slot-icon{height:36px;width:36px}.fa-menu-scene .fa-scene-settings .fa-settings-categories{gap:5px}.fa-scene-settings .fa-settings-row{padding:7px 0}}
+@media(max-width:420px){.fa-scene-settings .fa-settings-row{grid-template-columns:minmax(0,1fr);gap:7px}.fa-scene-settings .fa-settings-value{text-align:left;max-width:none}.fa-scene-settings .fa-settings-row .fa-button{max-width:none;justify-self:start}}
+
+/* Second polish pass: shared cinematic ornament, readable shaded strips, no card. */
+.fa-loading-content .fa-glass-kicker{display:flex;align-items:center;justify-content:center;gap:clamp(8px,2vw,28px);width:min(100%,680px);text-align:center}
+.fa-loading-content .fa-glass-kicker::before,.fa-loading-content .fa-glass-kicker::after{content:"";height:1px;flex:1;min-width:8px;background:linear-gradient(90deg,transparent,#e5d2ad99)}
+.fa-loading-content .fa-glass-kicker::after{background:linear-gradient(90deg,#e5d2ad99,transparent)}
+.fa-loading-emblem{position:relative;width:1em;height:1em;display:grid;place-items:center;color:transparent;text-shadow:none}
+.fa-loading-emblem::before{content:"";position:absolute;inset:12% 25%;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);background:linear-gradient(140deg,#effbff 10%,#7cc8ff 38%,#376cb6 50%,#d7edff 52%,#6fb6fa 90%);filter:none}
+.fa-loading-emblem::after{content:"";position:absolute;inset:-5%;background:radial-gradient(ellipse,#80cbff35,transparent 72%);pointer-events:none}
+.fa-scene-section-label{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-weight:500;font-size:1.05em;color:#f2dfb8;margin:0 0 10px;padding:0 0 9px;border-bottom:1px solid #d0e5ff45}
+.fa-scene-section-label small{color:#c2d9ef;font-size:.72em;font-variant-numeric:tabular-nums}
+.fa-scene-load .fa-glass-slot:disabled{opacity:.68;color:#d6e1ee;background:linear-gradient(90deg,#14264188,transparent);box-shadow:inset 0 -1px #c4e7ff28}
+.fa-scene-load .fa-glass-save-location{font-size:.86em;color:#c7dcef}
+.fa-scene-load .fa-glass-save-detail .fa-celestial-portrait-placeholder{width:100%;height:100%;display:grid;place-items:center;font-size:2em;background:radial-gradient(ellipse,#7199c849,transparent 72%)}
+.fa-scene-loading-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:12px}
+.fa-scene-loading-actions .fa-button{min-width:clamp(110px,16vw,200px)}
+.fa-menu-scene .fa-settings-row strong{font-size:1em}
+.fa-menu-scene .fa-settings-row small{color:#d8e6f7}
+.fa-menu-scene .fa-settings-detail .fa-button{min-height:44px}
+.fa-loading-content .fa-button:focus-visible{outline:2px solid #b6eaff;outline-offset:3px}
+@media(max-height:540px) and (min-width:701px){
+ .fa-menu-scene .fa-scene-settings .fa-settings-categories{grid-template-rows:repeat(6,minmax(36px,auto))}
+ .fa-menu-scene .fa-scene-settings .fa-settings-category{min-height:36px;padding:5px 10px}
+ .fa-menu-scene .fa-glass-load-heading{padding-bottom:4px}
+}
+@media(pointer:coarse){
+ .fa-loading-content .fa-button,.fa-menu-scene .fa-scene-settings .fa-settings-category{min-height:44px}
+}
+@media(max-width:420px){.fa-scene-loading-actions .fa-button{flex:1}.fa-scene-section-label{font-size:1em}}
+
+/* Feather the readable areas independently so the original scenery stays visible
+   between the menu columns. These are washes, not enclosing cards. */
+.fa-scene-save-list,.fa-scene-load .fa-glass-save-detail,.fa-menu-scene .fa-scene-settings .fa-settings-detail{position:relative;isolation:isolate}
+.fa-scene-save-list::before,.fa-scene-load .fa-glass-save-detail::before,.fa-scene-settings .fa-settings-detail::before{content:"";position:absolute;z-index:-1;pointer-events:none;inset:-18% -12%;background:radial-gradient(ellipse at 50% 50%,#07182c9e 0%,#122a4e5c 43%,transparent 73%)}
+.fa-scene-inline-notice{margin:0;padding:8px 0;color:#ffe1b5;text-align:center;font-size:.86em;background:radial-gradient(ellipse,#091a35a8,transparent 72%)}
+.fa-scene-load .fa-glass-load-actions .fa-button,.fa-scene-settings .fa-settings-actions .fa-button{position:relative;overflow:hidden}
+.fa-scene-load .fa-glass-load-actions .fa-button::before,.fa-scene-settings .fa-settings-actions .fa-button::before{content:"";position:absolute;inset:1px 12% auto;height:45%;border-radius:50%;background:linear-gradient(180deg,#d7efff24,transparent);pointer-events:none}
+.fa-loading-content .fa-glass-loading-steps li[data-state="active"] span{animation:fa-step-breathe 1.8s ease-in-out infinite alternate}
+@keyframes fa-step-breathe{from{opacity:.65;transform:scale(.93)}to{opacity:1;transform:scale(1.08)}}
+@media(prefers-reduced-motion:reduce){.fa-loading-content .fa-glass-loading-steps li[data-state="active"] span{animation:none}}
