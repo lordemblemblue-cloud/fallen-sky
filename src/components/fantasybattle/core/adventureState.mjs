@@ -4,7 +4,7 @@ import {treasureFor} from './treasureCatalog.mjs';
 import {BOND_GIFT} from './companionBonds.mjs';
 import {learnedPassives,applyPassives} from './passiveSkills.mjs';
 import {ULTIMATE_ID,ULTIMATE_LEVEL} from './battleRules.mjs';
-import {encounterReward} from './encounterRewards.mjs';
+import {encounterReward,encounterRecoverySupply} from './encounterRewards.mjs';
 import {WEAPONS,WEAPON_IDS,LEGACY_WEAPONS,validWeapons,cleanEnhancements,weaponEligible,enhancementLevel} from './weaponCatalog.mjs';
 // Browser-local guest save/progression service. No privileged Base44 endpoints or cloud claims.
 import {GEAR,GEAR_IDS,gearCount,gearFor,validGear,setGear,addGearStats,activeGearSetId,ascensionLevel,scaledSet,validAscensions,cleanAscensions,MAX_ASCENSION,SOCKET_GEMS,MAX_SOCKET_RANK,equippedSocketItems,socketFor,validSockets,cleanSockets,MAX_ENCHANT_RANK,enchantRank,enchantBonus,validEnchants,cleanEnchants} from './equipmentCatalog.mjs';
@@ -201,7 +201,7 @@ export function rewardVictory(p,encounter,remainingHp=p?.hp,units=[]){
   const xp=Math.min(100000-p.xp,reward.xp),gold=Math.min(10000000-p.gold,reward.gold),ore=reward.ore;
   const oldLevel=levelFor(p.xp),newLevel=levelFor(p.xp+xp);
   const gearId=Object.hasOwn(ENCOUNTER_GEAR_REWARDS,encounter.id)?ENCOUNTER_GEAR_REWARDS[encounter.id]:null;
-  const {inventory,loot}=grantLoot(p,[{id:'sapphireOre',count:ore},...(gearId?[{id:gearId,count:1}]:[])]);
+  const {inventory,loot}=grantLoot(p,[{id:'sapphireOre',count:ore},...(gearId?[{id:gearId,count:1}]:[]),...(encounterRecoverySupply(encounter)?[{id:'recoveryTonic',count:encounterRecoverySupply(encounter)}]:[])]);
   const completedEncounters=[...p.world.completedEncounters,encounter.id];
   const quest=p.quests.grove==='active'&&completedEncounters.includes('wilds_grove_01')?'complete':p.quests.grove;
   return {profile:{...p,party:companionProgress(p,encounter,units),xp:p.xp+xp,hp:Math.max(1,Math.min(heroStats(p).maxHp,Number.isInteger(remainingHp)?remainingHp:p.hp)),gold:p.gold+gold,inventory,world:{...p.world,completedEncounters},quests:{...p.quests,grove:quest}},xp,gold,loot,firstVictory:true,leveled:newLevel>oldLevel,unlocked:learnedSkills(newLevel).filter(x=>!learnedSkills(oldLevel).includes(x))};
@@ -321,11 +321,21 @@ export function craftItem(p,id,quantity=1){
  return {...p,gold:p.gold-q.gold,inventory:{...p.inventory,sapphireOre:p.inventory.sapphireOre-q.ore,[id]:q.owned+quantity}};
 }
 export const craftTonic=p=>craftItem(p,'recoveryTonic');
-export function heal(p,{sanctuary=false}={}) {
+export function recoveryQuote(p,recipient='hero'){
+ const m=ROSTER.find(x=>x.id===recipient),state=m&&p?memberFor(p,recipient):null;
+ const eligible=Boolean(p&&(recipient==='hero'||state?.recruited));
+ const max=eligible?(recipient==='hero'?heroStats(p).maxHp:m.maxHp):0;
+ const hp=eligible?(recipient==='hero'?p.hp:state.hp):0,owned=p?.inventory?.recoveryTonic??0;
+ const amount=Math.max(0,Math.min(max-hp,ITEMS.recoveryTonic.heal));
+ const reason=!eligible?'Select a recruited party member.':!owned?'No Recovery Tonics available.':!amount?'Health is already full.':null;
+ return {ok:!reason,reason,recipient,max,hp,owned,amount,next:hp+amount};
+}
+export function heal(p,{sanctuary=false,recipient='hero'}={}) {
   const max=heroStats(p).maxHp;if(sanctuary){if(p.hp>=max&&!partyNeedsRest(p))throw Error('Health is already full.');return recoverParty({...p,hp:max});}
-  if(p.hp>=max)throw Error('Health is already full.');
-  if(!p.inventory.recoveryTonic)throw Error('No Recovery Tonics available.');
-  return {...p,hp:Math.min(max,p.hp+ITEMS.recoveryTonic.heal),inventory:{...p.inventory,recoveryTonic:p.inventory.recoveryTonic-1}};
+  if(!isProfile(p))throw Error('Invalid profile.');
+  const q=recoveryQuote(p,recipient);if(!q.ok)throw Error(q.reason);
+  const next={...p,inventory:{...p.inventory,recoveryTonic:q.owned-1}};
+  return recipient==='hero'?{...next,hp:q.next}:withMember(next,recipient,{...memberFor(p,recipient),hp:q.next});
 }
 export function travelTo(p,region) {
   if(!region||!p.world.visitedRegions.includes(region.id)||!Number.isFinite(region.minX)||!Number.isFinite(region.maxX))throw Error('Discover this region before travelling.');
