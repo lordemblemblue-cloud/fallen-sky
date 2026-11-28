@@ -1,3 +1,4 @@
+/* global URL */
 // Data-level campaign regression, not executable game or reward/ending authority.
 import test from 'node:test';
 import assert from 'node:assert/strict';

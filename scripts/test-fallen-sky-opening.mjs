@@ -1,3 +1,4 @@
+/* global URL, console, process */
 // Run only the isolated Fallen Sky opening fixture tests, not the application.
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
