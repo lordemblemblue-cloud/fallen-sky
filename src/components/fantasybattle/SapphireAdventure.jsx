@@ -1515,10 +1515,14 @@ export default function SapphireAdventure(){
     <div className={'fa-ui '+(isWorldScreen(id)?'hud':'page')} key={id} data-screen={id} data-art-mode={artwork.mode} data-staged-original={original?'true':undefined}>
       <div aria-hidden="true" className="fa-template" style={{backgroundImage:'url("'+template+'")'}}>
         {original&&id==='01'&&!settings.reducedMotion&&<div className="fa-title-scene" data-quality={settings.quality}>
+          <div className="fa-scene-mist fa-scene-mist-left-upper"/>
+          <div className="fa-scene-mist fa-scene-mist-left-lower"/>
           <div className="fa-scene-moon-glow"/>
           <div className="fa-scene-waterfall fa-scene-waterfall-1"/>
           <div className="fa-scene-waterfall fa-scene-waterfall-2"/>
           <div className="fa-scene-waterfall fa-scene-waterfall-3"/>
+          <div className="fa-scene-mist fa-scene-mist-right-upper"/>
+          <div className="fa-scene-mist fa-scene-mist-right-lower"/>
           <div className="fa-scene-sparkles"/>
           <div className="fa-scene-petals">{[0,1,2,3,4,5].map(n=><i key={n}/>)}</div>
         </div>}
