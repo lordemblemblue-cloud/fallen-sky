@@ -6,6 +6,7 @@
 // runs along the root's own axis from the grip outward (blades: hilt to tip; bows: both limbs from the
 // grip, the string last). Presentation only: no combat, input or network state.
 import * as THREE from 'three';
+import { acquireEffectLight } from '../vfx/effectLightPool.mjs';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { PMREMGenerator as NodePMREMGenerator } from 'three/webgpu';
 import { attachNodes, addMapStageColor } from '../../../lib/webgpuNodeKit.js';
@@ -237,6 +238,7 @@ export function createWeaponConstructFx({ scene, renderer = null, getPixelScale 
   const effects = new Set();
   const tmp = new THREE.Vector3();
   const tmp2 = new THREE.Vector3();
+  const lightAt = new THREE.Vector3(); // where the borrowed glow sits this frame
 
   // Weapon frame from the root's meshes: the longest bounding-box axis, measured from the grip.
   function measure(root, kind, gripLocal) {
@@ -279,8 +281,7 @@ export function createWeaponConstructFx({ scene, renderer = null, getPixelScale 
     fx.tendrils = [];
     fx.blob?.removeFromParent();
     fx.blob?.geometry.dispose();
-    fx.light?.removeFromParent();
-    fx.light?.dispose?.();
+    fx.light?.release();
     if (fx.string) fx.string.forEach((s) => { s.mesh.visible = s.visible; s.mesh.scale.y = s.scaleY; });
   }
 
@@ -318,9 +319,9 @@ export function createWeaponConstructFx({ scene, renderer = null, getPixelScale 
       duration: duration ?? (mode === 'build' ? WEAPON_CONSTRUCT_SECONDS.build : WEAPON_CONSTRUCT_SECONDS.melt),
       t: 0, done: false, settle: 0, tendrils: [], blob: null, light: null, dripClock: 0,
     };
-    // glow that lights the hand and nearby body while the metal is molten
-    fx.light = new THREE.PointLight(0xff9a3c, 0, 1.3, 2);
-    scene?.add(fx.light);
+    // glow that lights the hand and nearby body while the metal is molten, borrowed from the world's effect light
+    // pool (vfx/effectLightPool.mjs) so a summon never changes the scene's light count
+    fx.light = acquireEffectLight(scene, { color: 0xff9a3c, distance: 1.3, decay: 2 });
     if (mode === 'build') {
       fx.blob = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14), oilMaterial);
       fx.blob.name = 'WeaponConstructPool';
@@ -382,8 +383,8 @@ export function createWeaponConstructFx({ scene, renderer = null, getPixelScale 
       // light: swells while molten, flashes as the weapon sets, then fades
       const flash = fx.mode === 'build' ? Math.max(0, 1 - Math.abs(k - 0.97) / 0.05) : 0;
       fx.shared.uCF_flash.value = fx.mode === 'build' ? Math.max(flash, fx.done ? Math.max(0, 1 - fx.settle / WEAPON_CONSTRUCT_SECONDS.settle) : 0) : 0;
-      fx.light.position.copy(frontWorld).lerp(pool, 0.65);
-      fx.light.intensity = fx.done ? 0.55 * Math.max(0, 1 - fx.settle / WEAPON_CONSTRUCT_SECONDS.settle) : 0.2 + 0.45 * Math.sin(Math.PI * k) + 0.55 * flash;
+      fx.light?.set(fx.done ? 0.55 * Math.max(0, 1 - fx.settle / WEAPON_CONSTRUCT_SECONDS.settle) : 0.2 + 0.45 * Math.sin(Math.PI * k) + 0.55 * flash,
+        lightAt.copy(frontWorld).lerp(pool, 0.65));
       if (fx.mode === 'build') {
         // the pool gathers in the palm first, then is drawn out into the weapon
         const gather = easeOut(Math.min(1, fx.t / 0.22));
