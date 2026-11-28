@@ -499,3 +499,29 @@ test('automatic passives unlock from level without spending points or adding act
  const page=readFileSync(new URL('../src/components/fantasybattle/SapphireAdventure.jsx',import.meta.url),'utf8');
  for(const marker of ['fa-skillbook-passive-nodes','PASSIVE_IDS.map','learnedPassives(level)','learnedSkills(level).includes(id)','result.unlocked.map(skillName)'])assert.ok(page.includes(marker),marker);
 });
+
+test('Moonfall is a leader-only full-Focus ultimate, used at most once per battle',()=>{
+ const base={name:'Fighter',maxHp:1000,atk:12,def:10,spd:11};
+ const hero={...base,id:'hero',team:'player',focus:3,actions:[...B.ACTION_ORDER,B.ULTIMATE_ID]};
+ const ally={...base,id:'ally',team:'player',focus:3,actions:[...B.ACTION_ORDER,B.ULTIMATE_ID]};
+ const enemy={...base,id:'enemy',team:'enemy',focus:3,actions:[...B.ACTION_ORDER,B.ULTIMATE_ID]};
+ const fresh=B.createBattle({seed:42,units:[hero,ally,enemy]});
+ assert.ok(B.isLegal(fresh,'hero',B.ULTIMATE_ID));
+ assert.equal(B.isLegal(fresh,'ally',B.ULTIMATE_ID),false);
+ assert.equal(B.isLegal(fresh,'enemy',B.ULTIMATE_ID),false);
+ assert.equal(B.isLegal(B.createBattle({units:[{...hero,focus:2},enemy]}),'hero',B.ULTIMATE_ID),false);
+ assert.equal(B.isLegal(B.createBattle({units:[{...hero,actions:B.ACTION_ORDER},enemy]}),'hero',B.ULTIMATE_ID),false);
+ const {battle,round}=B.resolveRound(fresh,{hero:B.ULTIMATE_ID,ally:'guard',enemy:'guard'});
+ assert.equal(B.unitById(battle,'hero').focus,0);assert.equal(B.unitById(battle,'hero').ultimateUsed,true);
+ assert.equal(round.steps.find(s=>s.actor==='hero').hits.length,1);assert.equal(B.unitById(fresh,'hero').ultimateUsed,undefined);
+ const charged=B.resolveRound(B.resolveRound(battle,{hero:'guard',ally:'guard',enemy:'guard'}).battle,{hero:'guard',ally:'guard',enemy:'guard'}).battle;
+ assert.equal(B.unitById(charged,'hero').focus,3);assert.equal(B.isLegal(charged,'hero',B.ULTIMATE_ID),false);
+ assert.throws(()=>B.resolveRound(charged,{hero:B.ULTIMATE_ID,ally:'guard',enemy:'guard'}));
+ assert.equal(B.isLegal(B.createBattle({units:[hero,enemy]}),'hero',B.ULTIMATE_ID),true);
+ assert.equal(A.availableActions(B.ULTIMATE_LEVEL-1).includes(B.ULTIMATE_ID),false);
+ assert.equal(A.availableActions(B.ULTIMATE_LEVEL).includes(B.ULTIMATE_ID),true);
+ const result=A.rewardVictory({...A.createProfile('Moonfall'),xp:299},{id:'moonfall-test',category:'Normal'});
+ assert.ok(result.unlocked.includes(B.ULTIMATE_ID));
+ assert.ok(result.unlocked.includes('windstep'));
+ assert.equal(B.ACTIONS[B.ULTIMATE_ID].skill,'chargedShot');
+});
