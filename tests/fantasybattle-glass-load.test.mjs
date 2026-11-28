@@ -33,9 +33,9 @@ test('save menu uses only the right glass panel and actual valid saves',()=>{
 });
 test('old full UI plates and generic header do not cover either new panel',()=>{
  assert.match(src,/const customLoad=id==='02'\|\|id==='35'/);
- assert.match(src,/useStagedOriginal\(customLoad\?null:id\)/);
- assert.match(src,/!customLoad&&id!=='10'&&<div/);
- assert.match(src,/!customLoad&&!isWorldScreen\(id\)/);
+ assert.match(src,/useStagedOriginal\(rightGlass\|\|glassKind==='toast'\?null:id\)/);
+ assert.match(src,/!rightGlass&&glassKind!=='toast'&&id!=='10'&&<div/);
+ assert.match(src,/!rightGlass&&glassKind!=='toast'&&!isWorldScreen\(id\)/);
 });
 test('visible progress uses a real native value and accessible status',()=>{
  assert.match(loading,/value=\{loading.completed\} max=\{loading.total\}/);
@@ -61,4 +61,4 @@ test('cancel, local backup, mobile and reduced motion remain supported',()=>{
 });
 
 test('slow status explains waiting without changing progress',()=>{assert.match(src,/setTimeout\(\(\)=>setSlowLoad\(true\),8000\)/);assert.match(loading,/slowLoad&&/);assert.doesNotMatch(loading,/setTimeout/);});
-test('loading failure preserves glass recovery and blocks late messages',()=>{assert.match(src,/case '47':content=loadFailure\?/);assert.match(src,/id==='35'\)setLoadFailure\(true\)/);assert.match(src,/e.type==='error'&&!failedLoad.current/);assert.match(src,/startReady.current\|\|restorePending.current/);assert.match(src,/clearTimeout\(startTimer.current\);clearTimeout\(timeoutRef.current\)/);});
+test('loading failure preserves glass recovery and blocks late messages',()=>{assert.match(src,/case '47':content=<div className="fa-glass-load-layout/);assert.match(src,/loadFailure\?'Unable to load':'Unable to continue'/);assert.match(src,/id==='35'\)setLoadFailure\(true\)/);assert.match(src,/e.type==='error'&&!failedLoad.current/);assert.match(src,/startReady.current\|\|restorePending.current/);assert.match(src,/clearTimeout\(startTimer.current\);clearTimeout\(timeoutRef.current\)/);});
