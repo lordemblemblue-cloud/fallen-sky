@@ -1,3 +1,4 @@
+import {WEAPONS,weaponEligible} from './weaponCatalog.mjs';
 // Shared local inventory, four slots per recruited party member.
 export const GEAR_SLOTS=Object.freeze(['armor','mantle','ring','necklace']);
 const item=(name,slot,buy,sell,atk,def,spd,color,trim,style,rarity='Common',requiredLevel=1,setId=null)=>Object.freeze({name,kind:'gear',slot,buy,sell,atk,def,spd,color,trim,style,rarity,requiredLevel,setId});
@@ -45,7 +46,30 @@ export const gearMetadata=key=>Object.hasOwn(GEAR,key)?GEAR[key].rarity+' · Lev
 export const WEARERS=Object.freeze(['hero','groveArcher','pilgrimWarden','mistScout']);
 export const gearFor=(p,id)=>WEARERS.includes(id)?p?.gear?.[id]||{}:{};
 export const gearCount=(p,key)=>WEARERS.reduce((n,id)=>n+GEAR_SLOTS.filter(slot=>gearFor(p,id)[slot]===key).length,0);
-export function addGearStats(stats,p,id){const out={...stats};for(const slot of GEAR_SLOTS){const key=gearFor(p,id)[slot];if(gearEligible(p,key)&&GEAR[key].slot===slot)for(const k of ['atk','def','spd'])out[k]+=GEAR[key][k];}const set=activeGearSet(p,id);if(set)for(const k of ['atk','def','spd'])out[k]+=set[k];return out;}
+export const SOCKET_GEMS=Object.freeze({ruby:Object.freeze({name:'Crimson Ruby',stat:'atk',label:'Attack'}),sapphire:Object.freeze({name:'Azure Sapphire',stat:'def',label:'Defense'}),emerald:Object.freeze({name:'Verdant Emerald',stat:'spd',label:'Speed'})});
+export const MAX_SOCKET_RANK=3;
+export function socketEligible(p,wearer,key){
+ return WEARERS.includes(wearer)&&(Object.hasOwn(GEAR,key)?gearEligible(p,key):wearer==='hero'&&key!=='starterBow'&&Object.hasOwn(WEAPONS,key)&&weaponEligible(p,key));
+}
+export function equippedSocketItems(p,wearer){
+ if(!WEARERS.includes(wearer))return [];
+ const slots=gearFor(p,wearer);
+ return [...(wearer==='hero'?[p?.equipped]:[]),...GEAR_SLOTS.map(slot=>slots[slot])].filter(key=>socketEligible(p,wearer,key));
+}
+const validSocket=s=>Boolean(s&&typeof s==='object'&&!Array.isArray(s)&&Object.keys(s).length===2&&Object.hasOwn(SOCKET_GEMS,s.gem)&&Number.isInteger(s.rank)&&s.rank>=1&&s.rank<=MAX_SOCKET_RANK);
+export function socketFor(p,wearer,key){
+ const socket=p?.sockets?.[wearer]?.[key];
+ return socketEligible(p,wearer,key)&&validSocket(socket)?socket:null;
+}
+export function validSockets(p,recruited){
+ if(p.sockets===undefined)return true;
+ if(!p.sockets||typeof p.sockets!=='object'||Array.isArray(p.sockets))return false;
+ return Object.entries(p.sockets).every(([wearer,items])=>WEARERS.includes(wearer)&&(wearer==='hero'||recruited(wearer))&&items&&typeof items==='object'&&!Array.isArray(items)&&Object.entries(items).every(([key,socket])=>socketEligible(p,wearer,key)&&validSocket(socket)));
+}
+export function cleanSockets(p){
+ return Object.fromEntries(Object.entries(p.sockets).map(([wearer,items])=>[wearer,Object.fromEntries(Object.entries(items).map(([key,socket])=>[key,{gem:socket.gem,rank:socket.rank}]))]));
+}
+export function addGearStats(stats,p,id){const out={...stats};for(const slot of GEAR_SLOTS){const key=gearFor(p,id)[slot];if(gearEligible(p,key)&&GEAR[key].slot===slot)for(const k of ['atk','def','spd'])out[k]+=GEAR[key][k];}const set=activeGearSet(p,id);if(set)for(const k of ['atk','def','spd'])out[k]+=set[k];for(const key of equippedSocketItems(p,id)){const socket=socketFor(p,id,key);if(socket)out[SOCKET_GEMS[socket.gem].stat]+=socket.rank;}return out;}
 // Accessories contribute stats but must not be passed to the armor/mantle mesh renderer.
 export const equippedVisuals=(p,id)=>['armor','mantle'].map(slot=>gearFor(p,id)[slot]).filter(key=>Object.hasOwn(GEAR,key));
 export const gearSlotLabel=slot=>({armor:'Armor',mantle:'Mantle',ring:'Ring',necklace:'Necklace'})[slot]||'Equipment';
