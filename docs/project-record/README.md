@@ -17,6 +17,8 @@ Baseline: `lordemblemblue-cloud/fallen-sky` `main` at **`ab03f50a`** (merge of P
 | [MISSING_INFORMATION.md](MISSING_INFORMATION.md) | Requests to the owner, in the directive's format, grouped so connected questions are answered together |
 | [AGENT_HANDOFF_PROTOCOL.md](AGENT_HANDOFF_PROTOCOL.md) | How ChatGPT, Claude, Gemini and other approved agents hand work to each other |
 | [COMPLETION_REPORTS.md](COMPLETION_REPORTS.md) | Per-game status by area, with counted inventories and the counting method |
+| [ANIMATION_AUDIT_20261128.md](ANIMATION_AUDIT_20261128.md) | Animation audit of all three games: skeletons, real clips, code-made placeholders, missing sets, skills without their own animation or effect, tools on the PC, licence flags (2026-11-28) |
+| [ANIMATION_ROADMAP_20261128.md](ANIMATION_ROADMAP_20261128.md) | Prioritised animation roadmap, tracker statuses, Cascadeur techniques (from its help pages) and delivery rules (2026-11-28) |
 
 ## Record categories (directive §3)
 
