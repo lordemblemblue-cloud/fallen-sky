@@ -26,7 +26,21 @@ export const GEAR_SETS=Object.freeze({pilgrim:Object.freeze({name:'Pilgrim Watch
 // Requirements use the shared party leader's progression; all legacy gear remains level 1.
 export const gearLevel=p=>1+Math.floor((Number.isFinite(p?.xp)?Math.max(0,p.xp):0)/100);
 export function gearEligible(p,key){return Object.hasOwn(GEAR,key)&&gearLevel(p)>=GEAR[key].requiredLevel;}
-export function activeGearSet(p,id){const slots=gearFor(p,id);const a=GEAR[slots.armor],m=GEAR[slots.mantle];return a?.setId&&a.setId===m?.setId&&Object.hasOwn(GEAR_SETS,a.setId)&&gearEligible(p,slots.armor)&&gearEligible(p,slots.mantle)?GEAR_SETS[a.setId]:null;}
+export const MAX_ASCENSION=4;
+export const ascensionLevel=(p,wearer,setId)=>WEARERS.includes(wearer)&&Object.hasOwn(GEAR_SETS,setId)&&Number.isInteger(p?.ascensions?.[wearer]?.[setId])?Math.max(0,Math.min(MAX_ASCENSION,p.ascensions[wearer][setId])):0;
+export function activeGearSetId(p,id){const slots=gearFor(p,id);const a=GEAR[slots.armor],m=GEAR[slots.mantle];return a?.setId&&a.setId===m?.setId&&Object.hasOwn(GEAR_SETS,a.setId)&&gearEligible(p,slots.armor)&&gearEligible(p,slots.mantle)?a.setId:null;}
+export function scaledSet(setId,rank=0){
+ if(!Object.hasOwn(GEAR_SETS,setId))return null;
+ const base=GEAR_SETS[setId],factor=1+Math.max(0,Math.min(MAX_ASCENSION,rank))*.25;
+ return {name:base.name,atk:base.atk*factor,def:base.def*factor,spd:base.spd*factor};
+}
+export function activeGearSet(p,id){const setId=activeGearSetId(p,id);return setId?scaledSet(setId,ascensionLevel(p,id,setId)):null;}
+export function validAscensions(p,recruited){
+ if(p.ascensions===undefined)return true;
+ if(!p.ascensions||typeof p.ascensions!=='object'||Array.isArray(p.ascensions))return false;
+ return Object.entries(p.ascensions).every(([wearer,sets])=>WEARERS.includes(wearer)&&(wearer==='hero'||recruited(wearer))&&sets&&typeof sets==='object'&&!Array.isArray(sets)&&Object.entries(sets).every(([id,n])=>Object.hasOwn(GEAR_SETS,id)&&Number.isInteger(n)&&n>=0&&n<=MAX_ASCENSION));
+}
+export function cleanAscensions(p){return Object.fromEntries(WEARERS.filter(w=>Object.hasOwn(p.ascensions||{},w)).map(w=>[w,Object.fromEntries(Object.keys(GEAR_SETS).filter(id=>Object.hasOwn(p.ascensions[w],id)).map(id=>[id,ascensionLevel(p,w,id)]))]));}
 export const gearMetadata=key=>Object.hasOwn(GEAR,key)?GEAR[key].rarity+' · Level '+GEAR[key].requiredLevel+(GEAR[key].setId?' · '+GEAR_SETS[GEAR[key].setId].name:''):null;
 export const WEARERS=Object.freeze(['hero','groveArcher','pilgrimWarden','mistScout']);
 export const gearFor=(p,id)=>WEARERS.includes(id)?p?.gear?.[id]||{}:{};
