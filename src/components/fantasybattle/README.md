@@ -1,8 +1,16 @@
 # Fantasy Battle
 
-A turn-based 2D bow duel at `/fantasy-battle`. The characters are layered puppets in the Live2D manner, cut from the
-owner's archer parts sheet. KOTOR was the reference for the round structure only (pick actions, then watch the round
+A turn-based 2D bow duel. The characters are layered puppets in the Live2D manner, cut from the owner's archer parts
+sheet. KOTOR was the reference for the round structure only (pick actions, then watch the round
 play out); no names, art, sounds or UI come from it.
+
+## Where it runs
+
+- `/fantasy-battle-studio` (`src/routes/fantasy-battle-studio.jsx`): this duel with its Studio drawer, kept as a test page
+  at the owner's request (2026-11-27). Not linked from the games menu. It opens under the same rule as `/fantasy-battle`:
+  `FANTASY_BATTLE_RELEASED` (games hub catalog) or development (`import.meta.env.DEV`).
+- `/fantasy-battle` is the adventure (`SapphireAdventure`, other agents' work), which fights its battles on this
+  `FantasyBattleStage`.
 
 ## Layout
 

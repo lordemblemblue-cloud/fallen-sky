@@ -20,6 +20,7 @@ import { makeCompanionRig, requiredCompanionParts, visualFor } from './core/comp
 import {createSecondaryMotion,sampleMotion,resetSecondaryMotion} from './core/secondaryMotion.mjs';
 import { MELEE_SKILLS, isMeleeSkill, approachWeight, classAnimationLibrary, guardPose } from './core/meleeSkills.mjs';
 import { SkillPlayer } from './core/skillTimeline.mjs';
+import { withBattleStatePreserved } from './core/battleSnapshot.mjs';
 import {enemySkillLibrary} from './core/enemySkills.mjs';
 import { ACTIONS, ACTION_ORDER, MAX_FOCUS, createBattle, legalActions, resolveRound, chooseAiAction, enemyIntent, bossPhase, BOSS_PHASE_NAMES, unitById, computeDamage } from './core/battleRules.mjs';
 import { PuppetView, loadTextures, prepareTexture } from './render/puppetView.js';
@@ -648,33 +649,36 @@ export class FantasyBattleStage {
     return this.renderer.domElement.toDataURL('image/png');
   }
 
-  /** Record the three bow skills in practice mode as a WebM clip. */
+  /** Record the three bow skills in practice mode as a WebM clip; a battle in progress is put back afterwards. */
   async recordClip() {
     if (typeof MediaRecorder === 'undefined') throw new Error('this browser cannot record video');
-    const previousMode = this.mode;
-    this.mode = 'practice';
-    this.restart();
-    const stream = this.renderer.domElement.captureStream(60);
-    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m)) || '';
-    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
-    const chunks = [];
-    recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
-    const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
-    recorder.start(100);
-    const hero = this.fighters.hero;
-    await this.wait(0.6);
-    for (const id of ['quickShot', 'chargedShot', 'volley']) {
-      this.practice(id);
-      const run = hero.skills.current;
-      await this.waitUntil(() => hero.skills.current !== run && this.fx.arrows.length === 0);
-      await this.wait(0.45);
-    }
-    recorder.stop();
-    await stopped;
-    for (const t of stream.getTracks()) t.stop();
-    this.mode = previousMode;
-    this.restart();
-    return new Blob(chunks, { type: 'video/webm' });
+    if (this.phase === 'playing') throw new Error('wait for the round to finish');
+    return withBattleStatePreserved(this, async () => {
+      this.mode = 'practice';
+      this.restart();
+      const stream = this.renderer.domElement.captureStream(60);
+      try {
+        const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((m) => MediaRecorder.isTypeSupported(m)) || '';
+        const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
+        const chunks = [];
+        recorder.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+        const stopped = new Promise((resolve) => { recorder.onstop = resolve; });
+        recorder.start(100);
+        const hero = this.fighters.hero;
+        await this.wait(0.6);
+        for (const id of ['quickShot', 'chargedShot', 'volley']) {
+          this.practice(id);
+          const run = hero.skills.current;
+          await this.waitUntil(() => hero.skills.current !== run && this.fx.arrows.length === 0);
+          await this.wait(0.45);
+        }
+        recorder.stop();
+        await stopped;
+        return new Blob(chunks, { type: 'video/webm' });
+      } finally {
+        for (const t of stream.getTracks()) t.stop();
+      }
+    });
   }
 
   dispose() {
