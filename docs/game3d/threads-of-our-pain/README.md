@@ -1,5 +1,7 @@
 # The Threads of Our Pain — story-to-world index
 
+> **NPC Phase 72 — final consolidation (draft):** [handoff and remaining gates](NPC_PHASE72_FINAL_CONSOLIDATION.md), [pinned static validation](NPC_PHASE72_FINAL_VALIDATION.json). 20 main IDs, 105 optional IDs, 30 NPC candidates documented; late source stack reviewed, not merged by this packet. No playable completion claim.
+
 > **R141 — SQLite transaction and recovery fixture:** [Draft PR #420](https://github.com/lordemblemblue-cloud/fallen-sky/pull/420), [local test evidence](https://github.com/lordemblemblue-cloud/fallen-sky/blob/test/r140-reward-transaction-fixture/tests/fixtures/r141/README.md). 11/11 new local tests passed; committed blob matched. Disposable SQLite workers, rollback, lost reply, prior-cycle pending recovery and asynchronous projection; no Base44 concurrency guarantee or live implementation. Next R142 authority handler/schema and lock/crash testing.
 
 > **R140 — isolated executable reward fixture:** [Draft PR #420](https://github.com/lordemblemblue-cloud/fallen-sky/pull/420) and [test evidence](https://github.com/lordemblemblue-cloud/fallen-sky/blob/8ae62fa1d6a48777a5f4eab2a73b9cdfc9721e6e/tests/fixtures/r140/README.md). 16/16 local Node tests passed, committed blob matches tested file. Synthetic in-memory reducer and projection checks only; no live integration or production datastore proof. Next R141/E00–E02 actual authority discovery and storage/concurrency fixture expansion.
