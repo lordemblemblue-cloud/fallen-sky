@@ -1,3 +1,4 @@
+/* global URL, console, process */
 // Static validation of disabled source-intake manifests; not gameplay code.
 import {readFileSync} from 'node:fs';
 const root=new URL('../docs/game3d/threads-of-our-pain/',import.meta.url);
