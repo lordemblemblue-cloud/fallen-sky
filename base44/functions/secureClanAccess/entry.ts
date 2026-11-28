@@ -21,9 +21,10 @@ async function verifyChannel(base44, divisionId, channelId, membership) {
   if (!channel || channel.divisionId !== divisionId) {
     throw Object.assign(new Error('Channel not found'), {status:404});
   }
-  const rank = {member:0,officer:1,leader:2};
-  const required = {none:0,officer:1,leader:2}[channel.role_restriction || 'none'] ?? 2;
-  if ((rank[membership?.role] ?? -1) < required) {
+  const rank = new Map([['member', 0], ['officer', 1], ['leader', 2]]);
+  const required = new Map([['none', 0], ['officer', 1], ['leader', 2]])
+    .get(channel.role_restriction || 'none');
+  if (required === undefined || (rank.get(membership?.role) ?? -1) < required) {
     throw Object.assign(new Error('Restricted channel'), {status:403});
   }
   return channel;
@@ -38,12 +39,23 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
-    const body = await req.json();
-    const { operation, entityType, divisionId, entityId, entityData, filter, limit } = body;
+    const body = await req.json().catch(() => null);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return Response.json({ error: 'Invalid request' }, { status: 400 });
+    }
+    const { operation, divisionId, entityId, entityData, limit } = body;
+    const operations = ['listPublic', 'getMessages', 'postMessage', 'deleteMessage', 'getMembers', 'updateClan'];
+    const validId = value => typeof value === 'string' && value.length > 0 &&
+      value.length <= 160 && value.trim() === value && !/[\x00-\x1f\x7f]/.test(value);
+    if (!operations.includes(operation) ||
+        (operation !== 'listPublic' && !validId(divisionId)) ||
+        (operation === 'deleteMessage' && !validId(entityId))) {
+      return Response.json({ error: 'Invalid operation or identifier' }, { status: 400 });
+    }
     
     // Validate clan membership for all operations
     let membership = null;
-    if (divisionId && operation !== 'listPublic') {
+    if (operation !== 'listPublic') {
       membership = await checkClanMembership(base44, user.id, divisionId);
 
       if (!membership) {
@@ -147,7 +159,7 @@ Deno.serve(async (req) => {
           return Response.json({ error: 'Division ID required' }, { status: 400 });
         }
         
-        result = await base44.asServiceRole.entities.ClanMember.filter({ divisionId });
+        result = await base44.asServiceRole.entities.ClanMember.filter({ clan_id: divisionId }, '-created_date', Math.min(100, Math.max(1, Number.isInteger(limit) ? limit : 100)));
         break;
         
       case 'updateClan':
