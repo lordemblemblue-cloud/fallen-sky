@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { acquireEffectLight } from './vfx/effectLightPool.mjs';
 
 /**
  * CompanionTeleportDashEffect — visual streak that shows the companion
@@ -64,9 +65,8 @@ export function createCompanionTeleportDash(scene, getCasterPos, getTargetPos) {
   ring.position.set(tgt.x, tgt.y + 0.05, tgt.z);
   group.add(ring);
 
-  const light = new THREE.PointLight(0x66ddff, 6, 10);
-  light.position.set(tgt.x, tgt.y + 1.5, tgt.z);
-  group.add(light);
+  // Light at the impact, borrowed from the world's effect light pool (vfx/effectLightPool.mjs)
+  const light = acquireEffectLight(scene, { color: 0x66ddff, distance: 10, position: { x: tgt.x, y: tgt.y + 1.5, z: tgt.z } });
 
   let elapsed = 0;
   let alive = true;
@@ -86,7 +86,7 @@ export function createCompanionTeleportDash(scene, getCasterPos, getTargetPos) {
     const rScale = 1 + t * 2.5;
     ring.scale.set(rScale, rScale, 1);
 
-    light.intensity = 6 * fade;
+    light?.set(6 * fade);
 
     if (elapsed >= LIFETIME) {
       alive = false;
@@ -95,6 +95,7 @@ export function createCompanionTeleportDash(scene, getCasterPos, getTargetPos) {
       flashGeo.dispose(); flashMat.dispose();
       ringGeo.dispose(); ringMat.dispose();
       scene.remove(group);
+      light?.release();
     }
   };
 
