@@ -1,5 +1,23 @@
 # The Threads of Our Pain — story-to-world index
 
+> **SIDE1-20261127 — S01–S10 optional adventure refinement (draft):** [The road remembers its travelers](SIDE1_20261127_S01_S10_REFINEMENT.md). Ten scene/branching refinements and terrain deltas; 10/55 optional editorial coverage. Preserve independent quest receipts and actual observation. Not built or tested.
+
+> **FOCUS6-20261127 — final ten discoveries (draft):** [Where the road becomes quiet](FOCUS6_20261127_D41_D50_REFINEMENT.md). Ten dialogue and terrain deltas; FOCUS series 50/50 distinct discovery refinements, no new IDs. R66 required second vista and earned item retention preserved. Not built or tested. Next S01–S10 optional adventure quality review.
+
+> **FOCUS5-20261127 — D32–D40 discovery refinement (draft; D36 previously covered):** [The shape of what we carried](FOCUS5_20261127_D32_D40_REFINEMENT.md). Eight candidate refinements and terrain deltas, 40/50 FOCUS coverage; preserve existing entitlements and independent optional receipts. Not built or tested.
+
+> **FOCUS4-20261127 — D21–D30 discovery refinement (draft, D25 previously covered):** [What survived the crossing](FOCUS4_20261127_D21_D30_REFINEMENT.md). Nine dialogue and terrain deltas; FOCUS series 32/50. Preserve primary rewards and distinct S27/S28/S30/S33/S37/S40/S42/S44/S45 receipts. Not built or verified.
+
+> **FOCUS3-20261127 — D11–D20 discovery refinement (draft):** [The things we leave behind](FOCUS3_20261127_D11_D20_REFINEMENT.md). Ten dialogue and terrain deltas, 23/50 refined in FOCUS series; primary rewards and independent side quest receipts retained. Not built or verified.
+
+> **FOCUS2-20261127 — D02–D10 discovery variety (draft):** [The places between ordinary lives](FOCUS2_20261127_D02_D10_REFINEMENT.md). Nine candidate scene passes and Claude terrain deltas; thirteen discoveries refined across FOCUS/FOCUS2, rewards and distinct side quest receipts unchanged. No build or tests.
+
+> **FOCUS-20261127 — first four paired discoveries (draft):** [Four things the hands remember](FOCUS_20261127_D01_D25_D36_D31_REFINEMENT.md). D01/D25/D36/D31 dialogue and terrain deltas; independent paired alignments and required second vista, safe egress and single reward. No new quests or implementation.
+
+> **FINALE-20261127 — M18–M20 emotional pacing (draft):** [A world worth waking in](FINALE_20261127_M18_M20_EMOTIONAL_PACING.md). Five candidate beats, three chapter terrain deltas; preserve R64A/R65/R84, R98 causality and R111 unknowns. No new outcome, reward or implementation.
+
+> **CHRON-20261127 — two-life chronology and dialogue (draft):** [The hand that remembers](CHRON_20261127_M04_M06_M09_M10_DIALOGUE.md). Five candidate scene variants and terrain deltas; M05 physical death, M09/M10 actual overlap, no Celestial Sight. R111 chronology decision remains open. Not built or verified.
+
 > **POL-20261127 — political dialogue refinement (draft):** [The price of an accusation](POL_20261127_M14_M17_POLITICAL_DIALOGUE.md). Four candidate scene variants M14–M17, existing anchors and acceptance deltas; preserve R53/R107 selection, no new objectives or rewards, no retired Three Roads restoration. Not built or verified.
 
 > **R141 — SQLite transaction and recovery fixture:** [Draft PR #420](https://github.com/lordemblemblue-cloud/fallen-sky/pull/420), [local test evidence](https://github.com/lordemblemblue-cloud/fallen-sky/blob/test/r140-reward-transaction-fixture/tests/fixtures/r141/README.md). 11/11 new local tests passed; committed blob matched. Disposable SQLite workers, rollback, lost reply, prior-cycle pending recovery and asynchronous projection; no Base44 concurrency guarantee or live implementation. Next R142 authority handler/schema and lock/crash testing.
