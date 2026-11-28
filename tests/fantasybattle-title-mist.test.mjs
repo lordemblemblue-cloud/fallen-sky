@@ -66,3 +66,25 @@ test('waterfall texture scrolls down and scene motion stays lightweight',()=>{
  assert.ok(css.includes('.fa-root.reduced-motion .fa-title-scene { display: none; }'));
  assert.match(css,/@media \(prefers-reduced-motion: reduce\)\s*\{\s*\.fa-title-scene \{ display: none; \}/);
 });
+
+test('castle and plaza light are decorative overlays mounted inside the title scene',()=>{
+ const start=adventure.lastIndexOf('className="fa-template"');
+ const end=adventure.indexOf('{!isWorldScreen(id)',start);
+ const markup=adventure.slice(start,end);
+ for(const name of ['kingdom-light','portal-glow','foreground-breeze']) assert.ok(markup.includes('className="fa-scene-'+name+'"'),name);
+ assert.match(css,/\.fa-title-scene > \*\s*\{[^}]*pointer-events: none/);
+ assert.match(css,/\.fa-scene-kingdom-light\s*\{[^}]*left: 69%; top: 17%;/);
+ assert.match(css,/\.fa-scene-portal-glow\s*\{[^}]*left: 64%; top: 89%;/);
+ assert.doesNotMatch(markup,/<button|onClick=|onPointerDown=/);
+});
+test('new animated lights and foreground motion obey graphics quality and reduced motion',()=>{
+ for(const [name,key] of [['kingdom-light','fa-kingdom-luminance'],['portal-glow','fa-portal-breathe']]){
+  assert.ok(css.includes('.fa-title-scene:not([data-quality="performance"]) .fa-scene-'+name));
+  assert.ok(css.includes('@keyframes '+key));
+ }
+ assert.match(css,/\.fa-scene-foreground-breeze\s*\{[^}]*display: none/);
+ assert.ok(css.includes('.fa-title-scene:is([data-quality="high"],[data-quality="cinematic"]) .fa-scene-foreground-breeze'));
+ assert.ok(css.includes('@keyframes fa-foreground-breeze'));
+ assert.ok(adventure.includes("original&&id==='01'&&!settings.reducedMotion"));
+ assert.ok(css.includes('.fa-root.reduced-motion .fa-title-scene { display: none; }'));
+});
